@@ -1,0 +1,11 @@
+[package]
+name = "ruml-matrix-cpu-impl"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+ruml-matrix-traits = { path = "../ruml-matrix-traits" }
+cblas = "0.4.0"
+openblas-src = "0.10.8"
