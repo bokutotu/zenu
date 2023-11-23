@@ -2,13 +2,15 @@ use std::ops::{Index, IndexMut};
 
 use crate::{
     dim::DimTrait,
-    index::{IndexTrait, ShapeStride},
+    index::{ShapeStride, SliceTrait},
     memory::Memory,
 };
 
+pub trait Hoge {}
+
 pub trait Matrix<IT>: Index<IT> + IndexMut<IT> + Clone
 where
-    IT: IndexTrait,
+    IT: SliceTrait,
 {
     type Dim: DimTrait;
     type Memory: Memory;
@@ -21,7 +23,7 @@ where
 
 pub trait OwnedMatrix<IT>: Matrix<IT>
 where
-    IT: IndexTrait,
+    IT: SliceTrait,
 {
     type View: ViewMatrix<IT>;
 
@@ -30,7 +32,7 @@ where
 
 pub trait ViewMatrix<IT>: Matrix<IT>
 where
-    IT: IndexTrait,
+    IT: SliceTrait,
 {
     type Owned: OwnedMatrix<IT>;
 

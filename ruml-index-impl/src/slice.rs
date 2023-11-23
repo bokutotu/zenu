@@ -1,7 +1,7 @@
 use std::ops::{Range, RangeFrom, RangeFull, RangeTo};
 
 use ruml_dim_impl::{Dim0, Dim1, Dim2, Dim3, Dim4};
-use ruml_matrix_traits::index::{IndexTrait, ShapeStride};
+use ruml_matrix_traits::index::{ShapeStride, SliceTrait};
 
 #[derive(Clone, Debug, Copy, PartialEq)]
 pub struct SliceDim {
@@ -107,7 +107,7 @@ impl From<RangeFrom<usize>> for SliceDim {
 #[derive(Clone, Debug, Copy, PartialEq)]
 pub struct Slice0D {}
 
-impl IndexTrait for Slice0D {
+impl SliceTrait for Slice0D {
     type InDim = Dim0;
     type OutDim = Dim0;
 
@@ -126,7 +126,7 @@ pub struct Slice1D {
     pub(crate) index: SliceDim,
 }
 
-impl IndexTrait for Slice1D {
+impl SliceTrait for Slice1D {
     type InDim = Dim1;
     type OutDim = Dim1;
 
@@ -146,7 +146,7 @@ pub struct Slice2D {
     pub(crate) index: [SliceDim; 2],
 }
 
-impl IndexTrait for Slice2D {
+impl SliceTrait for Slice2D {
     type InDim = Dim2;
     type OutDim = Dim2;
 
@@ -171,7 +171,7 @@ pub struct Slice3D {
     pub(crate) index: [SliceDim; 3],
 }
 
-impl IndexTrait for Slice3D {
+impl SliceTrait for Slice3D {
     type InDim = Dim3;
     type OutDim = Dim3;
 
@@ -198,7 +198,7 @@ pub struct Slice4D {
     pub(crate) index: [SliceDim; 4],
 }
 
-impl IndexTrait for Slice4D {
+impl SliceTrait for Slice4D {
     type InDim = Dim4;
     type OutDim = Dim4;
 
