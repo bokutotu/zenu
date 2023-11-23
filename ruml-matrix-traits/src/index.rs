@@ -11,11 +11,11 @@ impl<D: DimTrait> ShapeStride<D> {
     }
 
     pub fn shape(&self) -> D {
-        *&self.shape
+        self.shape
     }
 
     pub fn stride(&self) -> D {
-        *&self.stride
+        self.stride
     }
 }
 

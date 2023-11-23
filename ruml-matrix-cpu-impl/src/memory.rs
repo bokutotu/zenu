@@ -45,6 +45,10 @@ impl<T: Num> OwnedMemory for CpuOwnedMemory<T> {
         self.buffer.len()
     }
 
+    fn is_empty(&self) -> bool {
+        todo!();
+    }
+
     fn allocate(size: usize) -> Self {
         Self::new(size)
     }
@@ -70,11 +74,11 @@ impl<T: Num> Memory for CpuViewMemory<T> {
     type Item = T;
 
     fn as_ptr(&self) -> *const Self::Item {
-        unsafe { self.buffer.as_ptr().offset(self.offset as isize) }
+        unsafe { self.buffer.as_ptr().add(self.offset) }
     }
 
     fn as_mut_ptr(&mut self) -> *mut Self::Item {
-        unsafe { self.buffer.as_ptr().offset(self.offset as isize) as *mut _ }
+        self.as_ptr() as *mut _
     }
 }
 

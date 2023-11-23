@@ -24,6 +24,7 @@ pub trait Blas {
     fn norm2(&self, x: *mut Self::Item, incx: usize) -> Self::Item;
     fn asum(&self, x: *mut Self::Item, incx: usize) -> Self::Item;
     fn amax(&self, x: *mut Self::Item, incx: usize) -> usize;
+    #[allow(clippy::too_many_arguments)]
     fn gemv(
         &self,
         trans: Trans,
@@ -38,6 +39,7 @@ pub trait Blas {
         y: *mut Self::Item,
         incy: usize,
     );
+    #[allow(clippy::too_many_arguments)]
     fn ger(
         &self,
         m: usize,
@@ -50,6 +52,7 @@ pub trait Blas {
         a: *mut Self::Item,
         lda: usize,
     );
+    #[allow(clippy::too_many_arguments)]
     fn gemm(
         &self,
         transa: Trans,

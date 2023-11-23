@@ -11,6 +11,7 @@ pub trait OwnedMemory: Memory {
     type View: ViewMemory;
 
     fn len(&self) -> usize;
+    fn is_empty(&self) -> bool;
     fn allocate(size: usize) -> Self;
     fn into_view(self, offset: usize) -> Self::View;
 }

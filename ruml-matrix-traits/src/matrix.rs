@@ -36,5 +36,5 @@ where
 {
     type Owned: OwnedMatrix<IT>;
 
-    fn into_owned(&self) -> Self::Owned;
+    fn into_owned(self) -> Self::Owned;
 }

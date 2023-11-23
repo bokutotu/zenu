@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
 use ruml_dim_impl::{Dim0, Dim1, Dim2, Dim3, Dim4};
-use ruml_matrix_traits::index::{IndexTrait, ShapeStride, SliceTrait};
+use ruml_matrix_traits::index::IndexTrait;
 
 pub struct DimNo1 {}
 pub struct DimNo2 {}

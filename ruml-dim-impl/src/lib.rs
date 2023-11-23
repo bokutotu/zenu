@@ -2,7 +2,7 @@ use std::ops::Index;
 
 use ruml_matrix_traits::dim::DimTrait;
 
-#[derive(Clone, Debug, Copy)]
+#[derive(Clone, Debug, Copy, Default)]
 pub struct Dim0 {}
 
 impl Dim0 {
@@ -38,12 +38,17 @@ impl DimTrait for Dim0 {
         0
     }
 
+    fn is_empty(&self) -> bool {
+        todo!();
+    }
+
     fn is_overflow<D: DimTrait>(&self, index: D) -> bool {
-        if index.len() == 0 {
-            false
-        } else {
-            true
-        }
+        // if index._len() == 0 {
+        //     false
+        // } else {
+        //     true
+        // }
+        index.len() != 0
     }
 }
 
@@ -92,6 +97,10 @@ impl DimTrait for Dim1 {
     fn len(&self) -> usize {
         1
     }
+
+    fn is_empty(&self) -> bool {
+        todo!()
+    }
 }
 
 #[derive(Clone, Debug, Copy)]
@@ -121,6 +130,7 @@ impl IntoIterator for Dim2 {
     type Item = usize;
     type IntoIter = std::vec::IntoIter<Self::Item>;
 
+    #[allow(clippy::unnecessary_to_owned)]
     fn into_iter(self) -> Self::IntoIter {
         self.dim.to_vec().into_iter()
     }
@@ -135,6 +145,10 @@ impl PartialEq for Dim2 {
 impl DimTrait for Dim2 {
     fn len(&self) -> usize {
         2
+    }
+
+    fn is_empty(&self) -> bool {
+        todo!()
     }
 }
 
@@ -165,6 +179,7 @@ impl IntoIterator for Dim3 {
     type Item = usize;
     type IntoIter = std::vec::IntoIter<Self::Item>;
 
+    #[allow(clippy::unnecessary_to_owned)]
     fn into_iter(self) -> Self::IntoIter {
         self.dim.to_vec().into_iter()
     }
@@ -179,6 +194,10 @@ impl PartialEq for Dim3 {
 impl DimTrait for Dim3 {
     fn len(&self) -> usize {
         3
+    }
+
+    fn is_empty(&self) -> bool {
+        todo!()
     }
 }
 
@@ -209,6 +228,7 @@ impl IntoIterator for Dim4 {
     type Item = usize;
     type IntoIter = std::vec::IntoIter<Self::Item>;
 
+    #[allow(clippy::unnecessary_to_owned)]
     fn into_iter(self) -> Self::IntoIter {
         self.dim.to_vec().into_iter()
     }
@@ -223,5 +243,9 @@ impl PartialEq for Dim4 {
 impl DimTrait for Dim4 {
     fn len(&self) -> usize {
         4
+    }
+
+    fn is_empty(&self) -> bool {
+        todo!()
     }
 }
