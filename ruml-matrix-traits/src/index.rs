@@ -22,7 +22,7 @@ impl<D: DimTrait> ShapeStride<D> {
 pub trait IndexTrait {
     type InDim: DimTrait;
     type OutDim: DimTrait;
-    fn sliced_index_stride(
+    fn sliced_shape_stride(
         &self,
         shape: &Self::InDim,
         stride: &Self::InDim,

@@ -1,7 +1,7 @@
 use std::ops::Index;
 
 pub trait DimTrait:
-    Index<usize, Output = isize> + IntoIterator<Item = isize> + Clone + Copy + PartialEq
+    Index<usize, Output = usize> + IntoIterator<Item = usize> + Clone + Copy + PartialEq
 {
     fn len(&self) -> usize;
     fn is_overflow<D: DimTrait>(&self, index: D) -> bool {
@@ -13,7 +13,7 @@ pub trait DimTrait:
     }
 }
 
-pub fn cal_offset<D1: DimTrait, D2: DimTrait>(shape: D1, stride: D2) -> isize {
+pub fn cal_offset<D1: DimTrait, D2: DimTrait>(shape: D1, stride: D2) -> usize {
     if shape.len() != stride.len() {
         panic!("Dimension mismatch");
     }
