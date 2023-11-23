@@ -20,13 +20,8 @@ impl<D: DimTrait> ShapeStride<D> {
 }
 
 pub trait SliceTrait {
-    type InDim: DimTrait;
-    type OutDim: DimTrait;
-    fn sliced_shape_stride(
-        &self,
-        shape: &Self::InDim,
-        stride: &Self::InDim,
-    ) -> ShapeStride<Self::OutDim>;
+    type Dim: DimTrait;
+    fn sliced_shape_stride(&self, shape: &Self::Dim, stride: &Self::Dim) -> ShapeStride<Self::Dim>;
 }
 
 pub trait IndexTrait<InDim, OutDim> {}

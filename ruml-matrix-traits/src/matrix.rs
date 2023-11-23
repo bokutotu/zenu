@@ -1,40 +1,32 @@
-use std::ops::{Index, IndexMut};
-
 use crate::{
     dim::DimTrait,
     index::{ShapeStride, SliceTrait},
     memory::Memory,
 };
 
-pub trait Hoge {}
-
-pub trait Matrix<IT>: Index<IT> + IndexMut<IT> + Clone
-where
-    IT: SliceTrait,
-{
+pub trait Matrix: Clone {
     type Dim: DimTrait;
     type Memory: Memory;
 
     fn shape_stride(&self) -> ShapeStride<Self::Dim>;
-    fn shape(&self) -> Self::Dim;
-    fn stride(&self) -> Self::Dim;
     fn memory(&self) -> &Self::Memory;
 }
 
-pub trait OwnedMatrix<IT>: Matrix<IT>
-where
-    IT: SliceTrait,
-{
-    type View: ViewMatrix<IT>;
+pub trait OwnedMatrix: Matrix {
+    type View: ViewMatrix;
 
-    fn into_view(self) -> Self::View;
+    fn to_view(&self) -> Self::View;
+    fn construct(data: Self::Memory, shape: Self::Dim, stride: Self::Dim) -> Self;
 }
 
-pub trait ViewMatrix<IT>: Matrix<IT>
-where
-    IT: SliceTrait,
-{
-    type Owned: OwnedMatrix<IT>;
+pub trait ViewMatrix: Matrix {
+    type Owned: OwnedMatrix;
 
-    fn into_owned(self) -> Self::Owned;
+    fn construct(data: Self::Memory, shape: Self::Dim, stride: Self::Dim) -> Self;
+    fn to_owned(&self) -> Self::Owned;
+}
+
+pub trait MatrixSlice<S: SliceTrait>: Matrix {
+    type Output: ViewMatrix;
+    fn slice(&self, index: S) -> Self::Output;
 }

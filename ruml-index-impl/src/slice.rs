@@ -108,14 +108,9 @@ impl From<RangeFrom<usize>> for SliceDim {
 pub struct Slice0D {}
 
 impl SliceTrait for Slice0D {
-    type InDim = Dim0;
-    type OutDim = Dim0;
+    type Dim = Dim0;
 
-    fn sliced_shape_stride(
-        &self,
-        shape: &Self::InDim,
-        stride: &Self::InDim,
-    ) -> ShapeStride<Self::OutDim> {
+    fn sliced_shape_stride(&self, shape: &Self::Dim, stride: &Self::Dim) -> ShapeStride<Self::Dim> {
         ShapeStride::new(*shape, *stride)
     }
 }
@@ -127,14 +122,9 @@ pub struct Slice1D {
 }
 
 impl SliceTrait for Slice1D {
-    type InDim = Dim1;
-    type OutDim = Dim1;
+    type Dim = Dim1;
 
-    fn sliced_shape_stride(
-        &self,
-        shape: &Self::InDim,
-        stride: &Self::InDim,
-    ) -> ShapeStride<Self::OutDim> {
+    fn sliced_shape_stride(&self, shape: &Self::Dim, stride: &Self::Dim) -> ShapeStride<Self::Dim> {
         let new_dim = self.index.new_dim(shape.dim());
         let new_stride = self.index.new_stride(stride.dim());
         ShapeStride::new(Dim1::new(new_dim), Dim1::new(new_stride))
@@ -147,14 +137,9 @@ pub struct Slice2D {
 }
 
 impl SliceTrait for Slice2D {
-    type InDim = Dim2;
-    type OutDim = Dim2;
+    type Dim = Dim2;
 
-    fn sliced_shape_stride(
-        &self,
-        shape: &Self::InDim,
-        stride: &Self::InDim,
-    ) -> ShapeStride<Self::OutDim> {
+    fn sliced_shape_stride(&self, shape: &Self::Dim, stride: &Self::Dim) -> ShapeStride<Self::Dim> {
         let new_dim0 = self.index[0].new_dim(shape[0]);
         let new_dim1 = self.index[1].new_dim(shape[1]);
         let new_stride0 = self.index[0].new_stride(stride[0]);
@@ -172,14 +157,9 @@ pub struct Slice3D {
 }
 
 impl SliceTrait for Slice3D {
-    type InDim = Dim3;
-    type OutDim = Dim3;
+    type Dim = Dim3;
 
-    fn sliced_shape_stride(
-        &self,
-        shape: &Self::InDim,
-        stride: &Self::InDim,
-    ) -> ShapeStride<Self::OutDim> {
+    fn sliced_shape_stride(&self, shape: &Self::Dim, stride: &Self::Dim) -> ShapeStride<Self::Dim> {
         let new_dim0 = self.index[0].new_dim(shape[0]);
         let new_dim1 = self.index[1].new_dim(shape[1]);
         let new_dim2 = self.index[2].new_dim(shape[2]);
@@ -199,14 +179,9 @@ pub struct Slice4D {
 }
 
 impl SliceTrait for Slice4D {
-    type InDim = Dim4;
-    type OutDim = Dim4;
+    type Dim = Dim4;
 
-    fn sliced_shape_stride(
-        &self,
-        shape: &Self::InDim,
-        stride: &Self::InDim,
-    ) -> ShapeStride<Self::OutDim> {
+    fn sliced_shape_stride(&self, shape: &Self::Dim, stride: &Self::Dim) -> ShapeStride<Self::Dim> {
         let new_dim0 = self.index[0].new_dim(shape[0]);
         let new_dim1 = self.index[1].new_dim(shape[1]);
         let new_dim2 = self.index[2].new_dim(shape[2]);
