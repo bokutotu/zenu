@@ -48,17 +48,7 @@ impl SliceDim {
         let end = self.end.unwrap_or(dim - 1);
         let step = self.step.unwrap_or(1);
 
-        if step == 1 {
-            return end - start + 1;
-        }
-
-        let mut new_dim = 0;
-        let mut i = start;
-        while i <= end {
-            new_dim += 1;
-            i += step;
-        }
-        new_dim
+        (end - start) / step
     }
 
     fn new_dim(&self, dim: usize) -> usize {
@@ -230,4 +220,30 @@ impl IndexTrait for Slice4D {
             Dim4::new([new_stride0, new_stride1, new_stride2, new_stride3]),
         )
     }
+}
+
+#[test]
+fn test_sliced_shape_stride_2d() {
+    let original_shape = Dim2::new([10, 20]);
+    let original_stride = Dim2::new([1, 10]);
+    let slice = crate::slice!(1..5;2, 3..10;1);
+    let new = slice.sliced_shape_stride(&original_shape, &original_stride);
+
+    assert_eq!(new.shape(), Dim2::new([2, 7]));
+    assert_eq!(new.stride(), Dim2::new([2, 10]));
+}
+
+#[test]
+fn test_sliced_shape_stride_3d() {
+    // 3Dの元の形状とストライドを設定
+    let original_shape = Dim3::new([10, 20, 30]);
+    let original_stride = Dim3::new([1, 10, 200]);
+    // スライス操作を定義
+    let slice = crate::slice!(1..5;2, 3..10;1, ..15;3);
+    // 新しい形状とストライドを計算
+    let new = slice.sliced_shape_stride(&original_shape, &original_stride);
+
+    // 期待される新しい形状とストライドを検証
+    assert_eq!(new.shape(), Dim3::new([2, 7, 5]));
+    assert_eq!(new.stride(), Dim3::new([2, 10, 600]),);
 }
