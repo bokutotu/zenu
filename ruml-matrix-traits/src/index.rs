@@ -24,4 +24,8 @@ pub trait SliceTrait {
     fn sliced_shape_stride(&self, shape: &Self::Dim, stride: &Self::Dim) -> ShapeStride<Self::Dim>;
 }
 
-pub trait IndexTrait<InDim, OutDim> {}
+/// Matrixに対して、Indexを取得してTを取得するのに使用するトレイト
+pub trait IndexTrait {
+    type Dim: DimTrait;
+    fn offset(&self, shape: &Self::Dim, stride: &Self::Dim) -> usize;
+}

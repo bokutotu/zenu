@@ -5,6 +5,9 @@ pub trait Memory {
 
     fn as_ptr(&self) -> *const Self::Item;
     fn as_mut_ptr(&mut self) -> *mut Self::Item;
+    fn offset(&self, offset: usize) -> &Self::Item {
+        unsafe { &*self.as_ptr().add(offset) as &Self::Item }
+    }
 }
 
 pub trait OwnedMemory: Memory {

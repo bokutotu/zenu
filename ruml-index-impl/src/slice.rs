@@ -1,4 +1,4 @@
-use std::ops::{Range, RangeFrom, RangeFull, RangeTo};
+use std::ops::{Index, Range, RangeFrom, RangeFull, RangeTo};
 
 use ruml_dim_impl::{Dim0, Dim1, Dim2, Dim3, Dim4};
 use ruml_matrix_traits::index::{ShapeStride, SliceTrait};
@@ -125,9 +125,9 @@ impl SliceTrait for Slice1D {
     type Dim = Dim1;
 
     fn sliced_shape_stride(&self, shape: &Self::Dim, stride: &Self::Dim) -> ShapeStride<Self::Dim> {
-        let new_dim = self.index.new_dim(shape.dim());
-        let new_stride = self.index.new_stride(stride.dim());
-        ShapeStride::new(Dim1::new(new_dim), Dim1::new(new_stride))
+        let new_dim = self.index.new_dim(shape.dim()[0]);
+        let new_stride = self.index.new_stride(stride.dim()[0]);
+        ShapeStride::new(Dim1::new([new_dim]), Dim1::new([new_stride]))
     }
 }
 
