@@ -58,8 +58,8 @@ macro_rules! impl_index {
             type Output = T;
 
             fn index(&self, index: $dim_ty) -> &Self::Output {
-                let offset = index.offset(&self.shape(), &self.stride());
-                &self.data().offset(offset)
+                let offset = dbg!(index.offset(&self.shape(), &self.stride()));
+                &self.data().ptr_add(offset)
             }
         }
     };
@@ -72,3 +72,51 @@ impl_index!(CpuOwnedMatrix1D<T>, Dim1);
 impl_index!(CpuOwnedMatrix2D<T>, Dim2);
 impl_index!(CpuOwnedMatrix3D<T>, Dim3);
 impl_index!(CpuOwnedMatrix4D<T>, Dim4);
+
+#[cfg(test)]
+mod matrix_index_test {
+    use ruml_dim_impl::{Dim1, Dim2};
+    use ruml_matrix_traits::matrix::{Matrix, OwnedMatrix};
+
+    use crate::matrix::CpuOwnedMatrix1D;
+
+    use super::CpuOwnedMatrix2D;
+
+    #[test]
+    fn test_index() {
+        println!("test_index");
+        let owned = CpuOwnedMatrix1D::from_vec(vec![1., 2., 3., 4.], Dim1::new([4]));
+        let stride = owned.stride();
+        println!("stride: {:?}", stride);
+        let view = owned.to_view();
+        assert_eq!(owned[Dim1::new([0])], 1.);
+        // assert_eq!(view[Dim1::new([0])], 1.);
+
+        assert_eq!(owned[Dim1::new([1])], 2.);
+        // assert_eq!(view[Dim1::new([1])], 2.);
+
+        assert_eq!(owned[Dim1::new([2])], 3.);
+        // assert_eq!(view[Dim1::new([2])], 3.);
+
+        assert_eq!(owned[Dim1::new([3])], 4.);
+        // assert_eq!(view[Dim1::new([3])], 4.);
+    }
+
+    #[test]
+    fn test_index_2d() {
+        let owned = CpuOwnedMatrix2D::from_vec(vec![1., 2., 3., 4.], Dim2::new([2, 2]));
+        //     let view = owned.to_view();
+
+        assert_eq!(owned[Dim2::new([0, 0])], 1.);
+        //     assert_eq!(view[Dim2::new([0, 0])], 1.);
+
+        assert_eq!(owned[Dim2::new([0, 1])], 2.);
+        //     assert_eq!(view[Dim2::new([0, 1])], 2.);
+
+        assert_eq!(owned[Dim2::new([1, 0])], 3.);
+        //     assert_eq!(view[Dim2::new([1, 0])], 3.);
+
+        assert_eq!(owned[Dim2::new([1, 1])], 4.);
+        //     assert_eq!(view[Dim2::new([1, 1])], 4.);
+    }
+}

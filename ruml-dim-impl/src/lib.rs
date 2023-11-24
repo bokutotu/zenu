@@ -1,4 +1,4 @@
-use std::ops::Index;
+use std::ops::{Index, IndexMut};
 
 use ruml_matrix_traits::{dim::DimTrait, index::IndexTrait};
 
@@ -16,6 +16,12 @@ impl Index<usize> for Dim0 {
 
     fn index(&self, _: usize) -> &Self::Output {
         &0
+    }
+}
+
+impl IndexMut<usize> for Dim0 {
+    fn index_mut(&mut self, _: usize) -> &mut Self::Output {
+        todo!();
     }
 }
 
@@ -84,6 +90,15 @@ macro_rules! impl_dim {
                     panic!("Index out of range");
                 }
                 &self.dim[index]
+            }
+        }
+
+        impl IndexMut<usize> for $name {
+            fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+                if index >= self.dim.len() {
+                    panic!("Index out of range");
+                }
+                &mut self.dim[index]
             }
         }
 

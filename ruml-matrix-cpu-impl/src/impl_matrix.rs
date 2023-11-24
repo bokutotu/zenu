@@ -1,8 +1,9 @@
 use ruml_dim_impl::{Dim1, Dim2, Dim3, Dim4};
 use ruml_matrix_traits::{
+    dim::default_stride,
     index::ShapeStride,
     matrix::{Matrix, OwnedMatrix, ViewMatrix},
-    memory::{OwnedMemory, ViewMemory},
+    memory::{Memory, OwnedMemory, ViewMemory},
     num::Num,
 };
 
@@ -26,6 +27,16 @@ macro_rules! impl_matrix {
 
             fn memory(&self) -> &Self::Memory {
                 &self.data()
+            }
+
+            fn from_vec(v: Vec<T>, shape: $dim) -> Self {
+                let num_elements = shape.clone().dim().iter().product();
+                if v.len() != num_elements {
+                    panic!("Vector length does not match shape");
+                }
+                let data = <Self::Memory as Memory>::from_vec(v);
+                let stride = default_stride(shape.clone());
+                Self::new(data, shape, stride)
             }
         }
     };

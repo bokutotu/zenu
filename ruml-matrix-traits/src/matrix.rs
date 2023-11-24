@@ -10,6 +10,7 @@ pub trait Matrix: Clone {
 
     fn shape_stride(&self) -> ShapeStride<Self::Dim>;
     fn memory(&self) -> &Self::Memory;
+    fn from_vec(vec: Vec<<<Self as Matrix>::Memory as Memory>::Item>, dim: Self::Dim) -> Self;
 }
 
 pub trait OwnedMatrix: Matrix {

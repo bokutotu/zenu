@@ -5,16 +5,22 @@ use ruml_matrix_traits::{
     num::Num,
 };
 
-#[derive(Clone)]
 pub struct CpuOwnedMemory<T: Num> {
     buffer: NonNull<T>,
     len: usize,
 }
 
+impl<T: Num> Clone for CpuOwnedMemory<T> {
+    fn clone(&self) -> Self {
+        let v = self.as_slice().to_vec().clone();
+        Self::from_vec(v)
+    }
+}
+
 impl<T: Num> CpuOwnedMemory<T> {
     pub fn new(size: usize) -> Self {
-        let mut buffer = vec![T::default(); size];
-        let buffer = NonNull::new(buffer.as_mut_ptr()).unwrap();
+        let mut v = vec![T::default(); size];
+        let buffer = NonNull::new(v.as_mut_ptr()).unwrap();
         Self { buffer, len: size }
     }
 
@@ -27,9 +33,10 @@ impl<T: Num> CpuOwnedMemory<T> {
     }
 
     pub fn from_vec(vec: Vec<T>) -> Self {
+        let mut vec = vec;
         let len = vec.len();
-        let mut buffer = vec;
-        let buffer = NonNull::new(buffer.as_mut_ptr()).unwrap();
+        let buffer = NonNull::new(vec.as_mut_ptr()).unwrap();
+        std::mem::forget(vec); // Vec<T> がドロップされないようにする
         Self { buffer, len }
     }
 }
@@ -42,7 +49,11 @@ impl<T: Num> Memory for CpuOwnedMemory<T> {
     }
 
     fn as_mut_ptr(&mut self) -> *mut Self::Item {
-        self.buffer.as_ptr()
+        unsafe { self.buffer.as_mut() }
+    }
+
+    fn from_vec(vec: Vec<Self::Item>) -> Self {
+        Self::from_vec(vec)
     }
 }
 
@@ -62,7 +73,10 @@ impl<T: Num> OwnedMemory for CpuOwnedMemory<T> {
     }
 
     fn to_view(&self, offset: usize) -> Self::View {
-        CpuViewMemory::new(Arc::new(self.clone()), offset)
+        let buffer = self.buffer;
+        let len = self.len;
+        let reference = Arc::new(Self { buffer, len });
+        CpuViewMemory::new(reference, offset)
     }
 }
 
@@ -88,6 +102,11 @@ impl<T: Num> Memory for CpuViewMemory<T> {
     fn as_mut_ptr(&mut self) -> *mut Self::Item {
         self.as_ptr() as *mut _
     }
+
+    fn from_vec(vec: Vec<Self::Item>) -> Self {
+        let data: CpuOwnedMemory<T> = CpuOwnedMemory::from_vec(vec);
+        Self::new(Arc::new(data), 0)
+    }
 }
 
 impl<T: Num> ViewMemory for CpuViewMemory<T> {
@@ -100,4 +119,31 @@ impl<T: Num> ViewMemory for CpuViewMemory<T> {
         let v = self.reference.as_slice().to_vec().clone();
         CpuOwnedMemory::from_vec(v)
     }
+}
+
+impl<T: Num> Drop for CpuOwnedMemory<T> {
+    fn drop(&mut self) {
+        // panic!("CpuOwnedMemory is not allowed to drop");
+        unsafe {
+            let _ = Vec::from_raw_parts(self.buffer.as_ptr(), self.len, self.len);
+        }
+    }
+}
+
+#[test]
+fn test_cpu_owned_memory() {
+    let v = vec![1., 2., 3., 4., 5.];
+    let m = CpuOwnedMemory::from_vec(v);
+    assert_eq!(m.as_slice(), &[1., 2., 3., 4., 5.]);
+    assert_eq!(m.ptr_add(0), &1.);
+}
+
+#[test]
+fn test_cpu_owned_to_view() {
+    let v = vec![1., 2., 3., 4., 5.];
+    let m = CpuOwnedMemory::from_vec(v);
+    println!("here");
+    let v = m.to_view(1);
+    // let v_0 = unsafe { *v.as_ptr() };
+    // assert_eq!(v_0, 2.);
 }

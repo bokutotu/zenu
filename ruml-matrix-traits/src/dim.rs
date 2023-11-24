@@ -1,7 +1,12 @@
-use std::ops::Index;
+use std::ops::{Index, IndexMut};
 
 pub trait DimTrait:
-    Index<usize, Output = usize> + IntoIterator<Item = usize> + Clone + Copy + PartialEq
+    Index<usize, Output = usize>
+    + IndexMut<usize>
+    + IntoIterator<Item = usize>
+    + Clone
+    + Copy
+    + PartialEq
 {
     fn len(&self) -> usize;
     fn is_empty(&self) -> bool;
@@ -19,4 +24,29 @@ pub fn cal_offset<D1: DimTrait, D2: DimTrait>(shape: D1, stride: D2) -> usize {
         panic!("Dimension mismatch");
     }
     shape.into_iter().zip(stride).map(|(x, y)| x * y).sum()
+}
+
+pub fn default_stride<D: DimTrait>(shape: D) -> D {
+    let mut stride = shape.clone();
+    let n = shape.len();
+
+    if n == 0 {
+        return stride;
+    }
+
+    println!("here");
+    if n == 1 {
+        stride[0] = 1;
+        return stride;
+    }
+
+    // 最後の次元のストライドは常に1
+    stride[n - 1] = 1;
+
+    // 残りの次元に対して、後ろから前へ計算
+    for i in (0..n - 1).rev() {
+        stride[i] = stride[i + 1] * shape[i + 1];
+    }
+
+    stride
 }
