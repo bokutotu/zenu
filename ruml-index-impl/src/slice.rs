@@ -1,4 +1,4 @@
-use std::ops::{Index, Range, RangeFrom, RangeFull, RangeTo};
+use std::ops::{Range, RangeFrom, RangeFull, RangeTo};
 
 use ruml_dim_impl::{Dim0, Dim1, Dim2, Dim3, Dim4};
 use ruml_matrix_traits::index::{ShapeStride, SliceTrait};

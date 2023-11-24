@@ -47,7 +47,6 @@ macro_rules! impl_slice {
         }
     };
 }
-
 impl_slice!(CpuOwnedMatrix1D<T>, CpuViewMatrix1D<T>, Slice1D);
 impl_slice!(CpuOwnedMatrix2D<T>, CpuViewMatrix2D<T>, Slice2D);
 impl_slice!(CpuOwnedMatrix3D<T>, CpuViewMatrix3D<T>, Slice3D);
