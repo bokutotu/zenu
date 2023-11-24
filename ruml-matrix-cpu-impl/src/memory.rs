@@ -1,4 +1,4 @@
-use std::{ptr::NonNull, sync::Arc};
+use std::ptr::NonNull;
 
 use ruml_matrix_traits::{
     memory::{Memory, OwnedMemory, ViewMemory},
@@ -52,13 +52,13 @@ impl<T: Num> Memory for CpuOwnedMemory<T> {
         unsafe { self.buffer.as_mut() }
     }
 
-    fn from_vec(vec: Vec<Self::Item>) -> Self {
-        Self::from_vec(vec)
-    }
+    // fn from_vec(vec: Vec<Self::Item>) -> Self {
+    //     Self::from_vec(vec)
+    // }
 }
 
-impl<T: Num> OwnedMemory for CpuOwnedMemory<T> {
-    type View = CpuViewMemory<T>;
+impl<'a, T: Num + 'a> OwnedMemory<'a> for CpuOwnedMemory<T> {
+    type View = CpuViewMemory<'a, T>;
 
     fn len(&self) -> usize {
         self.len
@@ -72,27 +72,28 @@ impl<T: Num> OwnedMemory for CpuOwnedMemory<T> {
         Self::new(size)
     }
 
-    fn to_view(&self, offset: usize) -> Self::View {
-        let buffer = self.buffer;
-        let len = self.len;
-        let reference = Arc::new(Self { buffer, len });
-        CpuViewMemory::new(reference, offset)
+    fn to_view(&'a self, offset: usize) -> Self::View {
+        CpuViewMemory::new(self, offset)
+    }
+
+    fn from_vec(vec: Vec<Self::Item>) -> Self {
+        Self::from_vec(vec)
     }
 }
 
 #[derive(Clone)]
-pub struct CpuViewMemory<T: Num> {
-    reference: Arc<CpuOwnedMemory<T>>,
+pub struct CpuViewMemory<'a, T: Num> {
+    reference: &'a CpuOwnedMemory<T>,
     offset: usize,
 }
 
-impl<T: Num> CpuViewMemory<T> {
-    pub fn new(reference: Arc<CpuOwnedMemory<T>>, offset: usize) -> Self {
+impl<'a, T: Num> CpuViewMemory<'a, T> {
+    pub fn new(reference: &'a CpuOwnedMemory<T>, offset: usize) -> Self {
         Self { reference, offset }
     }
 }
 
-impl<T: Num> Memory for CpuViewMemory<T> {
+impl<'a, T: Num> Memory for CpuViewMemory<'a, T> {
     type Item = T;
 
     fn as_ptr(&self) -> *const Self::Item {
@@ -102,14 +103,9 @@ impl<T: Num> Memory for CpuViewMemory<T> {
     fn as_mut_ptr(&mut self) -> *mut Self::Item {
         self.as_ptr() as *mut _
     }
-
-    fn from_vec(vec: Vec<Self::Item>) -> Self {
-        let data: CpuOwnedMemory<T> = CpuOwnedMemory::from_vec(vec);
-        Self::new(Arc::new(data), 0)
-    }
 }
 
-impl<T: Num> ViewMemory for CpuViewMemory<T> {
+impl<'a, 'b, T: Num + 'b> ViewMemory<'b> for CpuViewMemory<'a, T> {
     type Owned = CpuOwnedMemory<T>;
     fn offset(&self) -> usize {
         self.offset
@@ -144,6 +140,6 @@ fn test_cpu_owned_to_view() {
     let m = CpuOwnedMemory::from_vec(v);
     println!("here");
     let v = m.to_view(1);
-    // let v_0 = unsafe { *v.as_ptr() };
-    // assert_eq!(v_0, 2.);
+    let v_0 = unsafe { *v.as_ptr() };
+    assert_eq!(v_0, 2.);
 }

@@ -10,14 +10,16 @@ pub trait Matrix: Clone {
 
     fn shape_stride(&self) -> ShapeStride<Self::Dim>;
     fn memory(&self) -> &Self::Memory;
-    fn from_vec(vec: Vec<<<Self as Matrix>::Memory as Memory>::Item>, dim: Self::Dim) -> Self;
 }
 
 pub trait OwnedMatrix: Matrix {
-    type View: ViewMatrix;
+    type View<'a>: ViewMatrix
+    where
+        Self: 'a;
 
-    fn to_view(&self) -> Self::View;
+    fn to_view<'a>(&'a self) -> Self::View<'a>;
     fn construct(data: Self::Memory, shape: Self::Dim, stride: Self::Dim) -> Self;
+    fn from_vec(vec: Vec<<<Self as Matrix>::Memory as Memory>::Item>, dim: Self::Dim) -> Self;
 }
 
 pub trait ViewMatrix: Matrix {
@@ -28,6 +30,8 @@ pub trait ViewMatrix: Matrix {
 }
 
 pub trait MatrixSlice<S: SliceTrait>: Matrix {
-    type Output: ViewMatrix;
-    fn slice(&self, index: S) -> Self::Output;
+    type Output<'a>: ViewMatrix
+    where
+        Self: 'a;
+    fn slice<'a>(&'a self, index: S) -> Self::Output<'a>;
 }
