@@ -50,14 +50,14 @@ macro_rules! slice(
 
     (@final [$dim1:expr]) => {
         match $dim1 {
-            dim1 => Slice1D {
-                    index: dim1,
+            dim1 => $crate::slice::Slice1D {
+                    index: [dim1],
                 }
         }
     };
 
     (@final [$dim1:expr, $dim2:expr]) => {
-        Slice2D {
+        $crate::slice::Slice2D {
             index: [$dim1, $dim2],
         }
     };
@@ -92,11 +92,11 @@ mod tests {
         assert_eq!(
             slice,
             Slice1D {
-                index: SliceDim {
+                index: [SliceDim {
                     start: Some(1),
                     end: Some(5),
                     step: Some(2)
-                }
+                }]
             }
         );
     }

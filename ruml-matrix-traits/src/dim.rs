@@ -27,7 +27,7 @@ pub fn cal_offset<D1: DimTrait, D2: DimTrait>(shape: D1, stride: D2) -> usize {
 }
 
 pub fn default_stride<D: DimTrait>(shape: D) -> D {
-    let mut stride = shape.clone();
+    let mut stride = shape;
     let n = shape.len();
 
     if n == 0 {

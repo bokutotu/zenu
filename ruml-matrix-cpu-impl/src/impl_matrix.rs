@@ -64,7 +64,7 @@ macro_rules! impl_owned {
         impl<T: Num> OwnedMatrix for $owned_ty {
             type View<'a> = $view_ty where T: 'a;
 
-            fn to_view<'a>(&'a self) -> Self::View<'a> {
+            fn to_view(&self) -> Self::View<'_> {
                 let data = self.data().to_view(0);
 
                 Self::View::new(data, self.shape(), self.stride())

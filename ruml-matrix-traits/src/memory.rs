@@ -6,9 +6,6 @@ pub trait Memory {
     fn as_ptr(&self) -> *const Self::Item;
     fn as_mut_ptr(&mut self) -> *mut Self::Item;
     fn ptr_add(&self, offset: usize) -> &Self::Item {
-        unsafe {
-            println!("{:?}", *(self.as_ptr() as *const Self::Item));
-        }
         unsafe { &*self.as_ptr().add(offset) }
     }
 }

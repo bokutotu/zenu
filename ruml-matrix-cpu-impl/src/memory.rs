@@ -91,6 +91,10 @@ impl<'a, T: Num> CpuViewMemory<'a, T> {
     pub fn new(reference: &'a CpuOwnedMemory<T>, offset: usize) -> Self {
         Self { reference, offset }
     }
+
+    pub fn reference(&self) -> &'a CpuOwnedMemory<T> {
+        self.reference
+    }
 }
 
 impl<'a, T: Num> Memory for CpuViewMemory<'a, T> {
@@ -138,7 +142,6 @@ fn test_cpu_owned_memory() {
 fn test_cpu_owned_to_view() {
     let v = vec![1., 2., 3., 4., 5.];
     let m = CpuOwnedMemory::from_vec(v);
-    println!("here");
     let v = m.to_view(1);
     let v_0 = unsafe { *v.as_ptr() };
     assert_eq!(v_0, 2.);

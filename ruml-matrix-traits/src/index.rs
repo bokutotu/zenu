@@ -1,5 +1,6 @@
 use crate::dim::DimTrait;
 
+#[derive(Clone, Debug, Copy, PartialEq)]
 pub struct ShapeStride<D: DimTrait> {
     shape: D,
     stride: D,
@@ -22,6 +23,7 @@ impl<D: DimTrait> ShapeStride<D> {
 pub trait SliceTrait {
     type Dim: DimTrait;
     fn sliced_shape_stride(&self, shape: &Self::Dim, stride: &Self::Dim) -> ShapeStride<Self::Dim>;
+    fn sliced_offset(&self, stride: &Self::Dim, original_offset: usize) -> usize;
 }
 
 /// Matrixに対して、Indexを取得してTを取得するのに使用するトレイト
