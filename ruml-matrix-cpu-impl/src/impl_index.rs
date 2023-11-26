@@ -13,7 +13,6 @@ use crate::matrix::{
     CpuOwnedMatrix1D, CpuOwnedMatrix2D, CpuOwnedMatrix3D, CpuOwnedMatrix4D, CpuViewMatrix1D,
     CpuViewMatrix2D, CpuViewMatrix3D, CpuViewMatrix4D,
 };
-use crate::memory::CpuViewMemory;
 
 macro_rules! impl_slice {
     ($owned_ty:ty, $view_ty:ty, $slice_ty:ty) => {
@@ -41,9 +40,10 @@ macro_rules! impl_slice {
                 let stride = self.stride();
 
                 let new_shape_stride = index.sliced_shape_stride(&shape, &stride);
-                let offset = index.sliced_offset(&stride, self.data().offset());
+                let offset = index.sliced_offset(&stride, self.data().get_offset());
 
-                let data = CpuViewMemory::new(self.data().reference(), offset);
+                let mut data = self.data().clone();
+                data.set_offset(offset);
 
                 <$view_ty>::new(data, new_shape_stride.shape(), new_shape_stride.stride())
             }

@@ -1,7 +1,7 @@
 use ruml_index_impl::index::{Index0D, Index1D, Index2D, Index3D};
 use ruml_matrix_traits::{
     matrix::{IndexAxis, ViewMatrix},
-    memory::OwnedMemory,
+    memory::{Memory, OwnedMemory, ViewMemory},
     num::Num,
 };
 
@@ -9,7 +9,6 @@ use crate::matrix::{
     CpuOwnedMatrix2D, CpuOwnedMatrix3D, CpuOwnedMatrix4D, CpuViewMatrix1D, CpuViewMatrix2D,
     CpuViewMatrix3D, CpuViewMatrix4D,
 };
-use crate::memory::CpuViewMemory;
 
 macro_rules! impl_index_axis {
     ($impl_ty:ty, $output_ty:ty, $($index_ty:ty)*) => {
@@ -40,8 +39,9 @@ macro_rules! impl_index_view_axis {
 
                 fn index_axis(&self, index: $index_ty) -> Self::Output<'_> {
                     let shape_stride = index.get_shape_stride(&self.shape(), &self.stride());
-                    let offset = index.get_offset(self.stride());
-                    let data = CpuViewMemory::new(self.data().reference(), offset);
+                    let offset = index.get_offset(self.stride()) + self.data().get_offset();
+                    let mut data = self.data().clone();
+                    data.set_offset(offset);
                     Self::Output::construct(data, shape_stride.shape(), shape_stride.stride())
                 }
             }
@@ -52,3 +52,6 @@ macro_rules! impl_index_view_axis {
 impl_index_view_axis!(CpuViewMatrix2D<'a, T>, CpuViewMatrix1D<'a, T>, Index0D Index1D);
 impl_index_view_axis!(CpuViewMatrix3D<'a, T>, CpuViewMatrix2D<'a, T>, Index0D Index1D Index2D);
 impl_index_view_axis!(CpuViewMatrix4D<'a, T>, CpuViewMatrix3D<'a, T>, Index0D Index1D Index2D Index3D);
+
+#[cfg(test)]
+mod index_axis {}

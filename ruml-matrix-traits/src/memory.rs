@@ -23,6 +23,6 @@ pub trait OwnedMemory<'a>: Memory {
 
 pub trait ViewMemory<'b>: Memory {
     type Owned: OwnedMemory<'b>;
-    fn offset(&self) -> usize;
     fn to_owned(&self) -> Self::Owned;
+    fn set_offset(&mut self, offset: usize);
 }

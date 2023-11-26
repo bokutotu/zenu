@@ -19,7 +19,7 @@ impl<T: Num> Clone for CpuOwnedMemory<T> {
 }
 
 impl<T: Num> CpuOwnedMemory<T> {
-    pub fn new(size: usize) -> Self {
+    fn new(size: usize) -> Self {
         let mut v = vec![T::default(); size];
         let buffer = NonNull::new(v.as_mut_ptr()).unwrap();
         Self {
@@ -29,15 +29,11 @@ impl<T: Num> CpuOwnedMemory<T> {
         }
     }
 
-    pub fn as_slice(&self) -> &[T] {
+    fn as_slice(&self) -> &[T] {
         unsafe { std::slice::from_raw_parts(self.buffer.as_ptr(), self.len) }
     }
 
-    pub fn as_mut_slice(&mut self) -> &mut [T] {
-        unsafe { std::slice::from_raw_parts_mut(self.buffer.as_ptr(), self.len) }
-    }
-
-    pub fn from_vec(vec: Vec<T>) -> Self {
+    fn from_vec(vec: Vec<T>) -> Self {
         let mut vec = vec;
         let len = vec.len();
         let buffer = NonNull::new(vec.as_mut_ptr()).unwrap();
@@ -49,7 +45,7 @@ impl<T: Num> CpuOwnedMemory<T> {
         }
     }
 
-    pub fn from_vec_with_offset(vec: Vec<T>, offset: usize) -> Self {
+    fn from_vec_with_offset(vec: Vec<T>, offset: usize) -> Self {
         let mut vec = vec;
         let len = vec.len();
         let buffer = NonNull::new(vec.as_mut_ptr()).unwrap();
@@ -112,10 +108,6 @@ impl<'a, T: Num> CpuViewMemory<'a, T> {
     pub fn new(reference: &'a CpuOwnedMemory<T>, offset: usize) -> Self {
         Self { reference, offset }
     }
-
-    pub fn reference(&self) -> &'a CpuOwnedMemory<T> {
-        self.reference
-    }
 }
 
 impl<'a, T: Num> Memory for CpuViewMemory<'a, T> {
@@ -136,20 +128,20 @@ impl<'a, T: Num> Memory for CpuViewMemory<'a, T> {
 
 impl<'a, 'b, T: Num + 'b> ViewMemory<'b> for CpuViewMemory<'a, T> {
     type Owned = CpuOwnedMemory<T>;
-    fn offset(&self) -> usize {
-        self.offset
-    }
 
     fn to_owned(&self) -> CpuOwnedMemory<T> {
         let v = self.reference.as_slice().to_vec().clone();
         let offset = self.offset;
         CpuOwnedMemory::from_vec_with_offset(v, offset)
     }
+
+    fn set_offset(&mut self, offset: usize) {
+        self.offset = offset;
+    }
 }
 
 impl<T: Num> Drop for CpuOwnedMemory<T> {
     fn drop(&mut self) {
-        // panic!("CpuOwnedMemory is not allowed to drop");
         unsafe {
             let _ = Vec::from_raw_parts(self.buffer.as_ptr(), self.len, self.len);
         }
