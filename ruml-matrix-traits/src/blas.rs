@@ -1,72 +1,70 @@
 use crate::num::Num;
 
-pub enum Trans {
-    N,
-    T,
-    C,
+pub enum BlasTrans {
+    None,
+    Ordinary,
+    Conjugate,
 }
 
-pub trait Blas {
-    type Item: Num;
+pub enum BlasLayout {
+    RowMajor,
+    ColMajor,
+}
 
-    fn swap(&self, n: usize, x: *mut Self::Item, incx: usize, y: *mut Self::Item, incy: usize);
-    fn scal(
-        &self,
-        n: usize,
-        alpha: Self::Item,
-        x: *mut Self::Item,
-        y: *mut Self::Item,
-        incx: usize,
-    );
-    fn copy(&self, x: *mut Self::Item, y: *mut Self::Item, incx: usize, incy: usize);
-    fn dot(&self, x: *mut Self::Item, y: *mut Self::Item, incx: usize, incy: usize) -> Self::Item;
-    fn dotu(&self, x: *mut Self::Item, y: *mut Self::Item, incx: usize, incy: usize) -> Self::Item;
-    fn norm2(&self, x: *mut Self::Item, incx: usize) -> Self::Item;
-    fn asum(&self, x: *mut Self::Item, incx: usize) -> Self::Item;
-    fn amax(&self, x: *mut Self::Item, incx: usize) -> usize;
+pub trait Blas<T: Num> {
+    fn swap(&self, n: usize, x: *mut T, incx: usize, y: *mut T, incy: usize);
+    fn scal(&self, n: usize, alpha: T, x: *mut T, incx: usize);
+    fn copy(&self, n: usize, x: *mut T, incx: usize, y: *mut T, incy: usize);
+    fn dot(&self, n: usize, x: *mut T, incx: usize, y: *mut T, incy: usize) -> T;
+    fn norm2(&self, n: usize, x: *mut T, incx: usize) -> T;
+    fn asum(&self, n: usize, x: *mut T, incx: usize) -> T;
+    fn amax(&self, n: usize, x: *mut T, incx: usize) -> usize;
     #[allow(clippy::too_many_arguments)]
     fn gemv(
         &self,
-        trans: Trans,
+        layout: BlasLayout,
+        trans: BlasTrans,
         m: usize,
         n: usize,
-        alpha: Self::Item,
-        a: *mut Self::Item,
+        alpha: T,
+        a: *mut T,
         lda: usize,
-        x: *mut Self::Item,
+        x: *mut T,
         incx: usize,
-        beta: Self::Item,
-        y: *mut Self::Item,
+        beta: T,
+        y: *mut T,
         incy: usize,
     );
     #[allow(clippy::too_many_arguments)]
     fn ger(
         &self,
+        layout: BlasLayout,
         m: usize,
         n: usize,
-        alpha: Self::Item,
-        x: *mut Self::Item,
+        alpha: T,
+        x: *mut T,
         incx: usize,
-        y: *mut Self::Item,
+        y: *mut T,
         incy: usize,
-        a: *mut Self::Item,
+        a: *mut T,
         lda: usize,
     );
     #[allow(clippy::too_many_arguments)]
     fn gemm(
         &self,
-        transa: Trans,
-        transb: Trans,
+        layout: BlasLayout,
+        transa: BlasTrans,
+        transb: BlasTrans,
         m: usize,
         n: usize,
         k: usize,
-        alpha: Self::Item,
-        a: *mut Self::Item,
+        alpha: T,
+        a: *mut T,
         lda: usize,
-        b: *mut Self::Item,
+        b: *mut T,
         ldb: usize,
-        beta: Self::Item,
-        c: *mut Self::Item,
+        beta: T,
+        c: *mut T,
         ldc: usize,
     );
 }
