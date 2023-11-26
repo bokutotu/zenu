@@ -6,6 +6,7 @@ pub trait DimTrait:
     + IntoIterator<Item = usize>
     + Clone
     + Copy
+    + Default
     + PartialEq
 {
     fn len(&self) -> usize;
@@ -34,7 +35,6 @@ pub fn default_stride<D: DimTrait>(shape: D) -> D {
         return stride;
     }
 
-    println!("here");
     if n == 1 {
         stride[0] = 1;
         return stride;

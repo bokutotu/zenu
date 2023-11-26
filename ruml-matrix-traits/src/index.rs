@@ -31,3 +31,12 @@ pub trait IndexTrait {
     type Dim: DimTrait;
     fn offset(&self, shape: &Self::Dim, stride: &Self::Dim) -> usize;
 }
+
+pub trait IndexAxisTrait {
+    fn get_shape_stride<Din: DimTrait, Dout: DimTrait>(
+        &self,
+        shape: Din,
+        stride: Din,
+    ) -> ShapeStride<Dout>;
+    fn offset<Din: DimTrait>(&self, stride: Din) -> usize;
+}

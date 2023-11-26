@@ -8,6 +8,7 @@ use ruml_matrix_traits::{
 pub struct CpuOwnedMemory<T: Num> {
     buffer: NonNull<T>,
     len: usize,
+    offset: usize,
 }
 
 impl<T: Num> Clone for CpuOwnedMemory<T> {
@@ -21,7 +22,11 @@ impl<T: Num> CpuOwnedMemory<T> {
     pub fn new(size: usize) -> Self {
         let mut v = vec![T::default(); size];
         let buffer = NonNull::new(v.as_mut_ptr()).unwrap();
-        Self { buffer, len: size }
+        Self {
+            buffer,
+            len: size,
+            offset: 0,
+        }
     }
 
     pub fn as_slice(&self) -> &[T] {
@@ -37,7 +42,23 @@ impl<T: Num> CpuOwnedMemory<T> {
         let len = vec.len();
         let buffer = NonNull::new(vec.as_mut_ptr()).unwrap();
         std::mem::forget(vec); // Vec<T> がドロップされないようにする
-        Self { buffer, len }
+        Self {
+            buffer,
+            len,
+            offset: 0,
+        }
+    }
+
+    pub fn from_vec_with_offset(vec: Vec<T>, offset: usize) -> Self {
+        let mut vec = vec;
+        let len = vec.len();
+        let buffer = NonNull::new(vec.as_mut_ptr()).unwrap();
+        std::mem::forget(vec); // Vec<T> がドロップされないようにする
+        Self {
+            buffer,
+            len,
+            offset,
+        }
     }
 }
 
@@ -52,9 +73,9 @@ impl<T: Num> Memory for CpuOwnedMemory<T> {
         unsafe { self.buffer.as_mut() }
     }
 
-    // fn from_vec(vec: Vec<Self::Item>) -> Self {
-    //     Self::from_vec(vec)
-    // }
+    fn get_offset(&self) -> usize {
+        self.offset
+    }
 }
 
 impl<'a, T: Num + 'a> OwnedMemory<'a> for CpuOwnedMemory<T> {
@@ -107,6 +128,10 @@ impl<'a, T: Num> Memory for CpuViewMemory<'a, T> {
     fn as_mut_ptr(&mut self) -> *mut Self::Item {
         self.as_ptr() as *mut _
     }
+
+    fn get_offset(&self) -> usize {
+        self.offset
+    }
 }
 
 impl<'a, 'b, T: Num + 'b> ViewMemory<'b> for CpuViewMemory<'a, T> {
@@ -117,7 +142,8 @@ impl<'a, 'b, T: Num + 'b> ViewMemory<'b> for CpuViewMemory<'a, T> {
 
     fn to_owned(&self) -> CpuOwnedMemory<T> {
         let v = self.reference.as_slice().to_vec().clone();
-        CpuOwnedMemory::from_vec(v)
+        let offset = self.offset;
+        CpuOwnedMemory::from_vec_with_offset(v, offset)
     }
 }
 

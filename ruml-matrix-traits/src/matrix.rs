@@ -1,6 +1,6 @@
 use crate::{
     dim::DimTrait,
-    index::{ShapeStride, SliceTrait},
+    index::{IndexAxisTrait, ShapeStride, SliceTrait},
     memory::Memory,
 };
 
@@ -33,5 +33,15 @@ pub trait MatrixSlice<S: SliceTrait>: Matrix {
     type Output<'a>: ViewMatrix
     where
         Self: 'a;
+
     fn slice(&self, index: S) -> Self::Output<'_>;
+}
+
+pub trait IndexAxis<I: IndexAxisTrait> {
+    // type Index: IndexAxisTrait;
+    type Output<'a>: ViewMatrix
+    where
+        Self: 'a;
+
+    fn index_axis(&self, index: I) -> Self::Output<'_>;
 }

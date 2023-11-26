@@ -8,6 +8,7 @@ pub trait Memory {
     fn ptr_add(&self, offset: usize) -> &Self::Item {
         unsafe { &*self.as_ptr().add(offset) }
     }
+    fn get_offset(&self) -> usize;
 }
 
 pub trait OwnedMemory<'a>: Memory {
