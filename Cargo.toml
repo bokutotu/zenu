@@ -2,7 +2,7 @@
 resolver = "2"
 members = [
     "ruml",
-    "ruml-matrix-traits",
+    "ruml-matrix",
     "ruml-matrix-cpu-impl",
     "ruml-dim-impl",
     "ruml-index-impl",

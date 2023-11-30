@@ -1,6 +1,6 @@
 use crate::num::Num;
 
-pub trait Memory {
+pub trait Memory: Clone {
     type Item: Num;
 
     fn as_ptr(&self) -> *const Self::Item;
@@ -25,4 +25,8 @@ pub trait ViewMemory<'b>: Memory {
     type Owned: OwnedMemory<'b>;
     fn to_owned(&self) -> Self::Owned;
     fn set_offset(&mut self, offset: usize);
+}
+
+pub trait ViewMutMemory<'b>: ViewMemory<'b> {
+    fn as_mut_ptr(&mut self) -> *mut Self::Item;
 }
