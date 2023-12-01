@@ -1,6 +1,6 @@
 use std::ops::{Index, IndexMut};
 
-use ruml_matrix_traits::{dim::DimTrait, index::IndexTrait};
+use ruml_matrix::{dim::DimTrait, index::IndexTrait};
 
 #[derive(Clone, Debug, Copy, Default)]
 pub struct Dim0 {}

@@ -3,7 +3,6 @@ resolver = "2"
 members = [
     "ruml",
     "ruml-matrix",
-    "ruml-matrix-cpu-impl",
     "ruml-dim-impl",
     "ruml-index-impl",
 ]

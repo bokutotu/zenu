@@ -22,8 +22,8 @@ impl<D: DimTrait> ShapeStride<D> {
 
 pub trait SliceTrait {
     type Dim: DimTrait;
-    fn sliced_shape_stride(&self, shape: &Self::Dim, stride: &Self::Dim) -> ShapeStride<Self::Dim>;
-    fn sliced_offset(&self, stride: &Self::Dim, original_offset: usize) -> usize;
+    fn sliced_shape_stride(&self, shape: Self::Dim, stride: Self::Dim) -> ShapeStride<Self::Dim>;
+    fn sliced_offset(&self, stride: Self::Dim, original_offset: usize) -> usize;
 }
 
 /// Matrixに対して、Indexを取得してTを取得するのに使用するトレイト

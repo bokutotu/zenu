@@ -20,6 +20,14 @@ pub trait DimTrait:
     }
 }
 
+pub trait LessDimTrait: DimTrait {
+    type LessDim: DimTrait;
+}
+
+pub trait GreaterDimTrait: DimTrait {
+    type GreaterDim: DimTrait;
+}
+
 pub fn cal_offset<D1: DimTrait, D2: DimTrait>(shape: D1, stride: D2) -> usize {
     if shape.len() != stride.len() {
         panic!("Dimension mismatch");
