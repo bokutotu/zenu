@@ -6,7 +6,7 @@ use crate::{
     matrix::{
         IndexAxis, IndexAxisMut, MatrixBase, MatrixSlice, MatrixSliceMut, OwnedMatrix, ViewMatrix,
     },
-    memory::{Memory, OwnedMemory, ToViewMemory, ToViewMutMemory, ViewMemory},
+    memory::{Memory, OwnedMemory, ToOwnedMemory, ToViewMemory, ToViewMutMemory, ViewMemory},
 };
 
 pub struct Matrix<M, S> {
@@ -48,6 +48,7 @@ where
     M: ViewMemory,
     S: DimTrait,
 {
+    type Owned = Matrix<<<Matrix<M, S> as MatrixBase>::Memory as ToOwnedMemory>::Owned, S>;
 }
 
 impl<M, S> OwnedMatrix for Matrix<M, S>
@@ -55,6 +56,19 @@ where
     M: OwnedMemory,
     S: DimTrait,
 {
+    type View<'a> = Matrix<
+        <<Matrix<M, S> as MatrixBase>::Memory as ToViewMemory>::View<'a>,
+        S
+    >
+    where
+        Self: 'a;
+
+    type ViewMut<'a> = Matrix<
+        <<Matrix<M, S> as MatrixBase>::Memory as ToViewMutMemory>::ViewMut<'a>,
+        S
+    >
+    where
+        Self: 'a;
 }
 
 impl<M, S, SS> MatrixSlice<S, SS> for Matrix<M, S>

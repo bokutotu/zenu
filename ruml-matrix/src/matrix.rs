@@ -1,7 +1,7 @@
 use crate::{
     dim::{default_stride, DimTrait, LessDimTrait},
     index::{IndexAxisTrait, ShapeStride, SliceTrait},
-    memory::{Memory, OwnedMemory, ToViewMemory, ToViewMutMemory, ViewMemory},
+    memory::{Memory, OwnedMemory, ToOwnedMemory, ToViewMemory, ToViewMutMemory, ViewMemory},
 };
 
 pub trait MatrixBase: Sized {
@@ -18,32 +18,40 @@ pub trait OwnedMatrix: MatrixBase
 where
     Self::Memory: OwnedMemory,
 {
-    fn to_view<'a, D>(&'a self) -> D
+    type View<'a>: MatrixBase<
+        Memory = <<Self as MatrixBase>::Memory as ToViewMemory>::View<'a>,
+        Dim = Self::Dim,
+    >
     where
-        D: MatrixBase<
-            Memory = <<Self as MatrixBase>::Memory as ToViewMemory>::View<'a>,
-            Dim = Self::Dim,
-        >,
+        Self: 'a;
+
+    type ViewMut<'a>: MatrixBase<
+        Memory = <<Self as MatrixBase>::Memory as ToViewMutMemory>::ViewMut<'a>,
+        Dim = Self::Dim,
+    >
+    where
+        Self: 'a;
+
+    fn to_view<'a, D>(&'a self) -> Self::View<'a>
+    where
+        D: DimTrait,
     {
-        D::construct(
+        Self::View::construct(
             self.memory().to_view(self.memory().get_offset()),
             self.shape_stride().shape(),
             self.shape_stride().stride(),
         )
     }
 
-    fn to_view_mut<'a, DM>(&'a mut self) -> DM
+    fn to_view_mut<'a, DM>(&'a mut self) -> Self::ViewMut<'a>
     where
-        DM: MatrixBase<
-            Memory = <<Self as MatrixBase>::Memory as ToViewMutMemory>::ViewMut<'a>,
-            Dim = Self::Dim,
-        >,
+        DM: DimTrait,
     {
         let offset = self.memory().get_offset();
         let shape_stride = self.shape_stride();
         let shape = shape_stride.shape();
         let stride = shape_stride.stride();
-        DM::construct(self.memory_mut().to_view_mut(offset), shape, stride)
+        Self::ViewMut::construct(self.memory_mut().to_view_mut(offset), shape, stride)
     }
 
     fn from_vec(vec: Vec<<<Self as MatrixBase>::Memory as Memory>::Item>, dim: Self::Dim) -> Self {
@@ -57,12 +65,11 @@ pub trait ViewMatrix: MatrixBase
 where
     Self::Memory: ViewMemory,
 {
-    fn to_owned<O>(&self) -> O
-    where
-        O: MatrixBase<Memory = <<Self as MatrixBase>::Memory as ToOwned>::Owned, Dim = Self::Dim>,
-    {
-        O::construct(
-            self.memory().to_owned(),
+    type Owned: MatrixBase<Memory = <<Self as MatrixBase>::Memory as ToOwnedMemory>::Owned, Dim = Self::Dim>
+        + OwnedMatrix;
+    fn to_owned(&self) -> Self::Owned {
+        Self::Owned::construct(
+            self.memory().to_owned_memory(),
             self.shape_stride().shape(),
             self.shape_stride().stride(),
         )
