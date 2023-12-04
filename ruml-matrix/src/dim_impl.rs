@@ -1,6 +1,9 @@
 use std::ops::{Index, IndexMut};
 
-use crate::{dim::DimTrait, index::IndexTrait};
+use crate::{
+    dim::{DimTrait, GreaterDimTrait, LessDimTrait},
+    index::IndexTrait,
+};
 
 #[derive(Clone, Debug, Copy, Default)]
 pub struct Dim0 {}
@@ -148,3 +151,27 @@ impl_dim!(Dim1, [usize; 1]);
 impl_dim!(Dim2, [usize; 2]);
 impl_dim!(Dim3, [usize; 3]);
 impl_dim!(Dim4, [usize; 4]);
+
+macro_rules! impl_less_dim {
+    ($impl_ty:ty, $less_dim:ty) => {
+        impl LessDimTrait for $impl_ty {
+            type LessDim = $less_dim;
+        }
+    };
+}
+impl_less_dim!(Dim1, Dim0);
+impl_less_dim!(Dim2, Dim1);
+impl_less_dim!(Dim3, Dim2);
+impl_less_dim!(Dim4, Dim3);
+
+macro_rules! impl_grater_dim_trait {
+    ($impl_ty:ty, $less_dim:ty) => {
+        impl GreaterDimTrait for $impl_ty {
+            type GreaterDim = $less_dim;
+        }
+    };
+}
+impl_grater_dim_trait!(Dim0, Dim1);
+impl_grater_dim_trait!(Dim1, Dim2);
+impl_grater_dim_trait!(Dim2, Dim3);
+impl_grater_dim_trait!(Dim3, Dim4);

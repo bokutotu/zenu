@@ -1,7 +1,7 @@
 use crate::{
     dim::{default_stride, DimTrait, LessDimTrait},
     index::{IndexAxisTrait, ShapeStride, SliceTrait},
-    memory::{Memory, OwnedMemory, ToViewMemory, ToViewMutMemory, ViewMemory, ViewMutMemory},
+    memory::{Memory, OwnedMemory, ToViewMemory, ToViewMutMemory, ViewMemory},
 };
 
 pub trait MatrixBase: Sized {
@@ -69,37 +69,23 @@ where
     }
 }
 
-pub trait ViewMutMatrix: MatrixBase
-where
-    Self::Memory: ViewMutMemory,
-{
-    fn assign_from<'a, O>(&'a mut self, other: &O)
-    where
-        O: MatrixBase<
-            Memory = <<Self as MatrixBase>::Memory as ToViewMemory>::View<'a>,
-            Dim = Self::Dim,
-        >,
-    {
-        todo!();
-    }
-}
-
 pub trait MatrixSlice<D, S>: MatrixBase<Dim = D>
 where
     S: SliceTrait<Dim = D>,
     D: DimTrait,
     Self::Memory: ToViewMemory,
 {
-    fn slice<'a, M>(&'a self, index: S) -> M
+    type Output<'a>: MatrixBase<Memory = <Self::Memory as ToViewMemory>::View<'a>, Dim = D>
     where
-        M: MatrixBase<Memory = <Self::Memory as ToViewMemory>::View<'a>, Dim = D>,
-    {
+        Self: 'a;
+
+    fn slice(&self, index: S) -> Self::Output<'_> {
         let shape_stride = self.shape_stride();
         let shape = shape_stride.shape();
         let stride = shape_stride.stride();
         let new_shape_stride = index.sliced_shape_stride(shape, stride);
         let offset = index.sliced_offset(stride, self.memory().get_offset());
-        M::construct(
+        Self::Output::construct(
             self.memory().to_view(offset),
             new_shape_stride.shape(),
             new_shape_stride.stride(),
@@ -113,16 +99,17 @@ where
     D: DimTrait,
     Self::Memory: ToViewMutMemory,
 {
-    fn slice_mut<'a, M>(&'a mut self, index: S) -> M
+    type Output<'a>: MatrixBase<Memory = <Self::Memory as ToViewMutMemory>::ViewMut<'a>, Dim = D>
     where
-        M: MatrixBase<Memory = <Self::Memory as ToViewMutMemory>::ViewMut<'a>, Dim = D>,
-    {
+        Self: 'a;
+
+    fn slice_mut(&mut self, index: S) -> Self::Output<'_> {
         let shape_stride = self.shape_stride();
         let shape = shape_stride.shape();
         let stride = shape_stride.stride();
         let new_shape_stride = index.sliced_shape_stride(shape, stride);
         let offset = index.sliced_offset(stride, self.memory().get_offset());
-        M::construct(
+        Self::Output::construct(
             self.memory_mut().to_view_mut(offset),
             new_shape_stride.shape(),
             new_shape_stride.stride(),

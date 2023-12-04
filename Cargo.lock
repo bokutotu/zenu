@@ -7,20 +7,5 @@ name = "ruml"
 version = "0.1.0"
 
 [[package]]
-name = "ruml-dim-impl"
-version = "0.1.0"
-dependencies = [
- "ruml-matrix",
-]
-
-[[package]]
-name = "ruml-index-impl"
-version = "0.1.0"
-dependencies = [
- "ruml-dim-impl",
- "ruml-matrix",
-]
-
-[[package]]
 name = "ruml-matrix"
 version = "0.1.0"
