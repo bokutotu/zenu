@@ -1,4 +1,5 @@
 pub mod blas;
+pub mod cpu_blas;
 pub mod cpu_memory;
 pub mod dim;
 pub mod dim_impl;
