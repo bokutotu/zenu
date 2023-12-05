@@ -1,5 +1,5 @@
 use crate::{
-    dim::{default_stride, DimTrait, LessDimTrait},
+    dim::{cal_offset, default_stride, DimTrait, LessDimTrait},
     index::{IndexAxisTrait, ShapeStride, SliceTrait},
     memory::{Memory, OwnedMemory, ToOwnedMemory, ToViewMemory, ToViewMutMemory, ViewMemory},
 };
@@ -32,7 +32,7 @@ where
     where
         Self: 'a;
 
-    fn to_view<'a, D>(&'a self) -> Self::View<'a>
+    fn to_view<D>(&self) -> Self::View<'_>
     where
         D: DimTrait,
     {
@@ -43,7 +43,7 @@ where
         )
     }
 
-    fn to_view_mut<'a, DM>(&'a mut self) -> Self::ViewMut<'a>
+    fn to_view_mut<DM>(&mut self) -> Self::ViewMut<'_>
     where
         DM: DimTrait,
     {
@@ -173,5 +173,19 @@ where
             new_shape_stride.shape(),
             new_shape_stride.stride(),
         )
+    }
+}
+
+pub trait IndexItem<D>: MatrixBase<Dim = D>
+where
+    D: DimTrait,
+{
+    fn index_item(&self, index: D) -> <Self::Memory as Memory>::Item {
+        if self.shape_stride().shape().is_overflow(index) {
+            panic!("index out of bounds");
+        }
+
+        let offset = cal_offset(index, self.shape_stride().stride());
+        self.memory().ptr_offset(offset)
     }
 }

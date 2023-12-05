@@ -175,3 +175,62 @@ impl_grater_dim_trait!(Dim0, Dim1);
 impl_grater_dim_trait!(Dim1, Dim2);
 impl_grater_dim_trait!(Dim2, Dim3);
 impl_grater_dim_trait!(Dim3, Dim4);
+
+#[macro_export]
+macro_rules! dim {
+    () => {
+        Dim0::new()
+    };
+    ($x:expr) => {
+        Dim1::new([$x])
+    };
+    ($x:expr, $y:expr) => {
+        Dim2::new([$x, $y])
+    };
+    ($x:expr, $y:expr, $z:expr) => {
+        Dim3::new([$x, $y, $z])
+    };
+    ($x:expr, $y:expr, $z:expr, $w:expr) => {
+        Dim4::new([$x, $y, $z, $w])
+    };
+}
+
+#[cfg(test)]
+mod dim {
+    use super::*;
+
+    #[test]
+    fn test_0d() {
+        let ans = Dim0::new();
+        let dim = dim!();
+        assert_eq!(ans, dim);
+    }
+
+    #[test]
+    fn test_1d() {
+        let ans = Dim1::new([1]);
+        let dim = dim!(1);
+        assert_eq!(ans, dim);
+    }
+
+    #[test]
+    fn test_2d() {
+        let ans = Dim2::new([1, 2]);
+        let dim = dim!(1, 2);
+        assert_eq!(ans, dim);
+    }
+
+    #[test]
+    fn test_3d() {
+        let ans = Dim3::new([1, 2, 3]);
+        let dim = dim!(1, 2, 3);
+        assert_eq!(ans, dim);
+    }
+
+    #[test]
+    fn test_4d() {
+        let ans = Dim4::new([1, 2, 3, 4]);
+        let dim = dim!(1, 2, 3, 4);
+        assert_eq!(ans, dim);
+    }
+}

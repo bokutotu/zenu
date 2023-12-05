@@ -1,6 +1,7 @@
 use crate::num::Num;
 
 /// Matrixの要素を保持するメモリを表すトレイト
+#[allow(clippy::len_without_is_empty)]
 pub trait Memory {
     type Item: Num;
 
