@@ -37,7 +37,7 @@ macro_rules! impl_blas {
         $t:ty
     ) => {
         impl Blas<$t> for CpuBlas {
-            fn swap(&self, n: usize, x: *mut $t, incx: usize, y: *mut $t, incy: usize) {
+            fn swap(n: usize, x: *mut $t, incx: usize, y: *mut $t, incy: usize) {
                 let x = unsafe { std::slice::from_raw_parts_mut(x, n * incx) };
                 let y = unsafe { std::slice::from_raw_parts_mut(y, n * incy) };
                 unsafe {
@@ -51,12 +51,12 @@ macro_rules! impl_blas {
                 }
             }
 
-            fn scal(&self, n: usize, alpha: $t, x: *mut $t, incx: usize) {
+            fn scal(n: usize, alpha: $t, x: *mut $t, incx: usize) {
                 let x = unsafe { std::slice::from_raw_parts_mut(x, n * incx) };
                 unsafe { $sscal(n.try_into().unwrap(), alpha, x, incx.try_into().unwrap()) }
             }
 
-            fn copy(&self, n: usize, x: *mut $t, incx: usize, y: *mut $t, incy: usize) {
+            fn copy(n: usize, x: *const $t, incx: usize, y: *mut $t, incy: usize) {
                 let x = unsafe { std::slice::from_raw_parts(x, n * incx) };
                 let y = unsafe { std::slice::from_raw_parts_mut(y, n * incy) };
 
@@ -67,7 +67,7 @@ macro_rules! impl_blas {
                 unsafe { $copy(n, x, incx, y, incy) }
             }
 
-            fn dot(&self, n: usize, x: *mut $t, incx: usize, y: *mut $t, incy: usize) -> $t {
+            fn dot(n: usize, x: *mut $t, incx: usize, y: *mut $t, incy: usize) -> $t {
                 let x = unsafe { std::slice::from_raw_parts(x, n * incx) };
                 let y = unsafe { std::slice::from_raw_parts(y, n * incy) };
 
@@ -78,7 +78,7 @@ macro_rules! impl_blas {
                 unsafe { $dot(n, x, incx, y, incy) }
             }
 
-            fn norm2(&self, n: usize, x: *mut $t, incx: usize) -> $t {
+            fn norm2(n: usize, x: *mut $t, incx: usize) -> $t {
                 let x = unsafe { std::slice::from_raw_parts(x, n * incx) };
 
                 let n = n.try_into().unwrap();
@@ -87,7 +87,7 @@ macro_rules! impl_blas {
                 unsafe { $norm2(n, x, incx) }
             }
 
-            fn asum(&self, n: usize, x: *mut $t, incx: usize) -> $t {
+            fn asum(n: usize, x: *mut $t, incx: usize) -> $t {
                 let x = unsafe { std::slice::from_raw_parts(x, n * incx) };
 
                 let n = n.try_into().unwrap();
@@ -96,7 +96,7 @@ macro_rules! impl_blas {
                 unsafe { $asum(n, x, incx) }
             }
 
-            fn amax(&self, n: usize, x: *mut $t, incx: usize) -> usize {
+            fn amax(n: usize, x: *mut $t, incx: usize) -> usize {
                 let x = unsafe { std::slice::from_raw_parts(x, n * incx) };
 
                 let n = n.try_into().unwrap();
@@ -106,7 +106,6 @@ macro_rules! impl_blas {
             }
 
             fn gemv(
-                &self,
                 layout: BlasLayout,
                 trans: BlasTrans,
                 m: usize,
@@ -136,7 +135,6 @@ macro_rules! impl_blas {
             }
 
             fn ger(
-                &self,
                 layout: BlasLayout,
                 m: usize,
                 n: usize,
@@ -163,7 +161,6 @@ macro_rules! impl_blas {
             }
 
             fn gemm(
-                &self,
                 layout: BlasLayout,
                 transa: BlasTrans,
                 transb: BlasTrans,

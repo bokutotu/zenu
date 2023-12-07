@@ -45,4 +45,6 @@ pub trait OwnedMemory: Memory + ToViewMemory + ToViewMutMemory + Clone {
 pub trait ViewMemory: Memory + ToOwnedMemory + Clone + ToViewMemory {}
 
 /// Memoryの中でも値を保持するメモリを表すトレイト(可変参照)
-pub trait ViewMutMemory: Memory + ToOwnedMemory + ToViewMemory {}
+pub trait ViewMutMemory: Memory + ToOwnedMemory + ToViewMemory {
+    fn as_mut_ptr(&self) -> *mut Self::Item;
+}

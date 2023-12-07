@@ -5,9 +5,12 @@ use crate::{
     index::{IndexAxisTrait, ShapeStride, SliceTrait},
     matrix::{
         IndexAxis, IndexAxisMut, IndexItem, MatrixBase, MatrixSlice, MatrixSliceMut, OwnedMatrix,
-        ViewMatrix,
+        ViewMatrix, ViewMutMatix,
     },
-    memory::{Memory, OwnedMemory, ToOwnedMemory, ToViewMemory, ToViewMutMemory, ViewMemory},
+    memory::{
+        Memory, OwnedMemory, ToOwnedMemory, ToViewMemory, ToViewMutMemory, ViewMemory,
+        ViewMutMemory,
+    },
 };
 
 pub struct Matrix<M, S> {
@@ -59,6 +62,13 @@ where
     S: DimTrait,
 {
     type Owned = Matrix<<<Matrix<M, S> as MatrixBase>::Memory as ToOwnedMemory>::Owned, S>;
+}
+
+impl<M, S> ViewMutMatix for Matrix<M, S>
+where
+    M: ViewMutMemory,
+    S: DimTrait,
+{
 }
 
 impl<M, S> OwnedMatrix for Matrix<M, S>

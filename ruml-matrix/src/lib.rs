@@ -7,6 +7,7 @@ pub mod index;
 pub mod index_impl;
 pub mod matrix;
 pub mod matrix_impl;
+pub mod matrix_op;
 pub mod memory;
 pub mod num;
 pub mod slice_impl;

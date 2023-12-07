@@ -1,7 +1,10 @@
 use crate::{
     dim::{cal_offset, default_stride, DimTrait, LessDimTrait},
     index::{IndexAxisTrait, ShapeStride, SliceTrait},
-    memory::{Memory, OwnedMemory, ToOwnedMemory, ToViewMemory, ToViewMutMemory, ViewMemory},
+    memory::{
+        Memory, OwnedMemory, ToOwnedMemory, ToViewMemory, ToViewMutMemory, ViewMemory,
+        ViewMutMemory,
+    },
 };
 
 pub trait MatrixBase: Sized {
@@ -12,6 +15,9 @@ pub trait MatrixBase: Sized {
     fn memory(&self) -> &Self::Memory;
     fn memory_mut(&mut self) -> &mut Self::Memory;
     fn construct(data: Self::Memory, shape: Self::Dim, stride: Self::Dim) -> Self;
+    fn is_default_stride(&self) -> bool {
+        default_stride(self.shape_stride().shape()) == self.shape_stride().stride()
+    }
 }
 
 pub trait OwnedMatrix: MatrixBase
@@ -73,6 +79,15 @@ where
             self.shape_stride().shape(),
             self.shape_stride().stride(),
         )
+    }
+}
+
+pub trait ViewMutMatix: MatrixBase
+where
+    Self::Memory: ViewMutMemory,
+{
+    fn view_mut_memory(&self) -> &Self::Memory {
+        self.memory()
     }
 }
 

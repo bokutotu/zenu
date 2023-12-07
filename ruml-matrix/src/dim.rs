@@ -18,6 +18,9 @@ pub trait DimTrait:
 
         index.into_iter().zip(*self).any(|(x, y)| x >= y)
     }
+    fn num_elm(&self) -> usize {
+        self.into_iter().product()
+    }
 }
 
 pub trait LessDimTrait: DimTrait {

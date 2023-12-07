@@ -12,16 +12,15 @@ pub enum BlasLayout {
 }
 
 pub trait Blas<T: Num> {
-    fn swap(&self, n: usize, x: *mut T, incx: usize, y: *mut T, incy: usize);
-    fn scal(&self, n: usize, alpha: T, x: *mut T, incx: usize);
-    fn copy(&self, n: usize, x: *mut T, incx: usize, y: *mut T, incy: usize);
-    fn dot(&self, n: usize, x: *mut T, incx: usize, y: *mut T, incy: usize) -> T;
-    fn norm2(&self, n: usize, x: *mut T, incx: usize) -> T;
-    fn asum(&self, n: usize, x: *mut T, incx: usize) -> T;
-    fn amax(&self, n: usize, x: *mut T, incx: usize) -> usize;
+    fn swap(n: usize, x: *mut T, incx: usize, y: *mut T, incy: usize);
+    fn scal(n: usize, alpha: T, x: *mut T, incx: usize);
+    fn copy(n: usize, x: *const T, incx: usize, y: *mut T, incy: usize);
+    fn dot(n: usize, x: *mut T, incx: usize, y: *mut T, incy: usize) -> T;
+    fn norm2(n: usize, x: *mut T, incx: usize) -> T;
+    fn asum(n: usize, x: *mut T, incx: usize) -> T;
+    fn amax(n: usize, x: *mut T, incx: usize) -> usize;
     #[allow(clippy::too_many_arguments)]
     fn gemv(
-        &self,
         layout: BlasLayout,
         trans: BlasTrans,
         m: usize,
@@ -37,7 +36,6 @@ pub trait Blas<T: Num> {
     );
     #[allow(clippy::too_many_arguments)]
     fn ger(
-        &self,
         layout: BlasLayout,
         m: usize,
         n: usize,
@@ -51,7 +49,6 @@ pub trait Blas<T: Num> {
     );
     #[allow(clippy::too_many_arguments)]
     fn gemm(
-        &self,
         layout: BlasLayout,
         transa: BlasTrans,
         transb: BlasTrans,

@@ -167,7 +167,11 @@ impl_cpu_memory_to_view!(CpuViewMemory<'a, T>);
 impl_cpu_memory_to_view!(CpuViewMutMemory<'a, T>);
 
 impl<'a, T: Num> ViewMemory for CpuViewMemory<'a, T> {}
-impl<'a, T: Num> ViewMutMemory for CpuViewMutMemory<'a, T> {}
+impl<'a, T: Num> ViewMutMemory for CpuViewMutMemory<'a, T> {
+    fn as_mut_ptr(&self) -> *mut Self::Item {
+        self.ptr.as_ptr() as *mut Self::Item
+    }
+}
 
 #[cfg(test)]
 mod memory {
