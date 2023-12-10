@@ -38,10 +38,7 @@ where
     where
         Self: 'a;
 
-    fn to_view<D>(&self) -> Self::View<'_>
-    where
-        D: DimTrait,
-    {
+    fn to_view(&self) -> Self::View<'_> {
         Self::View::construct(
             self.memory().to_view(self.memory().get_offset()),
             self.shape_stride().shape(),
@@ -49,10 +46,7 @@ where
         )
     }
 
-    fn to_view_mut<DM>(&mut self) -> Self::ViewMut<'_>
-    where
-        DM: DimTrait,
-    {
+    fn to_view_mut(&mut self) -> Self::ViewMut<'_> {
         let offset = self.memory().get_offset();
         let shape_stride = self.shape_stride();
         let shape = shape_stride.shape();

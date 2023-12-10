@@ -1,11 +1,15 @@
 extern crate openblas_src;
 
-use crate::blas::Blas;
+use std::marker::PhantomData;
+
+use crate::{blas::Blas, num::Num};
 use cblas::*;
 
 use crate::blas::{BlasLayout, BlasTrans};
 
-pub struct CpuBlas {}
+pub struct CpuBlas<T: Num> {
+    _phantom: PhantomData<T>,
+}
 
 fn from_trans(value: BlasTrans) -> Transpose {
     match value {
@@ -26,6 +30,7 @@ macro_rules! impl_blas {
     (
         $swap:ident,
         $sscal:ident,
+        $axpy:ident,
         $copy:ident,
         $dot:ident,
         $norm2:ident,
@@ -36,7 +41,7 @@ macro_rules! impl_blas {
         $gemm:ident,
         $t:ty
     ) => {
-        impl Blas<$t> for CpuBlas {
+        impl Blas<$t> for CpuBlas<$t> {
             fn swap(n: usize, x: *mut $t, incx: usize, y: *mut $t, incy: usize) {
                 let x = unsafe { std::slice::from_raw_parts_mut(x, n * incx) };
                 let y = unsafe { std::slice::from_raw_parts_mut(y, n * incy) };
@@ -54,6 +59,17 @@ macro_rules! impl_blas {
             fn scal(n: usize, alpha: $t, x: *mut $t, incx: usize) {
                 let x = unsafe { std::slice::from_raw_parts_mut(x, n * incx) };
                 unsafe { $sscal(n.try_into().unwrap(), alpha, x, incx.try_into().unwrap()) }
+            }
+
+            fn axpy(n: usize, alpha: $t, x: *mut $t, incx: usize, y: *mut $t, incy: usize) {
+                let x = unsafe { std::slice::from_raw_parts(x, n * incx) };
+                let y = unsafe { std::slice::from_raw_parts_mut(y, n * incy) };
+
+                let n = n.try_into().unwrap();
+                let incx = incx.try_into().unwrap();
+                let incy = incy.try_into().unwrap();
+
+                unsafe { $axpy(n, alpha, x, incx, y, incy) }
             }
 
             fn copy(n: usize, x: *const $t, incx: usize, y: *mut $t, incy: usize) {
@@ -201,5 +217,5 @@ macro_rules! impl_blas {
     };
 }
 
-impl_blas!(sswap, sscal, scopy, sdot, snrm2, sasum, isamax, sgemv, sger, sgemm, f32);
-impl_blas!(dswap, dscal, dcopy, ddot, dnrm2, dasum, idamax, dgemv, dger, dgemm, f64);
+impl_blas!(sswap, sscal, saxpy, scopy, sdot, snrm2, sasum, isamax, sgemv, sger, sgemm, f32);
+impl_blas!(dswap, dscal, daxpy, dcopy, ddot, dnrm2, dasum, idamax, dgemv, dger, dgemm, f64);

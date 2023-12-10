@@ -179,19 +179,19 @@ impl_grater_dim_trait!(Dim3, Dim4);
 #[macro_export]
 macro_rules! dim {
     () => {
-        Dim0::new()
+        $crate::dim_impl::Dim0::new()
     };
     ($x:expr) => {
-        Dim1::new([$x])
+        $crate::dim_impl::Dim1::new([$x])
     };
     ($x:expr, $y:expr) => {
-        Dim2::new([$x, $y])
+        $crate::dim_impl::Dim2::new([$x, $y])
     };
     ($x:expr, $y:expr, $z:expr) => {
-        Dim3::new([$x, $y, $z])
+        $crate::dim_impl::Dim3::new([$x, $y, $z])
     };
     ($x:expr, $y:expr, $z:expr, $w:expr) => {
-        Dim4::new([$x, $y, $z, $w])
+        $crate::dim_impl::Dim4::new([$x, $y, $z, $w])
     };
 }
 

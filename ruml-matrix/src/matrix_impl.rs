@@ -44,7 +44,7 @@ where
     }
 
     fn construct(memory: Self::Memory, shape: Self::Dim, stride: Self::Dim) -> Self {
-        Self {
+        Matrix {
             memory,
             shape,
             stride,
