@@ -28,8 +28,8 @@ impl<D: DimTrait> ShapeStride<D> {
         let shape = indeies.iter().map(|&i| self.shape[i]).collect::<Vec<_>>();
         let stride = indeies.iter().map(|&i| self.stride[i]).collect::<Vec<_>>();
 
-        let mut new_shape = self.shape().clone();
-        let mut new_stride = self.stride().clone();
+        let mut new_shape = self.shape();
+        let mut new_stride = self.stride();
 
         for i in 0..self.stride.len() {
             new_shape[i] = shape[i];
