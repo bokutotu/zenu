@@ -1,9 +1,10 @@
-use crate::num::Num;
+use crate::{blas::Blas, num::Num};
 
 /// Matrixの要素を保持するメモリを表すトレイト
 #[allow(clippy::len_without_is_empty)]
 pub trait Memory {
     type Item: Num;
+    type Blas: Blas<Self::Item>;
 
     fn len(&self) -> usize;
     fn as_ptr(&self) -> *const Self::Item;

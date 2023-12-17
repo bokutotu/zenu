@@ -1,5 +1,9 @@
-use crate::memory::{
-    Memory, OwnedMemory, ToOwnedMemory, ToViewMemory, ToViewMutMemory, ViewMemory, ViewMutMemory,
+use crate::{
+    cpu_blas::CpuBlas,
+    memory::{
+        Memory, OwnedMemory, ToOwnedMemory, ToViewMemory, ToViewMutMemory, ViewMemory,
+        ViewMutMemory,
+    },
 };
 use std::ptr::NonNull;
 
@@ -26,6 +30,7 @@ pub struct CpuViewMutMemory<'a, T: Num> {
 
 impl<T: Num> Memory for CpuOwnedMemory<T> {
     type Item = T;
+    type Blas = CpuBlas<T>;
 
     fn len(&self) -> usize {
         self.length
@@ -85,6 +90,24 @@ where
     }
 }
 
+impl<'a, T> ToViewMutMemory for CpuViewMutMemory<'a, T>
+where
+    T: Num,
+{
+    type ViewMut<'b> = CpuViewMutMemory<'b, T>
+    where
+        T: 'b,
+        Self: 'b;
+
+    fn to_view_mut(&mut self, offset: usize) -> Self::ViewMut<'_> {
+        let offset = self.get_offset() + offset;
+        CpuViewMutMemory {
+            ptr: self.ptr,
+            offset,
+        }
+    }
+}
+
 impl<T: Num> OwnedMemory for CpuOwnedMemory<T> {
     fn from_vec(vec: Vec<Self::Item>) -> Self {
         let ptr = unsafe { NonNull::new_unchecked(vec.as_ptr() as *mut T) };
@@ -117,6 +140,7 @@ macro_rules! impl_cpu_memory_to_view {
     ($impl_ty: ty) => {
         impl<'a, T: Num> Memory for $impl_ty {
             type Item = T;
+            type Blas = CpuBlas<T>;
 
             fn len(&self) -> usize {
                 self.ptr.len()

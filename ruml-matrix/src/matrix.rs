@@ -20,23 +20,25 @@ pub trait MatrixBase: Sized {
     }
 }
 
-pub trait OwnedMatrix: MatrixBase
+pub trait OwnedMatrix<M>: MatrixBase<Memory = M>
 where
-    Self::Memory: OwnedMemory,
+    M: OwnedMemory + ToViewMemory + ToViewMutMemory,
 {
     type View<'a>: MatrixBase<
         Memory = <<Self as MatrixBase>::Memory as ToViewMemory>::View<'a>,
         Dim = Self::Dim,
     >
     where
-        Self: 'a;
+        Self: 'a,
+        M: 'a;
 
     type ViewMut<'a>: MatrixBase<
         Memory = <<Self as MatrixBase>::Memory as ToViewMutMemory>::ViewMut<'a>,
         Dim = Self::Dim,
     >
     where
-        Self: 'a;
+        Self: 'a,
+        M: 'a;
 
     fn to_view(&self) -> Self::View<'_> {
         Self::View::construct(
@@ -61,12 +63,12 @@ where
     }
 }
 
-pub trait ViewMatrix: MatrixBase
+pub trait ViewMatrix<M>: MatrixBase<Memory = M>
 where
-    Self::Memory: ViewMemory,
+    M: ViewMemory,
 {
     type Owned: MatrixBase<Memory = <<Self as MatrixBase>::Memory as ToOwnedMemory>::Owned, Dim = Self::Dim>
-        + OwnedMatrix;
+        + OwnedMatrix<<<Self as MatrixBase>::Memory as ToOwnedMemory>::Owned>;
     fn to_owned(&self) -> Self::Owned {
         Self::Owned::construct(
             self.memory().to_owned_memory(),
@@ -76,24 +78,25 @@ where
     }
 }
 
-pub trait ViewMutMatix: MatrixBase
+pub trait ViewMutMatix<M>: MatrixBase<Memory = M>
 where
-    Self::Memory: ViewMutMemory,
+    M: ViewMutMemory,
 {
     fn view_mut_memory(&self) -> &Self::Memory {
         self.memory()
     }
 }
 
-pub trait MatrixSlice<D, S>: MatrixBase<Dim = D>
+pub trait MatrixSlice<M, D, S>: MatrixBase<Memory = M, Dim = D>
 where
     S: SliceTrait<Dim = D>,
     D: DimTrait,
-    Self::Memory: ToViewMemory,
+    M: ToViewMemory,
 {
     type Output<'a>: MatrixBase<Memory = <Self::Memory as ToViewMemory>::View<'a>, Dim = D>
     where
-        Self: 'a;
+        Self: 'a,
+        M: 'a;
 
     fn slice(&self, index: S) -> Self::Output<'_> {
         let shape_stride = self.shape_stride();

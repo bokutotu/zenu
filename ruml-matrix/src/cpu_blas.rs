@@ -26,196 +26,413 @@ fn from_layout(value: BlasLayout) -> Layout {
     }
 }
 
-macro_rules! impl_blas {
-    (
-        $swap:ident,
-        $sscal:ident,
-        $axpy:ident,
-        $copy:ident,
-        $dot:ident,
-        $norm2:ident,
-        $asum:ident,
-        $amax:ident,
-        $gemv:ident,
-        $ger:ident,
-        $gemm:ident,
-        $t:ty
-    ) => {
-        impl Blas<$t> for CpuBlas<$t> {
-            fn swap(n: usize, x: *mut $t, incx: usize, y: *mut $t, incy: usize) {
-                let x = unsafe { std::slice::from_raw_parts_mut(x, n * incx) };
-                let y = unsafe { std::slice::from_raw_parts_mut(y, n * incy) };
-                unsafe {
-                    $swap(
-                        n.try_into().unwrap(),
-                        x,
-                        incx.try_into().unwrap(),
-                        y,
-                        incy.try_into().unwrap(),
-                    )
-                }
+impl<N: Num> Blas<N> for CpuBlas<N> {
+    fn swap(n: usize, x: *mut N, incx: usize, y: *mut N, incy: usize) {
+        if N::is_f32() {
+            let x = unsafe { std::slice::from_raw_parts_mut(x as *mut f32, n * incx) };
+            let y = unsafe { std::slice::from_raw_parts_mut(y as *mut f32, n * incy) };
+            unsafe {
+                sswap(
+                    n.try_into().unwrap(),
+                    x,
+                    incx.try_into().unwrap(),
+                    y,
+                    incy.try_into().unwrap(),
+                )
             }
-
-            fn scal(n: usize, alpha: $t, x: *mut $t, incx: usize) {
-                let x = unsafe { std::slice::from_raw_parts_mut(x, n * incx) };
-                unsafe { $sscal(n.try_into().unwrap(), alpha, x, incx.try_into().unwrap()) }
-            }
-
-            fn axpy(n: usize, alpha: $t, x: *mut $t, incx: usize, y: *mut $t, incy: usize) {
-                let x = unsafe { std::slice::from_raw_parts(x, n * incx) };
-                let y = unsafe { std::slice::from_raw_parts_mut(y, n * incy) };
-
-                let n = n.try_into().unwrap();
-                let incx = incx.try_into().unwrap();
-                let incy = incy.try_into().unwrap();
-
-                unsafe { $axpy(n, alpha, x, incx, y, incy) }
-            }
-
-            fn copy(n: usize, x: *const $t, incx: usize, y: *mut $t, incy: usize) {
-                let x = unsafe { std::slice::from_raw_parts(x, n * incx) };
-                let y = unsafe { std::slice::from_raw_parts_mut(y, n * incy) };
-
-                let n = n.try_into().unwrap();
-                let incx = incx.try_into().unwrap();
-                let incy = incy.try_into().unwrap();
-
-                unsafe { $copy(n, x, incx, y, incy) }
-            }
-
-            fn dot(n: usize, x: *mut $t, incx: usize, y: *mut $t, incy: usize) -> $t {
-                let x = unsafe { std::slice::from_raw_parts(x, n * incx) };
-                let y = unsafe { std::slice::from_raw_parts(y, n * incy) };
-
-                let n = n.try_into().unwrap();
-                let incx = incx.try_into().unwrap();
-                let incy = incy.try_into().unwrap();
-
-                unsafe { $dot(n, x, incx, y, incy) }
-            }
-
-            fn norm2(n: usize, x: *mut $t, incx: usize) -> $t {
-                let x = unsafe { std::slice::from_raw_parts(x, n * incx) };
-
-                let n = n.try_into().unwrap();
-                let incx = incx.try_into().unwrap();
-
-                unsafe { $norm2(n, x, incx) }
-            }
-
-            fn asum(n: usize, x: *mut $t, incx: usize) -> $t {
-                let x = unsafe { std::slice::from_raw_parts(x, n * incx) };
-
-                let n = n.try_into().unwrap();
-                let incx = incx.try_into().unwrap();
-
-                unsafe { $asum(n, x, incx) }
-            }
-
-            fn amax(n: usize, x: *mut $t, incx: usize) -> usize {
-                let x = unsafe { std::slice::from_raw_parts(x, n * incx) };
-
-                let n = n.try_into().unwrap();
-                let incx = incx.try_into().unwrap();
-
-                unsafe { $amax(n, x, incx).try_into().unwrap() }
-            }
-
-            fn gemv(
-                layout: BlasLayout,
-                trans: BlasTrans,
-                m: usize,
-                n: usize,
-                alpha: $t,
-                a: *mut $t,
-                lda: usize,
-                x: *mut $t,
-                incx: usize,
-                beta: $t,
-                y: *mut $t,
-                incy: usize,
-            ) {
-                let a = unsafe { std::slice::from_raw_parts(a, lda * n) };
-                let x = unsafe { std::slice::from_raw_parts(x, n * incx) };
-                let y = unsafe { std::slice::from_raw_parts_mut(y, m * incy) };
-
-                let layout = from_layout(layout);
-                let trans = from_trans(trans);
-                let m = m.try_into().unwrap();
-                let n = n.try_into().unwrap();
-                let lda = lda.try_into().unwrap();
-                let incx = incx.try_into().unwrap();
-                let incy = incy.try_into().unwrap();
-
-                unsafe { $gemv(layout, trans, m, n, alpha, a, lda, x, incx, beta, y, incy) }
-            }
-
-            fn ger(
-                layout: BlasLayout,
-                m: usize,
-                n: usize,
-                alpha: $t,
-                x: *mut $t,
-                incx: usize,
-                y: *mut $t,
-                incy: usize,
-                a: *mut $t,
-                lda: usize,
-            ) {
-                let layout = from_layout(layout);
-                let x = unsafe { std::slice::from_raw_parts(x, m * incx) };
-                let y = unsafe { std::slice::from_raw_parts(y, n * incy) };
-                let a = unsafe { std::slice::from_raw_parts_mut(a, lda * n) };
-
-                let m = m.try_into().unwrap();
-                let n = n.try_into().unwrap();
-                let incx = incx.try_into().unwrap();
-                let incy = incy.try_into().unwrap();
-                let lda = lda.try_into().unwrap();
-
-                unsafe { $ger(layout, m, n, alpha, x, incx, y, incy, a, lda) }
-            }
-
-            fn gemm(
-                layout: BlasLayout,
-                transa: BlasTrans,
-                transb: BlasTrans,
-                m: usize,
-                n: usize,
-                k: usize,
-                alpha: $t,
-                a: *mut $t,
-                lda: usize,
-                b: *mut $t,
-                ldb: usize,
-                beta: $t,
-                c: *mut $t,
-                ldc: usize,
-            ) {
-                let layout = from_layout(layout);
-                let transa = from_trans(transa);
-                let transb = from_trans(transb);
-
-                let a = unsafe { std::slice::from_raw_parts(a, lda) };
-                let b = unsafe { std::slice::from_raw_parts(b, ldb) };
-                let c = unsafe { std::slice::from_raw_parts_mut(c, ldc) };
-
-                let m = m.try_into().unwrap();
-                let n = n.try_into().unwrap();
-                let k = k.try_into().unwrap();
-                let lda = lda.try_into().unwrap();
-                let ldb = ldb.try_into().unwrap();
-                let ldc = ldc.try_into().unwrap();
-
-                unsafe {
-                    $gemm(
-                        layout, transa, transb, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc,
-                    )
-                }
+        } else {
+            let x = unsafe { std::slice::from_raw_parts_mut(x as *mut f64, n * incx) };
+            let y = unsafe { std::slice::from_raw_parts_mut(y as *mut f64, n * incy) };
+            unsafe {
+                dswap(
+                    n.try_into().unwrap(),
+                    x,
+                    incx.try_into().unwrap(),
+                    y,
+                    incy.try_into().unwrap(),
+                )
             }
         }
-    };
-}
+    }
 
-impl_blas!(sswap, sscal, saxpy, scopy, sdot, snrm2, sasum, isamax, sgemv, sger, sgemm, f32);
-impl_blas!(dswap, dscal, daxpy, dcopy, ddot, dnrm2, dasum, idamax, dgemv, dger, dgemm, f64);
+    fn scal(n: usize, alpha: N, x: *mut N, incx: usize) {
+        if N::is_f32() {
+            let x = unsafe { std::slice::from_raw_parts_mut(x as *mut f32, n * incx) };
+            unsafe {
+                sscal(
+                    n.try_into().unwrap(),
+                    *(&alpha as *const N as *const f32),
+                    x,
+                    incx.try_into().unwrap(),
+                )
+            }
+        } else {
+            let x = unsafe { std::slice::from_raw_parts_mut(x as *mut f64, n * incx) };
+            unsafe {
+                dscal(
+                    n.try_into().unwrap(),
+                    *(&alpha as *const N as *const f64),
+                    x,
+                    incx.try_into().unwrap(),
+                )
+            }
+        }
+    }
+
+    fn axpy(n: usize, alpha: N, x: *mut N, incx: usize, y: *mut N, incy: usize) {
+        if N::is_f32() {
+            let x = unsafe { std::slice::from_raw_parts(x as *mut f32, n * incx) };
+            let y = unsafe { std::slice::from_raw_parts_mut(y as *mut f32, n * incy) };
+            unsafe {
+                saxpy(
+                    n.try_into().unwrap(),
+                    *(&alpha as *const N as *const f32),
+                    x,
+                    incx.try_into().unwrap(),
+                    y,
+                    incy.try_into().unwrap(),
+                )
+            }
+        } else {
+            let x = unsafe { std::slice::from_raw_parts(x as *mut f64, n * incx) };
+            let y = unsafe { std::slice::from_raw_parts_mut(y as *mut f64, n * incy) };
+            unsafe {
+                daxpy(
+                    n.try_into().unwrap(),
+                    *(&alpha as *const N as *const f64),
+                    x,
+                    incx.try_into().unwrap(),
+                    y,
+                    incy.try_into().unwrap(),
+                )
+            }
+        }
+    }
+
+    fn copy(n: usize, x: *const N, incx: usize, y: *mut N, incy: usize) {
+        if N::is_f32() {
+            let x = unsafe { std::slice::from_raw_parts(x as *const f32, n * incx) };
+            let y = unsafe { std::slice::from_raw_parts_mut(y as *mut f32, n * incy) };
+            unsafe {
+                scopy(
+                    n.try_into().unwrap(),
+                    x,
+                    incx.try_into().unwrap(),
+                    y,
+                    incy.try_into().unwrap(),
+                )
+            }
+        } else {
+            let x = unsafe { std::slice::from_raw_parts(x as *const f64, n * incx) };
+            let y = unsafe { std::slice::from_raw_parts_mut(y as *mut f64, n * incy) };
+            unsafe {
+                dcopy(
+                    n.try_into().unwrap(),
+                    x,
+                    incx.try_into().unwrap(),
+                    y,
+                    incy.try_into().unwrap(),
+                )
+            }
+        }
+    }
+
+    fn dot(n: usize, x: *mut N, incx: usize, y: *mut N, incy: usize) -> N {
+        if N::is_f32() {
+            let x = unsafe { std::slice::from_raw_parts(x as *const f32, n * incx) };
+            let y = unsafe { std::slice::from_raw_parts(y as *const f32, n * incy) };
+            unsafe {
+                *(&sdot(
+                    n.try_into().unwrap(),
+                    x,
+                    incx.try_into().unwrap(),
+                    y,
+                    incy.try_into().unwrap(),
+                ) as *const f32 as *const N)
+            }
+        } else {
+            let x = unsafe { std::slice::from_raw_parts(x as *const f64, n * incx) };
+            let y = unsafe { std::slice::from_raw_parts(y as *const f64, n * incy) };
+            unsafe {
+                *(&ddot(
+                    n.try_into().unwrap(),
+                    x,
+                    incx.try_into().unwrap(),
+                    y,
+                    incy.try_into().unwrap(),
+                ) as *const f64 as *const N)
+            }
+        }
+    }
+
+    fn norm2(n: usize, x: *mut N, incx: usize) -> N {
+        if N::is_f32() {
+            let x = unsafe { std::slice::from_raw_parts(x as *const N as *const f32, n * incx) };
+            unsafe {
+                *(&snrm2(n.try_into().unwrap(), x, incx.try_into().unwrap()) as *const f32
+                    as *const N)
+            }
+        } else {
+            let x = unsafe { std::slice::from_raw_parts(x as *const N as *const f64, n * incx) };
+            unsafe {
+                *(&dnrm2(n.try_into().unwrap(), x, incx.try_into().unwrap()) as *const f64
+                    as *const N)
+            }
+        }
+    }
+
+    fn asum(n: usize, x: *mut N, incx: usize) -> N {
+        if N::is_f32() {
+            let x = unsafe { std::slice::from_raw_parts(x as *const f32, n * incx) };
+            unsafe {
+                *(&sasum(n.try_into().unwrap(), x, incx.try_into().unwrap()) as *const f32
+                    as *const N)
+            }
+        } else {
+            let x = unsafe { std::slice::from_raw_parts(x as *const f64, n * incx) };
+            unsafe {
+                *(&dasum(n.try_into().unwrap(), x, incx.try_into().unwrap()) as *const f64
+                    as *const N)
+            }
+        }
+    }
+
+    fn amax(n: usize, x: *mut N, incx: usize) -> usize {
+        if N::is_f32() {
+            let x = unsafe { std::slice::from_raw_parts(x as *const f32, n * incx) };
+            unsafe { isamax(n.try_into().unwrap(), x, incx.try_into().unwrap()) }
+                .try_into()
+                .unwrap()
+        } else {
+            let x = unsafe { std::slice::from_raw_parts(x as *const f64, n * incx) };
+            unsafe { idamax(n.try_into().unwrap(), x, incx.try_into().unwrap()) }
+                .try_into()
+                .unwrap()
+        }
+    }
+
+    fn gemv(
+        layout: BlasLayout,
+        trans: BlasTrans,
+        m: usize,
+        n: usize,
+        alpha: N,
+        a: *mut N,
+        lda: usize,
+        x: *mut N,
+        incx: usize,
+        beta: N,
+        y: *mut N,
+        incy: usize,
+    ) {
+        if N::is_f32() {
+            let a = unsafe { std::slice::from_raw_parts(a as *const f32, lda * n) };
+            let x = unsafe { std::slice::from_raw_parts(x as *const f32, n * incx) };
+            let y = unsafe { std::slice::from_raw_parts_mut(y as *mut f32, m * incy) };
+
+            let layout = from_layout(layout);
+            let trans = from_trans(trans);
+            let m = m.try_into().unwrap();
+            let n = n.try_into().unwrap();
+            let lda = lda.try_into().unwrap();
+            let incx = incx.try_into().unwrap();
+            let incy = incy.try_into().unwrap();
+
+            unsafe {
+                sgemv(
+                    layout,
+                    trans,
+                    m,
+                    n,
+                    *(&alpha as *const N as *const f32),
+                    a,
+                    lda,
+                    x,
+                    incx,
+                    *(&beta as *const N as *const f32),
+                    y,
+                    incy,
+                )
+            }
+        } else {
+            let a = unsafe { std::slice::from_raw_parts(a as *const f64, lda * n) };
+            let x = unsafe { std::slice::from_raw_parts(x as *const f64, n * incx) };
+            let y = unsafe { std::slice::from_raw_parts_mut(y as *mut f64, m * incy) };
+
+            let layout = from_layout(layout);
+            let trans = from_trans(trans);
+            let m = m.try_into().unwrap();
+            let n = n.try_into().unwrap();
+            let lda = lda.try_into().unwrap();
+            let incx = incx.try_into().unwrap();
+            let incy = incy.try_into().unwrap();
+
+            unsafe {
+                dgemv(
+                    layout,
+                    trans,
+                    m,
+                    n,
+                    *(&alpha as *const N as *const f64),
+                    a,
+                    lda,
+                    x,
+                    incx,
+                    *(&beta as *const N as *const f64),
+                    y,
+                    incy,
+                )
+            }
+        }
+    }
+
+    fn ger(
+        layout: BlasLayout,
+        m: usize,
+        n: usize,
+        alpha: N,
+        x: *mut N,
+        incx: usize,
+        y: *mut N,
+        incy: usize,
+        a: *mut N,
+        lda: usize,
+    ) {
+        let layout = from_layout(layout);
+
+        if N::is_f32() {
+            let x = unsafe { std::slice::from_raw_parts(x as *const f32, m * incx) };
+            let y = unsafe { std::slice::from_raw_parts(y as *const f32, n * incy) };
+            let a = unsafe { std::slice::from_raw_parts_mut(a as *mut f32, lda * n) };
+
+            let m = m.try_into().unwrap();
+            let n = n.try_into().unwrap();
+            let incx = incx.try_into().unwrap();
+            let incy = incy.try_into().unwrap();
+            let lda = lda.try_into().unwrap();
+
+            unsafe {
+                sger(
+                    layout,
+                    m,
+                    n,
+                    *(&alpha as *const N as *const f32),
+                    x,
+                    incx,
+                    y,
+                    incy,
+                    a,
+                    lda,
+                )
+            }
+        } else {
+            let x = unsafe { std::slice::from_raw_parts(x as *const f64, m * incx) };
+            let y = unsafe { std::slice::from_raw_parts(y as *const f64, n * incy) };
+            let a = unsafe { std::slice::from_raw_parts_mut(a as *mut f64, lda * n) };
+
+            let m = m.try_into().unwrap();
+            let n = n.try_into().unwrap();
+            let incx = incx.try_into().unwrap();
+            let incy = incy.try_into().unwrap();
+            let lda = lda.try_into().unwrap();
+
+            unsafe {
+                dger(
+                    layout,
+                    m,
+                    n,
+                    *(&alpha as *const N as *const f64),
+                    x,
+                    incx,
+                    y,
+                    incy,
+                    a,
+                    lda,
+                )
+            }
+        }
+    }
+
+    fn gemm(
+        layout: BlasLayout,
+        transa: BlasTrans,
+        transb: BlasTrans,
+        m: usize,
+        n: usize,
+        k: usize,
+        alpha: N,
+        a: *mut N,
+        lda: usize,
+        b: *mut N,
+        ldb: usize,
+        beta: N,
+        c: *mut N,
+        ldc: usize,
+    ) {
+        let layout = from_layout(layout);
+        let transa = from_trans(transa);
+        let transb = from_trans(transb);
+
+        if N::is_f32() {
+            let a = unsafe { std::slice::from_raw_parts(a as *const f32, lda) };
+            let b = unsafe { std::slice::from_raw_parts(b as *const f32, ldb) };
+            let c = unsafe { std::slice::from_raw_parts_mut(c as *mut f32, ldc) };
+
+            let m = m.try_into().unwrap();
+            let n = n.try_into().unwrap();
+            let k = k.try_into().unwrap();
+            let lda = lda.try_into().unwrap();
+            let ldb = ldb.try_into().unwrap();
+            let ldc = ldc.try_into().unwrap();
+
+            unsafe {
+                sgemm(
+                    layout,
+                    transa,
+                    transb,
+                    m,
+                    n,
+                    k,
+                    *(&alpha as *const N as *const f32),
+                    a,
+                    lda,
+                    b,
+                    ldb,
+                    *(&beta as *const N as *const f32),
+                    c,
+                    ldc,
+                )
+            }
+        } else {
+            let a = unsafe { std::slice::from_raw_parts(a as *const f64, lda) };
+            let b = unsafe { std::slice::from_raw_parts(b as *const f64, ldb) };
+            let c = unsafe { std::slice::from_raw_parts_mut(c as *mut f64, ldc) };
+
+            let m = m.try_into().unwrap();
+            let n = n.try_into().unwrap();
+            let k = k.try_into().unwrap();
+            let lda = lda.try_into().unwrap();
+            let ldb = ldb.try_into().unwrap();
+            let ldc = ldc.try_into().unwrap();
+
+            unsafe {
+                dgemm(
+                    layout,
+                    transa,
+                    transb,
+                    m,
+                    n,
+                    k,
+                    *(&alpha as *const N as *const f64),
+                    a,
+                    lda,
+                    b,
+                    ldb,
+                    *(&beta as *const N as *const f64),
+                    c,
+                    ldc,
+                )
+            }
+        }
+    }
+}

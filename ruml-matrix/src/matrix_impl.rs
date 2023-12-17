@@ -56,7 +56,7 @@ where
     }
 }
 
-impl<M, S> ViewMatrix for Matrix<M, S>
+impl<M, S> ViewMatrix<M> for Matrix<M, S>
 where
     M: ViewMemory,
     S: DimTrait,
@@ -64,14 +64,14 @@ where
     type Owned = Matrix<<<Matrix<M, S> as MatrixBase>::Memory as ToOwnedMemory>::Owned, S>;
 }
 
-impl<M, S> ViewMutMatix for Matrix<M, S>
+impl<M, S> ViewMutMatix<M> for Matrix<M, S>
 where
     M: ViewMutMemory,
     S: DimTrait,
 {
 }
 
-impl<M, S> OwnedMatrix for Matrix<M, S>
+impl<M, S> OwnedMatrix<M> for Matrix<M, S>
 where
     M: OwnedMemory,
     S: DimTrait,
@@ -91,7 +91,7 @@ where
         Self: 'a;
 }
 
-impl<M, S, SS> MatrixSlice<S, SS> for Matrix<M, S>
+impl<M, S, SS> MatrixSlice<M, S, SS> for Matrix<M, S>
 where
     M: ToViewMemory,
     S: DimTrait,

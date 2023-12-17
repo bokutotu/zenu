@@ -2,31 +2,23 @@
 //
 // use crate::{
 //     blas::Blas,
-//     cpu_blas::CpuBlas,
-//     dim::{default_stride, DimTrait},
-//     index::SliceTrait,
+//     dim::DimTrait,
+//     index::IndexAxisTrait,
 //     index_impl::Index3D,
-//     matrix::{MatrixBase, MatrixSlice, MatrixSliceMut, ViewMatrix, ViewMutMatix},
-//     matrix_impl::Matrix,
-//     memory::{Memory, ToViewMutMemory, ViewMemory, ViewMutMemory},
-//     num::Num,
+//     matrix::{
+//         BlasMatrix, IndexAxis, IndexAxisMut, MatrixBase, ViewMatrix, ViewMatrixBase,
+//         ViewMutMatixBase, ViewMutMatrix,
+//     },
+//     memory::{Memory, ViewMemory, ViewMutMemory},
 // };
-
-// pub trait DeepCopy<T: Num, M: ViewMatrix<Dim = D>, D: DimTrait>: ViewMutMatix<Dim = D>
-// pub trait DeepCopy<T, M, D, S>: ViewMutMatix<Dim = D> + MatrixSliceMut<D, S>
+//
+// pub trait DeepCopy: ViewMutMatrix
 // where
-//     T: Num,
-//     S: SliceTrait<Dim = D>,
-//     M: ViewMatrix<Dim = D> + MatrixSlice<S, D>,
-//     D: DimTrait,
-//     Self::Memory: ViewMutMemory + ToViewMutMemory,
-//     Self::Memory: Memory<Item = T>,
-//     <M as MatrixBase>::Memory: ViewMemory,
-//     <M as MatrixBase>::Memory: Memory<Item = T>,
-//     CpuBlas<T>: Blas<T>,
+//     <Self as MatrixBase>::Memory: ViewMutMemory,
 // {
-//     type Blas: Blas<<<Self as MatrixBase>::Memory as Memory>::Item>;
-//     fn copy_from(&self, m: &M) {
+//     type Source: ViewMatrix
+//
+//     fn copy_from(mut self, m: Self::Source) {
 //         let self_shape_stride = self.shape_stride();
 //         let m_shape_stride = m.shape_stride();
 //
@@ -56,24 +48,7 @@
 //         }
 //     }
 // }
-
-// impl<T, M, D, Me, S> DeepCopy<T, M, D, S> for Matrix<Me, D> + MatrixSliceMut<S, D>
-// impl<T, M, D, Me, S> DeepCopy<T, M, D, S> for Matrix<Me, D>
-// where
-//     Me: ViewMutMemory,
-//     T: Num,
-//     M: ViewMatrix<Dim = D>,
-//     D: DimTrait,
-//     S: SliceTrait<Dim = D>,
-//     Self::Memory: ViewMutMemory,
-//     Self::Memory: Memory<Item = T>,
-//     <M as MatrixBase>::Memory: ViewMemory,
-//     <M as MatrixBase>::Memory: Memory<Item = T>,
-//     CpuBlas<T>: Blas<T>,
-// {
-//     type Blas = CpuBlas<T>;
-// }
-
+//
 // #[cfg(test)]
 // mod deep_copy {
 //     use super::*;
