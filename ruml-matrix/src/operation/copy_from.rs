@@ -1,116 +1,119 @@
-// use crate::{
-//     blas::Blas,
-//     dim::{DimTrait, LessDimTrait},
-//     index::IndexAxisTrait,
-//     index_impl::{Index1D, Index2D, Index3D},
-//     matrix::{IndexAxis, IndexAxisMut, MatrixBase, ViewMatrix, ViewMutMatix},
-//     memory::{Memory, ToViewMutMemory, ViewMemory, ViewMutMemory},
-//     num::Num,
-// };
+use crate::{
+    blas::Blas,
+    dim::{DimTrait, LessDimTrait},
+    dim_impl::{Dim1, Dim2},
+    index::IndexAxisTrait,
+    index_impl::{Index1D, Index2D, Index3D},
+    matrix::{IndexAxis, IndexAxisMut, MatrixBase, ViewMatrix, ViewMutMatix},
+    memory::{Memory, ViewMemory, ViewMutMemory},
+    num::Num,
+};
+
+pub trait CopyFrom<'a, RHS: ViewMatrix, D: DimTrait, I: IndexAxisTrait, N: Num>:
+    ViewMutMatix
+{
+    fn copy_from(&mut self, rhs: RHS);
+}
+
+impl<'a, V, VM, N> CopyFrom<'a, V, Dim1, Index1D, N> for VM
+where
+    N: Num,
+    V: ViewMatrix + MatrixBase<Dim = Dim1>,
+    VM: ViewMutMatix + MatrixBase<Dim = Dim1>,
+    VM::Memory: ViewMutMemory + Memory<Item = N>,
+    V::Memory: Memory<Item = N> + ViewMemory,
+{
+    fn copy_from(&mut self, rhs: V) {
+        let self_shape_stride = self.shape_stride();
+        let rhs_shape_stride = rhs.shape_stride();
+
+        if self_shape_stride.shape() != rhs_shape_stride.shape() {
+            panic!("shape is not equal");
+        }
+
+        <<VM as MatrixBase>::Memory as Memory>::Blas::copy(
+            rhs_shape_stride.shape().len(),
+            rhs.memory().as_ptr(),
+            self_shape_stride.stride().len(),
+            self.memory().as_mut_ptr(),
+            self_shape_stride.shape().len(),
+        )
+    }
+}
+
+impl<'a, V, VM, N> CopyFrom<'a, V, Dim2, Index1D, N> for VM
+where
+    N: Num,
+    V: ViewMatrix + MatrixBase<Dim = Dim2> + IndexAxis<Index1D> + 'a,
+    VM: ViewMutMatix + MatrixBase<Dim = Dim2> + IndexAxisMut<Index1D> + 'a,
+    VM::Memory: ViewMutMemory + Memory<Item = N>,
+    V::Memory: Memory<Item = N> + ViewMemory,
+    <VM as IndexAxisMut<Index1D>>::Output<'a>:
+        CopyFrom<'a, <V as IndexAxis<Index1D>>::Output<'a>, Dim1, Index1D, N>,
+{
+    fn copy_from<'b: 'a>(&'b mut self, rhs: V) {
+        let self_shape_stride = self.shape_stride();
+        let rhs_shape_stride = rhs.shape_stride();
+
+        if self_shape_stride.shape() != rhs_shape_stride.shape() {
+            panic!("shape is not equal");
+        }
+
+        for i in 0..self_shape_stride.shape().len() {
+            let mut s_sliced = self.index_axis_mut(Index1D::new(i));
+            let r_sliced = rhs.index_axis(Index1D::new(i));
+
+            s_sliced.copy_from(r_sliced);
+        }
+    }
+}
+
+// #[cfg(test)]
+// mod deep_copy {
+//     use super::*;
+//     use crate::{
+//         dim,
+//         matrix::{IndexItem, MatrixSlice, MatrixSliceMut, OwnedMatrix},
+//         matrix_impl::CpuOwnedMatrix2D,
+//         slice,
+//     };
 //
-// pub trait DeepCopy<T, M, MM, V, D, I>: ViewMutMatix<M> + IndexAxisMut<I>
-// where
-//     M: ViewMutMemory<Item = T> + ToViewMutMemory<Item = T>,
-//     MM: ViewMemory<Item = T>,
-//     V: ViewMatrix<MM> + IndexAxis<I>,
-//     <V as MatrixBase>::Dim: LessDimTrait,
-//     T: Num,
-//     D: DimTrait + LessDimTrait,
-//     <Self as MatrixBase>::Dim: LessDimTrait,
-//     I: IndexAxisTrait,
-// {
-//     fn copy_from(mut self, m: V) {
-//         let self_shape_stride = self.shape_stride();
-//         let m_shape_stride = m.shape_stride();
+//     #[test]
+//     fn defualt_stride() {
+//         let a = vec![0f32; 6];
+//         let b = vec![1f32, 2., 3., 4., 5., 6.];
 //
-//         let self_shape = self_shape_stride.shape();
-//         let self_stride = self_shape_stride.stride();
+//         let mut a = CpuOwnedMatrix2D::from_vec(a, dim!(2, 3));
+//         let b = CpuOwnedMatrix2D::from_vec(b, dim!(2, 3));
 //
-//         let m_shape = m_shape_stride.shape();
-//         let m_stride = m_shape_stride.stride();
+//         a.to_view_mut().copy_from(&b.to_view());
 //
-//         if self_shape.len() == 1 {
-//             let ptr_mut = self.view_mut_memory().as_mut_ptr();
-//             let ptr = m.memory().as_ptr();
+//         assert_eq!(a.index_item(dim!(0, 0)), 1.);
+//         assert_eq!(a.index_item(dim!(0, 1)), 2.);
+//         assert_eq!(a.index_item(dim!(0, 2)), 3.);
+//         assert_eq!(a.index_item(dim!(1, 0)), 4.);
+//         assert_eq!(a.index_item(dim!(1, 1)), 5.);
+//         assert_eq!(a.index_item(dim!(1, 2)), 6.);
+//     }
 //
-//             let inc_mut = self_stride[0];
-//             let inc = m_stride[0];
+//     #[test]
+//     fn sliced() {
+//         let a = vec![0f32; 6];
+//         let v = vec![0f32, 1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12.];
+//         let mut a = CpuOwnedMatrix2D::from_vec(a.clone(), dim!(3, 4));
+//         let v = CpuOwnedMatrix2D::from_vec(v, dim!(3, 4));
 //
-//             <<Self as MatrixBase>::Memory as Memory>::Blas::copy(
-//                 self_shape[0],
-//                 ptr,
-//                 inc,
-//                 ptr_mut,
-//                 inc_mut,
-//             );
-//         }
+//         let a_sliced = a.slice_mut(slice!(0..2, 0..3));
+//         let v_sliced = v.slice(slice!(1..3, 1..4));
 //
-//         let num_axis = self_shape.len();
-//
-//         for i in 0..self_shape[0] {
-//             if num_axis == 4 {
-//                 let index_axis = Index3D::new(i);
-//                 self.index_axis_mut(index_axis)
-//                     .copy_from(m.index_axis(index_axis));
-//             } else if num_axis == 3 {
-//                 let index_axis = Index2D::new(i);
-//                 self.index_axis_mut(index_axis)
-//                     .copy_from(m.index_axis(index_axis));
-//             } else if num_axis == 2 {
-//                 let index_axis = Index1D::new(i);
-//                 self.index_axis_mut(index_axis)
-//                     .copy_from(m.index_axis(index_axis));
-//             }
-//         }
+//         a_sliced.copy_from(&v_sliced);
+//         assert_eq!(a.index_item(dim!(0, 0)), 0.);
+//         assert_eq!(a.index_item(dim!(0, 1)), 1.);
+//         assert_eq!(a.index_item(dim!(0, 2)), 2.);
+//         assert_eq!(a.index_item(dim!(0, 3)), 0.);
+//         assert_eq!(a.index_item(dim!(1, 0)), 4.);
+//         assert_eq!(a.index_item(dim!(1, 1)), 5.);
+//         assert_eq!(a.index_item(dim!(1, 2)), 6.);
+//         assert_eq!(a.index_item(dim!(2, 3)), 0.);
 //     }
 // }
-//
-// // #[cfg(test)]
-// // mod deep_copy {
-// //     use super::*;
-// //     use crate::{
-// //         dim,
-// //         matrix::{IndexItem, MatrixSlice, MatrixSliceMut, OwnedMatrix},
-// //         matrix_impl::CpuOwnedMatrix2D,
-// //         slice,
-// //     };
-// //
-// //     #[test]
-// //     fn defualt_stride() {
-// //         let a = vec![0f32; 6];
-// //         let b = vec![1f32, 2., 3., 4., 5., 6.];
-// //
-// //         let mut a = CpuOwnedMatrix2D::from_vec(a, dim!(2, 3));
-// //         let b = CpuOwnedMatrix2D::from_vec(b, dim!(2, 3));
-// //
-// //         a.to_view_mut().copy_from(&b.to_view());
-// //
-// //         assert_eq!(a.index_item(dim!(0, 0)), 1.);
-// //         assert_eq!(a.index_item(dim!(0, 1)), 2.);
-// //         assert_eq!(a.index_item(dim!(0, 2)), 3.);
-// //         assert_eq!(a.index_item(dim!(1, 0)), 4.);
-// //         assert_eq!(a.index_item(dim!(1, 1)), 5.);
-// //         assert_eq!(a.index_item(dim!(1, 2)), 6.);
-// //     }
-// //
-// //     #[test]
-// //     fn sliced() {
-// //         let a = vec![0f32; 6];
-// //         let v = vec![0f32, 1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12.];
-// //         let mut a = CpuOwnedMatrix2D::from_vec(a.clone(), dim!(3, 4));
-// //         let v = CpuOwnedMatrix2D::from_vec(v, dim!(3, 4));
-// //
-// //         let a_sliced = a.slice_mut(slice!(0..2, 0..3));
-// //         let v_sliced = v.slice(slice!(1..3, 1..4));
-// //
-// //         a_sliced.copy_from(&v_sliced);
-// //         assert_eq!(a.index_item(dim!(0, 0)), 0.);
-// //         assert_eq!(a.index_item(dim!(0, 1)), 1.);
-// //         assert_eq!(a.index_item(dim!(0, 2)), 2.);
-// //         assert_eq!(a.index_item(dim!(0, 3)), 0.);
-// //         assert_eq!(a.index_item(dim!(1, 0)), 4.);
-// //         assert_eq!(a.index_item(dim!(1, 1)), 5.);
-// //         assert_eq!(a.index_item(dim!(1, 2)), 6.);
-// //         assert_eq!(a.index_item(dim!(2, 3)), 0.);
-// //     }
-// // }
