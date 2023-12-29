@@ -1,3 +1,3 @@
-mod copy_from;
-mod to_default_stride;
-mod transpose;
+pub mod copy_from;
+pub mod to_default_stride;
+pub mod transpose;
