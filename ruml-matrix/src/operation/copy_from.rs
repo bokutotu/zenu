@@ -1,72 +1,72 @@
-use crate::{
-    blas::Blas,
-    dim::{DimTrait, LessDimTrait},
-    dim_impl::{Dim1, Dim2},
-    index::IndexAxisTrait,
-    index_impl::{Index1D, Index2D, Index3D},
-    matrix::{IndexAxis, IndexAxisMut, MatrixBase, ViewMatrix, ViewMutMatix},
-    memory::{Memory, ViewMemory, ViewMutMemory},
-    num::Num,
-};
-
-pub trait CopyFrom<'a, RHS: ViewMatrix, D: DimTrait, I: IndexAxisTrait, N: Num>:
-    ViewMutMatix
-{
-    fn copy_from(&mut self, rhs: RHS);
-}
-
-impl<'a, V, VM, N> CopyFrom<'a, V, Dim1, Index1D, N> for VM
-where
-    N: Num,
-    V: ViewMatrix + MatrixBase<Dim = Dim1>,
-    VM: ViewMutMatix + MatrixBase<Dim = Dim1>,
-    VM::Memory: ViewMutMemory + Memory<Item = N>,
-    V::Memory: Memory<Item = N> + ViewMemory,
-{
-    fn copy_from(&mut self, rhs: V) {
-        let self_shape_stride = self.shape_stride();
-        let rhs_shape_stride = rhs.shape_stride();
-
-        if self_shape_stride.shape() != rhs_shape_stride.shape() {
-            panic!("shape is not equal");
-        }
-
-        <<VM as MatrixBase>::Memory as Memory>::Blas::copy(
-            rhs_shape_stride.shape().len(),
-            rhs.memory().as_ptr(),
-            self_shape_stride.stride().len(),
-            self.memory().as_mut_ptr(),
-            self_shape_stride.shape().len(),
-        )
-    }
-}
-
-impl<'a, V, VM, N> CopyFrom<'a, V, Dim2, Index1D, N> for VM
-where
-    N: Num,
-    V: ViewMatrix + MatrixBase<Dim = Dim2> + IndexAxis<Index1D> + 'a,
-    VM: ViewMutMatix + MatrixBase<Dim = Dim2> + IndexAxisMut<Index1D> + 'a,
-    VM::Memory: ViewMutMemory + Memory<Item = N>,
-    V::Memory: Memory<Item = N> + ViewMemory,
-    <VM as IndexAxisMut<Index1D>>::Output<'a>:
-        CopyFrom<'a, <V as IndexAxis<Index1D>>::Output<'a>, Dim1, Index1D, N>,
-{
-    fn copy_from<'b: 'a>(&'b mut self, rhs: V) {
-        let self_shape_stride = self.shape_stride();
-        let rhs_shape_stride = rhs.shape_stride();
-
-        if self_shape_stride.shape() != rhs_shape_stride.shape() {
-            panic!("shape is not equal");
-        }
-
-        for i in 0..self_shape_stride.shape().len() {
-            let mut s_sliced = self.index_axis_mut(Index1D::new(i));
-            let r_sliced = rhs.index_axis(Index1D::new(i));
-
-            s_sliced.copy_from(r_sliced);
-        }
-    }
-}
+// use crate::{
+//     blas::Blas,
+//     dim::{DimTrait, LessDimTrait},
+//     dim_impl::{Dim1, Dim2},
+//     index::IndexAxisTrait,
+//     index_impl::{Index1D, Index2D, Index3D},
+//     matrix::{IndexAxis, IndexAxisMut, MatrixBase, ViewMatrix, ViewMutMatix},
+//     memory::{Memory, ViewMemory, ViewMutMemory},
+//     num::Num,
+// };
+//
+// pub trait CopyFrom<'a, RHS: ViewMatrix, D: DimTrait, I: IndexAxisTrait, N: Num>:
+//     ViewMutMatix
+// {
+//     fn copy_from(&mut self, rhs: RHS);
+// }
+//
+// impl<'a, V, VM, N> CopyFrom<'a, V, Dim1, Index1D, N> for VM
+// where
+//     N: Num,
+//     V: ViewMatrix + MatrixBase<Dim = Dim1>,
+//     VM: ViewMutMatix + MatrixBase<Dim = Dim1>,
+//     VM::Memory: ViewMutMemory + Memory<Item = N>,
+//     V::Memory: Memory<Item = N> + ViewMemory,
+// {
+//     fn copy_from(&mut self, rhs: V) {
+//         let self_shape_stride = self.shape_stride();
+//         let rhs_shape_stride = rhs.shape_stride();
+//
+//         if self_shape_stride.shape() != rhs_shape_stride.shape() {
+//             panic!("shape is not equal");
+//         }
+//
+//         <<VM as MatrixBase>::Memory as Memory>::Blas::copy(
+//             rhs_shape_stride.shape().len(),
+//             rhs.memory().as_ptr(),
+//             self_shape_stride.stride().len(),
+//             self.memory().as_mut_ptr(),
+//             self_shape_stride.shape().len(),
+//         )
+//     }
+// }
+//
+// impl<'a, V, VM, N> CopyFrom<'a, V, Dim2, Index1D, N> for VM
+// where
+//     N: Num,
+//     V: ViewMatrix + MatrixBase<Dim = Dim2> + IndexAxis<Index1D> + 'a,
+//     VM: ViewMutMatix + MatrixBase<Dim = Dim2> + IndexAxisMut<Index1D> + 'a,
+//     VM::Memory: ViewMutMemory + Memory<Item = N>,
+//     V::Memory: Memory<Item = N> + ViewMemory,
+//     <VM as IndexAxisMut<Index1D>>::Output<'a>:
+//         CopyFrom<'a, <V as IndexAxis<Index1D>>::Output<'a>, Dim1, Index1D, N>,
+// {
+//     fn copy_from<'b: 'a>(&'b mut self, rhs: V) {
+//         let self_shape_stride = self.shape_stride();
+//         let rhs_shape_stride = rhs.shape_stride();
+//
+//         if self_shape_stride.shape() != rhs_shape_stride.shape() {
+//             panic!("shape is not equal");
+//         }
+//
+//         for i in 0..self_shape_stride.shape().len() {
+//             let mut s_sliced = self.index_axis_mut(Index1D::new(i));
+//             let r_sliced = rhs.index_axis(Index1D::new(i));
+//
+//             s_sliced.copy_from(r_sliced);
+//         }
+//     }
+// }
 
 // #[cfg(test)]
 // mod deep_copy {

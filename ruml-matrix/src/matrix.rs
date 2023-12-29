@@ -1,9 +1,11 @@
 use crate::{
-    dim::{cal_offset, default_stride, DimTrait},
-    index::{IndexAxisTrait, ShapeStride},
-    memory::Memory,
+    dim::{cal_offset, default_stride, DimTrait, LessDimTrait},
+    index::{IndexAxisTrait, ShapeStride, SliceTrait},
+    memory::{
+        Memory, OwnedMemory, ToOwnedMemory, ToViewMemory, ToViewMutMemory, ViewMemory,
+        ViewMutMemory,
+    },
 };
-
 pub trait MatrixBase: Sized {
     type Dim: DimTrait;
     type Memory: Memory;
@@ -17,58 +19,170 @@ pub trait MatrixBase: Sized {
     }
 }
 
-pub trait OwnedMatrix: MatrixBase {
-    type View<'a>: ViewMatrix
-    where
-        Self: 'a;
-    type ViewMut<'a>: ViewMutMatix
-    where
-        Self: 'a;
-
-    fn to_view(&self) -> Self::View<'_>;
-    fn to_view_mut(&mut self) -> Self::ViewMut<'_>;
-    fn from_vec(vec: Vec<<<Self as MatrixBase>::Memory as Memory>::Item>, dim: Self::Dim) -> Self;
-}
-
-pub trait ViewMatrix: MatrixBase {
-    type Owned: OwnedMatrix;
-
-    fn to_owned(&self) -> Self::Owned;
-}
-pub trait ViewMutMatix: MatrixBase {
-    fn view_mut_memory(&self) -> &Self::Memory;
-}
-
-pub trait MatrixSlice<M, D, S>: MatrixBase {
-    type Output<'a>: ViewMatrix
+pub trait OwnedMatrix: MatrixBase
+where
+    Self::Memory: OwnedMemory,
+{
+    type View<'a>: MatrixBase<
+            Memory = <<Self as MatrixBase>::Memory as ToViewMemory>::View<'a>,
+            Dim = Self::Dim,
+        > + ViewMatrix
     where
         Self: 'a;
 
-    fn slice(&self, index: S) -> Self::Output<'_>;
-}
-
-pub trait MatrixSliceMut<D, S>: MatrixBase<Dim = D> {
-    type Output<'a>: ViewMutMatix
+    type ViewMut<'a>: MatrixBase<
+            Memory = <<Self as MatrixBase>::Memory as ToViewMutMemory>::ViewMut<'a>,
+            Dim = Self::Dim,
+        > + ViewMutMatix
     where
         Self: 'a;
 
-    fn slice_mut(&mut self, index: S) -> Self::Output<'_>;
+    fn to_view(&self) -> Self::View<'_> {
+        Self::View::construct(
+            self.memory().to_view(self.memory().get_offset()),
+            self.shape_stride().shape(),
+            self.shape_stride().stride(),
+        )
+    }
+
+    fn to_view_mut(&mut self) -> Self::ViewMut<'_> {
+        let offset = self.memory().get_offset();
+        let shape_stride = self.shape_stride();
+        let shape = shape_stride.shape();
+        let stride = shape_stride.stride();
+        Self::ViewMut::construct(self.memory_mut().to_view_mut(offset), shape, stride)
+    }
+
+    fn from_vec(vec: Vec<<<Self as MatrixBase>::Memory as Memory>::Item>, dim: Self::Dim) -> Self {
+        let stride = default_stride(dim);
+        let memory = Self::Memory::from_vec(vec);
+        Self::construct(memory, dim, stride)
+    }
 }
 
-pub trait IndexAxis<I: IndexAxisTrait>: MatrixBase {
-    type Output<'a>: ViewMatrix
+pub trait ViewMatrix: MatrixBase
+where
+    Self::Memory: ViewMemory,
+{
+    type Owned: MatrixBase<Memory = <<Self as MatrixBase>::Memory as ToOwnedMemory>::Owned, Dim = Self::Dim>
+        + OwnedMatrix;
+
+    fn to_owned(&self) -> Self::Owned {
+        Self::Owned::construct(
+            self.memory().to_owned_memory(),
+            self.shape_stride().shape(),
+            self.shape_stride().stride(),
+        )
+    }
+}
+
+pub trait ViewMutMatix: MatrixBase
+where
+    Self::Memory: ViewMutMemory,
+{
+    fn view_mut_memory(&self) -> &Self::Memory {
+        self.memory()
+    }
+}
+
+pub trait MatrixSlice<D, S>: MatrixBase<Dim = D>
+where
+    S: SliceTrait<Dim = D>,
+    D: DimTrait,
+    Self::Memory: ToViewMemory,
+{
+    type Output<'a>: MatrixBase<Memory = <Self::Memory as ToViewMemory>::View<'a>, Dim = D>
     where
         Self: 'a;
 
-    fn index_axis(&self, index: I) -> Self::Output<'_>;
+    fn slice(&self, index: S) -> Self::Output<'_> {
+        let shape_stride = self.shape_stride();
+        let shape = shape_stride.shape();
+        let stride = shape_stride.stride();
+        let new_shape_stride = index.sliced_shape_stride(shape, stride);
+        let offset = index.sliced_offset(stride, self.memory().get_offset());
+        Self::Output::construct(
+            self.memory().to_view(offset),
+            new_shape_stride.shape(),
+            new_shape_stride.stride(),
+        )
+    }
 }
 
-pub trait IndexAxisMut<I: IndexAxisTrait>: MatrixBase {
-    type Output<'a>: ViewMutMatix
+pub trait MatrixSliceMut<D, S>: MatrixBase<Dim = D>
+where
+    S: SliceTrait<Dim = D>,
+    D: DimTrait,
+    Self::Memory: ToViewMutMemory,
+{
+    type Output<'a>: MatrixBase<Memory = <Self::Memory as ToViewMutMemory>::ViewMut<'a>, Dim = D>
     where
         Self: 'a;
 
-    fn index_axis_mut(&mut self, index: I) -> Self::Output<'_>;
+    fn slice_mut(&mut self, index: S) -> Self::Output<'_> {
+        let shape_stride = self.shape_stride();
+        let shape = shape_stride.shape();
+        let stride = shape_stride.stride();
+        let new_shape_stride = index.sliced_shape_stride(shape, stride);
+        let offset = index.sliced_offset(stride, self.memory().get_offset());
+        Self::Output::construct(
+            self.memory_mut().to_view_mut(offset),
+            new_shape_stride.shape(),
+            new_shape_stride.stride(),
+        )
+    }
+}
+
+pub trait IndexAxis<I: IndexAxisTrait>: MatrixBase
+where
+    Self::Memory: ToViewMemory,
+    Self::Dim: LessDimTrait,
+{
+    type Output<'a>: MatrixBase<
+        Memory = <Self::Memory as ToViewMemory>::View<'a>,
+        Dim = <Self::Dim as LessDimTrait>::LessDim,
+    >
+    where
+        Self: 'a;
+
+    fn index_axis(&self, index: I) -> Self::Output<'_> {
+        let shape_stride = self.shape_stride();
+        let shape = shape_stride.shape();
+        let stride = shape_stride.stride();
+        let new_shape_stride = index.get_shape_stride(shape, stride);
+        let offset = index.offset(stride);
+        Self::Output::construct(
+            self.memory().to_view(offset),
+            new_shape_stride.shape(),
+            new_shape_stride.stride(),
+        )
+    }
+}
+
+pub trait IndexAxisMut<I: IndexAxisTrait>: MatrixBase
+where
+    Self::Memory: ToViewMutMemory,
+    Self::Dim: LessDimTrait,
+{
+    type Output<'a>: MatrixBase<
+        Memory = <Self::Memory as ToViewMutMemory>::ViewMut<'a>,
+        Dim = <Self::Dim as LessDimTrait>::LessDim,
+    >
+    where
+        Self: 'a;
+
+    fn index_axis_mut(&mut self, index: I) -> Self::Output<'_> {
+        let shape_stride = self.shape_stride();
+        let shape = shape_stride.shape();
+        let stride = shape_stride.stride();
+        let new_shape_stride = index.get_shape_stride(shape, stride);
+        let offset = index.offset(stride);
+        Self::Output::construct(
+            self.memory_mut().to_view_mut(offset),
+            new_shape_stride.shape(),
+            new_shape_stride.stride(),
+        )
+    }
 }
 
 pub trait IndexItem<D>: MatrixBase<Dim = D>
