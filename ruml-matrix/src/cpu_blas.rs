@@ -436,3 +436,45 @@ impl<N: Num> Blas<N> for CpuBlas<N> {
         }
     }
 }
+
+#[cfg(test)]
+mod cpu_blas {
+    use super::*;
+    fn zero_vec(n: usize) -> Vec<f32> {
+        vec![0.0; n]
+    }
+
+    fn fill_range(n: usize) -> Vec<f32> {
+        (0..n).map(|x| x as f32).collect()
+    }
+
+    fn zero_vec_f64(n: usize) -> Vec<f64> {
+        vec![0.0; n]
+    }
+
+    fn fill_range_f64(n: usize) -> Vec<f64> {
+        (0..n).map(|x| x as f64).collect()
+    }
+
+    #[test]
+    fn f32_swap() {
+        let mut x = zero_vec(10);
+        let mut y = fill_range(10);
+
+        super::CpuBlas::<f32>::swap(10, x.as_mut_ptr(), 1, y.as_mut_ptr(), 1);
+
+        assert_eq!(x, fill_range(10));
+        assert_eq!(y, zero_vec(10));
+    }
+
+    #[test]
+    fn f64_swap() {
+        let mut x = zero_vec_f64(10);
+        let mut y = fill_range_f64(10);
+
+        super::CpuBlas::<f64>::swap(10, x.as_mut_ptr(), 1, y.as_mut_ptr(), 1);
+
+        assert_eq!(x, fill_range_f64(10));
+        assert_eq!(y, zero_vec_f64(10));
+    }
+}

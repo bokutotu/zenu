@@ -1,16 +1,13 @@
 use crate::{
     cpu_memory::{CpuOwnedMemory, CpuViewMemory},
-    dim::{DimTrait, LessDimTrait},
+    dim::{cal_offset, default_stride, DimTrait, LessDimTrait},
     dim_impl::{Dim1, Dim2, Dim3, Dim4},
     index::{IndexAxisTrait, ShapeStride, SliceTrait},
     matrix::{
         IndexAxis, IndexAxisMut, IndexItem, MatrixBase, MatrixSlice, MatrixSliceMut, OwnedMatrix,
         ViewMatrix, ViewMutMatix,
     },
-    memory::{
-        Memory, OwnedMemory, ToOwnedMemory, ToViewMemory, ToViewMutMemory, ViewMemory,
-        ViewMutMemory,
-    },
+    memory::{Memory, OwnedMemory, ToViewMemory, ToViewMutMemory, ViewMemory, ViewMutMemory},
 };
 
 pub struct Matrix<M, S> {
@@ -56,39 +53,68 @@ where
     }
 }
 
-impl<M, S> ViewMatrix<M> for Matrix<M, S>
+impl<M, S> OwnedMatrix for Matrix<M, S>
+where
+    M: OwnedMemory + ToViewMemory + ToViewMutMemory + Clone,
+    S: DimTrait,
+{
+    type View<'a> = Matrix<<M as ToViewMemory>::View<'a>,S>
+    where
+        Self: 'a;
+
+    type ViewMut<'a> = Matrix<<M as ToViewMutMemory>::ViewMut<'a>, S>
+    where
+        Self: 'a;
+
+    fn to_view(&self) -> Self::View<'_> {
+        Matrix {
+            memory: self.memory.to_view(0),
+            shape: self.shape,
+            stride: self.stride,
+        }
+    }
+    fn to_view_mut(&mut self) -> Self::ViewMut<'_> {
+        Matrix {
+            memory: self.memory.to_view_mut(0),
+            shape: self.shape,
+            stride: self.stride,
+        }
+    }
+    fn from_vec(vec: Vec<<<Self as MatrixBase>::Memory as Memory>::Item>, dim: Self::Dim) -> Self {
+        let memory = M::from_vec(vec);
+        let stride = default_stride(dim);
+        Matrix {
+            memory,
+            shape: dim,
+            stride,
+        }
+    }
+}
+
+impl<M, S> ViewMatrix for Matrix<M, S>
 where
     M: ViewMemory,
     S: DimTrait,
 {
-    type Owned = Matrix<<<Matrix<M, S> as MatrixBase>::Memory as ToOwnedMemory>::Owned, S>;
+    type Owned = Matrix<M::Owned, S>;
+
+    fn to_owned(&self) -> Self::Owned {
+        Matrix {
+            memory: self.memory.to_owned_memory(),
+            shape: self.shape,
+            stride: self.stride,
+        }
+    }
 }
 
-impl<M, S> ViewMutMatix<M> for Matrix<M, S>
+impl<M, S> ViewMutMatix for Matrix<M, S>
 where
     M: ViewMutMemory,
     S: DimTrait,
 {
-}
-
-impl<M, S> OwnedMatrix<M> for Matrix<M, S>
-where
-    M: OwnedMemory,
-    S: DimTrait,
-{
-    type View<'a> = Matrix<
-        <<Matrix<M, S> as MatrixBase>::Memory as ToViewMemory>::View<'a>,
-        S
-    >
-    where
-        Self: 'a;
-
-    type ViewMut<'a> = Matrix<
-        <<Matrix<M, S> as MatrixBase>::Memory as ToViewMutMemory>::ViewMut<'a>,
-        S
-    >
-    where
-        Self: 'a;
+    fn view_mut_memory(&self) -> &Self::Memory {
+        &self.memory
+    }
 }
 
 impl<M, S, SS> MatrixSlice<M, S, SS> for Matrix<M, S>
@@ -97,12 +123,22 @@ where
     S: DimTrait,
     SS: SliceTrait<Dim = S>,
 {
-    type Output<'a> = Matrix<
-        <<Matrix<M, S> as MatrixBase>::Memory as ToViewMemory>::View<'a>,
-        S
-    >
+    type Output<'a> = Matrix<<M as ToViewMemory>::View<'a>, S>
     where
         Self: 'a;
+
+    fn slice(&self, index: SS) -> Self::Output<'_> {
+        let shape_stride = self.shape_stride();
+        let shape = shape_stride.shape();
+        let stride = shape_stride.stride();
+        let new_shape_stride = index.sliced_shape_stride(shape, stride);
+        let offset = index.sliced_offset(stride, self.memory().get_offset());
+        Self::Output::construct(
+            self.memory().to_view(offset),
+            new_shape_stride.shape(),
+            new_shape_stride.stride(),
+        )
+    }
 }
 
 impl<M, S, SS> MatrixSliceMut<S, SS> for Matrix<M, S>
@@ -117,6 +153,19 @@ where
     >
     where
         Self: 'a;
+
+    fn slice_mut(&mut self, index: SS) -> Self::Output<'_> {
+        let shape_stride = self.shape_stride();
+        let shape = shape_stride.shape();
+        let stride = shape_stride.stride();
+        let new_shape_stride = index.sliced_shape_stride(shape, stride);
+        let offset = index.sliced_offset(stride, self.memory().get_offset());
+        Self::Output::construct(
+            self.memory_mut().to_view_mut(offset),
+            new_shape_stride.shape(),
+            new_shape_stride.stride(),
+        )
+    }
 }
 
 impl<M, S, I> IndexAxis<I> for Matrix<M, S>
@@ -131,6 +180,19 @@ where
     >
     where
         Self: 'a;
+
+    fn index_axis(&self, index: I) -> Self::Output<'_> {
+        let shape_stride = self.shape_stride();
+        let shape = shape_stride.shape();
+        let stride = shape_stride.stride();
+        let new_shape_stride = index.get_shape_stride(shape, stride);
+        let offset = index.offset(stride);
+        Self::Output::construct(
+            self.memory().to_view(offset),
+            new_shape_stride.shape(),
+            new_shape_stride.stride(),
+        )
+    }
 }
 
 impl<M, S, I> IndexAxisMut<I> for Matrix<M, S>
@@ -145,6 +207,19 @@ where
     >
     where
         Self: 'a;
+
+    fn index_axis_mut(&mut self, index: I) -> Self::Output<'_> {
+        let shape_stride = self.shape_stride();
+        let shape = shape_stride.shape();
+        let stride = shape_stride.stride();
+        let new_shape_stride = index.get_shape_stride(shape, stride);
+        let offset = index.offset(stride);
+        Self::Output::construct(
+            self.memory_mut().to_view_mut(offset),
+            new_shape_stride.shape(),
+            new_shape_stride.stride(),
+        )
+    }
 }
 
 impl<M, D> IndexItem<D> for Matrix<M, D>
@@ -152,6 +227,14 @@ where
     D: DimTrait,
     M: Memory,
 {
+    fn index_item(&self, index: D) -> <Self::Memory as Memory>::Item {
+        if self.shape_stride().shape().is_overflow(index) {
+            panic!("index out of bounds");
+        }
+
+        let offset = cal_offset(index, self.shape_stride().stride());
+        self.memory().ptr_offset(offset)
+    }
 }
 
 #[cfg(test)]
