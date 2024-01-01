@@ -86,13 +86,13 @@ impl<M: ToOwnedMemory, S: DimTrait> ToOwnedMatrix for Matrix<M, S> {
 
 impl<M: ViewMutMemory, S: DimTrait> AsMutPtr for Matrix<M, S> {
     fn as_mut_ptr(&mut self) -> *mut Self::Item {
-        self.memory.as_mut_ptr()
+        self.memory.as_mut_ptr_offset(0)
     }
 }
 
 impl<M: Memory, S: DimTrait> AsPtr for Matrix<M, S> {
     fn as_ptr(&self) -> *const Self::Item {
-        self.memory.as_ptr()
+        self.memory.as_ptr_offset(0)
     }
 }
 
@@ -204,7 +204,7 @@ impl<D: DimTrait, M: Memory> IndexItem<D> for Matrix<M, D> {
         }
 
         let offset = cal_offset(index, self.shape_stride().stride());
-        self.memory.ptr_offset(offset)
+        self.memory.value_offset(offset)
     }
 }
 

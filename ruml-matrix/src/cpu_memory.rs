@@ -207,11 +207,11 @@ mod memory {
     fn owned_memory_offset() {
         let mut memory = CpuOwnedMemory::from_vec(vec![1., 2., 3., 4., 5.]);
         assert_eq!(memory.get_offset(), 0);
-        assert_eq!(memory.ptr_offset(0), 1.);
+        assert_eq!(memory.value_offset(0), 1.);
 
         memory.set_offset(2);
         assert_eq!(memory.get_offset(), 2);
-        assert_eq!(memory.ptr_offset(0), 3.);
+        assert_eq!(memory.value_offset(0), 3.);
     }
 
     #[test]
@@ -219,7 +219,7 @@ mod memory {
         let memory = CpuOwnedMemory::from_vec(vec![1., 2., 3., 4., 5.]);
         let view = memory.to_view(3);
         assert_eq!(view.get_offset(), 3);
-        assert_eq!(view.ptr_offset(0), 4.);
+        assert_eq!(view.value_offset(0), 4.);
     }
 
     #[test]
@@ -228,7 +228,7 @@ mod memory {
         memory.set_offset(1);
         let view = dbg!(memory.to_view(2));
         assert_eq!(view.get_offset(), 3);
-        assert_eq!(view.ptr_offset(0), 4.);
+        assert_eq!(view.value_offset(0), 4.);
     }
 
     #[test]
@@ -238,6 +238,6 @@ mod memory {
         let view = memory.to_view(3);
         let owned_memory = view.to_owned_memory();
         assert_eq!(owned_memory.get_offset(), 4);
-        assert_eq!(owned_memory.ptr_offset(0), 5.);
+        assert_eq!(owned_memory.value_offset(0), 5.);
     }
 }

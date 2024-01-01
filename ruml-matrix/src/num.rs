@@ -1,6 +1,6 @@
-use std::fmt::Debug;
+use std::fmt::{Debug, Display};
 
-pub trait Num: Default + Clone + Copy + Debug {
+pub trait Num: Default + Clone + Copy + Debug + Display {
     fn is_f32() -> bool;
 }
 

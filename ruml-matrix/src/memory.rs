@@ -7,9 +7,14 @@ pub trait Memory {
     type Blas: Blas<Self::Item>;
 
     fn len(&self) -> usize;
+    /// 確保しているメモリの先頭のポインタを返す
+    /// offsetがある場合でもoffsetは考慮されない
     fn as_ptr(&self) -> *const Self::Item;
-    fn ptr_offset(&self, offset: usize) -> Self::Item {
-        unsafe { *self.as_ptr().add(self.get_offset() + offset) }
+    fn as_ptr_offset(&self, offset: usize) -> *const Self::Item {
+        unsafe { self.as_ptr().add(self.get_offset() + offset) }
+    }
+    fn value_offset(&self, offset: usize) -> Self::Item {
+        unsafe { *self.as_ptr_offset(offset) }
     }
     fn get_offset(&self) -> usize;
     fn set_offset(&mut self, offset: usize);
