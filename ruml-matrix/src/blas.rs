@@ -15,7 +15,7 @@ pub trait Blas<T: Num> {
     fn swap(n: usize, x: *mut T, incx: usize, y: *mut T, incy: usize);
     /// x = alpha * x
     fn scal(n: usize, alpha: T, x: *mut T, incx: usize);
-    fn axpy(n: usize, alpha: T, x: *mut T, incx: usize, y: *mut T, incy: usize);
+    fn axpy(n: usize, alpha: T, x: *const T, incx: usize, y: *mut T, incy: usize);
     fn copy(n: usize, x: *const T, incx: usize, y: *mut T, incy: usize);
     fn dot(n: usize, x: *mut T, incx: usize, y: *mut T, incy: usize) -> T;
     fn norm2(n: usize, x: *mut T, incx: usize) -> T;

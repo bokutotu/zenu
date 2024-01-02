@@ -1,5 +1,5 @@
 use crate::{
-    cpu_memory::{CpuOwnedMemory, CpuViewMemory, CpuViewMutMemory},
+    cpu_memory::{CpuOwnedMemory, CpuViewMemory},
     dim::{cal_offset, default_stride, DimTrait, LessDimTrait},
     dim_impl::{Dim1, Dim2, Dim3, Dim4},
     index::{IndexAxisTrait, ShapeStride, SliceTrait},
@@ -28,6 +28,14 @@ impl<M, S> Matrix<M, S> {
             shape,
             stride,
         }
+    }
+
+    pub(crate) fn update_shape(&mut self, shape: S) {
+        self.shape = shape;
+    }
+
+    pub(crate) fn update_stride(&mut self, stride: S) {
+        self.stride = stride;
     }
 }
 
@@ -102,6 +110,9 @@ impl<M: ViewMutMemory, S: DimTrait> ViewMutMatix for Matrix<M, S> {}
 
 impl<M: OwnedMemory, S: DimTrait> OwnedMatrix for Matrix<M, S> {
     fn from_vec(vec: Vec<Self::Item>, dim: Self::Dim) -> Self {
+        if vec.len() != dim.num_elm() {
+            panic!("vec.len() != dim.num_elm()");
+        }
         let stride = default_stride(dim);
         let memory = M::from_vec(vec);
         Matrix {
@@ -208,7 +219,9 @@ impl<D: DimTrait, M: Memory> IndexItem<D> for Matrix<M, D> {
     }
 }
 
-impl<'a, T: Num, D: DimTrait> IndexItemAsign<D> for Matrix<CpuViewMutMemory<'a, T>, D> {
+impl<'a, T: Num, D: DimTrait, VM: ViewMutMemory + Memory<Item = T>> IndexItemAsign<D>
+    for Matrix<VM, D>
+{
     fn index_item_asign(&mut self, index: Self::Dim, value: Self::Item) {
         if self.shape_stride().shape().is_overflow(index) {
             panic!("index is overflow");

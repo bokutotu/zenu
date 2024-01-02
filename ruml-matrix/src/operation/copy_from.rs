@@ -139,8 +139,8 @@ mod deep_copy {
 
     #[test]
     fn sliced_2d() {
-        let a = vec![0f32; 6];
-        let v = vec![0f32, 1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12.];
+        let a = vec![0f32; 12];
+        let v = vec![0f32, 1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11.];
         let mut a = CpuOwnedMatrix2D::from_vec(a.clone(), dim!(3, 4));
         let v = CpuOwnedMatrix2D::from_vec(v, dim!(3, 4));
 

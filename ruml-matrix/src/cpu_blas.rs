@@ -79,10 +79,10 @@ impl<N: Num> Blas<N> for CpuBlas<N> {
         }
     }
 
-    fn axpy(n: usize, alpha: N, x: *mut N, incx: usize, y: *mut N, incy: usize) {
+    fn axpy(n: usize, alpha: N, x: *const N, incx: usize, y: *mut N, incy: usize) {
         if N::is_f32() {
-            let x = unsafe { std::slice::from_raw_parts(x as *mut f32, n * incx) };
-            let y = unsafe { std::slice::from_raw_parts_mut(y as *mut f32, n * incy) };
+            let x = unsafe { std::slice::from_raw_parts(x as *mut f32, 1) };
+            let y = unsafe { std::slice::from_raw_parts_mut(y as *mut f32, 1) };
             unsafe {
                 saxpy(
                     n.try_into().unwrap(),
@@ -94,8 +94,8 @@ impl<N: Num> Blas<N> for CpuBlas<N> {
                 )
             }
         } else {
-            let x = unsafe { std::slice::from_raw_parts(x as *mut f64, n * incx) };
-            let y = unsafe { std::slice::from_raw_parts_mut(y as *mut f64, n * incy) };
+            let x = unsafe { std::slice::from_raw_parts(x as *mut f64, 1) };
+            let y = unsafe { std::slice::from_raw_parts_mut(y as *mut f64, 1) };
             unsafe {
                 daxpy(
                     n.try_into().unwrap(),

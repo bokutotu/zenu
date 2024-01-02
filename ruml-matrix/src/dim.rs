@@ -1,4 +1,7 @@
-use std::ops::{Index, IndexMut};
+use std::{
+    fmt::Debug,
+    ops::{Index, IndexMut},
+};
 
 pub trait DimTrait:
     Index<usize, Output = usize>
@@ -8,6 +11,7 @@ pub trait DimTrait:
     + Copy
     + Default
     + PartialEq
+    + Debug
 {
     fn len(&self) -> usize;
     fn is_empty(&self) -> bool;
