@@ -181,7 +181,7 @@ impl<N: Num> Blas<N> for CpuBlas<N> {
         }
     }
 
-    fn asum(n: usize, x: *mut N, incx: usize) -> N {
+    fn asum(n: usize, x: *const N, incx: usize) -> N {
         if N::is_f32() {
             let x = unsafe { std::slice::from_raw_parts(x as *const f32, n * incx) };
             unsafe {
