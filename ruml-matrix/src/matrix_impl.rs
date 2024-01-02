@@ -219,7 +219,7 @@ impl<D: DimTrait, M: Memory> IndexItem<D> for Matrix<M, D> {
     }
 }
 
-impl<'a, T: Num, D: DimTrait, VM: ViewMutMemory + Memory<Item = T>> IndexItemAsign<D>
+impl<T: Num, D: DimTrait, VM: ViewMutMemory + Memory<Item = T>> IndexItemAsign<D>
     for Matrix<VM, D>
 {
     fn index_item_asign(&mut self, index: Self::Dim, value: Self::Item) {

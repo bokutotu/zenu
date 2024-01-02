@@ -14,6 +14,7 @@ pub trait Transpose: ViewMutMatix {
 macro_rules! impl_transpose {
     ($dim:ty) => {
         impl<T: Num, M: ViewMutMemory + Memory<Item = T>> Transpose for Matrix<M, $dim> {
+            #[allow(clippy::almost_swapped)]
             fn transpose(&mut self) {
                 let shape_stride = self.shape_stride();
                 let mut shape = shape_stride.shape();
