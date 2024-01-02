@@ -1,6 +1,7 @@
 use crate::{
     blas::Blas,
-    dim_impl::{Dim1, Dim2},
+    dim::DimTrait,
+    dim_impl::{Dim1, Dim2, Dim3, Dim4},
     index_impl::Index0D,
     matrix::{AsMutPtr, AsPtr, IndexAxis, IndexAxisMut, MatrixBase, ViewMatrix, ViewMutMatix},
     matrix_impl::Matrix,
@@ -31,20 +32,42 @@ impl<V: ViewMemory + Memory<Item = T>, VM: ViewMutMemory + Memory<Item = T>, T: 
     }
 }
 
-impl<V: ViewMemory + Memory<Item = T>, VM: ViewMutMemory + Memory<Item = T>, T: Num>
-    CopyFrom<Matrix<V, Dim2>, T> for Matrix<VM, Dim2>
-{
-    fn copy_from(&mut self, rhs: &Matrix<V, Dim2>) {
-        assert_eq!(self.shape_stride().shape(), rhs.shape_stride().shape());
+macro_rules! impl_copy_from {
+    ($dim:ty) => {
+        impl<V: ViewMemory + Memory<Item = T>, VM: ViewMutMemory + Memory<Item = T>, T: Num>
+            CopyFrom<Matrix<V, $dim>, T> for Matrix<VM, $dim>
+        {
+            fn copy_from(&mut self, rhs: &Matrix<V, $dim>) {
+                assert_eq!(self.shape_stride().shape(), rhs.shape_stride().shape());
 
-        for i in 0..self.shape_stride().shape()[0] {
-            let rhs = rhs.index_axis(Index0D::new(i));
-            let mut self_ = self.index_axis_mut(Index0D::new(i));
+                if self.shape_stride().is_contiguous() && rhs.shape_stride().is_contiguous() {
+                    let num_dims = self.shape_stride().shape().len();
+                    let num_elms = self.shape_stride().shape().num_elm();
+                    let self_stride = self.shape_stride().stride()[num_dims - 1];
+                    let rhs_stride = rhs.shape_stride().stride()[num_dims - 1];
 
-            self_.copy_from(&rhs);
+                    <V as Memory>::Blas::copy(
+                        num_elms,
+                        rhs.as_ptr(),
+                        rhs_stride,
+                        self.as_mut_ptr() as *mut _,
+                        self_stride,
+                    );
+                } else {
+                    for i in 0..self.shape_stride().shape()[0] {
+                        let rhs = rhs.index_axis(Index0D::new(i));
+                        let mut self_ = self.index_axis_mut(Index0D::new(i));
+
+                        self_.copy_from(&rhs);
+                    }
+                }
+            }
         }
-    }
+    };
 }
+impl_copy_from!(Dim2);
+impl_copy_from!(Dim3);
+impl_copy_from!(Dim4);
 
 #[cfg(test)]
 mod deep_copy {

@@ -63,21 +63,7 @@ impl<D: DimTrait> ShapeStride<D> {
     }
 
     pub fn is_transposed(&self) -> bool {
-        println!("shape: {:?}", self.shape().into_iter().collect::<Vec<_>>());
-        println!(
-            "stride: {:?}",
-            self.stride().into_iter().collect::<Vec<_>>()
-        );
         let sorted = self.sort_by_stride();
-
-        println!(
-            "sorted shape: {:?}",
-            sorted.shape().into_iter().collect::<Vec<_>>()
-        );
-        println!(
-            "sorted stride: {:?}",
-            sorted.stride().into_iter().collect::<Vec<_>>()
-        );
 
         // sortedのshaptとself.shapeが一致しているかどうか
         // 一致していれば、transposeされていない
