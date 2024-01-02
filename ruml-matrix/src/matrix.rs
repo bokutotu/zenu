@@ -1,4 +1,5 @@
 use crate::{
+    blas::Blas,
     dim::{default_stride, DimTrait, LessDimTrait},
     index::{IndexAxisTrait, ShapeStride, SliceTrait},
     num::Num,
@@ -108,10 +109,17 @@ where
     fn index_item_asign(&mut self, index: D, value: <Self as MatrixBase>::Item);
 }
 
-pub trait ViewMatrix: MatrixBase + ToViewMatrix + ToOwnedMatrix + AsPtr {}
+pub trait BlasMatrix: MatrixBase {
+    type Blas: Blas<Self::Item>;
+}
 
-pub trait ViewMutMatix: MatrixBase + ToViewMatrix + ToViewMutMatrix + AsMutPtr {}
+pub trait ViewMatrix: MatrixBase + ToViewMatrix + ToOwnedMatrix + AsPtr + BlasMatrix {}
 
-pub trait OwnedMatrix: MatrixBase + ToViewMatrix + ToViewMutMatrix + AsPtr {
+pub trait ViewMutMatix:
+    MatrixBase + ToViewMatrix + ToViewMutMatrix + AsMutPtr + BlasMatrix + AsPtr
+{
+}
+
+pub trait OwnedMatrix: MatrixBase + ToViewMatrix + ToViewMutMatrix + AsPtr + BlasMatrix {
     fn from_vec(vec: Vec<Self::Item>, dim: Self::Dim) -> Self;
 }

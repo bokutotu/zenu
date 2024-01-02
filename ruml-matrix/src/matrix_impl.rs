@@ -4,9 +4,9 @@ use crate::{
     dim_impl::{Dim1, Dim2, Dim3, Dim4},
     index::{IndexAxisTrait, ShapeStride, SliceTrait},
     matrix::{
-        AsMutPtr, AsPtr, IndexAxis, IndexAxisMut, IndexItem, IndexItemAsign, MatrixBase,
-        MatrixSlice, MatrixSliceMut, OwnedMatrix, ToOwnedMatrix, ToViewMatrix, ToViewMutMatrix,
-        ViewMatrix, ViewMutMatix,
+        AsMutPtr, AsPtr, BlasMatrix, IndexAxis, IndexAxisMut, IndexItem, IndexItemAsign,
+        MatrixBase, MatrixSlice, MatrixSliceMut, OwnedMatrix, ToOwnedMatrix, ToViewMatrix,
+        ToViewMutMatrix, ViewMatrix, ViewMutMatix,
     },
     memory::{
         Memory, OwnedMemory, ToOwnedMemory, ToViewMemory, ToViewMutMemory, ViewMemory,
@@ -232,6 +232,10 @@ impl<'a, T: Num, D: DimTrait, VM: ViewMutMemory + Memory<Item = T>> IndexItemAsi
             *self.memory.as_mut_ptr_offset(offset) = value;
         }
     }
+}
+
+impl<T: Num, M: Memory<Item = T>, D: DimTrait> BlasMatrix for Matrix<M, D> {
+    type Blas = M::Blas;
 }
 
 pub type CpuOwnedMatrix1D<T> = Matrix<CpuOwnedMemory<T>, Dim1>;

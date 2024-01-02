@@ -137,7 +137,7 @@ impl<N: Num> Blas<N> for CpuBlas<N> {
         }
     }
 
-    fn dot(n: usize, x: *mut N, incx: usize, y: *mut N, incy: usize) -> N {
+    fn dot(n: usize, x: *const N, incx: usize, y: *const N, incy: usize) -> N {
         if N::is_f32() {
             let x = unsafe { std::slice::from_raw_parts(x as *const f32, n * incx) };
             let y = unsafe { std::slice::from_raw_parts(y as *const f32, n * incy) };
