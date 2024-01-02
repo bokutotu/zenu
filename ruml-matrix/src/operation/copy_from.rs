@@ -114,24 +114,24 @@ mod deep_copy {
         assert_eq!(a.index_item(dim!(1, 2)), 6.);
     }
 
-    // #[test]
-    // fn sliced_2d() {
-    //     let a = vec![0f32; 6];
-    //     let v = vec![0f32, 1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12.];
-    //     let mut a = CpuOwnedMatrix2D::from_vec(a.clone(), dim!(3, 4));
-    //     let v = CpuOwnedMatrix2D::from_vec(v, dim!(3, 4));
-    //
-    //     let mut a_sliced = a.slice_mut(slice!(0..2, 0..3));
-    //     let v_sliced = v.slice(slice!(1..3, 1..4));
-    //
-    //     a_sliced.copy_from(&v_sliced);
-    //     assert_eq!(a.index_item(dim!(0, 0)), 0.);
-    //     assert_eq!(a.index_item(dim!(0, 1)), 1.);
-    //     assert_eq!(a.index_item(dim!(0, 2)), 2.);
-    //     assert_eq!(a.index_item(dim!(0, 3)), 0.);
-    //     assert_eq!(a.index_item(dim!(1, 0)), 4.);
-    //     assert_eq!(a.index_item(dim!(1, 1)), 5.);
-    //     assert_eq!(a.index_item(dim!(1, 2)), 6.);
-    //     assert_eq!(a.index_item(dim!(2, 3)), 0.);
-    // }
+    #[test]
+    fn sliced_2d() {
+        let a = vec![0f32; 6];
+        let v = vec![0f32, 1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12.];
+        let mut a = CpuOwnedMatrix2D::from_vec(a.clone(), dim!(3, 4));
+        let v = CpuOwnedMatrix2D::from_vec(v, dim!(3, 4));
+
+        let mut a_sliced = a.slice_mut(slice!(0..2, 0..3));
+        let v_sliced = v.slice(slice!(1..3, 1..4));
+
+        a_sliced.copy_from(&v_sliced);
+        assert_eq!(a.index_item(dim!(0, 0)), 5.);
+        assert_eq!(a.index_item(dim!(0, 1)), 6.);
+        assert_eq!(a.index_item(dim!(0, 2)), 7.);
+        assert_eq!(a.index_item(dim!(0, 3)), 0.);
+        assert_eq!(a.index_item(dim!(1, 0)), 9.);
+        assert_eq!(a.index_item(dim!(1, 1)), 10.);
+        assert_eq!(a.index_item(dim!(1, 2)), 11.);
+        assert_eq!(a.index_item(dim!(2, 3)), 0.);
+    }
 }
