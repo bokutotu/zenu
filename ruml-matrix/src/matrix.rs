@@ -101,11 +101,11 @@ where
     fn index_item(&self, index: D) -> Self::Item;
 }
 
-pub trait IndexItemMut<D>: MatrixBase<Dim = D>
+pub trait IndexItemAsign<D>: MatrixBase<Dim = D>
 where
     D: DimTrait,
 {
-    fn index_item_mut(&mut self, index: D) -> &mut Self::Item;
+    fn index_item_asign(&mut self, index: D, value: <Self as MatrixBase>::Item);
 }
 
 pub trait ViewMatrix: MatrixBase + ToViewMatrix + ToOwnedMatrix + AsPtr {}

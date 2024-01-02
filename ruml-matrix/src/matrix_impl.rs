@@ -1,12 +1,12 @@
 use crate::{
-    cpu_memory::{CpuOwnedMemory, CpuViewMemory},
+    cpu_memory::{CpuOwnedMemory, CpuViewMemory, CpuViewMutMemory},
     dim::{cal_offset, default_stride, DimTrait, LessDimTrait},
     dim_impl::{Dim1, Dim2, Dim3, Dim4},
     index::{IndexAxisTrait, ShapeStride, SliceTrait},
     matrix::{
-        AsMutPtr, AsPtr, IndexAxis, IndexAxisMut, IndexItem, MatrixBase, MatrixSlice,
-        MatrixSliceMut, OwnedMatrix, ToOwnedMatrix, ToViewMatrix, ToViewMutMatrix, ViewMatrix,
-        ViewMutMatix,
+        AsMutPtr, AsPtr, IndexAxis, IndexAxisMut, IndexItem, IndexItemAsign, MatrixBase,
+        MatrixSlice, MatrixSliceMut, OwnedMatrix, ToOwnedMatrix, ToViewMatrix, ToViewMutMatrix,
+        ViewMatrix, ViewMutMatix,
     },
     memory::{
         Memory, OwnedMemory, ToOwnedMemory, ToViewMemory, ToViewMutMemory, ViewMemory,
@@ -208,17 +208,18 @@ impl<D: DimTrait, M: Memory> IndexItem<D> for Matrix<M, D> {
     }
 }
 
-// impl<M: ViewMutMemory, D: DimTrait> IndexItemMut<D> for Matrix<M, D> {
-//     fn index_item_mut(&mut self, index: Self::Dim) -> &mut M::Item {
-//         if self.shape_stride().shape().is_overflow(index) {
-//             panic!("index is overflow");
-//         }
-//
-//         let offset = cal_offset(index, self.shape_stride().stride());
-//         let ptr = unsafe { *self.memory.as_mut_ptr_offset(offset) };
-//         &mut ptr as &mut M::Item
-//     }
-// }
+impl<'a, T: Num, D: DimTrait> IndexItemAsign<D> for Matrix<CpuViewMutMemory<'a, T>, D> {
+    fn index_item_asign(&mut self, index: Self::Dim, value: Self::Item) {
+        if self.shape_stride().shape().is_overflow(index) {
+            panic!("index is overflow");
+        }
+
+        let offset = cal_offset(index, self.shape_stride().stride());
+        unsafe {
+            *self.memory.as_mut_ptr_offset(offset) = value;
+        }
+    }
+}
 
 pub type CpuOwnedMatrix1D<T> = Matrix<CpuOwnedMemory<T>, Dim1>;
 pub type CpuViewMatrix1D<'a, T> = Matrix<CpuViewMemory<'a, T>, Dim1>;
