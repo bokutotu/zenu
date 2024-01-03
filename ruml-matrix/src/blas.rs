@@ -20,7 +20,7 @@ pub trait Blas<T: Num> {
     fn dot(n: usize, x: *const T, incx: usize, y: *const T, incy: usize) -> T;
     fn norm2(n: usize, x: *mut T, incx: usize) -> T;
     fn asum(n: usize, x: *const T, incx: usize) -> T;
-    fn amax(n: usize, x: *mut T, incx: usize) -> usize;
+    fn amax(n: usize, x: *const T, incx: usize) -> usize;
     #[allow(clippy::too_many_arguments)]
     fn gemv(
         layout: BlasLayout,

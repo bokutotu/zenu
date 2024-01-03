@@ -69,6 +69,16 @@ impl<D: DimTrait> ShapeStride<D> {
         // 一致していれば、transposeされていない
         sorted.shape != self.shape
     }
+
+    pub fn get_dim_by_offset(&self, offset: usize) -> D {
+        let mut offset = offset;
+        let mut dim = D::default();
+        for i in 0..self.shape.len() {
+            dim[i] = offset / self.stride[i];
+            offset %= self.stride[i];
+        }
+        dim
+    }
 }
 
 pub trait SliceTrait {

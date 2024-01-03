@@ -3,7 +3,9 @@ use std::{
     ops::Add,
 };
 
-pub trait Num: Default + Clone + Copy + Debug + Display + Add<Self, Output = Self> {
+pub trait Num:
+    Default + Clone + Copy + Debug + Display + Add<Self, Output = Self> + PartialOrd
+{
     fn is_f32() -> bool;
     fn zero() -> Self;
     fn one() -> Self;

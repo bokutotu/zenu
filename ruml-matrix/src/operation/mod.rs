@@ -3,7 +3,6 @@ pub mod asum;
 pub mod copy_from;
 pub mod dot;
 pub mod max;
-pub mod min;
 pub mod mul;
 pub mod norm2;
 pub mod to_default_stride;
