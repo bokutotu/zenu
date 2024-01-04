@@ -123,7 +123,7 @@ impl<M: OwnedMemory, S: DimTrait> OwnedMatrix for Matrix<M, S> {
     }
 }
 
-impl<M: ToViewMemory, D: DimTrait, S: SliceTrait<Dim = D>> MatrixSlice<D, S> for Matrix<M, D> {
+impl<M: ToViewMemory, D: DimTrait, S: SliceTrait<Dim = D>> MatrixSlice<S> for Matrix<M, D> {
     type Output<'a> = Matrix<M::View<'a>, D>
     where
         Self: 'a;
@@ -142,9 +142,7 @@ impl<M: ToViewMemory, D: DimTrait, S: SliceTrait<Dim = D>> MatrixSlice<D, S> for
     }
 }
 
-impl<M: ToViewMutMemory, D: DimTrait, S: SliceTrait<Dim = D>> MatrixSliceMut<D, S>
-    for Matrix<M, D>
-{
+impl<M: ToViewMutMemory, D: DimTrait, S: SliceTrait<Dim = D>> MatrixSliceMut<S> for Matrix<M, D> {
     type Output<'a> = Matrix<M::ViewMut<'a>, D>
     where
         Self: 'a;
@@ -208,7 +206,7 @@ where
     }
 }
 
-impl<D: DimTrait, M: Memory> IndexItem<D> for Matrix<M, D> {
+impl<D: DimTrait, M: Memory> IndexItem for Matrix<M, D> {
     fn index_item(&self, index: D) -> Self::Item {
         if self.shape_stride().shape().is_overflow(index) {
             panic!("index is overflow");
@@ -219,9 +217,7 @@ impl<D: DimTrait, M: Memory> IndexItem<D> for Matrix<M, D> {
     }
 }
 
-impl<T: Num, D: DimTrait, VM: ViewMutMemory + Memory<Item = T>> IndexItemAsign<D>
-    for Matrix<VM, D>
-{
+impl<T: Num, D: DimTrait, VM: ViewMutMemory + Memory<Item = T>> IndexItemAsign for Matrix<VM, D> {
     fn index_item_asign(&mut self, index: Self::Dim, value: Self::Item) {
         if self.shape_stride().shape().is_overflow(index) {
             panic!("index is overflow");

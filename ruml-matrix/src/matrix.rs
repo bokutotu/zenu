@@ -49,31 +49,29 @@ pub trait AsPtr: MatrixBase {
     fn as_ptr(&self) -> *const Self::Item;
 }
 
-pub trait MatrixSlice<D, S>: MatrixBase<Dim = D> + ToViewMatrix
+pub trait MatrixSlice<S>: ToViewMatrix
 where
-    S: SliceTrait<Dim = D>,
-    D: DimTrait,
+    S: SliceTrait<Dim = Self::Dim>,
 {
-    type Output<'a>: MatrixBase<Dim = D> + ViewMatrix
+    type Output<'a>: MatrixBase<Dim = Self::Dim> + ViewMatrix
     where
         Self: 'a;
 
     fn slice(&self, index: S) -> Self::Output<'_>;
 }
 
-pub trait MatrixSliceMut<D, S>: MatrixBase<Dim = D> + ToViewMutMatrix
+pub trait MatrixSliceMut<S>: ToViewMutMatrix
 where
-    S: SliceTrait<Dim = D>,
-    D: DimTrait,
+    S: SliceTrait<Dim = Self::Dim>,
 {
-    type Output<'a>: MatrixBase<Dim = D> + ViewMutMatix
+    type Output<'a>: MatrixBase<Dim = Self::Dim> + ViewMutMatix
     where
         Self: 'a;
 
     fn slice_mut(&mut self, index: S) -> Self::Output<'_>;
 }
 
-pub trait IndexAxis<I: IndexAxisTrait>: MatrixBase + ToViewMatrix
+pub trait IndexAxis<I: IndexAxisTrait>: ToViewMatrix
 where
     Self::Dim: LessDimTrait,
 {
@@ -84,7 +82,7 @@ where
     fn index_axis(&self, index: I) -> Self::Output<'_>;
 }
 
-pub trait IndexAxisMut<I: IndexAxisTrait>: MatrixBase + ToViewMutMatrix
+pub trait IndexAxisMut<I: IndexAxisTrait>: ToViewMutMatrix
 where
     Self::Dim: LessDimTrait,
 {
@@ -95,28 +93,32 @@ where
     fn index_axis_mut(&mut self, index: I) -> Self::Output<'_>;
 }
 
-pub trait IndexItem<D>: MatrixBase<Dim = D>
-where
-    D: DimTrait,
-{
-    fn index_item(&self, index: D) -> Self::Item;
+pub trait IndexItem: MatrixBase {
+    fn index_item(&self, index: Self::Dim) -> Self::Item;
 }
 
-pub trait IndexItemAsign<D>: MatrixBase<Dim = D>
-where
-    D: DimTrait,
-{
-    fn index_item_asign(&mut self, index: D, value: <Self as MatrixBase>::Item);
+pub trait IndexItemAsign: MatrixBase {
+    fn index_item_asign(&mut self, index: Self::Dim, value: <Self as MatrixBase>::Item);
 }
 
 pub trait BlasMatrix: MatrixBase {
     type Blas: Blas<Self::Item>;
 }
 
-pub trait ViewMatrix: MatrixBase + ToViewMatrix + ToOwnedMatrix + AsPtr + BlasMatrix {}
+pub trait ViewMatrix:
+    MatrixBase + ToViewMatrix + ToOwnedMatrix + AsPtr + BlasMatrix + IndexItem
+{
+}
 
 pub trait ViewMutMatix:
-    MatrixBase + ToViewMatrix + ToViewMutMatrix + AsMutPtr + BlasMatrix + AsPtr
+    MatrixBase
+    + ToViewMatrix
+    + ToViewMutMatrix
+    + AsMutPtr
+    + BlasMatrix
+    + AsPtr
+    + IndexItem
+    + IndexItemAsign
 {
 }
 
