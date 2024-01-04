@@ -45,7 +45,7 @@ macro_rules! impl_matrix_add_scalar {
             fn add(&mut self, rhs: &Matrix<RM, $dim>, lhs: &T) {
                 assert_eq!(self.shape_stride().shape(), rhs.shape_stride().shape());
 
-                for idx in 0..self.shape_stride().shape().num_elm() {
+                for idx in 0..self.shape_stride().shape()[0] {
                     self.index_axis_mut(Index0D::new(idx))
                         .add(&rhs.index_axis(Index0D::new(idx)), lhs);
                 }
