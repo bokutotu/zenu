@@ -1,9 +1,6 @@
 use std::ops::{Index, IndexMut};
 
-use crate::{
-    dim::{DimTrait, GreaterDimTrait, LessDimTrait},
-    index::IndexTrait,
-};
+use crate::dim::{DimTrait, GreaterDimTrait, LessDimTrait};
 
 #[derive(Clone, Debug, Copy, Default)]
 pub struct Dim0 {}
@@ -61,12 +58,12 @@ impl DimTrait for Dim0 {
     }
 }
 
-impl IndexTrait for Dim0 {
-    type Dim = Self;
-    fn offset(&self, _: &Self::Dim, _: &Self::Dim) -> usize {
-        0
-    }
-}
+// impl IndexTrait for Dim0 {
+//     type Dim = Self;
+//     fn offset(&self, _: &Self::Dim, _: &Self::Dim) -> usize {
+//         0
+//     }
+// }
 
 macro_rules! impl_dim {
     ($name:ident, $index_ty:ty) => {
@@ -131,19 +128,19 @@ macro_rules! impl_dim {
             }
         }
 
-        impl IndexTrait for $name {
-            type Dim = Self;
-            fn offset(&self, shape: &Self::Dim, stride: &Self::Dim) -> usize {
-                if shape.is_overflow(*self) {
-                    panic!("Dimension mismatch");
-                }
-
-                self.into_iter()
-                    .zip(stride.into_iter())
-                    .map(|(x, y)| x * y)
-                    .sum()
-            }
-        }
+        // impl IndexTrait for $name {
+        //     type Dim = Self;
+        //     fn offset(&self, shape: &Self::Dim, stride: &Self::Dim) -> usize {
+        //         if shape.is_overflow(*self) {
+        //             panic!("Dimension mismatch");
+        //         }
+        //
+        //         self.into_iter()
+        //             .zip(stride.into_iter())
+        //             .map(|(x, y)| x * y)
+        //             .sum()
+        //     }
+        // }
     };
 }
 

@@ -212,7 +212,7 @@ impl<D: DimTrait, M: Memory> IndexItem for Matrix<M, D> {
             panic!("index is overflow");
         }
 
-        let offset = cal_offset(index, self.shape_stride().stride());
+        let offset = cal_offset(index, self.stride());
         self.memory.value_offset(offset)
     }
 }

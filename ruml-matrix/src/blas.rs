@@ -1,11 +1,13 @@
 use crate::num::Num;
 
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum BlasTrans {
     None,
     Ordinary,
     Conjugate,
 }
 
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum BlasLayout {
     RowMajor,
     ColMajor,
@@ -58,9 +60,9 @@ pub trait Blas<T: Num> {
         n: usize,
         k: usize,
         alpha: T,
-        a: *mut T,
+        a: *const T,
         lda: usize,
-        b: *mut T,
+        b: *const T,
         ldb: usize,
         beta: T,
         c: *mut T,

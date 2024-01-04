@@ -228,7 +228,7 @@ mod memory {
     fn view_memory_offset_with_owned_memory_offset() {
         let mut memory = CpuOwnedMemory::from_vec(vec![1., 2., 3., 4., 5.]);
         memory.set_offset(1);
-        let view = dbg!(memory.to_view(2));
+        let view = memory.to_view(2);
         assert_eq!(view.get_offset(), 3);
         assert_eq!(view.value_offset(0), 4.);
     }

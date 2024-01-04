@@ -1,13 +1,15 @@
 use crate::{
-    blas::Blas,
+    blas::{Blas, BlasLayout},
     dim::DimTrait,
     dim_impl::{Dim1, Dim2, Dim3, Dim4},
     element_wise::ElementWise,
+    index::get_blas_trans_for_gemm,
     index_impl::Index0D,
     matrix::{AsMutPtr, AsPtr, IndexAxis, IndexAxisMut, MatrixBase, ViewMatrix, ViewMutMatix},
     matrix_impl::Matrix,
     memory::{ViewMemory, ViewMutMemory},
     num::Num,
+    operation::transpose::Transpose,
 };
 
 use super::copy_from::CopyFrom;
@@ -151,6 +153,55 @@ impl_mul_matrix_matrix!(Dim3, Dim2);
 impl_mul_matrix_matrix!(Dim4, Dim2);
 impl_mul_matrix_matrix!(Dim4, Dim3);
 
+impl<T, S, R, L> MatMul<Matrix<R, Dim2>, Matrix<L, Dim2>> for Matrix<S, Dim2>
+where
+    T: Num,
+    S: ViewMutMemory<Item = T>,
+    R: ViewMemory<Item = T>,
+    L: ViewMemory<Item = T>,
+{
+    fn mat_mul(&mut self, rhs: &Matrix<R, Dim2>, lhs: &Matrix<L, Dim2>) {
+        assert_eq!(self.shape()[0], rhs.shape()[0]);
+        assert_eq!(self.shape()[1], lhs.shape()[1]);
+        assert_eq!(rhs.shape()[1], lhs.shape()[0]);
+
+        assert!(self.shape_stride().is_contiguous());
+        assert!(rhs.shape_stride().is_contiguous());
+        assert!(lhs.shape_stride().is_contiguous());
+
+        let m = self.shape()[0];
+        let n = self.shape()[1];
+        let k = rhs.shape()[1];
+
+        let self_stride = self.shape()[1];
+        let rhs_stride = rhs.shape()[1];
+        let lhs_stride = lhs.shape()[1];
+
+        let self_ptr = self.as_mut_ptr();
+        let rhs_ptr = rhs.as_ptr();
+        let lhs_ptr = lhs.as_ptr();
+
+        Self::Blas::gemm(
+            BlasLayout::RowMajor,
+            get_blas_trans_for_gemm(rhs.shape_stride()),
+            get_blas_trans_for_gemm(lhs.shape_stride()),
+            m,
+            n,
+            k,
+            T::one(),
+            rhs_ptr,
+            rhs_stride,
+            lhs_ptr,
+            lhs_stride,
+            T::zero(),
+            self_ptr,
+            self_stride,
+        );
+
+        self.transpose();
+    }
+}
+
 #[cfg(test)]
 mod mul {
     use crate::{
@@ -265,5 +316,34 @@ mod mul {
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod mat_mul {
+    use crate::{
+        dim,
+        matrix::{IndexItem, OwnedMatrix, ToViewMatrix, ToViewMutMatrix},
+        matrix_impl::CpuOwnedMatrix2D,
+        operation::zeros::Zeros,
+    };
+
+    use super::*;
+
+    #[test]
+    fn default() {
+        let a = CpuOwnedMatrix2D::from_vec(vec![1., 2., 3., 4., 5., 6.], dim![2, 3]);
+        let b = CpuOwnedMatrix2D::from_vec(vec![1., 2., 3., 4., 5., 6.], dim![3, 2]);
+        let mut ans = CpuOwnedMatrix2D::<f32>::zeros(dim![2, 2]);
+
+        ans.to_view_mut().mat_mul(&a.to_view(), &b.to_view());
+        dbg!(ans.index_item(dim!(0, 0)));
+        dbg!(ans.index_item(dim!(0, 1)));
+        dbg!(ans.index_item(dim!(1, 0)));
+        dbg!(ans.index_item(dim!(1, 1)));
+        assert_eq!(ans.index_item(dim!(0, 0)), 22.);
+        assert_eq!(ans.index_item(dim!(0, 1)), 28.);
+        assert_eq!(ans.index_item(dim!(1, 0)), 49.);
+        assert_eq!(ans.index_item(dim!(1, 1)), 64.);
     }
 }

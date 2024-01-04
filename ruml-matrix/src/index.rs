@@ -1,11 +1,25 @@
 use std::fmt::Debug;
 
-use crate::dim::{default_stride, DimTrait};
+use crate::{
+    blas::BlasTrans,
+    dim::{default_stride, DimTrait},
+    dim_impl::Dim2,
+};
 
 #[derive(Clone, Debug, Copy, PartialEq)]
 pub struct ShapeStride<D: DimTrait> {
     shape: D,
     stride: D,
+}
+
+pub(crate) fn get_blas_trans_for_gemm(shape_stride: ShapeStride<Dim2>) -> BlasTrans {
+    assert!(shape_stride.is_contiguous());
+
+    if shape_stride.stride()[0] > shape_stride.stride()[1] {
+        BlasTrans::None
+    } else {
+        BlasTrans::Ordinary
+    }
 }
 
 impl<D: DimTrait> ShapeStride<D> {
@@ -87,11 +101,11 @@ pub trait SliceTrait {
     fn sliced_offset(&self, stride: Self::Dim, original_offset: usize) -> usize;
 }
 
-/// Matrixに対して、Indexを取得してTを取得するのに使用するトレイト
-pub trait IndexTrait {
-    type Dim: DimTrait;
-    fn offset(&self, shape: &Self::Dim, stride: &Self::Dim) -> usize;
-}
+// /// Matrixに対して、Indexを取得してTを取得するのに使用するトレイト
+// pub trait IndexTrait {
+//     type Dim: DimTrait;
+//     fn offset(&self, shape: &Self::Dim, stride: &Self::Dim) -> usize;
+// }
 
 pub trait IndexAxisTrait {
     fn get_shape_stride<Din: DimTrait, Dout: DimTrait>(

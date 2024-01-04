@@ -12,6 +12,9 @@ pub trait Memory {
     /// offsetがある場合でもoffsetは考慮されない
     fn as_ptr(&self) -> *const Self::Item;
     fn as_ptr_offset(&self, offset: usize) -> *const Self::Item {
+        if self.get_offset() + offset >= self.len() {
+            panic!("out of range");
+        }
         unsafe { self.as_ptr().add(self.get_offset() + offset) }
     }
     fn value_offset(&self, offset: usize) -> Self::Item {

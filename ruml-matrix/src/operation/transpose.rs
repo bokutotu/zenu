@@ -1,19 +1,19 @@
 use crate::{
     dim::DimTrait,
     dim_impl::{Dim2, Dim3, Dim4},
-    matrix::{MatrixBase, ViewMutMatix},
+    matrix::MatrixBase,
     matrix_impl::Matrix,
-    memory::{Memory, ViewMutMemory},
+    memory::Memory,
     num::Num,
 };
 
-pub trait Transpose: ViewMutMatix {
+pub trait Transpose {
     fn transpose(&mut self);
 }
 
 macro_rules! impl_transpose {
     ($dim:ty) => {
-        impl<T: Num, M: ViewMutMemory + Memory<Item = T>> Transpose for Matrix<M, $dim> {
+        impl<T: Num, M: Memory<Item = T>> Transpose for Matrix<M, $dim> {
             #[allow(clippy::almost_swapped)]
             fn transpose(&mut self) {
                 let shape_stride = self.shape_stride();
