@@ -1,10 +1,11 @@
-use crate::{blas::Blas, num::Num};
+use crate::{blas::Blas, element_wise::ElementWise, num::Num};
 
 /// Matrixの要素を保持するメモリを表すトレイト
 #[allow(clippy::len_without_is_empty)]
 pub trait Memory {
     type Item: Num;
     type Blas: Blas<Self::Item>;
+    type ElmentWise: ElementWise<Self::Item>;
 
     fn len(&self) -> usize;
     /// 確保しているメモリの先頭のポインタを返す

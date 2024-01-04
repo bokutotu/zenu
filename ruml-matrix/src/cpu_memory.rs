@@ -1,5 +1,6 @@
 use crate::{
     cpu_blas::CpuBlas,
+    cpu_element_wise::CpuElementWise,
     memory::{
         Memory, OwnedMemory, ToOwnedMemory, ToViewMemory, ToViewMutMemory, ViewMemory,
         ViewMutMemory,
@@ -31,6 +32,7 @@ pub struct CpuViewMutMemory<'a, T: Num> {
 impl<T: Num> Memory for CpuOwnedMemory<T> {
     type Item = T;
     type Blas = CpuBlas<T>;
+    type ElmentWise = CpuElementWise<T>;
 
     fn len(&self) -> usize {
         self.length
@@ -70,7 +72,7 @@ where
 {
     type View<'a> = CpuViewMemory<'a, T>
     where
-        T: 'a;
+        Self: 'a;
 
     fn to_view(&self, offset: usize) -> Self::View<'_> {
         CpuViewMemory { ptr: self, offset }
@@ -83,7 +85,7 @@ where
 {
     type ViewMut<'a> = CpuViewMutMemory<'a, T>
     where
-        T: 'a;
+        Self: 'a;
 
     fn to_view_mut(&mut self, offset: usize) -> Self::ViewMut<'_> {
         CpuViewMutMemory { ptr: self, offset }
@@ -96,7 +98,6 @@ where
 {
     type ViewMut<'b> = CpuViewMutMemory<'b, T>
     where
-        T: 'b,
         Self: 'b;
 
     fn to_view_mut(&mut self, offset: usize) -> Self::ViewMut<'_> {
@@ -141,6 +142,7 @@ macro_rules! impl_cpu_memory_to_view {
         impl<'a, T: Num> Memory for $impl_ty {
             type Item = T;
             type Blas = CpuBlas<T>;
+            type ElmentWise = CpuElementWise<T>;
 
             fn len(&self) -> usize {
                 self.ptr.len()

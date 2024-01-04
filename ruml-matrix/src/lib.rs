@@ -1,8 +1,10 @@
 pub mod blas;
 pub mod cpu_blas;
+pub mod cpu_element_wise;
 pub mod cpu_memory;
 pub mod dim;
 pub mod dim_impl;
+pub mod element_wise;
 pub mod index;
 pub mod index_impl;
 pub mod matrix;

@@ -1,10 +1,17 @@
 use std::{
     fmt::{Debug, Display},
-    ops::Add,
+    ops::{Add, Mul},
 };
 
 pub trait Num:
-    Default + Clone + Copy + Debug + Display + Add<Self, Output = Self> + PartialOrd
+    Default
+    + Clone
+    + Copy
+    + Debug
+    + Display
+    + Add<Self, Output = Self>
+    + PartialOrd
+    + Mul<Output = Self>
 {
     fn is_f32() -> bool;
     fn zero() -> Self;

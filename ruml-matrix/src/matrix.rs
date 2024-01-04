@@ -9,6 +9,12 @@ pub trait MatrixBase: Sized {
     type Item: Num;
 
     fn shape_stride(&self) -> ShapeStride<Self::Dim>;
+    fn shape(&self) -> Self::Dim {
+        self.shape_stride().shape()
+    }
+    fn stride(&self) -> Self::Dim {
+        self.shape_stride().stride()
+    }
     // fn memory(&self) -> &Self::Memory;
     // fn memory_mut(&mut self) -> &mut Self::Memory;
     // fn construct(data: Self::Memory, shape: Self::Dim, stride: Self::Dim) -> Self;
