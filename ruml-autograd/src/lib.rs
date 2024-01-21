@@ -1,6 +1,8 @@
 use std::{
     cell::RefCell,
+    collections::{BinaryHeap, HashSet},
     fmt::Debug,
+    ops::Deref,
     rc::{Rc, Weak},
 };
 
@@ -9,6 +11,7 @@ pub struct VariableInner {
     data: f64,
     creator: Option<Rc<RefCell<Box<dyn Function>>>>,
     grad: Option<f64>,
+    gen: usize,
 }
 
 impl VariableInner {
@@ -17,6 +20,7 @@ impl VariableInner {
             data,
             creator: None,
             grad: None,
+            gen: 0,
         }
     }
 
@@ -30,6 +34,8 @@ impl VariableInner {
 
     pub fn set_creator(&mut self, creator: Rc<RefCell<Box<dyn Function>>>) {
         self.creator = Some(creator);
+        let gen = self.creator.as_ref().unwrap().borrow().get_gen();
+        self.gen = gen + 1;
     }
 
     pub fn get_creator(&self) -> &Option<Rc<RefCell<Box<dyn Function>>>> {
@@ -48,14 +54,30 @@ impl VariableInner {
     }
 
     pub fn backward(&self) {
-        let mut funcs = vec![self.creator.clone()];
-        while let Some(func) = funcs.pop() {
-            if let Some(func) = func {
-                func.borrow().backward();
-                let inputs = func.borrow().get_inputs();
-                funcs.extend(inputs.into_iter().map(|input| input.get_creator()));
-            }
+        let mut funcs: BinaryHeap<FunctionQueueItem> = BinaryHeap::new();
+        let mut seen_rc = HashSet::new();
+
+        funcs.push(self.creator.clone().unwrap().into());
+
+        while let Some(FunctionQueueItem { func, .. }) = funcs.pop() {
+            func.borrow().backward();
+            func.borrow().get_inputs().iter().for_each(|input| {
+                if let Some(creator) = input.get_creator() {
+                    if !seen_rc.contains(&creator.as_ptr()) {
+                        funcs.push(creator.clone().into());
+                        seen_rc.insert(creator.as_ptr());
+                    }
+                }
+            });
         }
+    }
+
+    pub fn get_gen(&self) -> usize {
+        self.gen
+    }
+
+    pub fn set_gen(&mut self, gen: usize) {
+        self.gen = gen;
     }
 }
 
@@ -107,6 +129,10 @@ impl Variable {
             inner: Rc::downgrade(&self.inner),
         }
     }
+
+    pub fn get_gen(&self) -> usize {
+        self.inner.borrow().get_gen()
+    }
 }
 
 impl AsRef<Variable> for Variable {
@@ -130,6 +156,58 @@ pub trait Function: Debug {
     fn forward(&self);
     fn backward(&self);
     fn get_inputs(&self) -> Vec<Variable>;
+    fn get_gen(&self) -> usize {
+        let inputs = self.get_inputs();
+        inputs
+            .iter()
+            .map(|input| input.get_gen())
+            .max()
+            .unwrap_or(0)
+    }
+}
+
+pub struct FunctionQueueItem {
+    func: Rc<RefCell<Box<dyn Function>>>,
+    gen: usize,
+}
+
+impl From<Rc<RefCell<Box<dyn Function>>>> for FunctionQueueItem {
+    fn from(func: Rc<RefCell<Box<dyn Function>>>) -> Self {
+        Self {
+            func: func.clone(),
+            gen: func.borrow().get_gen(),
+        }
+    }
+}
+
+impl PartialEq for FunctionQueueItem {
+    fn eq(&self, other: &Self) -> bool {
+        self.gen == other.gen
+    }
+}
+
+impl Eq for FunctionQueueItem {
+    fn assert_receiver_is_total_eq(&self) {}
+}
+
+impl PartialOrd for FunctionQueueItem {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.gen.cmp(&other.gen))
+    }
+}
+
+impl Ord for FunctionQueueItem {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.gen.cmp(&other.gen)
+    }
+}
+
+impl Deref for FunctionQueueItem {
+    type Target = Rc<RefCell<Box<dyn Function>>>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.func
+    }
 }
 
 #[derive(Debug)]
@@ -336,5 +414,15 @@ mod autograd {
         let y = add(x0.clone(), x0.clone());
         y.backward();
         assert_eq!(x0.get_grad(), Some(2.0));
+    }
+
+    #[test]
+    fn complicated_backward() {
+        let x = Variable::new(2.0);
+        let a = square(x.clone());
+        let y = add(square(a.clone()), square(a.clone()));
+        y.backward();
+        assert_eq!(y.get_data(), 32.0);
+        assert_eq!(x.get_grad(), Some(64.0));
     }
 }
