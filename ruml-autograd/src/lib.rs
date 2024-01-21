@@ -45,11 +45,13 @@ impl VariableInner {
     }
 
     pub fn backward(&self) {
-        if let Some(creator) = &self.creator {
-            creator.borrow().backward();
-            creator.borrow().get_inputs().into_iter().for_each(|input| {
-                input.backward();
-            })
+        let mut funcs = vec![self.creator.clone()];
+        while let Some(func) = funcs.pop() {
+            if let Some(func) = func {
+                func.borrow().backward();
+                let inputs = func.borrow().get_inputs();
+                funcs.extend(inputs.into_iter().map(|input| input.get_creator()));
+            }
         }
     }
 }
