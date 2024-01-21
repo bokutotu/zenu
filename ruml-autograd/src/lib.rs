@@ -41,7 +41,10 @@ impl VariableInner {
     }
 
     pub fn set_grad(&mut self, grad: f64) {
-        self.grad = Some(grad);
+        match self.grad {
+            Some(g) => self.grad = Some(g + grad),
+            None => self.grad = Some(grad),
+        }
     }
 
     pub fn backward(&self) {
@@ -325,5 +328,13 @@ mod autograd {
         assert_eq!(x0.get_grad(), Some(4.0));
         assert_eq!(x1.get_grad(), Some(4.0));
         assert_eq!(x2.get_grad(), Some(5.0));
+    }
+
+    #[test]
+    fn use_same_variable() {
+        let x0 = Variable::new(2.0);
+        let y = add(x0.clone(), x0.clone());
+        y.backward();
+        assert_eq!(x0.get_grad(), Some(2.0));
     }
 }
