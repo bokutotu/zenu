@@ -110,7 +110,7 @@ impl Variable {
     }
 
     pub fn get_grad(&self) -> Option<f64> {
-        self.inner.borrow().get_grad().clone()
+        *self.inner.borrow().get_grad()
     }
 
     pub fn set_grad(&self, grad: f64) {
@@ -214,11 +214,12 @@ impl Deref for FunctionQueueItem {
 pub struct Add {
     x: Variable,
     y: Variable,
-    output: Variable,
+    output: VariableWeak,
 }
 
 impl Add {
     pub fn new(x: Variable, y: Variable, output: Variable) -> Self {
+        let output = output.downgrade();
         Self { x, y, output }
     }
 }
@@ -226,11 +227,11 @@ impl Add {
 impl Function for Add {
     fn forward(&self) {
         let ans = self.x.get_data() + self.y.get_data();
-        self.output.set_data(ans);
+        self.output.upgrade().unwrap().set_data(ans);
     }
 
     fn backward(&self) {
-        let grad = self.output.get_grad().unwrap();
+        let grad = self.output.upgrade().unwrap().get_grad().unwrap();
         self.x.set_grad(grad);
         self.y.set_grad(grad);
     }
@@ -254,11 +255,12 @@ pub fn add<V: AsRef<Variable>>(x: V, y: V) -> Variable {
 pub struct Mul {
     x: Variable,
     y: Variable,
-    output: Variable,
+    output: VariableWeak,
 }
 
 impl Mul {
     pub fn new(x: Variable, y: Variable, output: Variable) -> Self {
+        let output = output.downgrade();
         Self { x, y, output }
     }
 }
@@ -266,11 +268,11 @@ impl Mul {
 impl Function for Mul {
     fn forward(&self) {
         let ans = self.x.get_data() * self.y.get_data();
-        self.output.set_data(ans);
+        self.output.upgrade().unwrap().set_data(ans);
     }
 
     fn backward(&self) {
-        let grad = self.output.get_grad().unwrap();
+        let grad = self.output.upgrade().unwrap().get_grad().unwrap();
         println!("mul");
         self.x.set_grad(grad * self.y.get_data());
         self.y.set_grad(grad * self.x.get_data());
@@ -294,11 +296,12 @@ pub fn mul<V: AsRef<Variable>>(x: V, y: V) -> Variable {
 #[derive(Debug)]
 pub struct Square {
     x: Variable,
-    output: Variable,
+    output: VariableWeak,
 }
 
 impl Square {
     pub fn new(x: Variable, output: Variable) -> Self {
+        let output = output.downgrade();
         Self { x, output }
     }
 }
@@ -306,11 +309,11 @@ impl Square {
 impl Function for Square {
     fn forward(&self) {
         let ans = self.x.get_data() * self.x.get_data();
-        self.output.set_data(ans);
+        self.output.upgrade().unwrap().set_data(ans);
     }
 
     fn backward(&self) {
-        let grad = self.output.get_grad().unwrap();
+        let grad = self.output.upgrade().unwrap().get_grad().unwrap();
         let x = self.x.get_data();
         self.x.set_grad(grad * 2. * x);
     }
@@ -331,11 +334,12 @@ pub fn square<V: AsRef<Variable>>(x: V) -> Variable {
 #[derive(Debug)]
 pub struct Exp {
     x: Variable,
-    output: Variable,
+    output: VariableWeak,
 }
 
 impl Exp {
     pub fn new(x: Variable, output: Variable) -> Self {
+        let output = output.downgrade();
         Self { x, output }
     }
 }
@@ -343,11 +347,11 @@ impl Exp {
 impl Function for Exp {
     fn forward(&self) {
         let ans = self.x.get_data().exp();
-        self.output.set_data(ans);
+        self.output.upgrade().unwrap().set_data(ans);
     }
 
     fn backward(&self) {
-        let grad = self.output.get_grad().unwrap();
+        let grad = self.output.upgrade().unwrap().get_grad().unwrap();
         let x = self.x.get_data();
         self.x.set_grad(grad * x.exp());
     }
