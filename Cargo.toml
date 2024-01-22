@@ -2,6 +2,6 @@
 resolver = "2"
 members = [
     "ruml",
-    "ruml-autograd",
+    "ruml-autograd", "ruml-functions",
     "ruml-matrix",
 ]
