@@ -6,17 +6,57 @@ use std::{
     rc::{Rc, Weak},
 };
 
-#[derive(Debug)]
-pub struct VariableInner {
-    data: f64,
-    creator: Option<Rc<RefCell<Box<dyn Function>>>>,
-    grad: Option<Variable>,
+pub trait Zero {
+    fn zero() -> Self;
+}
+
+pub trait One {
+    fn one() -> Self;
+}
+
+pub trait Value:
+    Zero + One + Clone + Debug + std::ops::Add<Output = Self> + std::ops::Mul<Output = Self> + 'static
+{
+}
+
+impl Zero for f32 {
+    fn zero() -> Self {
+        0.0
+    }
+}
+
+impl One for f32 {
+    fn one() -> Self {
+        1.0
+    }
+}
+
+impl Zero for f64 {
+    fn zero() -> Self {
+        0.0
+    }
+}
+
+impl One for f64 {
+    fn one() -> Self {
+        1.0
+    }
+}
+
+impl Value for f32 {}
+
+impl Value for f64 {}
+
+pub struct VariableInner<V> {
+    data: V,
+    creator: Option<Rc<RefCell<Box<dyn Function<V>>>>>,
+    grad: Option<Variable<V>>,
     gen: usize,
     name: Option<String>,
 }
 
-impl VariableInner {
-    pub fn new(data: f64) -> Self {
+impl<V: Value> VariableInner<V> {
+    pub fn new(data: V) -> Self {
         Self {
             data,
             creator: None,
@@ -26,29 +66,29 @@ impl VariableInner {
         }
     }
 
-    pub fn get_data(&self) -> f64 {
-        self.data
+    pub fn get_data(&self) -> V {
+        self.data.clone()
     }
 
-    pub fn set_data(&mut self, data: f64) {
+    pub fn set_data(&mut self, data: V) {
         self.data = data;
     }
 
-    pub fn set_creator(&mut self, creator: Rc<RefCell<Box<dyn Function>>>) {
+    pub fn set_creator(&mut self, creator: Rc<RefCell<Box<dyn Function<V>>>>) {
         self.creator = Some(creator);
         let gen = self.creator.as_ref().unwrap().borrow().get_gen();
         self.gen = gen + 1;
     }
 
-    pub fn get_creator(&self) -> &Option<Rc<RefCell<Box<dyn Function>>>> {
+    pub fn get_creator(&self) -> &Option<Rc<RefCell<Box<dyn Function<V>>>>> {
         &self.creator
     }
 
-    pub fn get_grad(&self) -> &Option<Variable> {
+    pub fn get_grad(&self) -> &Option<Variable<V>> {
         &self.grad
     }
 
-    pub fn set_grad(&mut self, grad: Variable) {
+    pub fn set_grad(&mut self, grad: Variable<V>) {
         match self.grad {
             Some(ref grad_) => {
                 let new_grad = add(grad_, &grad);
@@ -61,7 +101,7 @@ impl VariableInner {
     }
 
     pub fn backward(&self) {
-        let mut funcs: BinaryHeap<FunctionQueueItem> = BinaryHeap::new();
+        let mut funcs: BinaryHeap<FunctionQueueItem<V>> = BinaryHeap::new();
         let mut seen_rc = HashSet::new();
 
         funcs.push(self.creator.clone().unwrap().into());
@@ -90,7 +130,7 @@ impl VariableInner {
     pub fn clear_grad(&mut self) {
         match self.grad {
             Some(ref mut grad) => {
-                *grad = Variable::new(0.);
+                *grad = Variable::new(V::zero());
             }
             None => {}
         }
@@ -105,50 +145,50 @@ impl VariableInner {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct Variable {
-    inner: Rc<RefCell<VariableInner>>,
+#[derive(Clone)]
+pub struct Variable<V> {
+    inner: Rc<RefCell<VariableInner<V>>>,
 }
 
-impl Variable {
-    pub fn new(data: f64) -> Self {
+impl<V: Value> Variable<V> {
+    pub fn new(data: V) -> Self {
         let inner = VariableInner::new(data);
         let inner = Rc::new(RefCell::new(inner));
         Self { inner }
     }
 
-    pub fn get_data(&self) -> f64 {
+    pub fn get_data(&self) -> V {
         self.inner.borrow().get_data()
     }
 
-    pub fn set_data(&self, data: f64) {
+    pub fn set_data(&self, data: V) {
         self.inner.borrow_mut().set_data(data);
     }
 
-    pub fn set_creator(&self, creator: Rc<RefCell<Box<dyn Function>>>) {
+    pub fn set_creator(&self, creator: Rc<RefCell<Box<dyn Function<V>>>>) {
         self.inner.borrow_mut().set_creator(creator);
     }
 
-    pub fn get_creator(&self) -> Option<Rc<RefCell<Box<dyn Function>>>> {
+    pub fn get_creator(&self) -> Option<Rc<RefCell<Box<dyn Function<V>>>>> {
         self.inner.borrow().get_creator().clone()
     }
 
-    pub fn get_grad(&self) -> Option<Variable> {
+    pub fn get_grad(&self) -> Option<Variable<V>> {
         self.inner.borrow().get_grad().clone()
     }
 
-    pub fn set_grad(&self, grad: Variable) {
+    pub fn set_grad(&self, grad: Variable<V>) {
         self.inner.borrow_mut().set_grad(grad);
     }
 
     pub fn backward(&self) {
         if self.inner.borrow().get_grad().is_none() {
-            self.inner.borrow_mut().set_grad(Variable::new(1.));
+            self.inner.borrow_mut().set_grad(Variable::new(V::one()));
         }
         self.inner.borrow().backward();
     }
 
-    pub fn downgrade(self) -> VariableWeak {
+    pub fn downgrade(self) -> VariableWeak<V> {
         VariableWeak {
             inner: Rc::downgrade(&self.inner),
         }
@@ -171,27 +211,27 @@ impl Variable {
     }
 }
 
-impl AsRef<Variable> for Variable {
-    fn as_ref(&self) -> &Variable {
+impl<V> AsRef<Variable<V>> for Variable<V> {
+    fn as_ref(&self) -> &Variable<V> {
         self
     }
 }
 
 #[derive(Debug, Clone)]
-pub struct VariableWeak {
-    inner: Weak<RefCell<VariableInner>>,
+pub struct VariableWeak<V> {
+    inner: Weak<RefCell<VariableInner<V>>>,
 }
 
-impl VariableWeak {
-    pub fn upgrade(&self) -> Option<Variable> {
+impl<V> VariableWeak<V> {
+    pub fn upgrade(&self) -> Option<Variable<V>> {
         self.inner.upgrade().map(|inner| Variable { inner })
     }
 }
 
-pub trait Function: Debug {
+pub trait Function<V: Value> {
     fn forward(&self);
     fn backward(&self);
-    fn get_inputs(&self) -> Vec<Variable>;
+    fn get_inputs(&self) -> Vec<Variable<V>>;
     fn get_gen(&self) -> usize {
         let inputs = self.get_inputs();
         inputs
@@ -202,14 +242,14 @@ pub trait Function: Debug {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct FunctionQueueItem {
-    func: Rc<RefCell<Box<dyn Function>>>,
+#[derive(Clone)]
+pub struct FunctionQueueItem<V> {
+    func: Rc<RefCell<Box<dyn Function<V>>>>,
     gen: usize,
 }
 
-impl From<Rc<RefCell<Box<dyn Function>>>> for FunctionQueueItem {
-    fn from(func: Rc<RefCell<Box<dyn Function>>>) -> Self {
+impl<V: Value> From<Rc<RefCell<Box<dyn Function<V>>>>> for FunctionQueueItem<V> {
+    fn from(func: Rc<RefCell<Box<dyn Function<V>>>>) -> Self {
         Self {
             func: func.clone(),
             gen: func.borrow().get_gen(),
@@ -217,51 +257,50 @@ impl From<Rc<RefCell<Box<dyn Function>>>> for FunctionQueueItem {
     }
 }
 
-impl PartialEq for FunctionQueueItem {
+impl<V> PartialEq for FunctionQueueItem<V> {
     fn eq(&self, other: &Self) -> bool {
         self.gen == other.gen
     }
 }
 
-impl Eq for FunctionQueueItem {
+impl<V> Eq for FunctionQueueItem<V> {
     fn assert_receiver_is_total_eq(&self) {}
 }
 
-impl PartialOrd for FunctionQueueItem {
+impl<V> PartialOrd for FunctionQueueItem<V> {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         Some(self.gen.cmp(&other.gen))
     }
 }
 
-impl Ord for FunctionQueueItem {
+impl<V> Ord for FunctionQueueItem<V> {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         self.gen.cmp(&other.gen)
     }
 }
 
-impl Deref for FunctionQueueItem {
-    type Target = Rc<RefCell<Box<dyn Function>>>;
+impl<V> Deref for FunctionQueueItem<V> {
+    type Target = Rc<RefCell<Box<dyn Function<V>>>>;
 
     fn deref(&self) -> &Self::Target {
         &self.func
     }
 }
 
-#[derive(Debug)]
-pub struct Add {
-    x: Variable,
-    y: Variable,
-    output: VariableWeak,
+pub struct Add<V> {
+    x: Variable<V>,
+    y: Variable<V>,
+    output: VariableWeak<V>,
 }
 
-impl Add {
-    pub fn new(x: Variable, y: Variable, output: Variable) -> Self {
+impl<V: Value> Add<V> {
+    pub fn new(x: Variable<V>, y: Variable<V>, output: Variable<V>) -> Self {
         let output = output.downgrade();
         Self { x, y, output }
     }
 }
 
-impl Function for Add {
+impl<V: Value> Function<V> for Add<V> {
     fn forward(&self) {
         let ans = self.x.get_data() + self.y.get_data();
         self.output.upgrade().unwrap().set_data(ans);
@@ -273,107 +312,103 @@ impl Function for Add {
         self.y.set_grad(input_grad);
     }
 
-    fn get_inputs(&self) -> Vec<Variable> {
+    fn get_inputs(&self) -> Vec<Variable<V>> {
         vec![self.x.clone(), self.y.clone()]
     }
 }
 
-pub fn add<V: AsRef<Variable>>(x: V, y: V) -> Variable {
+pub fn add<V1: Value, V: AsRef<Variable<V1>>>(x: V, y: V) -> Variable<V1> {
     let x = x.as_ref().clone();
     let y = y.as_ref().clone();
-    let output = Variable::new(0.);
+    let output = Variable::new(V1::zero());
     let add = Add::new(x, y, output.clone());
     add.forward();
     output.set_creator(Rc::new(RefCell::new(Box::new(add))));
     output
 }
 
-#[derive(Debug)]
-pub struct Mul {
-    x: Variable,
-    y: Variable,
-    output: VariableWeak,
-}
-
-impl Mul {
-    pub fn new(x: Variable, y: Variable, output: Variable) -> Self {
-        let output = output.downgrade();
-        Self { x, y, output }
-    }
-}
-
-impl Function for Mul {
-    fn forward(&self) {
-        let ans = self.x.get_data() * self.y.get_data();
-        self.output.upgrade().unwrap().set_data(ans);
-    }
-
-    fn backward(&self) {
-        let input_grad = self.output.upgrade().unwrap().get_grad().unwrap();
-        let x_grad = mul(&input_grad, &self.y);
-        let y_grad = mul(&input_grad, &self.x);
-        self.x.set_grad(x_grad);
-        self.y.set_grad(y_grad);
-    }
-
-    fn get_inputs(&self) -> Vec<Variable> {
-        vec![self.x.clone(), self.y.clone()]
-    }
-}
-
-pub fn mul<V: AsRef<Variable>>(x: V, y: V) -> Variable {
-    let x = x.as_ref().clone();
-    let y = y.as_ref().clone();
-    let output = Variable::new(0.);
-    let mul = Mul::new(x, y, output.clone());
-    mul.forward();
-    output.set_creator(Rc::new(RefCell::new(Box::new(mul))));
-    output
-}
-
-#[derive(Debug)]
-pub struct Square {
-    x: Variable,
-    output: VariableWeak,
-}
-
-impl Square {
-    pub fn new(x: Variable, output: Variable) -> Self {
-        let output = output.downgrade();
-        Self { x, output }
-    }
-}
-
-impl Function for Square {
-    fn forward(&self) {
-        let ans = self.x.get_data() * self.x.get_data();
-        self.output.upgrade().unwrap().set_data(ans);
-    }
-
-    fn backward(&self) {
-        let grad = self.output.upgrade().unwrap().get_grad().unwrap();
-        let tmp = mul(&grad, &Variable::new(2.));
-        let x_grad = mul(&tmp, &self.x);
-        self.x.set_grad(x_grad);
-    }
-
-    fn get_inputs(&self) -> Vec<Variable> {
-        vec![self.x.clone()]
-    }
-}
-
-pub fn square<V: AsRef<Variable>>(x: V) -> Variable {
-    let output = Variable::new(0.);
-    let square = Square::new(x.as_ref().clone(), output.clone());
-    square.forward();
-    output.set_creator(Rc::new(RefCell::new(Box::new(square))));
-    output
-}
-
 #[cfg(test)]
 mod autograd {
     use super::*;
+    pub struct Mul<V> {
+        x: Variable<V>,
+        y: Variable<V>,
+        output: VariableWeak<V>,
+    }
 
+    impl<V: Value> Mul<V> {
+        pub fn new(x: Variable<V>, y: Variable<V>, output: Variable<V>) -> Self {
+            let output = output.downgrade();
+            Self { x, y, output }
+        }
+    }
+
+    impl<V: Value> Function<V> for Mul<V> {
+        fn forward(&self) {
+            let ans = self.x.get_data() * self.y.get_data();
+            self.output.upgrade().unwrap().set_data(ans);
+        }
+
+        fn backward(&self) {
+            let input_grad = self.output.upgrade().unwrap().get_grad().unwrap();
+            let x_grad = mul(&input_grad, &self.y);
+            let y_grad = mul(&input_grad, &self.x);
+            self.x.set_grad(x_grad);
+            self.y.set_grad(y_grad);
+        }
+
+        fn get_inputs(&self) -> Vec<Variable<V>> {
+            vec![self.x.clone(), self.y.clone()]
+        }
+    }
+
+    pub fn mul<V1: Value, V: AsRef<Variable<V1>>>(x: V, y: V) -> Variable<V1> {
+        let x = x.as_ref().clone();
+        let y = y.as_ref().clone();
+        let output = Variable::new(V1::zero());
+        let mul = Mul::new(x, y, output.clone());
+        mul.forward();
+        output.set_creator(Rc::new(RefCell::new(Box::new(mul))));
+        output
+    }
+
+    pub struct Square<V> {
+        x: Variable<V>,
+        output: VariableWeak<V>,
+    }
+
+    impl<V: Value> Square<V> {
+        pub fn new(x: Variable<V>, output: Variable<V>) -> Self {
+            let output = output.downgrade();
+            Self { x, output }
+        }
+    }
+
+    impl<V: Value> Function<V> for Square<V> {
+        fn forward(&self) {
+            let ans = self.x.get_data() * self.x.get_data();
+            self.output.upgrade().unwrap().set_data(ans);
+        }
+
+        fn backward(&self) {
+            let grad = self.output.upgrade().unwrap().get_grad().unwrap();
+            let tmp = mul(&grad, &Variable::new(V::one() + V::one()));
+            let x_grad = mul(&tmp, &self.x);
+            self.x.set_grad(x_grad);
+        }
+
+        fn get_inputs(&self) -> Vec<Variable<V>> {
+            vec![self.x.clone()]
+        }
+    }
+
+    pub fn square<V1: Value, V: AsRef<Variable<V1>>>(x: V) -> Variable<V1> {
+        let output = Variable::new(V1::zero());
+        let square = Square::new(x.as_ref().clone(), output.clone());
+        square.forward();
+        output.set_creator(Rc::new(RefCell::new(Box::new(square))));
+        output
+    }
     #[test]
     fn add_test() {
         let x0 = Variable::new(2.0);
