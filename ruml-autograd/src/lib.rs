@@ -10,8 +10,9 @@ use std::{
 pub struct VariableInner {
     data: f64,
     creator: Option<Rc<RefCell<Box<dyn Function>>>>,
-    grad: Option<f64>,
+    grad: Option<Variable>,
     gen: usize,
+    name: Option<String>,
 }
 
 impl VariableInner {
@@ -21,6 +22,7 @@ impl VariableInner {
             creator: None,
             grad: None,
             gen: 0,
+            name: None,
         }
     }
 
@@ -42,14 +44,19 @@ impl VariableInner {
         &self.creator
     }
 
-    pub fn get_grad(&self) -> &Option<f64> {
+    pub fn get_grad(&self) -> &Option<Variable> {
         &self.grad
     }
 
-    pub fn set_grad(&mut self, grad: f64) {
+    pub fn set_grad(&mut self, grad: Variable) {
         match self.grad {
-            Some(g) => self.grad = Some(g + grad),
-            None => self.grad = Some(grad),
+            Some(ref grad_) => {
+                let new_grad = add(grad_, &grad);
+                self.grad = Some(new_grad);
+            }
+            None => {
+                self.grad = Some(grad);
+            }
         }
     }
 
@@ -78,6 +85,23 @@ impl VariableInner {
 
     pub fn set_gen(&mut self, gen: usize) {
         self.gen = gen;
+    }
+
+    pub fn clear_grad(&mut self) {
+        match self.grad {
+            Some(ref mut grad) => {
+                *grad = Variable::new(0.);
+            }
+            None => {}
+        }
+    }
+
+    pub fn set_name(&mut self, name: &str) {
+        self.name = Some(name.to_string());
+    }
+
+    pub fn get_name(&self) -> &Option<String> {
+        &self.name
     }
 }
 
@@ -109,17 +133,17 @@ impl Variable {
         self.inner.borrow().get_creator().clone()
     }
 
-    pub fn get_grad(&self) -> Option<f64> {
-        *self.inner.borrow().get_grad()
+    pub fn get_grad(&self) -> Option<Variable> {
+        self.inner.borrow().get_grad().clone()
     }
 
-    pub fn set_grad(&self, grad: f64) {
+    pub fn set_grad(&self, grad: Variable) {
         self.inner.borrow_mut().set_grad(grad);
     }
 
     pub fn backward(&self) {
         if self.inner.borrow().get_grad().is_none() {
-            self.inner.borrow_mut().set_grad(1.);
+            self.inner.borrow_mut().set_grad(Variable::new(1.));
         }
         self.inner.borrow().backward();
     }
@@ -132,6 +156,18 @@ impl Variable {
 
     pub fn get_gen(&self) -> usize {
         self.inner.borrow().get_gen()
+    }
+
+    pub fn clear_grad(&self) {
+        self.inner.borrow_mut().clear_grad();
+    }
+
+    pub fn set_name(&self, name: &str) {
+        self.inner.borrow_mut().set_name(name);
+    }
+
+    pub fn get_name(&self) -> Option<String> {
+        self.inner.borrow().get_name().clone()
     }
 }
 
@@ -166,6 +202,7 @@ pub trait Function: Debug {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct FunctionQueueItem {
     func: Rc<RefCell<Box<dyn Function>>>,
     gen: usize,
@@ -231,9 +268,9 @@ impl Function for Add {
     }
 
     fn backward(&self) {
-        let grad = self.output.upgrade().unwrap().get_grad().unwrap();
-        self.x.set_grad(grad);
-        self.y.set_grad(grad);
+        let input_grad = self.output.upgrade().unwrap().get_grad().unwrap();
+        self.x.set_grad(input_grad.clone());
+        self.y.set_grad(input_grad);
     }
 
     fn get_inputs(&self) -> Vec<Variable> {
@@ -248,7 +285,7 @@ pub fn add<V: AsRef<Variable>>(x: V, y: V) -> Variable {
     let add = Add::new(x, y, output.clone());
     add.forward();
     output.set_creator(Rc::new(RefCell::new(Box::new(add))));
-    output.clone()
+    output
 }
 
 #[derive(Debug)]
@@ -272,10 +309,11 @@ impl Function for Mul {
     }
 
     fn backward(&self) {
-        let grad = self.output.upgrade().unwrap().get_grad().unwrap();
-        println!("mul");
-        self.x.set_grad(grad * self.y.get_data());
-        self.y.set_grad(grad * self.x.get_data());
+        let input_grad = self.output.upgrade().unwrap().get_grad().unwrap();
+        let x_grad = mul(&input_grad, &self.y);
+        let y_grad = mul(&input_grad, &self.x);
+        self.x.set_grad(x_grad);
+        self.y.set_grad(y_grad);
     }
 
     fn get_inputs(&self) -> Vec<Variable> {
@@ -290,7 +328,7 @@ pub fn mul<V: AsRef<Variable>>(x: V, y: V) -> Variable {
     let mul = Mul::new(x, y, output.clone());
     mul.forward();
     output.set_creator(Rc::new(RefCell::new(Box::new(mul))));
-    output.clone()
+    output
 }
 
 #[derive(Debug)]
@@ -314,8 +352,9 @@ impl Function for Square {
 
     fn backward(&self) {
         let grad = self.output.upgrade().unwrap().get_grad().unwrap();
-        let x = self.x.get_data();
-        self.x.set_grad(grad * 2. * x);
+        let tmp = mul(&grad, &Variable::new(2.));
+        let x_grad = mul(&tmp, &self.x);
+        self.x.set_grad(x_grad);
     }
 
     fn get_inputs(&self) -> Vec<Variable> {
@@ -328,46 +367,7 @@ pub fn square<V: AsRef<Variable>>(x: V) -> Variable {
     let square = Square::new(x.as_ref().clone(), output.clone());
     square.forward();
     output.set_creator(Rc::new(RefCell::new(Box::new(square))));
-    output.clone()
-}
-
-#[derive(Debug)]
-pub struct Exp {
-    x: Variable,
-    output: VariableWeak,
-}
-
-impl Exp {
-    pub fn new(x: Variable, output: Variable) -> Self {
-        let output = output.downgrade();
-        Self { x, output }
-    }
-}
-
-impl Function for Exp {
-    fn forward(&self) {
-        let ans = self.x.get_data().exp();
-        self.output.upgrade().unwrap().set_data(ans);
-    }
-
-    fn backward(&self) {
-        let grad = self.output.upgrade().unwrap().get_grad().unwrap();
-        let x = self.x.get_data();
-        self.x.set_grad(grad * x.exp());
-    }
-
-    fn get_inputs(&self) -> Vec<Variable> {
-        vec![self.x.clone()]
-    }
-}
-
-pub fn exp<V: AsRef<Variable>>(x: V) -> Variable {
-    let x = x.as_ref();
-    let output = Variable::new(0.);
-    let exp = Exp::new(x.clone(), output.clone());
-    exp.forward();
-    output.set_creator(Rc::new(RefCell::new(Box::new(exp))));
-    output.clone()
+    output
 }
 
 #[cfg(test)]
@@ -407,9 +407,9 @@ mod autograd {
         let y = add(&x0, &x1);
         let y = mul(y, x2.clone());
         y.backward();
-        assert_eq!(x0.get_grad(), Some(4.0));
-        assert_eq!(x1.get_grad(), Some(4.0));
-        assert_eq!(x2.get_grad(), Some(5.0));
+        assert_eq!(x0.get_grad().unwrap().get_data(), 4.0);
+        assert_eq!(x1.get_grad().unwrap().get_data(), 4.0);
+        assert_eq!(x2.get_grad().unwrap().get_data(), 5.0);
     }
 
     #[test]
@@ -417,7 +417,7 @@ mod autograd {
         let x0 = Variable::new(2.0);
         let y = add(x0.clone(), x0.clone());
         y.backward();
-        assert_eq!(x0.get_grad(), Some(2.0));
+        assert_eq!(x0.get_grad().unwrap().get_data(), 2.0);
     }
 
     #[test]
@@ -427,6 +427,19 @@ mod autograd {
         let y = add(square(a.clone()), square(a.clone()));
         y.backward();
         assert_eq!(y.get_data(), 32.0);
-        assert_eq!(x.get_grad(), Some(64.0));
+        assert_eq!(x.get_grad().unwrap().get_data(), 64.0);
+    }
+
+    #[test]
+    fn grad_twice() {
+        let x = Variable::new(3.0);
+        x.set_name("x");
+        let y = square(x.clone());
+        y.backward();
+        assert_eq!(x.get_grad().unwrap().get_data(), 6.0);
+        let x_grad = x.get_grad().unwrap();
+        x.clear_grad();
+        x_grad.backward();
+        assert_eq!(x.get_grad().unwrap().get_data(), 2.0);
     }
 }
