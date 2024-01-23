@@ -1,5 +1,6 @@
 use crate::{
     blas::{Blas, BlasLayout, BlasTrans},
+    dim::DimTrait,
     dim_impl::Dim2,
     matrix::{MatrixBase, ViewMatrix, ViewMutMatix},
     num::Num,
@@ -22,6 +23,10 @@ pub fn gemm<
     let a_shape = a.shape();
     let b_shape = b.shape();
 
+    assert_eq!(a_shape.len(), 2);
+    assert_eq!(b_shape.len(), 2);
+    assert_eq!(c_shape.len(), 2);
+
     // check if transposed
     let is_transposed_a = a.shape_stride().is_transposed();
     let is_transposed_b = b.shape_stride().is_transposed();
@@ -29,44 +34,45 @@ pub fn gemm<
 
     assert!(!is_transposed_c);
 
-    // shake shape
-    // check m
-    assert_eq!(a_shape[0], c_shape[0]);
-    // check k
-    assert_eq!(b_shape[0], a_shape[1]);
-    // check n
-    assert_eq!(b_shape[1], c_shape[1]);
+    let m = a_shape[1];
+    let n = b_shape[0];
+    let k = a_shape[0];
 
-    let m = a_shape[0];
-    let k = b_shape[0];
-    let n = b_shape[1];
+    // shape check
+    assert_eq!(a_shape[1], c_shape[1]);
+    assert_eq!(b_shape[0], c_shape[0]);
+    assert_eq!(a_shape[0], b_shape[1]);
 
-    // check a stride is default stride and lead dimension's stride is m
-    let lead_dim_stride_a = if is_transposed_a {
-        a.stride()[1]
-    } else {
-        a.stride()[0]
+    let get_inner_stride = |stride: Dim2, is_transpose| {
+        if is_transpose {
+            stride[0]
+        } else {
+            stride[1]
+        }
     };
+    let get_leading_dim = |shape: Dim2, is_transpose| {
+        if is_transpose {
+            shape[1]
+        } else {
+            shape[0]
+        }
+    };
+
+    let leading_dim_a = get_leading_dim(a_shape, is_transposed_a);
+    let leading_dim_b = get_leading_dim(b_shape, is_transposed_b);
+    let leading_dim_c = get_leading_dim(c_shape, is_transposed_c);
+
+    let inner_stride_a = get_inner_stride(a.stride(), is_transposed_a);
     assert!(a.is_default_stride() || a.is_transposed_default_stride());
-    assert_eq!(lead_dim_stride_a, m);
+    assert_eq!(inner_stride_a, 1);
 
-    // check b stride is default stride and lead dimension's stride is k
-    let lead_dim_stride_b = if is_transposed_b {
-        b.stride()[1]
-    } else {
-        b.stride()[0]
-    };
+    let inner_stride_b = get_inner_stride(b.stride(), is_transposed_b);
     assert!(b.is_default_stride() || a.is_transposed_default_stride());
-    assert_eq!(lead_dim_stride_b, k);
+    assert_eq!(inner_stride_b, 1);
 
-    // check c stride is default stride and lead dimension's stride is m
-    let lead_dim_stride_c = if is_transposed_c {
-        c.stride()[1]
-    } else {
-        c.stride()[0]
-    };
+    let inner_stride_c = get_inner_stride(c.stride(), is_transposed_c);
     assert!(c.is_default_stride());
-    assert_eq!(lead_dim_stride_c, m);
+    assert_eq!(inner_stride_c, 1);
 
     let transa = if is_transposed_a {
         BlasTrans::Ordinary
@@ -89,12 +95,12 @@ pub fn gemm<
         k,
         alpha,
         a.as_ptr(),
-        lead_dim_stride_a,
+        leading_dim_a,
         b.as_ptr(),
-        lead_dim_stride_b,
+        leading_dim_b,
         beta,
         c.as_mut_ptr(),
-        lead_dim_stride_c,
+        leading_dim_c,
     );
 }
 
