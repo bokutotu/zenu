@@ -76,12 +76,12 @@ impl<D: DimTrait> ShapeStride<D> {
         default_stride == sorted.stride
     }
 
+    /// 転置は最後の次元と最後から2番目の次元を入れ替えることで表現される
     pub fn is_transposed(&self) -> bool {
-        let sorted = self.sort_by_stride();
+        let last = self.stride()[self.stride().len() - 1];
+        let last_2 = self.stride()[self.stride().len() - 2];
 
-        // sortedのshaptとself.shapeが一致しているかどうか
-        // 一致していれば、transposeされていない
-        sorted.shape != self.shape
+        last > last_2
     }
 
     pub fn get_dim_by_offset(&self, offset: usize) -> D {
@@ -92,6 +92,38 @@ impl<D: DimTrait> ShapeStride<D> {
             offset %= self.stride[i];
         }
         dim
+    }
+
+    pub fn transpose(&self) -> Self {
+        let mut shape = self.shape();
+        let mut stride = self.stride();
+
+        let num_dim = shape.len();
+
+        // 入れ替える
+        let last = shape[shape.len() - 1];
+        let last_2 = shape[shape.len() - 2];
+
+        shape[num_dim - 1] = last_2;
+        shape[num_dim - 2] = last;
+
+        let last = stride[stride.len() - 1];
+        let last_2 = stride[stride.len() - 2];
+
+        stride[num_dim - 1] = last_2;
+        stride[num_dim - 2] = last;
+
+        Self::new(shape, stride)
+    }
+
+    pub fn is_default_stride(&self) -> bool {
+        default_stride(self.shape()) == self.stride()
+    }
+
+    /// shpae strideが転置されている場合、
+    /// 転置を元に戻した場合default_strideになっているかどうかを判定する
+    pub fn is_transposed_default_stride(&self) -> bool {
+        self.transpose().is_default_stride()
     }
 }
 

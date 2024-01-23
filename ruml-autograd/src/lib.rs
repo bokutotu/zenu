@@ -128,11 +128,8 @@ impl<V: Value> VariableInner<V> {
     }
 
     pub fn clear_grad(&mut self) {
-        match self.grad {
-            Some(ref mut grad) => {
-                *grad = Variable::new(V::zero());
-            }
-            None => {}
+        if let Some(ref mut grad) = self.grad {
+            *grad = Variable::new(V::zero());
         }
     }
 

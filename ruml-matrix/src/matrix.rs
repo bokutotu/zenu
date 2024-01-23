@@ -1,6 +1,6 @@
 use crate::{
     blas::Blas,
-    dim::{default_stride, DimTrait, LessDimTrait},
+    dim::{DimTrait, LessDimTrait},
     index::{IndexAxisTrait, ShapeStride, SliceTrait},
     num::Num,
 };
@@ -19,7 +19,11 @@ pub trait MatrixBase: Sized {
     // fn memory_mut(&mut self) -> &mut Self::Memory;
     // fn construct(data: Self::Memory, shape: Self::Dim, stride: Self::Dim) -> Self;
     fn is_default_stride(&self) -> bool {
-        default_stride(self.shape_stride().shape()) == self.shape_stride().stride()
+        self.shape_stride().is_default_stride()
+    }
+
+    fn is_transposed_default_stride(&self) -> bool {
+        self.shape_stride().is_transposed_default_stride()
     }
 }
 

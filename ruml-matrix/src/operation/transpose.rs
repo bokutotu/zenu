@@ -1,5 +1,4 @@
 use crate::{
-    dim::DimTrait,
     dim_impl::{Dim2, Dim3, Dim4},
     matrix::MatrixBase,
     matrix_impl::Matrix,
@@ -17,19 +16,10 @@ macro_rules! impl_transpose {
             #[allow(clippy::almost_swapped)]
             fn transpose(&mut self) {
                 let shape_stride = self.shape_stride();
-                let mut shape = shape_stride.shape();
-                let mut stride = shape_stride.stride();
+                let transposed = shape_stride.transpose();
 
-                let num_dim = shape.len();
-
-                shape[num_dim - 2] = shape[num_dim - 1];
-                shape[num_dim - 1] = shape[num_dim - 2];
-
-                stride[num_dim - 2] = stride[num_dim - 1];
-                stride[num_dim - 1] = stride[num_dim - 2];
-
-                self.update_shape(shape);
-                self.update_stride(stride);
+                self.update_shape(transposed.shape());
+                self.update_stride(transposed.stride());
             }
         }
     };
