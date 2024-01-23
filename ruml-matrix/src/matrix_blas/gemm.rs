@@ -6,26 +6,17 @@ use crate::{
     num::Num,
 };
 
-pub fn gemm<
+pub fn gemm<T, A, B, C>(a: A, b: B, c: C, alpha: T, beta: T)
+where
     T: Num,
     A: ViewMatrix + MatrixBase<Dim = Dim2, Item = T>,
     B: ViewMatrix + MatrixBase<Dim = Dim2, Item = T>,
     C: ViewMutMatix + MatrixBase<Dim = Dim2, Item = T>,
->(
-    a: A,
-    b: B,
-    c: C,
-    alpha: T,
-    beta: T,
-) {
+{
     let mut c = c;
     let c_shape = c.shape();
     let a_shape = a.shape();
     let b_shape = b.shape();
-
-    assert_eq!(a_shape.len(), 2);
-    assert_eq!(b_shape.len(), 2);
-    assert_eq!(c_shape.len(), 2);
 
     // check if transposed
     let is_transposed_a = a.shape_stride().is_transposed();

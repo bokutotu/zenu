@@ -1,35 +1,22 @@
 use crate::{
-    blas::Blas,
-    dim::DimTrait,
     dim_impl::Dim1,
-    matrix::{BlasMatrix, ViewMatrix},
+    matrix::{MatrixBase, ViewMatrix},
+    matrix_blas::dot::dot,
     num::Num,
 };
 
 pub trait Dot<Other, T> {
-    fn dot(&self, other: Other) -> T;
+    fn dot(self, other: Other) -> T;
 }
 
 impl<T, S, O> Dot<O, T> for S
 where
     T: Num,
-    S: ViewMatrix<Item = T, Dim = Dim1>,
-    O: ViewMatrix<Item = T, Dim = Dim1>,
+    S: ViewMatrix + MatrixBase<Dim = Dim1, Item = T>,
+    O: ViewMatrix + MatrixBase<Dim = Dim1, Item = T>,
 {
-    fn dot(&self, other: O) -> T {
-        if self.shape_stride().shape() != other.shape_stride().shape() {
-            panic!("shape and stride must be same");
-        }
-        let num_elm = self.shape_stride().shape().num_elm();
-        let self_stride = self.shape_stride().stride()[0];
-        let other_stride = other.shape_stride().stride()[0];
-        <Self as BlasMatrix>::Blas::dot(
-            num_elm,
-            self.as_ptr(),
-            self_stride,
-            other.as_ptr(),
-            other_stride,
-        )
+    fn dot(self, other: O) -> T {
+        dot(self, other)
     }
 }
 
