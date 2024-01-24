@@ -1,5 +1,5 @@
 use crate::{
-    cpu_memory::{CpuOwnedMemory, CpuViewMemory},
+    cpu_memory::{CpuOwnedMemory, CpuViewMemory, CpuViewMutMemory},
     dim::{cal_offset, default_stride, DimTrait, LessDimTrait},
     dim_impl::{Dim1, Dim2, Dim3, Dim4},
     index::{IndexAxisTrait, ShapeStride, SliceTrait},
@@ -236,12 +236,19 @@ impl<T: Num, M: Memory<Item = T>, D: DimTrait> BlasMatrix for Matrix<M, D> {
 
 pub type CpuOwnedMatrix1D<T> = Matrix<CpuOwnedMemory<T>, Dim1>;
 pub type CpuViewMatrix1D<'a, T> = Matrix<CpuViewMemory<'a, T>, Dim1>;
+pub type CpuViewMutMatrix1D<'a, T> = Matrix<CpuViewMutMemory<'a, T>, Dim1>;
+
 pub type CpuOwnedMatrix2D<T> = Matrix<CpuOwnedMemory<T>, Dim2>;
 pub type CpuViewMatrix2D<'a, T> = Matrix<CpuViewMemory<'a, T>, Dim2>;
+pub type CpuViewMutMatrix2D<'a, T> = Matrix<CpuViewMutMemory<'a, T>, Dim2>;
+
 pub type CpuOwnedMatrix3D<T> = Matrix<CpuOwnedMemory<T>, Dim3>;
 pub type CpuViewMatrix3D<'a, T> = Matrix<CpuViewMemory<'a, T>, Dim3>;
+pub type CpuViewMutMatrix3D<'a, T> = Matrix<CpuViewMutMemory<'a, T>, Dim3>;
+
 pub type CpuOwnedMatrix4D<T> = Matrix<CpuOwnedMemory<T>, Dim4>;
 pub type CpuViewMatrix4D<'a, T> = Matrix<CpuViewMemory<'a, T>, Dim4>;
+pub type CpuViewMutMatrix4D<'a, T> = Matrix<CpuViewMutMemory<'a, T>, Dim4>;
 
 #[cfg(test)]
 mod matrix_slice {

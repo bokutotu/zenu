@@ -1,6 +1,5 @@
 use crate::{
     blas::{Blas, BlasLayout, BlasTrans},
-    dim::DimTrait,
     dim_impl::Dim2,
     matrix::{MatrixBase, ViewMatrix, ViewMutMatix},
     num::Num,

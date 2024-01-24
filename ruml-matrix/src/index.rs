@@ -1,25 +1,11 @@
 use std::fmt::Debug;
 
-use crate::{
-    blas::BlasTrans,
-    dim::{default_stride, DimTrait},
-    dim_impl::Dim2,
-};
+use crate::dim::{default_stride, DimTrait};
 
 #[derive(Clone, Debug, Copy, PartialEq)]
 pub struct ShapeStride<D: DimTrait> {
     shape: D,
     stride: D,
-}
-
-pub(crate) fn get_blas_trans_for_gemm(shape_stride: ShapeStride<Dim2>) -> BlasTrans {
-    assert!(shape_stride.is_contiguous());
-
-    if shape_stride.stride()[0] > shape_stride.stride()[1] {
-        BlasTrans::None
-    } else {
-        BlasTrans::Ordinary
-    }
 }
 
 impl<D: DimTrait> ShapeStride<D> {

@@ -47,7 +47,7 @@ pub trait ToOwnedMemory: Memory {
 }
 
 /// Memoryの中でも値を保持するメモリを表すトレイト
-pub trait OwnedMemory: Memory + ToViewMemory + ToViewMutMemory + Clone {
+pub trait OwnedMemory: Memory + ToViewMemory + ToViewMutMemory + Clone + ToOwnedMemory {
     fn from_vec(vec: Vec<Self::Item>) -> Self;
 }
 

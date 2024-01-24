@@ -109,6 +109,14 @@ where
     }
 }
 
+impl<T: Num> ToOwnedMemory for CpuOwnedMemory<T> {
+    type Owned = CpuOwnedMemory<T>;
+
+    fn to_owned_memory(&self) -> Self::Owned {
+        self.clone()
+    }
+}
+
 impl<T: Num> OwnedMemory for CpuOwnedMemory<T> {
     fn from_vec(vec: Vec<Self::Item>) -> Self {
         let ptr = unsafe { NonNull::new_unchecked(vec.as_ptr() as *mut T) };

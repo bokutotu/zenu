@@ -5,6 +5,7 @@ pub mod cpu_memory;
 pub mod dim;
 pub mod dim_impl;
 pub mod element_wise;
+mod impl_ops;
 pub mod index;
 pub mod index_impl;
 pub mod matrix;

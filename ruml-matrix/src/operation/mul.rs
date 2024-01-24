@@ -13,7 +13,7 @@ use crate::{
 
 use super::copy_from::CopyFrom;
 
-pub trait Mul<Rhs, Lhs>: ViewMutMatix {
+pub trait MatrixMul<Rhs, Lhs>: ViewMutMatix {
     fn mul(&mut self, rhs: &Rhs, lhs: &Lhs);
 }
 
@@ -21,7 +21,7 @@ pub trait MatMul<Rhs, Lhs>: ViewMutMatix {
     fn mat_mul(self, rhs: Rhs, lhs: Lhs);
 }
 
-impl<T, VM, R> Mul<R, T> for VM
+impl<T, VM, R> MatrixMul<R, T> for VM
 where
     T: Num,
     VM: ViewMutMatix<Dim = Dim1, Item = T> + CopyFrom<R, T>,
@@ -39,7 +39,7 @@ where
     }
 }
 
-impl<T, VM, R, L> Mul<Matrix<R, Dim1>, Matrix<L, Dim1>> for Matrix<VM, Dim1>
+impl<T, VM, R, L> MatrixMul<Matrix<R, Dim1>, Matrix<L, Dim1>> for Matrix<VM, Dim1>
 where
     T: Num,
     VM: ViewMutMemory<Item = T>,
@@ -66,7 +66,7 @@ where
 
 macro_rules! impl_mul_same_dim {
     ($dim:ty) => {
-        impl<T, VM, R, L> Mul<Matrix<R, $dim>, Matrix<L, $dim>> for Matrix<VM, $dim>
+        impl<T, VM, R, L> MatrixMul<Matrix<R, $dim>, Matrix<L, $dim>> for Matrix<VM, $dim>
         where
             T: Num,
             VM: ViewMutMemory<Item = T>,
@@ -93,7 +93,7 @@ impl_mul_same_dim!(Dim4);
 
 macro_rules! impl_mul_scalar {
     ($dim:ty) => {
-        impl<T, VM, R> Mul<Matrix<R, $dim>, T> for Matrix<VM, $dim>
+        impl<T, VM, R> MatrixMul<Matrix<R, $dim>, T> for Matrix<VM, $dim>
         where
             T: Num,
             VM: ViewMutMemory<Item = T>,
@@ -127,7 +127,7 @@ impl_mul_scalar!(Dim4);
 
 macro_rules! impl_mul_matrix_matrix {
     ($dim_s:ty, $dim_l:ty) => {
-        impl<T, S, R, L> Mul<Matrix<R, $dim_s>, Matrix<L, $dim_l>> for Matrix<S, $dim_s>
+        impl<T, S, R, L> MatrixMul<Matrix<R, $dim_s>, Matrix<L, $dim_l>> for Matrix<S, $dim_s>
         where
             T: Num,
             S: ViewMutMemory<Item = T>,
@@ -160,7 +160,7 @@ where
     S: ViewMutMatix<Item = T> + MatrixBase<Dim = Dim2>,
 {
     fn mat_mul(self, rhs: R, lhs: L) {
-        gemm(rhs, lhs, self, T::one(), T::one());
+        gemm(rhs, lhs, self, T::one(), T::zero());
     }
 }
 
@@ -174,7 +174,7 @@ mod mul {
         slice,
     };
 
-    use super::Mul;
+    use super::MatrixMul;
 
     #[test]
     fn scalar_1d() {
