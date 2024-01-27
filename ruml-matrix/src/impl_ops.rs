@@ -17,7 +17,7 @@ macro_rules! impl_scalar {
             type Output = Matrix<<TV as ToOwnedMemory>::Owned, $dim>;
 
             fn $func(self, rhs: T) -> Self::Output {
-                let mut ans = <Self::Output as Zeros<$dim>>::zeros(self.shape());
+                let mut ans = <Self::Output as Zeros>::zeros(self.shape());
                 $matrix_trait::$matrix_fn(&mut ans.to_view_mut(), &self.to_view(), &rhs);
                 ans
             }
@@ -29,7 +29,7 @@ macro_rules! impl_scalar {
             type Output = Matrix<<TV as ToOwnedMemory>::Owned, $dim>;
 
             fn $func(self, rhs: T) -> Self::Output {
-                let mut ans = <Self::Output as Zeros<$dim>>::zeros(self.shape());
+                let mut ans = <Self::Output as Zeros>::zeros(self.shape());
                 $matrix_trait::$matrix_fn(&mut ans.to_view_mut(), &self.to_view(), &rhs);
                 ans
             }
@@ -53,7 +53,7 @@ macro_rules! impl_matrix_operation {
             type Output = Matrix<<M as ToOwnedMemory>::Owned, $dim2>;
 
             fn $func(self, rhs: Matrix<M, $dim1>) -> Self::Output {
-                let mut ans = <Self::Output as Zeros<$dim2>>::zeros(self.shape());
+                let mut ans = <Self::Output as Zeros>::zeros(self.shape());
                 $matrix_trait::$matrix_fn(&mut ans.to_view_mut(), &self.to_view(), &rhs.to_view());
                 ans
             }
@@ -65,7 +65,7 @@ macro_rules! impl_matrix_operation {
             type Output = Matrix<<M as ToOwnedMemory>::Owned, $dim2>;
 
             fn $func(self, rhs: &Matrix<M, $dim1>) -> Self::Output {
-                let mut ans = <Self::Output as Zeros<$dim2>>::zeros(self.shape());
+                let mut ans = <Self::Output as Zeros>::zeros(self.shape());
                 $matrix_trait::$matrix_fn(&mut ans.to_view_mut(), &self.to_view(), &rhs.to_view());
                 ans
             }
@@ -77,7 +77,7 @@ macro_rules! impl_matrix_operation {
             type Output = Matrix<<M as ToOwnedMemory>::Owned, $dim2>;
 
             fn $func(self, rhs: &Matrix<M, $dim1>) -> Self::Output {
-                let mut ans = <Self::Output as Zeros<$dim2>>::zeros(self.shape());
+                let mut ans = <Self::Output as Zeros>::zeros(self.shape());
                 $matrix_trait::$matrix_fn(&mut ans.to_view_mut(), &self.to_view(), &rhs.to_view());
                 ans
             }
@@ -89,7 +89,7 @@ macro_rules! impl_matrix_operation {
             type Output = Matrix<<M as ToOwnedMemory>::Owned, $dim2>;
 
             fn $func(self, rhs: Matrix<M, $dim1>) -> Self::Output {
-                let mut ans = <Self::Output as Zeros<$dim2>>::zeros(self.shape());
+                let mut ans = <Self::Output as Zeros>::zeros(self.shape());
                 $matrix_trait::$matrix_fn(&mut ans.to_view_mut(), &self.to_view(), &rhs.to_view());
                 ans
             }
