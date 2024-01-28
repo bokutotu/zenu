@@ -1,7 +1,11 @@
-use std::fmt::Debug;
+use std::{
+    fmt::Debug,
+    ops::{Add, Mul},
+};
 
-use ruml_matrix::matrix_impl::{
-    CpuOwnedMatrix1D, CpuOwnedMatrix2D, CpuOwnedMatrix3D, CpuOwnedMatrix4D,
+use ruml_matrix::{
+    matrix::ToViewMatrix,
+    matrix_impl::{CpuOwnedMatrix1D, CpuOwnedMatrix2D, CpuOwnedMatrix3D, CpuOwnedMatrix4D},
 };
 
 pub trait Zero {
@@ -68,4 +72,93 @@ pub enum Val {
     Cpu3DF64(CpuOwnedMatrix3D<f64>),
     Cpu4DF32(CpuOwnedMatrix4D<f32>),
     Cpu4DF64(CpuOwnedMatrix4D<f64>),
+}
+
+impl Add<Val> for Val {
+    type Output = Val;
+    fn add(self, rhs: Val) -> Self::Output {
+        match (self, rhs) {
+            (Val::F32(a), Val::F32(b)) => Val::F32(a + b),
+            (Val::F64(a), Val::F64(b)) => Val::F64(a + b),
+
+            (Val::Cpu1DF32(a), Val::Cpu1DF32(b)) => Val::Cpu1DF32(a.to_view() + b.to_view()),
+            (Val::Cpu2DF32(a), Val::Cpu2DF32(b)) => Val::Cpu2DF32(a.to_view() + b.to_view()),
+            (Val::Cpu3DF32(a), Val::Cpu3DF32(b)) => Val::Cpu3DF32(a.to_view() + b.to_view()),
+            (Val::Cpu4DF32(a), Val::Cpu4DF32(b)) => Val::Cpu4DF32(a.to_view() + b.to_view()),
+
+            (Val::Cpu1DF32(a), Val::F32(b)) => Val::Cpu1DF32(a.to_view() + b),
+            (Val::Cpu2DF32(a), Val::F32(b)) => Val::Cpu2DF32(a.to_view() + b),
+            (Val::Cpu3DF32(a), Val::F32(b)) => Val::Cpu3DF32(a.to_view() + b),
+            (Val::Cpu4DF32(a), Val::F32(b)) => Val::Cpu4DF32(a.to_view() + b),
+
+            (Val::Cpu2DF32(a), Val::Cpu1DF32(b)) => Val::Cpu2DF32(a.to_view() + b.to_view()),
+            (Val::Cpu3DF32(a), Val::Cpu1DF32(b)) => Val::Cpu3DF32(a.to_view() + b.to_view()),
+            (Val::Cpu4DF32(a), Val::Cpu1DF32(b)) => Val::Cpu4DF32(a.to_view() + b.to_view()),
+            (Val::Cpu3DF32(a), Val::Cpu2DF32(b)) => Val::Cpu3DF32(a.to_view() + b.to_view()),
+            (Val::Cpu4DF32(a), Val::Cpu2DF32(b)) => Val::Cpu4DF32(a.to_view() + b.to_view()),
+            (Val::Cpu4DF32(a), Val::Cpu3DF32(b)) => Val::Cpu4DF32(a.to_view() + b.to_view()),
+
+            (Val::Cpu1DF64(a), Val::Cpu1DF64(b)) => Val::Cpu1DF64(a.to_view() + b.to_view()),
+            (Val::Cpu2DF64(a), Val::Cpu2DF64(b)) => Val::Cpu2DF64(a.to_view() + b.to_view()),
+            (Val::Cpu3DF64(a), Val::Cpu3DF64(b)) => Val::Cpu3DF64(a.to_view() + b.to_view()),
+            (Val::Cpu4DF64(a), Val::Cpu4DF64(b)) => Val::Cpu4DF64(a.to_view() + b.to_view()),
+
+            (Val::Cpu1DF64(a), Val::F64(b)) => Val::Cpu1DF64(a.to_view() + b),
+            (Val::Cpu2DF64(a), Val::F64(b)) => Val::Cpu2DF64(a.to_view() + b),
+            (Val::Cpu3DF64(a), Val::F64(b)) => Val::Cpu3DF64(a.to_view() + b),
+            (Val::Cpu4DF64(a), Val::F64(b)) => Val::Cpu4DF64(a.to_view() + b),
+
+            (Val::Cpu2DF64(a), Val::Cpu1DF64(b)) => Val::Cpu2DF64(a.to_view() + b.to_view()),
+            (Val::Cpu3DF64(a), Val::Cpu1DF64(b)) => Val::Cpu3DF64(a.to_view() + b.to_view()),
+            (Val::Cpu4DF64(a), Val::Cpu1DF64(b)) => Val::Cpu4DF64(a.to_view() + b.to_view()),
+            (Val::Cpu3DF64(a), Val::Cpu2DF64(b)) => Val::Cpu3DF64(a.to_view() + b.to_view()),
+            (Val::Cpu4DF64(a), Val::Cpu2DF64(b)) => Val::Cpu4DF64(a.to_view() + b.to_view()),
+            (Val::Cpu4DF64(a), Val::Cpu3DF64(b)) => Val::Cpu4DF64(a.to_view() + b.to_view()),
+            _ => panic!("type mismatch"),
+        }
+    }
+}
+impl Mul<Val> for Val {
+    type Output = Val;
+    fn mul(self, rhs: Val) -> Self::Output {
+        match (self, rhs) {
+            (Val::F32(a), Val::F32(b)) => Val::F32(a * b),
+            (Val::F64(a), Val::F64(b)) => Val::F64(a * b),
+
+            (Val::Cpu1DF32(a), Val::Cpu1DF32(b)) => Val::Cpu1DF32(a.to_view() * b.to_view()),
+            (Val::Cpu2DF32(a), Val::Cpu2DF32(b)) => Val::Cpu2DF32(a.to_view() * b.to_view()),
+            (Val::Cpu3DF32(a), Val::Cpu3DF32(b)) => Val::Cpu3DF32(a.to_view() * b.to_view()),
+            (Val::Cpu4DF32(a), Val::Cpu4DF32(b)) => Val::Cpu4DF32(a.to_view() * b.to_view()),
+
+            (Val::Cpu1DF32(a), Val::F32(b)) => Val::Cpu1DF32(a.to_view() * b),
+            (Val::Cpu2DF32(a), Val::F32(b)) => Val::Cpu2DF32(a.to_view() * b),
+            (Val::Cpu3DF32(a), Val::F32(b)) => Val::Cpu3DF32(a.to_view() * b),
+            (Val::Cpu4DF32(a), Val::F32(b)) => Val::Cpu4DF32(a.to_view() * b),
+
+            (Val::Cpu2DF32(a), Val::Cpu1DF32(b)) => Val::Cpu2DF32(a.to_view() * b.to_view()),
+            (Val::Cpu3DF32(a), Val::Cpu1DF32(b)) => Val::Cpu3DF32(a.to_view() * b.to_view()),
+            (Val::Cpu4DF32(a), Val::Cpu1DF32(b)) => Val::Cpu4DF32(a.to_view() * b.to_view()),
+            (Val::Cpu3DF32(a), Val::Cpu2DF32(b)) => Val::Cpu3DF32(a.to_view() * b.to_view()),
+            (Val::Cpu4DF32(a), Val::Cpu2DF32(b)) => Val::Cpu4DF32(a.to_view() * b.to_view()),
+            (Val::Cpu4DF32(a), Val::Cpu3DF32(b)) => Val::Cpu4DF32(a.to_view() * b.to_view()),
+
+            (Val::Cpu1DF64(a), Val::Cpu1DF64(b)) => Val::Cpu1DF64(a.to_view() * b.to_view()),
+            (Val::Cpu2DF64(a), Val::Cpu2DF64(b)) => Val::Cpu2DF64(a.to_view() * b.to_view()),
+            (Val::Cpu3DF64(a), Val::Cpu3DF64(b)) => Val::Cpu3DF64(a.to_view() * b.to_view()),
+            (Val::Cpu4DF64(a), Val::Cpu4DF64(b)) => Val::Cpu4DF64(a.to_view() * b.to_view()),
+
+            (Val::Cpu1DF64(a), Val::F64(b)) => Val::Cpu1DF64(a.to_view() * b),
+            (Val::Cpu2DF64(a), Val::F64(b)) => Val::Cpu2DF64(a.to_view() * b),
+            (Val::Cpu3DF64(a), Val::F64(b)) => Val::Cpu3DF64(a.to_view() * b),
+            (Val::Cpu4DF64(a), Val::F64(b)) => Val::Cpu4DF64(a.to_view() * b),
+
+            (Val::Cpu2DF64(a), Val::Cpu1DF64(b)) => Val::Cpu2DF64(a.to_view() * b.to_view()),
+            (Val::Cpu3DF64(a), Val::Cpu1DF64(b)) => Val::Cpu3DF64(a.to_view() * b.to_view()),
+            (Val::Cpu4DF64(a), Val::Cpu1DF64(b)) => Val::Cpu4DF64(a.to_view() * b.to_view()),
+            (Val::Cpu3DF64(a), Val::Cpu2DF64(b)) => Val::Cpu3DF64(a.to_view() * b.to_view()),
+            (Val::Cpu4DF64(a), Val::Cpu2DF64(b)) => Val::Cpu4DF64(a.to_view() * b.to_view()),
+            (Val::Cpu4DF64(a), Val::Cpu3DF64(b)) => Val::Cpu4DF64(a.to_view() * b.to_view()),
+            _ => panic!("type mismatch"),
+        }
+    }
 }
