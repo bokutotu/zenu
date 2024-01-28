@@ -12,6 +12,7 @@ pub trait DimTrait:
     + Default
     + PartialEq
     + Debug
+    + 'static
 {
     fn len(&self) -> usize;
     fn is_empty(&self) -> bool;

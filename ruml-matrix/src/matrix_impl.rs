@@ -1,3 +1,5 @@
+use std::any::TypeId;
+
 use crate::{
     cpu_memory::{CpuOwnedMemory, CpuViewMemory, CpuViewMutMemory},
     dim::{cal_offset, default_stride, DimTrait, LessDimTrait},
@@ -15,6 +17,7 @@ use crate::{
     num::Num,
 };
 
+#[derive(Clone)]
 pub struct Matrix<M, S> {
     memory: M,
     shape: S,
@@ -227,6 +230,27 @@ impl<T: Num, D: DimTrait, VM: ViewMutMemory + Memory<Item = T>> IndexItemAsign f
         unsafe {
             *self.memory.as_mut_ptr_offset(offset) = value;
         }
+    }
+}
+
+pub(crate) fn matrix_into_dim<M: Memory, Dout: DimTrait, Din: DimTrait>(
+    m: Matrix<M, Din>,
+) -> Matrix<M, Dout> {
+    if TypeId::of::<Dout>() == TypeId::of::<Din>() {
+        let shape = m.shape();
+        let stride = m.stride();
+
+        let mut shape_new = Dout::default();
+        let mut stride_new = Dout::default();
+
+        for i in 0..shape.len() {
+            shape_new[i] = shape[i];
+            stride_new[i] = stride[i];
+        }
+
+        return Matrix::new(m.memory, shape_new, stride_new);
+    } else {
+        panic!("Dout != Din");
     }
 }
 

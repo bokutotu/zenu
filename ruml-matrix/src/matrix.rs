@@ -4,6 +4,7 @@ use crate::{
     index::{IndexAxisTrait, ShapeStride, SliceTrait},
     num::Num,
 };
+
 pub trait MatrixBase: Sized {
     type Dim: DimTrait;
     type Item: Num;
@@ -85,7 +86,8 @@ pub trait IndexAxis<I: IndexAxisTrait>: ToViewMatrix
 where
     Self::Dim: LessDimTrait,
 {
-    type Output<'a>: MatrixBase<Dim = <Self::Dim as LessDimTrait>::LessDim> + ViewMatrix
+    type Output<'a>: MatrixBase<Dim = <Self::Dim as LessDimTrait>::LessDim, Item = Self::Item>
+        + ViewMatrix
     where
         Self: 'a;
 
@@ -96,7 +98,8 @@ pub trait IndexAxisMut<I: IndexAxisTrait>: ToViewMutMatrix
 where
     Self::Dim: LessDimTrait,
 {
-    type Output<'a>: MatrixBase<Dim = <Self::Dim as LessDimTrait>::LessDim> + ViewMutMatix
+    type Output<'a>: MatrixBase<Dim = <Self::Dim as LessDimTrait>::LessDim, Item = Self::Item>
+        + ViewMutMatix
     where
         Self: 'a;
 
@@ -119,7 +122,6 @@ pub trait ViewMatrix:
     MatrixBase + ToViewMatrix + ToOwnedMatrix + AsPtr + BlasMatrix + IndexItem
 {
 }
-
 pub trait ViewMutMatix:
     MatrixBase
     + ToViewMatrix
