@@ -40,7 +40,7 @@ impl<V: Value> Function<V> for Add<V> {
 pub fn add<V1: Value, V: AsRef<Variable<V1>>>(x: V, y: V) -> Variable<V1> {
     let x = x.as_ref().clone();
     let y = y.as_ref().clone();
-    let output = Variable::new(V1::zero());
+    let output = Variable::new(V1::zero(&[]));
     let add = Add::new(x, y, output.clone());
     add.forward();
     output.set_creator(Rc::new(RefCell::new(Box::new(add))));

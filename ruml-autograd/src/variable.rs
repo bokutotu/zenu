@@ -91,7 +91,7 @@ impl<V: Value> VariableInner<V> {
 
     pub fn clear_grad(&mut self) {
         if let Some(ref mut grad) = self.grad {
-            *grad = Variable::new(V::zero());
+            *grad = Variable::new(V::zero(&[]));
         }
     }
 
@@ -142,7 +142,7 @@ impl<V: Value> Variable<V> {
 
     pub fn backward(&self) {
         if self.inner.borrow().get_grad().is_none() {
-            self.inner.borrow_mut().set_grad(Variable::new(V::one()));
+            self.inner.borrow_mut().set_grad(Variable::new(V::one(&[])));
         }
         self.inner.borrow().backward();
     }

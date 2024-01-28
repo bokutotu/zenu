@@ -48,7 +48,7 @@ mod autograd {
     pub fn mul<V1: Value, V: AsRef<Variable<V1>>>(x: V, y: V) -> Variable<V1> {
         let x = x.as_ref().clone();
         let y = y.as_ref().clone();
-        let output = Variable::new(V1::zero());
+        let output = Variable::new(V1::zero(&[]));
         let mul = Mul::new(x, y, output.clone());
         mul.forward();
         output.set_creator(Rc::new(RefCell::new(Box::new(mul))));
@@ -75,7 +75,7 @@ mod autograd {
 
         fn backward(&self) {
             let grad = self.output.upgrade().unwrap().get_grad().unwrap();
-            let tmp = mul(&grad, &Variable::new(V::one() + V::one()));
+            let tmp = mul(&grad, &Variable::new(V::one(&[]) + V::one(&[])));
             let x_grad = mul(&tmp, &self.x);
             self.x.set_grad(x_grad);
         }
@@ -86,7 +86,7 @@ mod autograd {
     }
 
     pub fn square<V1: Value, V: AsRef<Variable<V1>>>(x: V) -> Variable<V1> {
-        let output = Variable::new(V1::zero());
+        let output = Variable::new(V1::zero(&[]));
         let square = Square::new(x.as_ref().clone(), output.clone());
         square.forward();
         output.set_creator(Rc::new(RefCell::new(Box::new(square))));
