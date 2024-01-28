@@ -74,6 +74,348 @@ pub enum Val {
     Cpu4DF64(CpuOwnedMatrix4D<f64>),
 }
 
+impl Val {
+    pub fn from_f32(v: f32) -> Self {
+        Val::F32(v)
+    }
+
+    pub fn from_f64(v: f64) -> Self {
+        Val::F64(v)
+    }
+
+    pub fn from_cpu1d_f32(v: CpuOwnedMatrix1D<f32>) -> Self {
+        Val::Cpu1DF32(v)
+    }
+
+    pub fn from_cpu1d_f64(v: CpuOwnedMatrix1D<f64>) -> Self {
+        Val::Cpu1DF64(v)
+    }
+
+    pub fn from_cpu2d_f32(v: CpuOwnedMatrix2D<f32>) -> Self {
+        Val::Cpu2DF32(v)
+    }
+
+    pub fn from_cpu2d_f64(v: CpuOwnedMatrix2D<f64>) -> Self {
+        Val::Cpu2DF64(v)
+    }
+
+    pub fn from_cpu3d_f32(v: CpuOwnedMatrix3D<f32>) -> Self {
+        Val::Cpu3DF32(v)
+    }
+
+    pub fn from_cpu3d_f64(v: CpuOwnedMatrix3D<f64>) -> Self {
+        Val::Cpu3DF64(v)
+    }
+
+    pub fn from_cpu4d_f32(v: CpuOwnedMatrix4D<f32>) -> Self {
+        Val::Cpu4DF32(v)
+    }
+
+    pub fn from_cpu4d_f64(v: CpuOwnedMatrix4D<f64>) -> Self {
+        Val::Cpu4DF64(v)
+    }
+
+    pub fn is_f32(&self) -> bool {
+        match self {
+            Val::F32(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_f64(&self) -> bool {
+        match self {
+            Val::F64(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_cpu1d_f32(&self) -> bool {
+        match self {
+            Val::Cpu1DF32(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_cpu1d_f64(&self) -> bool {
+        match self {
+            Val::Cpu1DF64(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_cpu2d_f32(&self) -> bool {
+        match self {
+            Val::Cpu2DF32(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_cpu2d_f64(&self) -> bool {
+        match self {
+            Val::Cpu2DF64(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_cpu3d_f32(&self) -> bool {
+        match self {
+            Val::Cpu3DF32(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_cpu3d_f64(&self) -> bool {
+        match self {
+            Val::Cpu3DF64(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_cpu4d_f32(&self) -> bool {
+        match self {
+            Val::Cpu4DF32(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_cpu4d_f64(&self) -> bool {
+        match self {
+            Val::Cpu4DF64(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn to_f32(&self) -> f32 {
+        match self {
+            Val::F32(v) => *v,
+            _ => panic!("type mismatch"),
+        }
+    }
+
+    pub fn to_f64(&self) -> f64 {
+        match self {
+            Val::F64(v) => *v,
+            _ => panic!("type mismatch"),
+        }
+    }
+
+    pub fn to_cpu1d_f32(&self) -> CpuOwnedMatrix1D<f32> {
+        match self {
+            Val::Cpu1DF32(v) => v.clone(),
+            _ => panic!("type mismatch"),
+        }
+    }
+
+    pub fn to_cpu1d_f64(&self) -> CpuOwnedMatrix1D<f64> {
+        match self {
+            Val::Cpu1DF64(v) => v.clone(),
+            _ => panic!("type mismatch"),
+        }
+    }
+
+    pub fn to_cpu2d_f32(&self) -> CpuOwnedMatrix2D<f32> {
+        match self {
+            Val::Cpu2DF32(v) => v.clone(),
+            _ => panic!("type mismatch"),
+        }
+    }
+
+    pub fn to_cpu2d_f64(&self) -> CpuOwnedMatrix2D<f64> {
+        match self {
+            Val::Cpu2DF64(v) => v.clone(),
+            _ => panic!("type mismatch"),
+        }
+    }
+
+    pub fn to_cpu3d_f32(&self) -> CpuOwnedMatrix3D<f32> {
+        match self {
+            Val::Cpu3DF32(v) => v.clone(),
+            _ => panic!("type mismatch"),
+        }
+    }
+
+    pub fn to_cpu3d_f64(&self) -> CpuOwnedMatrix3D<f64> {
+        match self {
+            Val::Cpu3DF64(v) => v.clone(),
+            _ => panic!("type mismatch"),
+        }
+    }
+
+    pub fn to_cpu4d_f32(&self) -> CpuOwnedMatrix4D<f32> {
+        match self {
+            Val::Cpu4DF32(v) => v.clone(),
+            _ => panic!("type mismatch"),
+        }
+    }
+
+    pub fn to_cpu4d_f64(&self) -> CpuOwnedMatrix4D<f64> {
+        match self {
+            Val::Cpu4DF64(v) => v.clone(),
+            _ => panic!("type mismatch"),
+        }
+    }
+}
+
+impl From<f32> for Val {
+    fn from(v: f32) -> Self {
+        Val::F32(v)
+    }
+}
+
+impl From<f64> for Val {
+    fn from(v: f64) -> Self {
+        Val::F64(v)
+    }
+}
+
+impl From<CpuOwnedMatrix1D<f32>> for Val {
+    fn from(v: CpuOwnedMatrix1D<f32>) -> Self {
+        Val::Cpu1DF32(v)
+    }
+}
+
+impl From<CpuOwnedMatrix1D<f64>> for Val {
+    fn from(v: CpuOwnedMatrix1D<f64>) -> Self {
+        Val::Cpu1DF64(v)
+    }
+}
+
+impl From<CpuOwnedMatrix2D<f32>> for Val {
+    fn from(v: CpuOwnedMatrix2D<f32>) -> Self {
+        Val::Cpu2DF32(v)
+    }
+}
+
+impl From<CpuOwnedMatrix2D<f64>> for Val {
+    fn from(v: CpuOwnedMatrix2D<f64>) -> Self {
+        Val::Cpu2DF64(v)
+    }
+}
+
+impl From<CpuOwnedMatrix3D<f32>> for Val {
+    fn from(v: CpuOwnedMatrix3D<f32>) -> Self {
+        Val::Cpu3DF32(v)
+    }
+}
+
+impl From<CpuOwnedMatrix3D<f64>> for Val {
+    fn from(v: CpuOwnedMatrix3D<f64>) -> Self {
+        Val::Cpu3DF64(v)
+    }
+}
+
+impl From<CpuOwnedMatrix4D<f32>> for Val {
+    fn from(v: CpuOwnedMatrix4D<f32>) -> Self {
+        Val::Cpu4DF32(v)
+    }
+}
+
+impl From<CpuOwnedMatrix4D<f64>> for Val {
+    fn from(v: CpuOwnedMatrix4D<f64>) -> Self {
+        Val::Cpu4DF64(v)
+    }
+}
+
+impl TryFrom<Val> for f32 {
+    type Error = &'static str;
+    fn try_from(v: Val) -> Result<Self, Self::Error> {
+        match v {
+            Val::F32(v) => Ok(v),
+            _ => Err("type mismatch"),
+        }
+    }
+}
+
+impl TryFrom<Val> for f64 {
+    type Error = &'static str;
+    fn try_from(v: Val) -> Result<Self, Self::Error> {
+        match v {
+            Val::F64(v) => Ok(v),
+            _ => Err("type mismatch"),
+        }
+    }
+}
+
+impl TryFrom<Val> for CpuOwnedMatrix1D<f32> {
+    type Error = &'static str;
+    fn try_from(v: Val) -> Result<Self, Self::Error> {
+        match v {
+            Val::Cpu1DF32(v) => Ok(v),
+            _ => Err("type mismatch"),
+        }
+    }
+}
+
+impl TryFrom<Val> for CpuOwnedMatrix1D<f64> {
+    type Error = &'static str;
+    fn try_from(v: Val) -> Result<Self, Self::Error> {
+        match v {
+            Val::Cpu1DF64(v) => Ok(v),
+            _ => Err("type mismatch"),
+        }
+    }
+}
+
+impl TryFrom<Val> for CpuOwnedMatrix2D<f32> {
+    type Error = &'static str;
+    fn try_from(v: Val) -> Result<Self, Self::Error> {
+        match v {
+            Val::Cpu2DF32(v) => Ok(v),
+            _ => Err("type mismatch"),
+        }
+    }
+}
+
+impl TryFrom<Val> for CpuOwnedMatrix2D<f64> {
+    type Error = &'static str;
+    fn try_from(v: Val) -> Result<Self, Self::Error> {
+        match v {
+            Val::Cpu2DF64(v) => Ok(v),
+            _ => Err("type mismatch"),
+        }
+    }
+}
+
+impl TryFrom<Val> for CpuOwnedMatrix3D<f32> {
+    type Error = &'static str;
+    fn try_from(v: Val) -> Result<Self, Self::Error> {
+        match v {
+            Val::Cpu3DF32(v) => Ok(v),
+            _ => Err("type mismatch"),
+        }
+    }
+}
+
+impl TryFrom<Val> for CpuOwnedMatrix3D<f64> {
+    type Error = &'static str;
+    fn try_from(v: Val) -> Result<Self, Self::Error> {
+        match v {
+            Val::Cpu3DF64(v) => Ok(v),
+            _ => Err("type mismatch"),
+        }
+    }
+}
+
+impl TryFrom<Val> for CpuOwnedMatrix4D<f32> {
+    type Error = &'static str;
+    fn try_from(v: Val) -> Result<Self, Self::Error> {
+        match v {
+            Val::Cpu4DF32(v) => Ok(v),
+            _ => Err("type mismatch"),
+        }
+    }
+}
+
+impl TryFrom<Val> for CpuOwnedMatrix4D<f64> {
+    type Error = &'static str;
+    fn try_from(v: Val) -> Result<Self, Self::Error> {
+        match v {
+            Val::Cpu4DF64(v) => Ok(v),
+            _ => Err("type mismatch"),
+        }
+    }
+}
+
 impl Add<Val> for Val {
     type Output = Val;
     fn add(self, rhs: Val) -> Self::Output {
