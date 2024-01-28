@@ -137,15 +137,16 @@ where
     }
 }
 
-impl<T, RM, SM, D1, D2> MatrixAdd<Matrix<RM, D1>, Matrix<RM, D2>, T> for Matrix<SM, D1>
+impl<T, RM, LM, SM, D1, D2> MatrixAdd<Matrix<LM, D1>, Matrix<RM, D2>, T> for Matrix<SM, D1>
 where
     T: Num,
     RM: ViewMemory<Item = T>,
+    LM: ViewMemory<Item = T>,
     SM: ViewMutMemory<Item = T>,
     D1: DimTrait,
     D2: DimTrait,
 {
-    fn add(self, lhs: Matrix<RM, D1>, rhs: Matrix<RM, D2>) {
+    fn add(self, lhs: Matrix<LM, D1>, rhs: Matrix<RM, D2>) {
         add_matrix_matrix(self, lhs, rhs);
     }
 }
