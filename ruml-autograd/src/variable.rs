@@ -42,6 +42,7 @@ impl<V: Value> VariableInner<V> {
         self.gen = gen + 1;
     }
 
+    #[allow(clippy::type_complexity)]
     pub fn get_creator(&self) -> &Option<Rc<RefCell<Box<dyn Function<V>>>>> {
         &self.creator
     }

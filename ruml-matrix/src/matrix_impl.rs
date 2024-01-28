@@ -248,7 +248,7 @@ pub(crate) fn matrix_into_dim<M: Memory, Dout: DimTrait, Din: DimTrait>(
             stride_new[i] = stride[i];
         }
 
-        return Matrix::new(m.memory, shape_new, stride_new);
+        Matrix::new(m.memory, shape_new, stride_new)
     } else {
         panic!("Dout != Din");
     }

@@ -19,7 +19,7 @@ pub trait Value:
 
 impl Zero for f32 {
     fn zero(dim: &[usize]) -> Self {
-        if dim.len() != 0 {
+        if !dim.is_empty() {
             panic!("dim must be empty")
         }
         0.0
@@ -28,7 +28,7 @@ impl Zero for f32 {
 
 impl One for f32 {
     fn one(dim: &[usize]) -> Self {
-        if dim.len() != 0 {
+        if !dim.is_empty() {
             panic!("dim must be empty")
         }
         1.0
@@ -37,7 +37,7 @@ impl One for f32 {
 
 impl Zero for f64 {
     fn zero(dim: &[usize]) -> Self {
-        if dim.len() != 0 {
+        if !dim.is_empty() {
             panic!("dim must be empty")
         }
         0.0
@@ -46,7 +46,7 @@ impl Zero for f64 {
 
 impl One for f64 {
     fn one(dim: &[usize]) -> Self {
-        if dim.len() != 0 {
+        if !dim.is_empty() {
             panic!("dim must be empty")
         }
         1.0
