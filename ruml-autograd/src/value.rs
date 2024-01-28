@@ -4,7 +4,7 @@ use std::{
 };
 
 use ruml_matrix::{
-    matrix::ToViewMatrix,
+    matrix::{MatrixBase, ToViewMatrix},
     matrix_impl::{CpuOwnedMatrix1D, CpuOwnedMatrix2D, CpuOwnedMatrix3D, CpuOwnedMatrix4D},
 };
 
@@ -61,6 +61,7 @@ impl Value for f32 {}
 
 impl Value for f64 {}
 
+#[derive(Clone)]
 pub enum Val {
     F32(f32),
     F64(f64),
@@ -75,44 +76,23 @@ pub enum Val {
 }
 
 impl Val {
-    pub fn from_f32(v: f32) -> Self {
-        Val::F32(v)
+    pub fn dim(&self) -> Vec<usize> {
+        match self {
+            Val::F32(_) => vec![],
+            Val::F64(_) => vec![],
+            Val::Cpu1DF32(v) => v.shape().into_iter().collect(),
+            Val::Cpu1DF64(v) => v.shape().into_iter().collect(),
+            Val::Cpu2DF32(v) => v.shape().into_iter().collect(),
+            Val::Cpu2DF64(v) => v.shape().into_iter().collect(),
+            Val::Cpu3DF32(v) => v.shape().into_iter().collect(),
+            Val::Cpu3DF64(v) => v.shape().into_iter().collect(),
+            Val::Cpu4DF32(v) => v.shape().into_iter().collect(),
+            Val::Cpu4DF64(v) => v.shape().into_iter().collect(),
+        }
     }
 
-    pub fn from_f64(v: f64) -> Self {
-        Val::F64(v)
-    }
-
-    pub fn from_cpu1d_f32(v: CpuOwnedMatrix1D<f32>) -> Self {
-        Val::Cpu1DF32(v)
-    }
-
-    pub fn from_cpu1d_f64(v: CpuOwnedMatrix1D<f64>) -> Self {
-        Val::Cpu1DF64(v)
-    }
-
-    pub fn from_cpu2d_f32(v: CpuOwnedMatrix2D<f32>) -> Self {
-        Val::Cpu2DF32(v)
-    }
-
-    pub fn from_cpu2d_f64(v: CpuOwnedMatrix2D<f64>) -> Self {
-        Val::Cpu2DF64(v)
-    }
-
-    pub fn from_cpu3d_f32(v: CpuOwnedMatrix3D<f32>) -> Self {
-        Val::Cpu3DF32(v)
-    }
-
-    pub fn from_cpu3d_f64(v: CpuOwnedMatrix3D<f64>) -> Self {
-        Val::Cpu3DF64(v)
-    }
-
-    pub fn from_cpu4d_f32(v: CpuOwnedMatrix4D<f32>) -> Self {
-        Val::Cpu4DF32(v)
-    }
-
-    pub fn from_cpu4d_f64(v: CpuOwnedMatrix4D<f64>) -> Self {
-        Val::Cpu4DF64(v)
+    pub fn num_dim(&self) -> usize {
+        self.dim().len()
     }
 
     pub fn is_f32(&self) -> bool {
@@ -182,76 +162,6 @@ impl Val {
         match self {
             Val::Cpu4DF64(_) => true,
             _ => false,
-        }
-    }
-
-    pub fn to_f32(&self) -> f32 {
-        match self {
-            Val::F32(v) => *v,
-            _ => panic!("type mismatch"),
-        }
-    }
-
-    pub fn to_f64(&self) -> f64 {
-        match self {
-            Val::F64(v) => *v,
-            _ => panic!("type mismatch"),
-        }
-    }
-
-    pub fn to_cpu1d_f32(&self) -> CpuOwnedMatrix1D<f32> {
-        match self {
-            Val::Cpu1DF32(v) => v.clone(),
-            _ => panic!("type mismatch"),
-        }
-    }
-
-    pub fn to_cpu1d_f64(&self) -> CpuOwnedMatrix1D<f64> {
-        match self {
-            Val::Cpu1DF64(v) => v.clone(),
-            _ => panic!("type mismatch"),
-        }
-    }
-
-    pub fn to_cpu2d_f32(&self) -> CpuOwnedMatrix2D<f32> {
-        match self {
-            Val::Cpu2DF32(v) => v.clone(),
-            _ => panic!("type mismatch"),
-        }
-    }
-
-    pub fn to_cpu2d_f64(&self) -> CpuOwnedMatrix2D<f64> {
-        match self {
-            Val::Cpu2DF64(v) => v.clone(),
-            _ => panic!("type mismatch"),
-        }
-    }
-
-    pub fn to_cpu3d_f32(&self) -> CpuOwnedMatrix3D<f32> {
-        match self {
-            Val::Cpu3DF32(v) => v.clone(),
-            _ => panic!("type mismatch"),
-        }
-    }
-
-    pub fn to_cpu3d_f64(&self) -> CpuOwnedMatrix3D<f64> {
-        match self {
-            Val::Cpu3DF64(v) => v.clone(),
-            _ => panic!("type mismatch"),
-        }
-    }
-
-    pub fn to_cpu4d_f32(&self) -> CpuOwnedMatrix4D<f32> {
-        match self {
-            Val::Cpu4DF32(v) => v.clone(),
-            _ => panic!("type mismatch"),
-        }
-    }
-
-    pub fn to_cpu4d_f64(&self) -> CpuOwnedMatrix4D<f64> {
-        match self {
-            Val::Cpu4DF64(v) => v.clone(),
-            _ => panic!("type mismatch"),
         }
     }
 }
@@ -433,12 +343,24 @@ impl Add<Val> for Val {
             (Val::Cpu3DF32(a), Val::F32(b)) => Val::Cpu3DF32(a.to_view() + b),
             (Val::Cpu4DF32(a), Val::F32(b)) => Val::Cpu4DF32(a.to_view() + b),
 
-            (Val::Cpu2DF32(a), Val::Cpu1DF32(b)) => Val::Cpu2DF32(a.to_view() + b.to_view()),
-            (Val::Cpu3DF32(a), Val::Cpu1DF32(b)) => Val::Cpu3DF32(a.to_view() + b.to_view()),
-            (Val::Cpu4DF32(a), Val::Cpu1DF32(b)) => Val::Cpu4DF32(a.to_view() + b.to_view()),
-            (Val::Cpu3DF32(a), Val::Cpu2DF32(b)) => Val::Cpu3DF32(a.to_view() + b.to_view()),
-            (Val::Cpu4DF32(a), Val::Cpu2DF32(b)) => Val::Cpu4DF32(a.to_view() + b.to_view()),
-            (Val::Cpu4DF32(a), Val::Cpu3DF32(b)) => Val::Cpu4DF32(a.to_view() + b.to_view()),
+            (Val::Cpu2DF32(a), Val::Cpu1DF32(b)) | (Val::Cpu1DF32(b), Val::Cpu2DF32(a)) => {
+                Val::Cpu2DF32(a.to_view() + b.to_view())
+            }
+            (Val::Cpu3DF32(a), Val::Cpu1DF32(b)) | (Val::Cpu1DF32(b), Val::Cpu3DF32(a)) => {
+                Val::Cpu3DF32(a.to_view() + b.to_view())
+            }
+            (Val::Cpu4DF32(a), Val::Cpu1DF32(b)) | (Val::Cpu1DF32(b), Val::Cpu4DF32(a)) => {
+                Val::Cpu4DF32(a.to_view() + b.to_view())
+            }
+            (Val::Cpu3DF32(a), Val::Cpu2DF32(b)) | (Val::Cpu2DF32(b), Val::Cpu3DF32(a)) => {
+                Val::Cpu3DF32(a.to_view() + b.to_view())
+            }
+            (Val::Cpu4DF32(a), Val::Cpu2DF32(b)) | (Val::Cpu2DF32(b), Val::Cpu4DF32(a)) => {
+                Val::Cpu4DF32(a.to_view() + b.to_view())
+            }
+            (Val::Cpu4DF32(a), Val::Cpu3DF32(b)) | (Val::Cpu3DF32(b), Val::Cpu4DF32(a)) => {
+                Val::Cpu4DF32(a.to_view() + b.to_view())
+            }
 
             (Val::Cpu1DF64(a), Val::Cpu1DF64(b)) => Val::Cpu1DF64(a.to_view() + b.to_view()),
             (Val::Cpu2DF64(a), Val::Cpu2DF64(b)) => Val::Cpu2DF64(a.to_view() + b.to_view()),
@@ -450,16 +372,29 @@ impl Add<Val> for Val {
             (Val::Cpu3DF64(a), Val::F64(b)) => Val::Cpu3DF64(a.to_view() + b),
             (Val::Cpu4DF64(a), Val::F64(b)) => Val::Cpu4DF64(a.to_view() + b),
 
-            (Val::Cpu2DF64(a), Val::Cpu1DF64(b)) => Val::Cpu2DF64(a.to_view() + b.to_view()),
-            (Val::Cpu3DF64(a), Val::Cpu1DF64(b)) => Val::Cpu3DF64(a.to_view() + b.to_view()),
-            (Val::Cpu4DF64(a), Val::Cpu1DF64(b)) => Val::Cpu4DF64(a.to_view() + b.to_view()),
-            (Val::Cpu3DF64(a), Val::Cpu2DF64(b)) => Val::Cpu3DF64(a.to_view() + b.to_view()),
-            (Val::Cpu4DF64(a), Val::Cpu2DF64(b)) => Val::Cpu4DF64(a.to_view() + b.to_view()),
-            (Val::Cpu4DF64(a), Val::Cpu3DF64(b)) => Val::Cpu4DF64(a.to_view() + b.to_view()),
+            (Val::Cpu2DF64(a), Val::Cpu1DF64(b)) | (Val::Cpu1DF64(b), Val::Cpu2DF64(a)) => {
+                Val::Cpu2DF64(a.to_view() + b.to_view())
+            }
+            (Val::Cpu3DF64(a), Val::Cpu1DF64(b)) | (Val::Cpu1DF64(b), Val::Cpu3DF64(a)) => {
+                Val::Cpu3DF64(a.to_view() + b.to_view())
+            }
+            (Val::Cpu4DF64(a), Val::Cpu1DF64(b)) | (Val::Cpu1DF64(b), Val::Cpu4DF64(a)) => {
+                Val::Cpu4DF64(a.to_view() + b.to_view())
+            }
+            (Val::Cpu3DF64(a), Val::Cpu2DF64(b)) | (Val::Cpu2DF64(b), Val::Cpu3DF64(a)) => {
+                Val::Cpu3DF64(a.to_view() + b.to_view())
+            }
+            (Val::Cpu4DF64(a), Val::Cpu2DF64(b)) | (Val::Cpu2DF64(b), Val::Cpu4DF64(a)) => {
+                Val::Cpu4DF64(a.to_view() + b.to_view())
+            }
+            (Val::Cpu4DF64(a), Val::Cpu3DF64(b)) | (Val::Cpu3DF64(b), Val::Cpu4DF64(a)) => {
+                Val::Cpu4DF64(a.to_view() + b.to_view())
+            }
             _ => panic!("type mismatch"),
         }
     }
 }
+
 impl Mul<Val> for Val {
     type Output = Val;
     fn mul(self, rhs: Val) -> Self::Output {
@@ -477,12 +412,24 @@ impl Mul<Val> for Val {
             (Val::Cpu3DF32(a), Val::F32(b)) => Val::Cpu3DF32(a.to_view() * b),
             (Val::Cpu4DF32(a), Val::F32(b)) => Val::Cpu4DF32(a.to_view() * b),
 
-            (Val::Cpu2DF32(a), Val::Cpu1DF32(b)) => Val::Cpu2DF32(a.to_view() * b.to_view()),
-            (Val::Cpu3DF32(a), Val::Cpu1DF32(b)) => Val::Cpu3DF32(a.to_view() * b.to_view()),
-            (Val::Cpu4DF32(a), Val::Cpu1DF32(b)) => Val::Cpu4DF32(a.to_view() * b.to_view()),
-            (Val::Cpu3DF32(a), Val::Cpu2DF32(b)) => Val::Cpu3DF32(a.to_view() * b.to_view()),
-            (Val::Cpu4DF32(a), Val::Cpu2DF32(b)) => Val::Cpu4DF32(a.to_view() * b.to_view()),
-            (Val::Cpu4DF32(a), Val::Cpu3DF32(b)) => Val::Cpu4DF32(a.to_view() * b.to_view()),
+            (Val::Cpu2DF32(a), Val::Cpu1DF32(b)) | (Val::Cpu1DF32(b), Val::Cpu2DF32(a)) => {
+                Val::Cpu2DF32(a.to_view() * b.to_view())
+            }
+            (Val::Cpu3DF32(a), Val::Cpu1DF32(b)) | (Val::Cpu1DF32(b), Val::Cpu3DF32(a)) => {
+                Val::Cpu3DF32(a.to_view() * b.to_view())
+            }
+            (Val::Cpu4DF32(a), Val::Cpu1DF32(b)) | (Val::Cpu1DF32(b), Val::Cpu4DF32(a)) => {
+                Val::Cpu4DF32(a.to_view() * b.to_view())
+            }
+            (Val::Cpu3DF32(a), Val::Cpu2DF32(b)) | (Val::Cpu2DF32(b), Val::Cpu3DF32(a)) => {
+                Val::Cpu3DF32(a.to_view() * b.to_view())
+            }
+            (Val::Cpu4DF32(a), Val::Cpu2DF32(b)) | (Val::Cpu2DF32(b), Val::Cpu4DF32(a)) => {
+                Val::Cpu4DF32(a.to_view() * b.to_view())
+            }
+            (Val::Cpu4DF32(a), Val::Cpu3DF32(b)) | (Val::Cpu3DF32(b), Val::Cpu4DF32(a)) => {
+                Val::Cpu4DF32(a.to_view() * b.to_view())
+            }
 
             (Val::Cpu1DF64(a), Val::Cpu1DF64(b)) => Val::Cpu1DF64(a.to_view() * b.to_view()),
             (Val::Cpu2DF64(a), Val::Cpu2DF64(b)) => Val::Cpu2DF64(a.to_view() * b.to_view()),
@@ -494,12 +441,24 @@ impl Mul<Val> for Val {
             (Val::Cpu3DF64(a), Val::F64(b)) => Val::Cpu3DF64(a.to_view() * b),
             (Val::Cpu4DF64(a), Val::F64(b)) => Val::Cpu4DF64(a.to_view() * b),
 
-            (Val::Cpu2DF64(a), Val::Cpu1DF64(b)) => Val::Cpu2DF64(a.to_view() * b.to_view()),
-            (Val::Cpu3DF64(a), Val::Cpu1DF64(b)) => Val::Cpu3DF64(a.to_view() * b.to_view()),
-            (Val::Cpu4DF64(a), Val::Cpu1DF64(b)) => Val::Cpu4DF64(a.to_view() * b.to_view()),
-            (Val::Cpu3DF64(a), Val::Cpu2DF64(b)) => Val::Cpu3DF64(a.to_view() * b.to_view()),
-            (Val::Cpu4DF64(a), Val::Cpu2DF64(b)) => Val::Cpu4DF64(a.to_view() * b.to_view()),
-            (Val::Cpu4DF64(a), Val::Cpu3DF64(b)) => Val::Cpu4DF64(a.to_view() * b.to_view()),
+            (Val::Cpu2DF64(a), Val::Cpu1DF64(b)) | (Val::Cpu1DF64(b), Val::Cpu2DF64(a)) => {
+                Val::Cpu2DF64(a.to_view() * b.to_view())
+            }
+            (Val::Cpu3DF64(a), Val::Cpu1DF64(b)) | (Val::Cpu1DF64(b), Val::Cpu3DF64(a)) => {
+                Val::Cpu3DF64(a.to_view() * b.to_view())
+            }
+            (Val::Cpu4DF64(a), Val::Cpu1DF64(b)) | (Val::Cpu1DF64(b), Val::Cpu4DF64(a)) => {
+                Val::Cpu4DF64(a.to_view() * b.to_view())
+            }
+            (Val::Cpu3DF64(a), Val::Cpu2DF64(b)) | (Val::Cpu2DF64(b), Val::Cpu3DF64(a)) => {
+                Val::Cpu3DF64(a.to_view() * b.to_view())
+            }
+            (Val::Cpu4DF64(a), Val::Cpu2DF64(b)) | (Val::Cpu2DF64(b), Val::Cpu4DF64(a)) => {
+                Val::Cpu4DF64(a.to_view() * b.to_view())
+            }
+            (Val::Cpu4DF64(a), Val::Cpu3DF64(b)) | (Val::Cpu3DF64(b), Val::Cpu4DF64(a)) => {
+                Val::Cpu4DF64(a.to_view() * b.to_view())
+            }
             _ => panic!("type mismatch"),
         }
     }
