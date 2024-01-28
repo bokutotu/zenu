@@ -75,6 +75,14 @@ pub enum Val {
     Cpu4DF64(CpuOwnedMatrix4D<f64>),
 }
 
+macro_rules! impl_is_method {
+    ($method_name:ident, $type:ident) => {
+        pub fn $method_name(&self) -> bool {
+            matches!(self, Val::$type(_))
+        }
+    };
+}
+
 impl Val {
     pub fn dim(&self) -> Vec<usize> {
         match self {
@@ -95,75 +103,16 @@ impl Val {
         self.dim().len()
     }
 
-    pub fn is_f32(&self) -> bool {
-        match self {
-            Val::F32(_) => true,
-            _ => false,
-        }
-    }
-
-    pub fn is_f64(&self) -> bool {
-        match self {
-            Val::F64(_) => true,
-            _ => false,
-        }
-    }
-
-    pub fn is_cpu1d_f32(&self) -> bool {
-        match self {
-            Val::Cpu1DF32(_) => true,
-            _ => false,
-        }
-    }
-
-    pub fn is_cpu1d_f64(&self) -> bool {
-        match self {
-            Val::Cpu1DF64(_) => true,
-            _ => false,
-        }
-    }
-
-    pub fn is_cpu2d_f32(&self) -> bool {
-        match self {
-            Val::Cpu2DF32(_) => true,
-            _ => false,
-        }
-    }
-
-    pub fn is_cpu2d_f64(&self) -> bool {
-        match self {
-            Val::Cpu2DF64(_) => true,
-            _ => false,
-        }
-    }
-
-    pub fn is_cpu3d_f32(&self) -> bool {
-        match self {
-            Val::Cpu3DF32(_) => true,
-            _ => false,
-        }
-    }
-
-    pub fn is_cpu3d_f64(&self) -> bool {
-        match self {
-            Val::Cpu3DF64(_) => true,
-            _ => false,
-        }
-    }
-
-    pub fn is_cpu4d_f32(&self) -> bool {
-        match self {
-            Val::Cpu4DF32(_) => true,
-            _ => false,
-        }
-    }
-
-    pub fn is_cpu4d_f64(&self) -> bool {
-        match self {
-            Val::Cpu4DF64(_) => true,
-            _ => false,
-        }
-    }
+    impl_is_method!(is_f32, F32);
+    impl_is_method!(is_f64, F64);
+    impl_is_method!(is_cpu1df32, Cpu1DF32);
+    impl_is_method!(is_cpu1df64, Cpu1DF64);
+    impl_is_method!(is_cpu2df32, Cpu2DF32);
+    impl_is_method!(is_cpu2df64, Cpu2DF64);
+    impl_is_method!(is_cpu3df32, Cpu3DF32);
+    impl_is_method!(is_cpu3df64, Cpu3DF64);
+    impl_is_method!(is_cpu4df32, Cpu4DF32);
+    impl_is_method!(is_cpu4df64, Cpu4DF64);
 }
 
 impl From<f32> for Val {
