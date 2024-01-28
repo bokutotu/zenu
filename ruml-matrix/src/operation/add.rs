@@ -120,12 +120,12 @@ fn add_matrix_matrix<T, LM, RM, SM, D1, D2>(
     }
 }
 
-pub trait MatrixAdd<Rhs, Lhs, T>: ViewMutMatix + MatrixBase<Item = T> {
+pub trait MatrixAdd<Rhs, Lhs>: ViewMutMatix + MatrixBase {
     fn add(self, lhs: Rhs, rhs: Lhs);
 }
 
 // matrix add scalar
-impl<T, RM, SM, D> MatrixAdd<Matrix<RM, D>, T, T> for Matrix<SM, D>
+impl<T, RM, SM, D> MatrixAdd<Matrix<RM, D>, T> for Matrix<SM, D>
 where
     T: Num,
     RM: ViewMemory<Item = T>,
@@ -137,7 +137,7 @@ where
     }
 }
 
-impl<T, RM, LM, SM, D1, D2> MatrixAdd<Matrix<LM, D1>, Matrix<RM, D2>, T> for Matrix<SM, D1>
+impl<T, RM, LM, SM, D1, D2> MatrixAdd<Matrix<LM, D1>, Matrix<RM, D2>> for Matrix<SM, D1>
 where
     T: Num,
     RM: ViewMemory<Item = T>,

@@ -1,156 +1,161 @@
+use std::any::TypeId;
+
 use crate::{
-    blas::Blas,
+    dim,
     dim::DimTrait,
     dim_impl::{Dim1, Dim2, Dim3, Dim4},
-    element_wise::ElementWise,
     index_impl::Index0D,
-    matrix::{AsMutPtr, AsPtr, IndexAxis, IndexAxisMut, MatrixBase, ViewMatrix, ViewMutMatix},
+    matrix::{
+        IndexAxis, IndexAxisMut, IndexItem, IndexItemAsign, MatrixBase, ViewMatrix, ViewMutMatix,
+    },
     matrix_blas::gemm::gemm,
-    matrix_impl::Matrix,
+    matrix_impl::{matrix_into_dim, Matrix},
     memory::{ViewMemory, ViewMutMemory},
     num::Num,
 };
 
-use super::copy_from::CopyFrom;
+fn mul_matrix_scalar<T, LM, SM, D>(self_: Matrix<SM, D>, lhs: Matrix<LM, D>, rhs: T)
+where
+    T: Num,
+    SM: ViewMutMemory<Item = T>,
+    LM: ViewMemory<Item = T>,
+    D: DimTrait,
+{
+    assert_eq!(self_.shape(), lhs.shape());
 
-pub trait MatrixMul<Rhs, Lhs>: ViewMutMatix {
-    fn mul(&mut self, rhs: &Rhs, lhs: &Lhs);
+    macro_rules! mul_matrix_scalar_dim {
+        ($self_:ident, $lhs:ident, $rhs:ident, $dim:ident) => {{
+            let mut self_: Matrix<SM, $dim> = matrix_into_dim($self_);
+            let lhs: Matrix<LM, $dim> = matrix_into_dim($lhs);
+            let self_shape: $dim = self_.shape();
+            for idx in 0..self_shape[0] {
+                let self_row = self_.index_axis_mut(Index0D::new(idx));
+                let lhs_row = lhs.index_axis(Index0D::new(idx));
+                mul_matrix_scalar(self_row, lhs_row, $rhs);
+            }
+        }};
+    }
+
+    match self_.shape().len() {
+        1 => {
+            let mut self_: Matrix<SM, Dim1> = matrix_into_dim(self_);
+            let lhs: Matrix<LM, Dim1> = matrix_into_dim(lhs);
+            for idx in 0..self_.shape()[0] {
+                self_.index_item_asign(dim!(idx), lhs.index_item(dim!(idx)) * rhs);
+            }
+        }
+        2 => mul_matrix_scalar_dim!(self_, lhs, rhs, Dim2),
+        3 => mul_matrix_scalar_dim!(self_, lhs, rhs, Dim3),
+        4 => mul_matrix_scalar_dim!(self_, lhs, rhs, Dim4),
+        _ => panic!("not implemented: this is bug. please report this bug."),
+    }
+}
+
+// // TODO: クッソ汚いコードなのでどうにかする
+fn mul_matrix_matrix<T, LM, RM, SM, D1, D2>(
+    self_: Matrix<SM, D1>,
+    lhs: Matrix<LM, D1>,
+    rhs: Matrix<RM, D2>,
+) where
+    T: Num,
+    LM: ViewMemory<Item = T>,
+    RM: ViewMemory<Item = T>,
+    SM: ViewMutMemory<Item = T>,
+    D1: DimTrait,
+    D2: DimTrait,
+{
+    assert_eq!(self_.shape(), lhs.shape());
+    assert!(self_.shape().len() >= rhs.shape().len());
+
+    if TypeId::of::<D1>() == TypeId::of::<D2>() {
+        macro_rules! impl_mul_same_dim {
+            ($dim:ty) => {{
+                let mut self_: Matrix<SM, $dim> = matrix_into_dim(self_);
+                let lhs: Matrix<LM, $dim> = matrix_into_dim(lhs);
+                let rhs: Matrix<RM, $dim> = matrix_into_dim(rhs);
+                for idx in 0..self_.shape()[0] {
+                    let self_ = self_.index_axis_mut(Index0D::new(idx));
+                    let lhs = lhs.index_axis(Index0D::new(idx));
+                    let rhs = rhs.index_axis(Index0D::new(idx));
+                    mul_matrix_matrix(self_, lhs, rhs);
+                }
+            }};
+        }
+        match self_.shape().len() {
+            1 => {
+                let mut self_: Matrix<SM, Dim1> = matrix_into_dim(self_);
+                let lhs: Matrix<LM, Dim1> = matrix_into_dim(lhs);
+                let rhs: Matrix<RM, Dim1> = matrix_into_dim(rhs);
+                for idx in 0..self_.shape()[0] {
+                    self_.index_item_asign(
+                        dim!(idx),
+                        lhs.index_item(dim!(idx)) * rhs.index_item(dim!(idx)),
+                    );
+                }
+            }
+            2 => impl_mul_same_dim!(Dim2),
+            3 => impl_mul_same_dim!(Dim3),
+            4 => impl_mul_same_dim!(Dim4),
+            _ => panic!("not implemented: this is bug. please report this bug."),
+        }
+    } else {
+        macro_rules! impl_mul_diff_dim {
+            ($dim1:ty, $dim2:ty) => {{
+                let mut self_: Matrix<SM, $dim1> = matrix_into_dim(self_);
+                let lhs: Matrix<LM, $dim1> = matrix_into_dim(lhs);
+                let rhs: Matrix<RM, $dim2> = matrix_into_dim(rhs);
+                for idx in 0..self_.shape()[0] {
+                    let self_ = self_.index_axis_mut(Index0D::new(idx));
+                    let lhs = lhs.index_axis(Index0D::new(idx));
+                    mul_matrix_matrix(self_, lhs, rhs.clone());
+                }
+            }};
+        }
+        match (self_.shape().len(), rhs.shape().len()) {
+            (2, 1) => impl_mul_diff_dim!(Dim2, Dim1),
+            (3, 1) => impl_mul_diff_dim!(Dim3, Dim1),
+            (3, 2) => impl_mul_diff_dim!(Dim3, Dim2),
+            (4, 1) => impl_mul_diff_dim!(Dim4, Dim1),
+            (4, 2) => impl_mul_diff_dim!(Dim4, Dim2),
+            (4, 3) => impl_mul_diff_dim!(Dim4, Dim3),
+            _ => panic!("not implemented: this is bug. please report this bug."),
+        }
+    }
+}
+
+pub trait MatrixMul<Lhs, Rhs>: ViewMutMatix {
+    fn mul(self, lhs: Lhs, rhs: Rhs);
+}
+
+impl<T, RM, SM, D> MatrixMul<Matrix<RM, D>, T> for Matrix<SM, D>
+where
+    T: Num,
+    RM: ViewMemory<Item = T>,
+    SM: ViewMutMemory<Item = T>,
+    D: DimTrait,
+{
+    fn mul(self, lhs: Matrix<RM, D>, rhs: T) {
+        mul_matrix_scalar(self, lhs, rhs);
+    }
+}
+
+impl<T, DS, DR, SM, LM, RM> MatrixMul<Matrix<LM, DS>, Matrix<RM, DR>> for Matrix<SM, DS>
+where
+    T: Num,
+    DS: DimTrait,
+    DR: DimTrait,
+    SM: ViewMutMemory<Item = T>,
+    LM: ViewMemory<Item = T>,
+    RM: ViewMemory<Item = T>,
+{
+    fn mul(self, lhs: Matrix<LM, DS>, rhs: Matrix<RM, DR>) {
+        mul_matrix_matrix(self, lhs, rhs);
+    }
 }
 
 pub trait MatMul<Rhs, Lhs>: ViewMutMatix {
     fn mat_mul(self, rhs: Rhs, lhs: Lhs);
 }
-
-impl<T, VM, R> MatrixMul<R, T> for VM
-where
-    T: Num,
-    VM: ViewMutMatix<Dim = Dim1, Item = T> + CopyFrom<R, T>,
-    R: ViewMatrix<Dim = Dim1>,
-{
-    fn mul(&mut self, rhs: &R, lhs: &T) {
-        assert_eq!(self.shape(), rhs.shape());
-        self.copy_from(rhs);
-        Self::Blas::scal(
-            self.shape().num_elm(),
-            *lhs,
-            self.as_mut_ptr(),
-            self.stride()[0],
-        );
-    }
-}
-
-impl<T, VM, R, L> MatrixMul<Matrix<R, Dim1>, Matrix<L, Dim1>> for Matrix<VM, Dim1>
-where
-    T: Num,
-    VM: ViewMutMemory<Item = T>,
-    R: ViewMemory<Item = T>,
-    L: ViewMemory<Item = T>,
-{
-    fn mul(&mut self, rhs: &Matrix<R, Dim1>, lhs: &Matrix<L, Dim1>) {
-        assert_eq!(self.shape(), rhs.shape());
-        assert_eq!(self.shape(), lhs.shape());
-        let self_stride = self.stride()[0];
-        let self_size = self.shape().num_elm();
-
-        VM::ElmentWise::mul(
-            self.as_mut_ptr(),
-            rhs.as_ptr(),
-            lhs.as_ptr(),
-            self_size,
-            rhs.stride()[0],
-            lhs.stride()[0],
-            self_stride,
-        );
-    }
-}
-
-macro_rules! impl_mul_same_dim {
-    ($dim:ty) => {
-        impl<T, VM, R, L> MatrixMul<Matrix<R, $dim>, Matrix<L, $dim>> for Matrix<VM, $dim>
-        where
-            T: Num,
-            VM: ViewMutMemory<Item = T>,
-            R: ViewMemory<Item = T>,
-            L: ViewMemory<Item = T>,
-        {
-            fn mul(&mut self, rhs: &Matrix<R, $dim>, lhs: &Matrix<L, $dim>) {
-                assert_eq!(self.shape(), rhs.shape());
-                assert_eq!(self.shape(), lhs.shape());
-
-                for i in 0..self.shape()[0] {
-                    let mut self_ = self.index_axis_mut(Index0D::new(i));
-                    let rhs_ = rhs.index_axis(Index0D::new(i));
-                    let lhs_ = lhs.index_axis(Index0D::new(i));
-                    self_.mul(&rhs_, &lhs_);
-                }
-            }
-        }
-    };
-}
-impl_mul_same_dim!(Dim2);
-impl_mul_same_dim!(Dim3);
-impl_mul_same_dim!(Dim4);
-
-macro_rules! impl_mul_scalar {
-    ($dim:ty) => {
-        impl<T, VM, R> MatrixMul<Matrix<R, $dim>, T> for Matrix<VM, $dim>
-        where
-            T: Num,
-            VM: ViewMutMemory<Item = T>,
-            R: ViewMemory<Item = T>,
-        {
-            fn mul(&mut self, rhs: &Matrix<R, $dim>, lhs: &T) {
-                assert_eq!(self.shape(), rhs.shape());
-                if self.shape_stride().is_contiguous() {
-                    self.copy_from(rhs);
-                    let num_dim = self.shape().len();
-                    Self::Blas::scal(
-                        self.shape().num_elm(),
-                        *lhs,
-                        self.as_mut_ptr(),
-                        self.stride()[num_dim - 1],
-                    );
-                } else {
-                    for i in 0..self.shape()[0] {
-                        let mut self_ = self.index_axis_mut(Index0D::new(i));
-                        let rhs_ = rhs.index_axis(Index0D::new(i));
-                        self_.mul(&rhs_, lhs);
-                    }
-                }
-            }
-        }
-    };
-}
-impl_mul_scalar!(Dim2);
-impl_mul_scalar!(Dim3);
-impl_mul_scalar!(Dim4);
-
-macro_rules! impl_mul_matrix_matrix {
-    ($dim_s:ty, $dim_l:ty) => {
-        impl<T, S, R, L> MatrixMul<Matrix<R, $dim_s>, Matrix<L, $dim_l>> for Matrix<S, $dim_s>
-        where
-            T: Num,
-            S: ViewMutMemory<Item = T>,
-            R: ViewMemory<Item = T>,
-            L: ViewMemory<Item = T>,
-        {
-            fn mul(&mut self, rhs: &Matrix<R, $dim_s>, lhs: &Matrix<L, $dim_l>) {
-                assert_eq!(self.shape(), rhs.shape());
-
-                for i in 0..self.shape()[0] {
-                    self.index_axis_mut(Index0D::new(i))
-                        .mul(&rhs.index_axis(Index0D::new(i)), lhs);
-                }
-            }
-        }
-    };
-}
-impl_mul_matrix_matrix!(Dim2, Dim1);
-impl_mul_matrix_matrix!(Dim3, Dim1);
-impl_mul_matrix_matrix!(Dim4, Dim1);
-impl_mul_matrix_matrix!(Dim3, Dim2);
-impl_mul_matrix_matrix!(Dim4, Dim2);
-impl_mul_matrix_matrix!(Dim4, Dim3);
 
 impl<T, S, R, L> MatMul<R, L> for S
 where
@@ -180,7 +185,7 @@ mod mul {
     fn scalar_1d() {
         let a = CpuOwnedMatrix1D::from_vec(vec![1., 2., 3.], dim!(3));
         let mut ans = CpuOwnedMatrix1D::<f32>::zeros(dim!(3));
-        ans.to_view_mut().mul(&a.to_view(), &2.);
+        ans.to_view_mut().mul(a.to_view(), 2.);
 
         assert_eq!(ans.index_item(dim!(0)), 2.);
         assert_eq!(ans.index_item(dim!(1)), 4.);
@@ -191,7 +196,7 @@ mod mul {
     fn sliced_scalar_1d() {
         let a = CpuOwnedMatrix1D::from_vec(vec![1., 2., 3., 4.], dim!(4));
         let mut ans = CpuOwnedMatrix1D::<f32>::zeros(dim!(2));
-        ans.to_view_mut().mul(&a.to_view().slice(slice!(..;2)), &2.);
+        ans.to_view_mut().mul(a.to_view().slice(slice!(..;2)), 2.);
 
         assert_eq!(ans.index_item(dim!(0)), 2.);
         assert_eq!(ans.index_item(dim!(1)), 6.);
@@ -201,7 +206,7 @@ mod mul {
     fn scalar_2d() {
         let a = CpuOwnedMatrix2D::from_vec(vec![1., 2., 3., 4., 5., 6.], dim![2, 3]);
         let mut ans = CpuOwnedMatrix2D::<f32>::zeros(dim![2, 3]);
-        ans.to_view_mut().mul(&a.to_view(), &2.);
+        ans.to_view_mut().mul(a.to_view(), 2.);
 
         assert_eq!(ans.index_item(dim!(0, 0)), 2.);
         assert_eq!(ans.index_item(dim!(0, 1)), 4.);
@@ -216,7 +221,7 @@ mod mul {
         let a = CpuOwnedMatrix1D::from_vec(vec![1., 2., 3.], dim!(3));
         let b = CpuOwnedMatrix1D::from_vec(vec![1., 2., 3.], dim!(3));
         let mut ans = CpuOwnedMatrix1D::<f32>::zeros(dim!(3));
-        ans.to_view_mut().mul(&a.to_view(), &b.to_view());
+        ans.to_view_mut().mul(a.to_view(), b.to_view());
 
         assert_eq!(ans.index_item(dim!(0)), 1.);
         assert_eq!(ans.index_item(dim!(1)), 4.);
@@ -229,8 +234,8 @@ mod mul {
         let b = CpuOwnedMatrix1D::from_vec(vec![1., 2., 3., 4.], dim!(4));
         let mut ans = CpuOwnedMatrix1D::<f32>::zeros(dim!(2));
         ans.to_view_mut().mul(
-            &a.to_view().slice(slice!(..;2)),
-            &b.to_view().slice(slice!(..;2)),
+            a.to_view().slice(slice!(..;2)),
+            b.to_view().slice(slice!(..;2)),
         );
 
         assert_eq!(ans.index_item(dim!(0)), 1.);
@@ -242,7 +247,7 @@ mod mul {
         let a = CpuOwnedMatrix2D::from_vec(vec![1., 2., 3., 4., 5., 6.], dim![2, 3]);
         let b = CpuOwnedMatrix2D::from_vec(vec![1., 2., 3., 4., 5., 6.], dim![2, 3]);
         let mut ans = CpuOwnedMatrix2D::<f32>::zeros(dim![2, 3]);
-        ans.to_view_mut().mul(&a.to_view(), &b.to_view());
+        ans.to_view_mut().mul(a.to_view(), b.to_view());
 
         assert_eq!(ans.index_item(dim!(0, 0)), 1.);
         assert_eq!(ans.index_item(dim!(0, 1)), 4.);
@@ -264,7 +269,7 @@ mod mul {
 
         let mut ans = CpuOwnedMatrix4D::<f32>::zeros(dim![2, 2, 2, 2]);
 
-        ans.to_view_mut().mul(&a.to_view(), &b.to_view());
+        ans.to_view_mut().mul(a.to_view(), b.to_view());
 
         for i in 0..2 {
             for j in 0..2 {
