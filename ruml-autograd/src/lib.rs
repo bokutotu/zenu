@@ -1,52 +1,11 @@
-use std::fmt::Debug;
-
 pub mod functions;
+pub mod value;
 pub mod variable;
-
-pub trait Zero {
-    fn zero() -> Self;
-}
-
-pub trait One {
-    fn one() -> Self;
-}
-
-pub trait Value:
-    Zero + One + Clone + Debug + std::ops::Add<Output = Self> + std::ops::Mul<Output = Self> + 'static
-{
-}
-
-impl Zero for f32 {
-    fn zero() -> Self {
-        0.0
-    }
-}
-
-impl One for f32 {
-    fn one() -> Self {
-        1.0
-    }
-}
-
-impl Zero for f64 {
-    fn zero() -> Self {
-        0.0
-    }
-}
-
-impl One for f64 {
-    fn one() -> Self {
-        1.0
-    }
-}
-
-impl Value for f32 {}
-
-impl Value for f64 {}
 
 #[cfg(test)]
 mod autograd {
     use std::{cell::RefCell, rc::Rc};
+    use value::Value;
 
     use crate::{
         functions::{add::add, Function},

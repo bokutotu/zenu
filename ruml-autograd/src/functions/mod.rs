@@ -2,8 +2,7 @@ pub mod add;
 
 use std::{cell::RefCell, ops::Deref, rc::Rc};
 
-use crate::variable::Variable;
-use crate::Value;
+use crate::{value::Value, variable::Variable};
 
 pub trait Function<V: Value> {
     fn forward(&self);

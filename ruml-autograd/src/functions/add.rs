@@ -1,8 +1,8 @@
 use std::{cell::RefCell, rc::Rc};
 
 use crate::{
+    value::Value,
     variable::{Variable, VariableWeak},
-    Value,
 };
 
 use super::Function;

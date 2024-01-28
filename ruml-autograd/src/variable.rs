@@ -6,7 +6,7 @@ use std::{
 
 use crate::{
     functions::{add::add, Function, FunctionQueueItem},
-    Value,
+    value::Value,
 };
 
 pub struct VariableInner<V> {
