@@ -48,7 +48,6 @@ where
     }
 }
 
-// // TODO: クッソ汚いコードなのでどうにかする
 fn add_matrix_matrix<T, LM, RM, SM, D1, D2>(
     self_: Matrix<SM, D1>,
     lhs: Matrix<LM, D1>,
