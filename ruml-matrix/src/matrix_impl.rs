@@ -3,7 +3,7 @@ use std::any::TypeId;
 use crate::{
     cpu_memory::{CpuOwnedMemory, CpuViewMemory, CpuViewMutMemory},
     dim::{cal_offset, default_stride, DimTrait, LessDimTrait},
-    dim_impl::{Dim1, Dim2, Dim3, Dim4},
+    dim_impl::{Dim0, Dim1, Dim2, Dim3, Dim4},
     index::{IndexAxisTrait, ShapeStride, SliceTrait},
     matrix::{
         AsMutPtr, AsPtr, BlasMatrix, IndexAxis, IndexAxisMut, IndexItem, IndexItemAsign,
@@ -22,6 +22,37 @@ pub struct Matrix<M, S> {
     memory: M,
     shape: S,
     stride: S,
+}
+
+impl<T, M> Matrix<M, Dim0>
+where
+    T: Num,
+    M: Memory<Item = T>,
+{
+    pub fn scalar(scalar: T) -> Self
+    where
+        M: OwnedMemory<Item = T>,
+    {
+        let memory = M::from_vec(vec![scalar]);
+        Matrix {
+            memory,
+            shape: Dim0::default(),
+            stride: Dim0::default(),
+        }
+    }
+
+    pub fn get_value(&self) -> T {
+        self.memory.value_offset(0)
+    }
+
+    pub fn set_value(&mut self, value: T)
+    where
+        M: ViewMutMemory<Item = T>,
+    {
+        unsafe {
+            self.as_mut_ptr().write(value);
+        }
+    }
 }
 
 impl<M, S> Matrix<M, S> {
@@ -257,6 +288,10 @@ pub(crate) fn matrix_into_dim<M: Memory, Dout: DimTrait, Din: DimTrait>(
 impl<T: Num, M: Memory<Item = T>, D: DimTrait> BlasMatrix for Matrix<M, D> {
     type Blas = M::Blas;
 }
+
+pub type CpuOwnedMatrix0D<T> = Matrix<CpuOwnedMemory<T>, Dim0>;
+pub type CpuViewMatrix0D<'a, T> = Matrix<CpuViewMemory<'a, T>, Dim0>;
+pub type CpuViewMutMatrix0D<'a, T> = Matrix<CpuViewMutMemory<'a, T>, Dim0>;
 
 pub type CpuOwnedMatrix1D<T> = Matrix<CpuOwnedMemory<T>, Dim1>;
 pub type CpuViewMatrix1D<'a, T> = Matrix<CpuViewMemory<'a, T>, Dim1>;

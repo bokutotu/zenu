@@ -3,7 +3,7 @@ use std::any::TypeId;
 use crate::{
     dim,
     dim::DimTrait,
-    dim_impl::{Dim1, Dim2, Dim3, Dim4},
+    dim_impl::{Dim0, Dim1, Dim2, Dim3, Dim4},
     index_impl::Index0D,
     matrix::{IndexAxis, IndexAxisMut, IndexItem, IndexItemAsign, MatrixBase, ViewMutMatix},
     matrix_impl::{matrix_into_dim, Matrix},
@@ -63,7 +63,11 @@ fn add_matrix_matrix<T, LM, RM, SM, D1, D2>(
     assert_eq!(self_.shape(), lhs.shape());
     assert!(self_.shape().len() >= rhs.shape().len());
 
-    if TypeId::of::<D1>() == TypeId::of::<D2>() {
+    if TypeId::of::<D2>() == TypeId::of::<Dim0>() {
+        let rhs: Matrix<RM, Dim0> = matrix_into_dim(rhs);
+        let scalar = rhs.get_value();
+        add_matrix_scalar(self_, lhs, scalar);
+    } else if TypeId::of::<D1>() == TypeId::of::<D2>() {
         macro_rules! impl_add_same_dim {
             ($dim:ty) => {{
                 let mut self_: Matrix<SM, $dim> = matrix_into_dim(self_);
@@ -155,12 +159,24 @@ mod add {
     use crate::{
         dim,
         matrix::{MatrixSlice, OwnedMatrix, ToViewMatrix, ToViewMutMatrix},
-        matrix_impl::{CpuOwnedMatrix1D, CpuOwnedMatrix2D, CpuOwnedMatrix3D},
+        matrix_impl::{CpuOwnedMatrix0D, CpuOwnedMatrix1D, CpuOwnedMatrix2D, CpuOwnedMatrix3D},
         operation::zeros::Zeros,
         slice,
     };
 
     use super::*;
+
+    #[test]
+    fn add_1d_scalar() {
+        let a = CpuOwnedMatrix1D::from_vec(vec![1.0, 2.0, 3.0], dim!(3));
+        let mut ans = CpuOwnedMatrix1D::<f32>::zeros(dim!(3));
+        let b = CpuOwnedMatrix0D::from_vec(vec![2.0], dim!());
+        ans.to_view_mut().add(a.to_view(), b.to_view());
+
+        assert_eq!(ans.index_item(dim!(0)), 3.0);
+        assert_eq!(ans.index_item(dim!(1)), 4.0);
+        assert_eq!(ans.index_item(dim!(2)), 5.0);
+    }
 
     #[test]
     fn add_1d_scalar_default_stride() {

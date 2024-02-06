@@ -2,6 +2,70 @@ use std::ops::{Index, IndexMut};
 
 use crate::dim::{DimTrait, GreaterDimTrait, LessDimTrait};
 
+#[derive(Clone, Debug, Default, PartialEq, Copy)]
+pub struct DimDyn {
+    dim: [usize; 4],
+    len: usize,
+}
+
+impl DimDyn {
+    pub fn new(dim: [usize; 4], len: usize) -> Self {
+        Self { dim, len }
+    }
+
+    pub fn dim(&self) -> [usize; 4] {
+        self.dim
+    }
+
+    pub fn len(&self) -> usize {
+        self.len
+    }
+}
+
+impl Index<usize> for DimDyn {
+    type Output = usize;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        if index >= self.len {
+            panic!("Index out of range");
+        }
+        &self.dim[index]
+    }
+}
+
+impl IndexMut<usize> for DimDyn {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        if index >= self.len {
+            panic!("Index out of range");
+        }
+        &mut self.dim[index]
+    }
+}
+
+impl IntoIterator for DimDyn {
+    type Item = usize;
+    type IntoIter = std::vec::IntoIter<Self::Item>;
+
+    #[allow(clippy::unnecessary_to_owned)]
+    fn into_iter(self) -> Self::IntoIter {
+        self.dim.to_vec().into_iter()
+    }
+}
+
+impl DimTrait for DimDyn {
+    fn len(&self) -> usize {
+        self.len
+    }
+
+    fn is_empty(&self) -> bool {
+        self.len == 0
+    }
+
+    fn is_overflow<D: DimTrait>(&self, index: D) -> bool {
+        index.len() != self.len
+    }
+}
+
 #[derive(Clone, Debug, Copy, Default)]
 pub struct Dim0 {}
 
@@ -49,21 +113,9 @@ impl DimTrait for Dim0 {
     }
 
     fn is_overflow<D: DimTrait>(&self, index: D) -> bool {
-        // if index._len() == 0 {
-        //     false
-        // } else {
-        //     true
-        // }
         index.len() != 0
     }
 }
-
-// impl IndexTrait for Dim0 {
-//     type Dim = Self;
-//     fn offset(&self, _: &Self::Dim, _: &Self::Dim) -> usize {
-//         0
-//     }
-// }
 
 macro_rules! impl_dim {
     ($name:ident, $index_ty:ty) => {
@@ -127,23 +179,8 @@ macro_rules! impl_dim {
                 todo!();
             }
         }
-
-        // impl IndexTrait for $name {
-        //     type Dim = Self;
-        //     fn offset(&self, shape: &Self::Dim, stride: &Self::Dim) -> usize {
-        //         if shape.is_overflow(*self) {
-        //             panic!("Dimension mismatch");
-        //         }
-        //
-        //         self.into_iter()
-        //             .zip(stride.into_iter())
-        //             .map(|(x, y)| x * y)
-        //             .sum()
-        //     }
-        // }
     };
 }
-
 impl_dim!(Dim1, [usize; 1]);
 impl_dim!(Dim2, [usize; 2]);
 impl_dim!(Dim3, [usize; 3]);

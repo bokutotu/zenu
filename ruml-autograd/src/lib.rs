@@ -13,6 +13,7 @@ mod autograd {
     };
 
     use super::*;
+
     pub struct Mul<V> {
         x: Variable<V>,
         y: Variable<V>,

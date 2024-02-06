@@ -63,15 +63,16 @@ impl Value for f64 {}
 
 #[derive(Clone)]
 pub enum Val {
-    F32(f32),
     F64(f64),
     Cpu1DF32(CpuOwnedMatrix1D<f32>),
-    Cpu1DF64(CpuOwnedMatrix1D<f64>),
     Cpu2DF32(CpuOwnedMatrix2D<f32>),
-    Cpu2DF64(CpuOwnedMatrix2D<f64>),
     Cpu3DF32(CpuOwnedMatrix3D<f32>),
-    Cpu3DF64(CpuOwnedMatrix3D<f64>),
     Cpu4DF32(CpuOwnedMatrix4D<f32>),
+
+    F32(f32),
+    Cpu1DF64(CpuOwnedMatrix1D<f64>),
+    Cpu2DF64(CpuOwnedMatrix2D<f64>),
+    Cpu3DF64(CpuOwnedMatrix3D<f64>),
     Cpu4DF64(CpuOwnedMatrix4D<f64>),
 }
 
@@ -87,14 +88,15 @@ impl Val {
     pub fn dim(&self) -> Vec<usize> {
         match self {
             Val::F32(_) => vec![],
-            Val::F64(_) => vec![],
             Val::Cpu1DF32(v) => v.shape().into_iter().collect(),
-            Val::Cpu1DF64(v) => v.shape().into_iter().collect(),
             Val::Cpu2DF32(v) => v.shape().into_iter().collect(),
-            Val::Cpu2DF64(v) => v.shape().into_iter().collect(),
             Val::Cpu3DF32(v) => v.shape().into_iter().collect(),
-            Val::Cpu3DF64(v) => v.shape().into_iter().collect(),
             Val::Cpu4DF32(v) => v.shape().into_iter().collect(),
+
+            Val::F64(_) => vec![],
+            Val::Cpu1DF64(v) => v.shape().into_iter().collect(),
+            Val::Cpu2DF64(v) => v.shape().into_iter().collect(),
+            Val::Cpu3DF64(v) => v.shape().into_iter().collect(),
             Val::Cpu4DF64(v) => v.shape().into_iter().collect(),
         }
     }
