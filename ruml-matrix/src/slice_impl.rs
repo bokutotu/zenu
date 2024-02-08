@@ -1,4 +1,4 @@
-use std::ops::{Range, RangeFrom, RangeFull, RangeTo};
+use std::ops::{Range, RangeFrom, RangeFull, RangeInclusive, RangeTo, RangeToInclusive};
 
 use crate::dim_impl::{Dim0, Dim1, Dim2, Dim3, Dim4};
 use crate::index::{ShapeStride, SliceTrait};
@@ -6,7 +6,7 @@ use crate::index::{ShapeStride, SliceTrait};
 #[allow(unused_imports)]
 use crate::slice;
 
-#[derive(Clone, Debug, Copy, PartialEq)]
+#[derive(Clone, Debug, Copy, PartialEq, Default)]
 pub struct SliceDim {
     pub(crate) start: Option<usize>,
     pub(crate) end: Option<usize>,
@@ -111,6 +111,36 @@ impl From<RangeFrom<usize>> for SliceDim {
     }
 }
 
+impl From<RangeInclusive<usize>> for SliceDim {
+    fn from(range: RangeInclusive<usize>) -> Self {
+        SliceDim {
+            start: Some(*range.start()),
+            end: Some(*range.end()),
+            step: None,
+        }
+    }
+}
+
+impl From<RangeToInclusive<usize>> for SliceDim {
+    fn from(range: RangeToInclusive<usize>) -> Self {
+        SliceDim {
+            start: None,
+            end: Some(range.end + 1),
+            step: None,
+        }
+    }
+}
+
+impl From<usize> for SliceDim {
+    fn from(index: usize) -> Self {
+        SliceDim {
+            start: Some(index),
+            end: None,
+            step: None,
+        }
+    }
+}
+
 #[derive(Clone, Debug, Copy, PartialEq)]
 pub struct Slice0D {}
 
@@ -179,6 +209,45 @@ impl_slice_ty!(Slice1D, 1, Dim1);
 impl_slice_ty!(Slice2D, 2, Dim2);
 impl_slice_ty!(Slice3D, 3, Dim3);
 impl_slice_ty!(Slice4D, 4, Dim4);
+
+#[derive(Clone, Debug, Copy, PartialEq)]
+pub struct Slice {
+    pub index: [SliceDim; 4],
+    pub len: usize,
+}
+
+impl From<&[SliceDim]> for Slice {
+    fn from(s: &[SliceDim]) -> Self {
+        if s.len() > 4 {
+            panic!("too many slice dimensions");
+        } else if s.len() == 1 {
+            Slice {
+                index: [
+                    s[0],
+                    SliceDim::default(),
+                    SliceDim::default(),
+                    SliceDim::default(),
+                ],
+                len: 1,
+            }
+        } else if s.len() == 2 {
+            Slice {
+                index: [s[0], s[1], SliceDim::default(), SliceDim::default()],
+                len: 2,
+            }
+        } else if s.len() == 3 {
+            Slice {
+                index: [s[0], s[1], s[2], SliceDim::default()],
+                len: 3,
+            }
+        } else {
+            Slice {
+                index: [s[0], s[1], s[2], s[3]],
+                len: 4,
+            }
+        }
+    }
+}
 
 #[test]
 fn slice_index() {

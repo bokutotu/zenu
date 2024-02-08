@@ -3,7 +3,7 @@ use std::any::TypeId;
 use crate::{
     cpu_memory::{CpuOwnedMemory, CpuViewMemory, CpuViewMutMemory},
     dim::{cal_offset, default_stride, DimTrait, LessDimTrait},
-    dim_impl::{Dim0, Dim1, Dim2, Dim3, Dim4},
+    dim_impl::{Dim0, Dim1, Dim2, Dim3, Dim4, DimDyn},
     index::{IndexAxisTrait, ShapeStride, SliceTrait},
     matrix::{
         AsMutPtr, AsPtr, BlasMatrix, IndexAxis, IndexAxisMut, IndexItem, IndexItemAsign,
@@ -70,6 +70,28 @@ impl<M, S> Matrix<M, S> {
 
     pub(crate) fn update_stride(&mut self, stride: S) {
         self.stride = stride;
+    }
+
+    pub fn into_dyn_dim(self) -> Matrix<M, DimDyn>
+    where
+        M: Memory,
+        S: DimTrait,
+    {
+        let shape = self.shape();
+        let stride = self.stride();
+
+        let mut shape_new = DimDyn::default();
+        let mut stride_new = DimDyn::default();
+
+        shape_new.set_len(shape.len());
+        stride_new.set_len(stride.len());
+
+        for i in 0..shape.len() {
+            shape_new[i] = shape[i];
+            stride_new[i] = stride[i];
+        }
+
+        Matrix::new(self.memory, shape_new, stride_new)
     }
 }
 
@@ -267,7 +289,7 @@ impl<T: Num, D: DimTrait, VM: ViewMutMemory + Memory<Item = T>> IndexItemAsign f
 pub(crate) fn matrix_into_dim<M: Memory, Dout: DimTrait, Din: DimTrait>(
     m: Matrix<M, Din>,
 ) -> Matrix<M, Dout> {
-    if TypeId::of::<Dout>() == TypeId::of::<Din>() {
+    if TypeId::of::<Din>() == TypeId::of::<Dout>() {
         let shape = m.shape();
         let stride = m.stride();
 
@@ -308,6 +330,10 @@ pub type CpuViewMutMatrix3D<'a, T> = Matrix<CpuViewMutMemory<'a, T>, Dim3>;
 pub type CpuOwnedMatrix4D<T> = Matrix<CpuOwnedMemory<T>, Dim4>;
 pub type CpuViewMatrix4D<'a, T> = Matrix<CpuViewMemory<'a, T>, Dim4>;
 pub type CpuViewMutMatrix4D<'a, T> = Matrix<CpuViewMutMemory<'a, T>, Dim4>;
+
+pub type CpuOwnedMatrixDyn<T> = Matrix<CpuOwnedMemory<T>, DimDyn>;
+pub type CpuViewMatrixDyn<'a, T> = Matrix<CpuViewMemory<'a, T>, DimDyn>;
+pub type CpuViewMutMatrixDyn<'a, T> = Matrix<CpuViewMutMemory<'a, T>, DimDyn>;
 
 #[cfg(test)]
 mod matrix_slice {

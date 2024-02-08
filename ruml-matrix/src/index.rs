@@ -119,12 +119,6 @@ pub trait SliceTrait {
     fn sliced_offset(&self, stride: Self::Dim, original_offset: usize) -> usize;
 }
 
-// /// Matrixに対して、Indexを取得してTを取得するのに使用するトレイト
-// pub trait IndexTrait {
-//     type Dim: DimTrait;
-//     fn offset(&self, shape: &Self::Dim, stride: &Self::Dim) -> usize;
-// }
-
 pub trait IndexAxisTrait {
     fn get_shape_stride<Din: DimTrait, Dout: DimTrait>(
         &self,

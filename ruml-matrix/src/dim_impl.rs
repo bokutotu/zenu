@@ -9,8 +9,16 @@ pub struct DimDyn {
 }
 
 impl DimDyn {
-    pub fn new(dim: [usize; 4], len: usize) -> Self {
-        Self { dim, len }
+    pub fn new(dim: &[usize]) -> Self {
+        if dim.len() > 4 {
+            panic!("Dim must be smaller than 4");
+        }
+        let mut dim_dyn = DimDyn::default();
+        for i in 0..dim.len() {
+            dim_dyn[i] = dim[i];
+        }
+        dim_dyn.len = dim.len();
+        dim_dyn
     }
 
     pub fn dim(&self) -> [usize; 4] {
@@ -19,6 +27,14 @@ impl DimDyn {
 
     pub fn len(&self) -> usize {
         self.len
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len == 0
+    }
+
+    pub fn set_len(&mut self, len: usize) {
+        self.len = len;
     }
 }
 

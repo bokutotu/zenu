@@ -34,11 +34,13 @@ macro_rules! slice(
             }
         }
     };
+
     (@parse []) => {
         {
             Slice0D {  }
         }
     };
+
     (@parse $($t:tt)*) => { compile_error!("Invalid syntax in slice![] call.") };
 
     (@convert $r:expr) => {
@@ -82,9 +84,106 @@ macro_rules! slice(
     };
 );
 
+#[macro_export]
+macro_rules! slice_dynamic {
+    (@parse [$($stack:tt)*] $r:expr;$s:expr) => {
+        $crate::slice_dynamic!(@final
+            [$($stack)* $crate::slice_dynamic!(@convert $r, $s)]
+        )
+    };
+    (@parse [$($stack:tt)*] $r:expr) => {
+        $crate::slice_dynamic!(@final [$($stack)* $crate::slice_dynamic!(@convert $r)])
+    };
+    (@parse [$($stack:tt)*] $r:expr;$s:expr ,) => {
+        $crate::slice_dynamic![@parse $in_dim, $out_dim, [$($stack)*] $r;$s]
+    };
+    (@parse $in_dim:expr, $out_dim:expr, [$($stack:tt)*] $r:expr ,) => {
+        $crate::slice_dynamic![@parse $in_dim, $out_dim, [$($stack)*] $r]
+    };
+    (@parse [$($stack:tt)*] $r:expr;$s:expr, $($t:tt)*) => {
+        match $r {
+            r => {
+                $crate::slice_dynamic![@parse
+                   [$($stack)* $crate::slice_dynamic!(@convert r, $s),]
+                   $($t)*
+                ]
+            }
+        }
+    };
+    (@parse [$($stack:tt)*] $r:expr, $($t:tt)*) => {
+        match $r {
+            r => {
+                $crate::slice_dynamic![@parse
+                   [$($stack)* $crate::slice_dynamic!(@convert r),]
+                   $($t)*
+                ]
+            }
+        }
+    };
+    (@parse []) => {
+        {
+            $crate::slice_impl::Slice::From(&[])
+        }
+    };
+    (@parse $($t:tt)*) => { compile_error!("Invalid syntax in slice_dynamic![] call.") };
+
+    (@convert $r:expr) => {
+        $crate::slice_impl::SliceDim::from($r)
+    };
+    (@convert $r:expr, $s:expr) => {
+        $crate::slice_impl::SliceDim::from($r).step($s)
+    };
+
+    (@final [$($dim:expr),*]) => {{
+        let slice = [$($dim),*];
+        let slice_ref = &slice as &[SliceDim];
+        $crate::slice_impl::Slice::from(slice_ref)
+    }};
+
+    ($($t:tt)*) => {
+        $crate::slice_dynamic![@parse
+              []
+              $($t)*
+        ]
+    };
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::slice_impl::{Slice1D, Slice2D, Slice3D, Slice4D, SliceDim};
+    use crate::slice_impl::{Slice, Slice1D, Slice2D, Slice3D, Slice4D, SliceDim};
+
+    #[test]
+    fn test_slice_dynamic() {
+        let slice = slice_dynamic!(1..3;1, ..4;2, 5..;3);
+        assert_eq!(
+            slice,
+            Slice {
+                index: [
+                    SliceDim {
+                        start: Some(1),
+                        end: Some(3),
+                        step: Some(1)
+                    },
+                    SliceDim {
+                        start: None,
+                        end: Some(4),
+                        step: Some(2)
+                    },
+                    SliceDim {
+                        start: Some(5),
+                        end: None,
+                        step: Some(3)
+                    },
+                    SliceDim {
+                        start: None,
+                        end: None,
+                        step: None
+                    }
+                ],
+                len: 3
+            }
+        );
+    }
 
     #[test]
     fn test_slice_macro_1d() {

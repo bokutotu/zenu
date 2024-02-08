@@ -1,5 +1,3 @@
-use std::any::TypeId;
-
 use crate::{
     dim,
     dim::DimTrait,
@@ -63,11 +61,11 @@ fn add_matrix_matrix<T, LM, RM, SM, D1, D2>(
     assert_eq!(self_.shape(), lhs.shape());
     assert!(self_.shape().len() >= rhs.shape().len());
 
-    if TypeId::of::<D2>() == TypeId::of::<Dim0>() {
+    if rhs.shape().len() == 0 {
         let rhs: Matrix<RM, Dim0> = matrix_into_dim(rhs);
         let scalar = rhs.get_value();
         add_matrix_scalar(self_, lhs, scalar);
-    } else if TypeId::of::<D1>() == TypeId::of::<D2>() {
+    } else if self_.shape().len() == rhs.shape().len() {
         macro_rules! impl_add_same_dim {
             ($dim:ty) => {{
                 let mut self_: Matrix<SM, $dim> = matrix_into_dim(self_);
@@ -165,6 +163,19 @@ mod add {
     };
 
     use super::*;
+
+    #[test]
+    fn add_dyn_dyn() {
+        let a = CpuOwnedMatrix1D::from_vec(vec![1.0, 2.0, 3.0], dim!(3));
+        let b = CpuOwnedMatrix1D::from_vec(vec![1.0, 2.0, 3.0], dim!(3));
+        let ans = CpuOwnedMatrix1D::<f32>::zeros(dim!(3));
+
+        let a = a.into_dyn_dim();
+        let b = b.into_dyn_dim();
+        let mut ans = ans.into_dyn_dim();
+
+        ans.to_view_mut().add(a.to_view(), b.to_view());
+    }
 
     #[test]
     fn add_1d_scalar() {
