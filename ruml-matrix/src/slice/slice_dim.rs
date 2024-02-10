@@ -129,7 +129,7 @@ impl From<usize> for SliceDim {
     fn from(index: usize) -> Self {
         SliceDim {
             start: Some(index),
-            end: None,
+            end: Some(index),
             step: None,
         }
     }

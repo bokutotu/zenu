@@ -1,6 +1,9 @@
 use std::fmt::Debug;
 
-use crate::dim::{default_stride, DimTrait};
+use crate::{
+    dim::{default_stride, DimTrait},
+    dim_impl::{convert_dim, DimDyn},
+};
 
 #[derive(Clone, Debug, Copy, PartialEq)]
 pub struct ShapeStride<D: DimTrait> {
@@ -110,6 +113,12 @@ impl<D: DimTrait> ShapeStride<D> {
     /// 転置を元に戻した場合default_strideになっているかどうかを判定する
     pub fn is_transposed_default_stride(&self) -> bool {
         self.transpose().is_default_stride()
+    }
+
+    pub(crate) fn into_dyn(self) -> ShapeStride<DimDyn> {
+        let shape = convert_dim(self.shape);
+        let stride = convert_dim(self.stride);
+        ShapeStride::new(shape, stride)
     }
 }
 

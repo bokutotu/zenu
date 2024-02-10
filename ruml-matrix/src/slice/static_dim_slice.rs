@@ -79,7 +79,6 @@ mod static_dim_slice {
     use crate::dim_impl::{Dim1, Dim2, Dim3};
     use crate::index::SliceTrait;
     use crate::slice;
-    use crate::slice::slice_dim::SliceDim;
 
     #[test]
     fn sliced_1d() {

@@ -318,11 +318,10 @@ where
     where
         Self: 'a;
     fn slice_dyn(&self, index: Slice) -> Self::Output<'_> {
-        let shape_stride = self.shape_stride();
-        let shape = shape_stride.shape();
-        let stride = shape_stride.stride();
-        let new_shape_stride = shape_stride.sliced_shape_stride(index);
-        let offset = shape_stride.sliced_offset(index);
+        let shape_stride = self.shape_stride().into_dyn();
+        let new_shape_stride =
+            index.sliced_shape_stride(shape_stride.shape(), shape_stride.stride());
+        let offset = index.sliced_offset(shape_stride.stride(), self.memory.get_offset());
         Matrix::new(
             self.memory.to_view(offset),
             new_shape_stride.shape(),
