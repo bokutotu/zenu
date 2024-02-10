@@ -1,8 +1,10 @@
 use crate::{
     blas::Blas,
     dim::{DimTrait, LessDimTrait},
+    dim_impl::DimDyn,
     index::{IndexAxisTrait, ShapeStride, SliceTrait},
     num::Num,
+    slice::Slice,
 };
 
 pub trait MatrixBase: Sized {
@@ -112,6 +114,22 @@ pub trait IndexItem: MatrixBase {
 
 pub trait IndexItemAsign: MatrixBase {
     fn index_item_asign(&mut self, index: Self::Dim, value: <Self as MatrixBase>::Item);
+}
+
+pub trait MatrixSliceDyn: ToViewMatrix {
+    type Output<'a>: MatrixBase<Dim = DimDyn> + ViewMatrix
+    where
+        Self: 'a;
+
+    fn slice_dyn(&self, index: Slice) -> Self::Output<'_>;
+}
+
+pub trait MatrixSliceMutDyn: ToViewMutMatrix {
+    type Output<'a>: MatrixBase<Dim = DimDyn> + ViewMutMatix
+    where
+        Self: 'a;
+
+    fn slice_mut_dyn(&mut self, index: Slice) -> Self::Output<'_>;
 }
 
 pub trait BlasMatrix: MatrixBase {

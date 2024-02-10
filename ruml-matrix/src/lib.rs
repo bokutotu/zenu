@@ -14,5 +14,4 @@ pub mod matrix_impl;
 pub mod memory;
 pub mod num;
 pub mod operation;
-pub mod slice_impl;
-pub mod slice_macro;
+pub mod slice;

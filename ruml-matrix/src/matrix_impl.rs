@@ -7,14 +7,15 @@ use crate::{
     index::{IndexAxisTrait, ShapeStride, SliceTrait},
     matrix::{
         AsMutPtr, AsPtr, BlasMatrix, IndexAxis, IndexAxisMut, IndexItem, IndexItemAsign,
-        MatrixBase, MatrixSlice, MatrixSliceMut, OwnedMatrix, ToOwnedMatrix, ToViewMatrix,
-        ToViewMutMatrix, ViewMatrix, ViewMutMatix,
+        MatrixBase, MatrixSlice, MatrixSliceDyn, MatrixSliceMut, OwnedMatrix, ToOwnedMatrix,
+        ToViewMatrix, ToViewMutMatrix, ViewMatrix, ViewMutMatix,
     },
     memory::{
         Memory, OwnedMemory, ToOwnedMemory, ToViewMemory, ToViewMutMemory, ViewMemory,
         ViewMutMemory,
     },
     num::Num,
+    slice::Slice,
 };
 
 #[derive(Clone)]
@@ -304,6 +305,29 @@ pub(crate) fn matrix_into_dim<M: Memory, Dout: DimTrait, Din: DimTrait>(
         Matrix::new(m.memory, shape_new, stride_new)
     } else {
         panic!("Dout != Din");
+    }
+}
+
+impl<T, M, D> MatrixSliceDyn for Matrix<M, D>
+where
+    T: Num,
+    M: Memory<Item = T> + ToViewMemory,
+    D: DimTrait,
+{
+    type Output<'a> = Matrix<M::View<'a>, DimDyn>
+    where
+        Self: 'a;
+    fn slice_dyn(&self, index: Slice) -> Self::Output<'_> {
+        let shape_stride = self.shape_stride();
+        let shape = shape_stride.shape();
+        let stride = shape_stride.stride();
+        let new_shape_stride = shape_stride.sliced_shape_stride(index);
+        let offset = shape_stride.sliced_offset(index);
+        Matrix::new(
+            self.memory.to_view(offset),
+            new_shape_stride.shape(),
+            new_shape_stride.stride(),
+        )
     }
 }
 
