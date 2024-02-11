@@ -97,7 +97,6 @@ where
 #[cfg(test)]
 mod gemm {
     use crate::{
-        dim,
         matrix::{IndexItem, MatrixBase, MatrixSlice, OwnedMatrix, ToViewMatrix, ToViewMutMatrix},
         matrix_impl::CpuOwnedMatrix2D,
         operation::transpose::Transpose,
@@ -112,14 +111,14 @@ mod gemm {
         let b = vec![1.0, 2.0, 3.0, 4.0];
         let c = vec![0.0, 0.0, 0.0, 0.0];
 
-        let a = CpuOwnedMatrix2D::from_vec(a, dim!(2, 2));
-        let b = CpuOwnedMatrix2D::from_vec(b, dim!(2, 2));
-        let mut c = CpuOwnedMatrix2D::from_vec(c, dim!(2, 2));
+        let a = CpuOwnedMatrix2D::from_vec(a, &[2, 2]);
+        let b = CpuOwnedMatrix2D::from_vec(b, &[2, 2]);
+        let mut c = CpuOwnedMatrix2D::from_vec(c, &[2, 2]);
 
         gemm(a.to_view(), b.to_view(), c.to_view_mut(), 1.0, 1.0);
 
-        assert_eq!(c.index_item(dim!(0, 0)), 7.0);
-        assert_eq!(c.index_item(dim!(0, 1)), 10.0);
+        assert_eq!(c.index_item(&[0, 0]), 7.0);
+        assert_eq!(c.index_item(&[0, 1]), 10.0);
         assert_eq!(c.index_item(dim!(1, 0)), 15.0);
         assert_eq!(c.index_item(dim!(1, 1)), 22.0);
     }

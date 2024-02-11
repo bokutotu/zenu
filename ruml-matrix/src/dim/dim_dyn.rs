@@ -97,3 +97,42 @@ impl DimTrait for DimDyn {
         index.len() != self.len
     }
 }
+
+impl From<&[usize]> for DimDyn {
+    fn from(slice: &[usize]) -> Self {
+        let mut dim_dyn = DimDyn::default();
+        for i in 0..slice.len() {
+            dim_dyn.push_dim(slice[i]);
+        }
+        dim_dyn
+    }
+}
+
+macro_rules! impl_from_slice_dim {
+    ($name:ident, $number_of_elm:expr) => {
+        impl From<&[usize; $number_of_elm]> for $name {
+            fn from(slice: &[usize; $number_of_elm]) -> Self {
+                let mut dim_dyn = $name::default();
+                for i in 0..slice.len() {
+                    dim_dyn.push_dim(slice[i]);
+                }
+                dim_dyn
+            }
+        }
+
+        impl From<[usize; $number_of_elm]> for $name {
+            fn from(slice: [usize; $number_of_elm]) -> Self {
+                let mut dim_dyn = $name::default();
+                for i in 0..slice.len() {
+                    dim_dyn.push_dim(slice[i]);
+                }
+                dim_dyn
+            }
+        }
+    };
+    () => {};
+}
+impl_from_slice_dim!(DimDyn, 4);
+impl_from_slice_dim!(DimDyn, 3);
+impl_from_slice_dim!(DimDyn, 2);
+impl_from_slice_dim!(DimDyn, 1);

@@ -109,11 +109,11 @@ where
 }
 
 pub trait IndexItem: MatrixBase {
-    fn index_item(&self, index: Self::Dim) -> Self::Item;
+    fn index_item<I: Into<Self::Dim>>(&self, index: I) -> Self::Item;
 }
 
 pub trait IndexItemAsign: MatrixBase {
-    fn index_item_asign(&mut self, index: Self::Dim, value: <Self as MatrixBase>::Item);
+    fn index_item_asign<I: Into<Self::Dim>>(&mut self, index: I, value: <Self as MatrixBase>::Item);
 }
 
 pub trait MatrixSliceDyn: ToViewMatrix {
@@ -153,5 +153,5 @@ pub trait ViewMutMatix:
 }
 
 pub trait OwnedMatrix: MatrixBase + ToViewMatrix + ToViewMutMatrix + AsPtr + BlasMatrix {
-    fn from_vec(vec: Vec<Self::Item>, dim: Self::Dim) -> Self;
+    fn from_vec<I: Into<Self::Dim>>(vec: Vec<Self::Item>, dim: I) -> Self;
 }
