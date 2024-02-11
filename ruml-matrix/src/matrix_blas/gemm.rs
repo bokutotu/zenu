@@ -119,8 +119,8 @@ mod gemm {
 
         assert_eq!(c.index_item(&[0, 0]), 7.0);
         assert_eq!(c.index_item(&[0, 1]), 10.0);
-        assert_eq!(c.index_item(dim!(1, 0)), 15.0);
-        assert_eq!(c.index_item(dim!(1, 1)), 22.0);
+        assert_eq!(c.index_item([1, 0]), 15.0);
+        assert_eq!(c.index_item([1, 1]), 22.0);
     }
 
     #[test]
@@ -129,9 +129,9 @@ mod gemm {
         let b = vec![1.0, 2.0, 3.0, 4.0];
         let c = vec![0.0, 0.0, 0.0, 0.0];
 
-        let mut a = CpuOwnedMatrix2D::from_vec(a, dim!(2, 2));
-        let mut b = CpuOwnedMatrix2D::from_vec(b, dim!(2, 2));
-        let mut c = CpuOwnedMatrix2D::from_vec(c, dim!(2, 2));
+        let mut a = CpuOwnedMatrix2D::from_vec(a, [2, 2]);
+        let mut b = CpuOwnedMatrix2D::from_vec(b, [2, 2]);
+        let mut c = CpuOwnedMatrix2D::from_vec(c, [2, 2]);
 
         a.transpose();
         b.transpose();
@@ -141,10 +141,10 @@ mod gemm {
 
         gemm(a.to_view(), b.to_view(), c.to_view_mut(), 1.0, 1.0);
 
-        assert_eq!(c.index_item(dim!(0, 0)), 7.0);
-        assert_eq!(c.index_item(dim!(0, 1)), 15.0);
-        assert_eq!(c.index_item(dim!(1, 0)), 10.0);
-        assert_eq!(c.index_item(dim!(1, 1)), 22.0);
+        assert_eq!(c.index_item([0, 0]), 7.0);
+        assert_eq!(c.index_item([0, 1]), 15.0);
+        assert_eq!(c.index_item([1, 0]), 10.0);
+        assert_eq!(c.index_item([1, 1]), 22.0);
     }
 
     #[test]
@@ -154,9 +154,9 @@ mod gemm {
         let b = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
         let c = vec![0.0, 0.0, 0.0, 0.0];
 
-        let a = CpuOwnedMatrix2D::from_vec(a, dim!(2, 4));
-        let b = CpuOwnedMatrix2D::from_vec(b, dim!(2, 4));
-        let mut c = CpuOwnedMatrix2D::from_vec(c, dim!(2, 2));
+        let a = CpuOwnedMatrix2D::from_vec(a, [2, 4]);
+        let b = CpuOwnedMatrix2D::from_vec(b, [2, 4]);
+        let mut c = CpuOwnedMatrix2D::from_vec(c, [2, 2]);
 
         let a = a.slice(slice!(.., ..2));
         let b = b.slice(slice!(.., ..2));

@@ -367,7 +367,7 @@ pub type CpuViewMutMatrixDyn<'a, T> = Matrix<CpuViewMutMemory<'a, T>, DimDyn>;
 mod matrix_slice {
     use crate::dim::Dim1;
     use crate::slice;
-    use crate::{dim, slice_dynamic};
+    use crate::slice_dynamic;
 
     use super::*;
 
@@ -384,9 +384,9 @@ mod matrix_slice {
         let m =
             CpuOwnedMatrix1D::from_vec(vec![1f32, 2., 3., 4., 5., 6., 7., 8., 9.], Dim1::new([9]));
         let s = m.slice(slice!(1..4));
-        assert_eq!(s.index_item(dim!(0)), 2.);
-        assert_eq!(s.index_item(dim!(1)), 3.);
-        assert_eq!(s.index_item(dim!(2)), 4.);
+        assert_eq!(s.index_item([0]), 2.);
+        assert_eq!(s.index_item([1]), 3.);
+        assert_eq!(s.index_item([2]), 4.);
         assert_eq!(s.shape_stride().shape()[0], 3);
         assert_eq!(s.shape_stride().stride()[0], 1);
     }
@@ -398,12 +398,12 @@ mod matrix_slice {
             Dim2::new([3, 4]),
         );
         let s = m.slice(slice!(1..3, 1..4));
-        assert_eq!(s.index_item(dim!(0, 0)), 6.);
-        assert_eq!(s.index_item(dim!(0, 1)), 7.);
-        assert_eq!(s.index_item(dim!(0, 2)), 8.);
-        assert_eq!(s.index_item(dim!(1, 0)), 10.);
-        assert_eq!(s.index_item(dim!(1, 1)), 11.);
-        assert_eq!(s.index_item(dim!(1, 2)), 12.);
+        assert_eq!(s.index_item([0, 0]), 6.);
+        assert_eq!(s.index_item([0, 1]), 7.);
+        assert_eq!(s.index_item([0, 2]), 8.);
+        assert_eq!(s.index_item([1, 0]), 10.);
+        assert_eq!(s.index_item([1, 1]), 11.);
+        assert_eq!(s.index_item([1, 2]), 12.);
         assert_eq!(s.shape_stride().shape()[0], 2);
         assert_eq!(s.shape_stride().shape()[1], 3);
         assert_eq!(s.shape_stride().stride()[0], 4);
@@ -420,15 +420,15 @@ mod matrix_slice {
                 35., 36., 37., 38., 39., 40., 41., 42., 43., 44., 45., 46., 47., 48., 49., 50.,
                 51., 52., 53., 54., 55., 56., 57., 58., 59., 60., 61., 62., 63., 64.,
             ],
-            dim!(2, 2, 4, 4),
+            [2, 2, 4, 4],
         );
 
         // into dyn
         let m = m.into_dyn_dim();
         let s = m.slice_dyn(slice_dynamic!(0..2, 0..2, 2, 0..4));
 
-        // assert_eq!(s.index_item(dim!(0, 0, 0)), 9.);
-        // assert_eq!(s.index_item(dim!(0, 0, 1)), 10.);
-        // assert_eq!(s.index_item(dim!(0, 1, 0)), 13.);
+        // assert_eq!(s.index_item([0, 0, 0]), 9.);
+        // assert_eq!(s.index_item([0, 0, 1]), 10.);
+        // assert_eq!(s.index_item([0, 1, 0]), 13.);
     }
 }

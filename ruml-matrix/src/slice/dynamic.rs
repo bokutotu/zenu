@@ -1,9 +1,5 @@
 use super::slice_dim::SliceDim;
-use crate::{
-    dim::{DimDyn, DimTrait},
-    index::SliceTrait,
-    shape_stride::ShapeStride,
-};
+use crate::{dim::DimDyn, index::SliceTrait, shape_stride::ShapeStride};
 
 #[derive(Clone, Debug, Copy, PartialEq)]
 

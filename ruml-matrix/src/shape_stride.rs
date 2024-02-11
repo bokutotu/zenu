@@ -122,12 +122,12 @@ impl<D: DimTrait> ShapeStride<D> {
 #[cfg(test)]
 mod shape_stride {
     use super::*;
-    use crate::dim;
-    use crate::dim::default_stride;
+    use crate::dim::{default_stride, Dim2, Dim4};
 
     #[test]
     fn is_transposed_false() {
-        let shape = dim!(2, 3);
+        let shape = [2, 3];
+        let shape: Dim2 = shape.into();
         let default_stride = default_stride(shape);
 
         let shape_stride = super::ShapeStride::new(shape, default_stride);
@@ -138,8 +138,10 @@ mod shape_stride {
     #[test]
     fn is_transposed_true() {
         // transpose
-        let shape_transposed = dim!(2, 3, 5, 4);
-        let stride_transposed = dim!(60, 20, 1, 5);
+        let shape_transposed = [2, 3, 5, 4];
+        let stride_transposed = [60, 20, 1, 5];
+        let shape_transposed: Dim4 = shape_transposed.into();
+        let stride_transposed: Dim4 = stride_transposed.into();
         let shape_stride = ShapeStride::new(shape_transposed, stride_transposed);
 
         assert_eq!(shape_stride.is_transposed(), true);

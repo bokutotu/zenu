@@ -64,7 +64,6 @@ impl_max_idx!(Dim4);
 #[cfg(test)]
 mod max_idx {
     use crate::{
-        dim,
         matrix::{MatrixSlice, OwnedMatrix, ToViewMatrix},
         matrix_impl::{CpuOwnedMatrix1D, CpuOwnedMatrix2D, CpuOwnedMatrix3D},
         operation::max::MaxIdx,
@@ -73,14 +72,14 @@ mod max_idx {
 
     #[test]
     fn default_1d() {
-        let a = CpuOwnedMatrix1D::from_vec(vec![0., 1., 2., 3.], dim!(4));
-        assert_eq!(a.to_view().max_idx(), dim!(3));
+        let a = CpuOwnedMatrix1D::from_vec(vec![0., 1., 2., 3.], [4]);
+        assert_eq!(a.to_view().max_idx(), [3].into());
     }
 
     #[test]
     fn default_2d() {
-        let a = CpuOwnedMatrix2D::from_vec(vec![0., 1., 2., 3.], dim!(2, 2));
-        assert_eq!(a.to_view().max_idx(), dim!(1, 1));
+        let a = CpuOwnedMatrix2D::from_vec(vec![0., 1., 2., 3.], [2, 2]);
+        assert_eq!(a.to_view().max_idx(), [1, 1].into());
     }
 
     #[test]
@@ -89,8 +88,8 @@ mod max_idx {
         for i in 0..8 * 8 * 8 {
             v.push(i as f32);
         }
-        let a = CpuOwnedMatrix3D::from_vec(v, dim!(8, 8, 8));
+        let a = CpuOwnedMatrix3D::from_vec(v, [8, 8, 8]);
         let sliced = a.slice(slice!(..;3, ..;4, ..;2));
-        assert_eq!(sliced.max_idx(), dim!(2, 1, 3));
+        assert_eq!(sliced.max_idx(), [2, 1, 3].into());
     }
 }

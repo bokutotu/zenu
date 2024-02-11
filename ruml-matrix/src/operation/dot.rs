@@ -23,7 +23,6 @@ where
 #[cfg(test)]
 mod dot {
     use crate::{
-        dim,
         matrix::{OwnedMatrix, ToViewMatrix},
         matrix_impl::CpuOwnedMatrix1D,
     };
@@ -32,8 +31,8 @@ mod dot {
 
     #[test]
     fn dot() {
-        let a = CpuOwnedMatrix1D::from_vec(vec![1.0, 2.0, 3.0], dim!(3));
-        let b = CpuOwnedMatrix1D::from_vec(vec![4.0, 5.0, 6.0], dim!(3));
+        let a = CpuOwnedMatrix1D::from_vec(vec![1.0, 2.0, 3.0], [3]);
+        let b = CpuOwnedMatrix1D::from_vec(vec![4.0, 5.0, 6.0], [3]);
         let c = a.to_view().dot(b.to_view());
 
         assert_eq!(c, 32.0);

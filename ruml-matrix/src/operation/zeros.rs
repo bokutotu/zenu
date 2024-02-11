@@ -5,7 +5,7 @@ use crate::{
 };
 
 pub trait Zeros: MatrixBase {
-    fn zeros(dim: Self::Dim) -> Self;
+    fn zeros<I: Into<Self::Dim>>(dim: I) -> Self;
 }
 impl<T, D, OM> Zeros for OM
 where
@@ -13,7 +13,8 @@ where
     D: DimTrait,
     OM: OwnedMatrix + MatrixBase<Dim = D, Item = T>,
 {
-    fn zeros(dim: D) -> Self {
+    fn zeros<I: Into<Self::Dim>>(dim: I) -> Self {
+        let dim = dim.into();
         let num_elm = dim.num_elm();
         let mut data = Vec::with_capacity(num_elm);
         for _ in 0..num_elm {
@@ -25,13 +26,13 @@ where
 
 #[cfg(test)]
 mod zeros {
-    use crate::{dim, matrix_impl::CpuOwnedMatrix0D};
+    use crate::matrix_impl::CpuOwnedMatrix0D;
 
     use super::Zeros;
 
     #[test]
     fn zeros_scalar() {
-        let x: CpuOwnedMatrix0D<f32> = Zeros::zeros(dim![]);
+        let x: CpuOwnedMatrix0D<f32> = Zeros::zeros([]);
         assert_eq!(x.get_value(), 0.0);
     }
 }

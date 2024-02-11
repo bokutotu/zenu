@@ -1,5 +1,4 @@
 use crate::{
-    dim,
     dim::{Dim0, Dim1, Dim2, Dim3, Dim4, DimTrait},
     index::Index0D,
     matrix::{IndexAxis, IndexAxisMut, IndexItem, IndexItemAsign, MatrixBase, ViewMutMatix},
@@ -35,7 +34,7 @@ where
             let mut self_: Matrix<SM, Dim1> = matrix_into_dim(self_);
             let lhs: Matrix<LM, Dim1> = matrix_into_dim(lhs);
             for idx in 0..self_.shape()[0] {
-                self_.index_item_asign(dim!(idx), lhs.index_item(dim!(idx)) + rhs);
+                self_.index_item_asign([idx], lhs.index_item([idx]) + rhs);
             }
         }
         2 => add_matrix_scalar_dim!(self_, lhs, rhs, Dim2),
@@ -84,10 +83,7 @@ fn add_matrix_matrix<T, LM, RM, SM, D1, D2>(
                 let lhs: Matrix<LM, Dim1> = matrix_into_dim(lhs);
                 let rhs: Matrix<RM, Dim1> = matrix_into_dim(rhs);
                 for idx in 0..self_.shape()[0] {
-                    self_.index_item_asign(
-                        dim!(idx),
-                        lhs.index_item(dim!(idx)) + rhs.index_item(dim!(idx)),
-                    );
+                    self_.index_item_asign([idx], lhs.index_item([idx]) + rhs.index_item([idx]));
                 }
             }
             2 => impl_add_same_dim!(Dim2),
@@ -154,7 +150,6 @@ where
 #[cfg(test)]
 mod add {
     use crate::{
-        dim,
         matrix::{MatrixSlice, OwnedMatrix, ToViewMatrix, ToViewMutMatrix},
         matrix_impl::{CpuOwnedMatrix0D, CpuOwnedMatrix1D, CpuOwnedMatrix2D, CpuOwnedMatrix3D},
         operation::zeros::Zeros,
@@ -165,9 +160,9 @@ mod add {
 
     // #[test]
     // fn add_dyn_dyn() {
-    //     let a = CpuOwnedMatrix1D::from_vec(vec![1.0, 2.0, 3.0], dim!(3));
-    //     let b = CpuOwnedMatrix1D::from_vec(vec![1.0, 2.0, 3.0], dim!(3));
-    //     let ans = CpuOwnedMatrix1D::<f32>::zeros(dim!(3));
+    //     let a = CpuOwnedMatrix1D::from_vec(vec![1.0, 2.0, 3.0], [3]);
+    //     let b = CpuOwnedMatrix1D::from_vec(vec![1.0, 2.0, 3.0], [3]);
+    //     let ans = CpuOwnedMatrix1D::<f32>::zeros([3]);
     //
     //     let a = a.into_dyn_dim();
     //     let b = b.into_dyn_dim();
@@ -178,39 +173,39 @@ mod add {
 
     #[test]
     fn add_1d_scalar() {
-        let a = CpuOwnedMatrix1D::from_vec(vec![1.0, 2.0, 3.0], dim!(3));
-        let mut ans = CpuOwnedMatrix1D::<f32>::zeros(dim!(3));
-        let b = CpuOwnedMatrix0D::from_vec(vec![2.0], dim!());
+        let a = CpuOwnedMatrix1D::from_vec(vec![1.0, 2.0, 3.0], [3]);
+        let mut ans = CpuOwnedMatrix1D::<f32>::zeros([3]);
+        let b = CpuOwnedMatrix0D::from_vec(vec![2.0], []);
         ans.to_view_mut().add(a.to_view(), b.to_view());
 
-        assert_eq!(ans.index_item(dim!(0)), 3.0);
-        assert_eq!(ans.index_item(dim!(1)), 4.0);
-        assert_eq!(ans.index_item(dim!(2)), 5.0);
+        assert_eq!(ans.index_item([0]), 3.0);
+        assert_eq!(ans.index_item([1]), 4.0);
+        assert_eq!(ans.index_item([2]), 5.0);
     }
 
     #[test]
     fn add_1d_scalar_default_stride() {
-        let a = CpuOwnedMatrix1D::from_vec(vec![1.0, 2.0, 3.0], dim!(3));
-        let mut ans = CpuOwnedMatrix1D::<f32>::zeros(dim!(3));
+        let a = CpuOwnedMatrix1D::from_vec(vec![1.0, 2.0, 3.0], [3]);
+        let mut ans = CpuOwnedMatrix1D::<f32>::zeros([3]);
         ans.to_view_mut().add(a.to_view(), 1.0);
 
-        assert_eq!(ans.index_item(dim!(0)), 2.0);
-        assert_eq!(ans.index_item(dim!(1)), 3.0);
-        assert_eq!(ans.index_item(dim!(2)), 4.0);
+        assert_eq!(ans.index_item([0]), 2.0);
+        assert_eq!(ans.index_item([1]), 3.0);
+        assert_eq!(ans.index_item([2]), 4.0);
     }
 
     #[test]
     fn add_1d_scalar_sliced() {
-        let a = CpuOwnedMatrix1D::from_vec(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], dim!(6));
-        let mut ans = CpuOwnedMatrix1D::<f32>::zeros(dim!(3));
+        let a = CpuOwnedMatrix1D::from_vec(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], [6]);
+        let mut ans = CpuOwnedMatrix1D::<f32>::zeros([3]);
 
         let sliced = a.slice(slice!(..;2));
 
         ans.to_view_mut().add(sliced.to_view(), 1.0);
 
-        assert_eq!(ans.index_item(dim!(0)), 2.0);
-        assert_eq!(ans.index_item(dim!(1)), 4.0);
-        assert_eq!(ans.index_item(dim!(2)), 6.0);
+        assert_eq!(ans.index_item([0]), 2.0);
+        assert_eq!(ans.index_item([1]), 4.0);
+        assert_eq!(ans.index_item([2]), 6.0);
     }
 
     #[test]
@@ -221,53 +216,53 @@ mod add {
                 16.0, 17.0, 18.0, 19.0, 20.0, 21.0, 22.0, 23.0, 24.0, 25.0, 26.0, 27.0, 28.0, 29.0,
                 30.0, 31.0, 32.0, 33.0, 34.0, 35.0, 36.0,
             ],
-            dim!(3, 3, 4),
+            [3, 3, 4],
         );
 
-        let mut ans = CpuOwnedMatrix3D::<f32>::zeros(dim!(3, 3, 2));
+        let mut ans = CpuOwnedMatrix3D::<f32>::zeros([3, 3, 2]);
 
         let sliced = a.slice(slice!(.., .., ..;2));
 
         ans.to_view_mut().add(sliced.to_view(), 1.0);
 
-        assert_eq!(ans.index_item(dim!(0, 0, 0)), 2.0);
-        assert_eq!(ans.index_item(dim!(0, 0, 1)), 4.0);
-        assert_eq!(ans.index_item(dim!(0, 1, 0)), 6.0);
-        assert_eq!(ans.index_item(dim!(0, 1, 1)), 8.0);
-        assert_eq!(ans.index_item(dim!(0, 2, 0)), 10.0);
-        assert_eq!(ans.index_item(dim!(0, 2, 1)), 12.0);
-        assert_eq!(ans.index_item(dim!(1, 0, 0)), 14.0);
-        assert_eq!(ans.index_item(dim!(1, 0, 1)), 16.0);
-        assert_eq!(ans.index_item(dim!(1, 1, 0)), 18.0);
-        assert_eq!(ans.index_item(dim!(1, 1, 1)), 20.0);
-        assert_eq!(ans.index_item(dim!(1, 2, 0)), 22.0);
-        assert_eq!(ans.index_item(dim!(1, 2, 1)), 24.0);
-        assert_eq!(ans.index_item(dim!(2, 0, 0)), 26.0);
-        assert_eq!(ans.index_item(dim!(2, 0, 1)), 28.0);
-        assert_eq!(ans.index_item(dim!(2, 1, 0)), 30.0);
-        assert_eq!(ans.index_item(dim!(2, 1, 1)), 32.0);
-        assert_eq!(ans.index_item(dim!(2, 2, 0)), 34.0);
-        assert_eq!(ans.index_item(dim!(2, 2, 1)), 36.0);
+        assert_eq!(ans.index_item([0, 0, 0]), 2.0);
+        assert_eq!(ans.index_item([0, 0, 1]), 4.0);
+        assert_eq!(ans.index_item([0, 1, 0]), 6.0);
+        assert_eq!(ans.index_item([0, 1, 1]), 8.0);
+        assert_eq!(ans.index_item([0, 2, 0]), 10.0);
+        assert_eq!(ans.index_item([0, 2, 1]), 12.0);
+        assert_eq!(ans.index_item([1, 0, 0]), 14.0);
+        assert_eq!(ans.index_item([1, 0, 1]), 16.0);
+        assert_eq!(ans.index_item([1, 1, 0]), 18.0);
+        assert_eq!(ans.index_item([1, 1, 1]), 20.0);
+        assert_eq!(ans.index_item([1, 2, 0]), 22.0);
+        assert_eq!(ans.index_item([1, 2, 1]), 24.0);
+        assert_eq!(ans.index_item([2, 0, 0]), 26.0);
+        assert_eq!(ans.index_item([2, 0, 1]), 28.0);
+        assert_eq!(ans.index_item([2, 1, 0]), 30.0);
+        assert_eq!(ans.index_item([2, 1, 1]), 32.0);
+        assert_eq!(ans.index_item([2, 2, 0]), 34.0);
+        assert_eq!(ans.index_item([2, 2, 1]), 36.0);
     }
 
     #[test]
     fn add_1d_1d_default_stride() {
-        let a = CpuOwnedMatrix1D::from_vec(vec![1.0, 2.0, 3.0], dim!(3));
-        let b = CpuOwnedMatrix1D::from_vec(vec![1.0, 2.0, 3.0], dim!(3));
-        let mut ans = CpuOwnedMatrix1D::<f32>::zeros(dim!(3));
+        let a = CpuOwnedMatrix1D::from_vec(vec![1.0, 2.0, 3.0], [3]);
+        let b = CpuOwnedMatrix1D::from_vec(vec![1.0, 2.0, 3.0], [3]);
+        let mut ans = CpuOwnedMatrix1D::<f32>::zeros([3]);
         ans.to_view_mut().add(a.to_view(), b.to_view());
 
-        assert_eq!(ans.index_item(dim!(0)), 2.0);
-        assert_eq!(ans.index_item(dim!(1)), 4.0);
-        assert_eq!(ans.index_item(dim!(2)), 6.0);
+        assert_eq!(ans.index_item([0]), 2.0);
+        assert_eq!(ans.index_item([1]), 4.0);
+        assert_eq!(ans.index_item([2]), 6.0);
     }
 
     #[test]
     fn add_1d_1d_sliced() {
-        let a = CpuOwnedMatrix1D::from_vec(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], dim!(6));
-        let b = CpuOwnedMatrix1D::from_vec(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], dim!(6));
+        let a = CpuOwnedMatrix1D::from_vec(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], [6]);
+        let b = CpuOwnedMatrix1D::from_vec(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], [6]);
 
-        let mut ans = CpuOwnedMatrix1D::<f32>::zeros(dim!(3));
+        let mut ans = CpuOwnedMatrix1D::<f32>::zeros([3]);
 
         let sliced_a = a.slice(slice!(..;2));
         let sliced_b = b.slice(slice!(1..;2));
@@ -275,9 +270,9 @@ mod add {
         ans.to_view_mut()
             .add(sliced_a.to_view(), sliced_b.to_view());
 
-        assert_eq!(ans.index_item(dim!(0)), 3.0);
-        assert_eq!(ans.index_item(dim!(1)), 7.0);
-        assert_eq!(ans.index_item(dim!(2)), 11.0);
+        assert_eq!(ans.index_item([0]), 3.0);
+        assert_eq!(ans.index_item([1]), 7.0);
+        assert_eq!(ans.index_item([2]), 11.0);
     }
 
     #[test]
@@ -286,12 +281,12 @@ mod add {
             vec![
                 1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12., 13., 14., 15., 16.,
             ],
-            dim!(4, 4),
+            [4, 4],
         );
 
-        let b = CpuOwnedMatrix1D::from_vec(vec![1., 2., 3., 4., 5., 6., 7., 8.], dim!(8));
+        let b = CpuOwnedMatrix1D::from_vec(vec![1., 2., 3., 4., 5., 6., 7., 8.], [8]);
 
-        let mut ans = CpuOwnedMatrix2D::<f32>::zeros(dim!(2, 2));
+        let mut ans = CpuOwnedMatrix2D::<f32>::zeros([2, 2]);
 
         let sliced_a = a.slice(slice!(..2, ..2));
         let sliced_b = b.slice(slice!(..2));
@@ -299,10 +294,10 @@ mod add {
         ans.to_view_mut()
             .add(sliced_a.to_view(), sliced_b.to_view());
 
-        assert_eq!(ans.index_item(dim!(0, 0)), 2.0);
-        assert_eq!(ans.index_item(dim!(0, 1)), 4.0);
-        assert_eq!(ans.index_item(dim!(1, 0)), 6.0);
-        assert_eq!(ans.index_item(dim!(1, 1)), 8.0);
+        assert_eq!(ans.index_item([0, 0]), 2.0);
+        assert_eq!(ans.index_item([0, 1]), 4.0);
+        assert_eq!(ans.index_item([1, 0]), 6.0);
+        assert_eq!(ans.index_item([1, 1]), 8.0);
     }
 
     #[test]
@@ -312,11 +307,11 @@ mod add {
         for i in 0..num_elm {
             v.push(i as f32);
         }
-        let a = CpuOwnedMatrix3D::from_vec(v, dim!(4, 4, 4));
+        let a = CpuOwnedMatrix3D::from_vec(v, [4, 4, 4]);
 
-        let b = CpuOwnedMatrix1D::from_vec(vec![1., 2., 3., 4.], dim!(4));
+        let b = CpuOwnedMatrix1D::from_vec(vec![1., 2., 3., 4.], [4]);
 
-        let mut ans = CpuOwnedMatrix3D::<f32>::zeros(dim!(2, 2, 2));
+        let mut ans = CpuOwnedMatrix3D::<f32>::zeros([2, 2, 2]);
 
         let sliced_a = a.slice(slice!(..2, 1..;2, ..2));
         let sliced_b = b.slice(slice!(..2));
@@ -324,14 +319,14 @@ mod add {
         ans.to_view_mut()
             .add(sliced_a.to_view(), sliced_b.to_view());
 
-        assert_eq!(ans.index_item(dim!(0, 0, 0)), 5.);
-        assert_eq!(ans.index_item(dim!(0, 0, 1)), 7.);
-        assert_eq!(ans.index_item(dim!(0, 1, 0)), 13.);
-        assert_eq!(ans.index_item(dim!(0, 1, 1)), 15.);
-        assert_eq!(ans.index_item(dim!(1, 0, 0)), 21.);
-        assert_eq!(ans.index_item(dim!(1, 0, 1)), 23.);
-        assert_eq!(ans.index_item(dim!(1, 1, 0)), 29.);
-        assert_eq!(ans.index_item(dim!(1, 1, 1)), 31.);
+        assert_eq!(ans.index_item([0, 0, 0]), 5.);
+        assert_eq!(ans.index_item([0, 0, 1]), 7.);
+        assert_eq!(ans.index_item([0, 1, 0]), 13.);
+        assert_eq!(ans.index_item([0, 1, 1]), 15.);
+        assert_eq!(ans.index_item([1, 0, 0]), 21.);
+        assert_eq!(ans.index_item([1, 0, 1]), 23.);
+        assert_eq!(ans.index_item([1, 1, 0]), 29.);
+        assert_eq!(ans.index_item([1, 1, 1]), 31.);
     }
 
     #[test]
@@ -340,34 +335,34 @@ mod add {
             vec![
                 1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12., 13., 14., 15., 16.,
             ],
-            dim!(4, 4),
+            [4, 4],
         );
 
         let b = CpuOwnedMatrix2D::from_vec(
             vec![
                 1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12., 13., 14., 15., 16.,
             ],
-            dim!(4, 4),
+            [4, 4],
         );
 
-        let mut ans = CpuOwnedMatrix2D::<f32>::zeros(dim!(4, 4));
+        let mut ans = CpuOwnedMatrix2D::<f32>::zeros([4, 4]);
         ans.to_view_mut().add(a.to_view(), b.to_view());
 
-        assert_eq!(ans.index_item(dim!(0, 0)), 2.0);
-        assert_eq!(ans.index_item(dim!(0, 1)), 4.0);
-        assert_eq!(ans.index_item(dim!(0, 2)), 6.0);
-        assert_eq!(ans.index_item(dim!(0, 3)), 8.0);
-        assert_eq!(ans.index_item(dim!(1, 0)), 10.0);
-        assert_eq!(ans.index_item(dim!(1, 1)), 12.0);
-        assert_eq!(ans.index_item(dim!(1, 2)), 14.0);
-        assert_eq!(ans.index_item(dim!(1, 3)), 16.0);
-        assert_eq!(ans.index_item(dim!(2, 0)), 18.0);
-        assert_eq!(ans.index_item(dim!(2, 1)), 20.0);
-        assert_eq!(ans.index_item(dim!(2, 2)), 22.0);
-        assert_eq!(ans.index_item(dim!(2, 3)), 24.0);
-        assert_eq!(ans.index_item(dim!(3, 0)), 26.0);
-        assert_eq!(ans.index_item(dim!(3, 1)), 28.0);
-        assert_eq!(ans.index_item(dim!(3, 2)), 30.0);
-        assert_eq!(ans.index_item(dim!(3, 3)), 32.0);
+        assert_eq!(ans.index_item([0, 0]), 2.0);
+        assert_eq!(ans.index_item([0, 1]), 4.0);
+        assert_eq!(ans.index_item([0, 2]), 6.0);
+        assert_eq!(ans.index_item([0, 3]), 8.0);
+        assert_eq!(ans.index_item([1, 0]), 10.0);
+        assert_eq!(ans.index_item([1, 1]), 12.0);
+        assert_eq!(ans.index_item([1, 2]), 14.0);
+        assert_eq!(ans.index_item([1, 3]), 16.0);
+        assert_eq!(ans.index_item([2, 0]), 18.0);
+        assert_eq!(ans.index_item([2, 1]), 20.0);
+        assert_eq!(ans.index_item([2, 2]), 22.0);
+        assert_eq!(ans.index_item([2, 3]), 24.0);
+        assert_eq!(ans.index_item([3, 0]), 26.0);
+        assert_eq!(ans.index_item([3, 1]), 28.0);
+        assert_eq!(ans.index_item([3, 2]), 30.0);
+        assert_eq!(ans.index_item([3, 3]), 32.0);
     }
 }

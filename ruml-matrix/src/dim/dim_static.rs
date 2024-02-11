@@ -53,6 +53,33 @@ impl DimTrait for Dim0 {
     }
 }
 
+impl From<&[usize]> for Dim0 {
+    fn from(dim: &[usize]) -> Self {
+        if dim.len() != 0 {
+            panic!("Invalid dimension");
+        }
+        Dim0 {}
+    }
+}
+
+impl From<&[usize; 0]> for Dim0 {
+    fn from(dim: &[usize; 0]) -> Self {
+        if dim.len() != 0 {
+            panic!("Invalid dimension");
+        }
+        Dim0 {}
+    }
+}
+
+impl From<[usize; 0]> for Dim0 {
+    fn from(dim: [usize; 0]) -> Self {
+        if dim.len() != 0 {
+            panic!("Invalid dimension");
+        }
+        Dim0 {}
+    }
+}
+
 macro_rules! impl_dim {
     ($name:ident, $number_of_elm:expr) => {
         #[derive(Clone, Debug, Copy, Default)]
@@ -131,9 +158,9 @@ macro_rules! impl_dim {
             }
         }
 
-        impl Into<[usize; $number_of_elm]> for $name {
-            fn into(self) -> [usize; $number_of_elm] {
-                self.dim
+        impl From<[usize; $number_of_elm]> for $name {
+            fn from(array: [usize; $number_of_elm]) -> Self {
+                $name { dim: array }
             }
         }
     };
@@ -183,28 +210,28 @@ impl_grater_dim_trait!(Dim3, Dim4);
 //     #[test]
 //     fn test_1d() {
 //         let ans = Dim1::new([1]);
-//         let dim = dim!(1);
+//         let dim = [1];
 //         assert_eq!(ans, dim);
 //     }
 //
 //     #[test]
 //     fn test_2d() {
 //         let ans = Dim2::new([1, 2]);
-//         let dim = dim!(1, 2);
+//         let dim = [1, 2];
 //         assert_eq!(ans, dim);
 //     }
 //
 //     #[test]
 //     fn test_3d() {
 //         let ans = Dim3::new([1, 2, 3]);
-//         let dim = dim!(1, 2, 3);
+//         let dim = [1, 2, 3];
 //         assert_eq!(ans, dim);
 //     }
 //
 //     #[test]
 //     fn test_4d() {
 //         let ans = Dim4::new([1, 2, 3, 4]);
-//         let dim = dim!(1, 2, 3, 4);
+//         let dim = [1, 2, 3, 4];
 //         assert_eq!(ans, dim);
 //     }
 // }

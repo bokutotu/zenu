@@ -72,7 +72,6 @@ impl_copy_from!(Dim4);
 mod deep_copy {
     use super::*;
     use crate::{
-        dim,
         matrix::{
             IndexItem, MatrixSlice, MatrixSliceMut, OwnedMatrix, ToViewMatrix, ToViewMutMatrix,
         },
@@ -85,17 +84,17 @@ mod deep_copy {
         let a = vec![0f32; 6];
         let b = vec![1f32, 2., 3., 4., 5., 6.];
 
-        let mut a = CpuOwnedMatrix1D::from_vec(a, dim!(6));
-        let b = CpuOwnedMatrix1D::from_vec(b, dim!(6));
+        let mut a = CpuOwnedMatrix1D::from_vec(a, [6]);
+        let b = CpuOwnedMatrix1D::from_vec(b, [6]);
 
         a.to_view_mut().copy_from(&b.to_view());
 
-        assert_eq!(a.index_item(dim!(0)), 1.);
-        assert_eq!(a.index_item(dim!(1)), 2.);
-        assert_eq!(a.index_item(dim!(2)), 3.);
-        assert_eq!(a.index_item(dim!(3)), 4.);
-        assert_eq!(a.index_item(dim!(4)), 5.);
-        assert_eq!(a.index_item(dim!(5)), 6.);
+        assert_eq!(a.index_item([0]), 1.);
+        assert_eq!(a.index_item([1]), 2.);
+        assert_eq!(a.index_item([2]), 3.);
+        assert_eq!(a.index_item([3]), 4.);
+        assert_eq!(a.index_item([4]), 5.);
+        assert_eq!(a.index_item([5]), 6.);
     }
 
     #[test]
@@ -103,19 +102,19 @@ mod deep_copy {
         let a = vec![0f32; 6];
         let v = vec![0f32, 1., 2., 3., 4., 5.];
 
-        let mut a = CpuOwnedMatrix1D::from_vec(a.clone(), dim!(6));
-        let v = CpuOwnedMatrix1D::from_vec(v, dim!(6));
+        let mut a = CpuOwnedMatrix1D::from_vec(a.clone(), [6]);
+        let v = CpuOwnedMatrix1D::from_vec(v, [6]);
 
         let mut a_sliced = a.slice_mut(slice!(..;2));
         let v_sliced = v.slice(slice!(0..3));
 
         a_sliced.copy_from(&v_sliced);
-        assert_eq!(a.index_item(dim!(0)), 0.);
-        assert_eq!(a.index_item(dim!(1)), 0.);
-        assert_eq!(a.index_item(dim!(2)), 1.);
-        assert_eq!(a.index_item(dim!(3)), 0.);
-        assert_eq!(a.index_item(dim!(4)), 2.);
-        assert_eq!(a.index_item(dim!(5)), 0.);
+        assert_eq!(a.index_item([0]), 0.);
+        assert_eq!(a.index_item([1]), 0.);
+        assert_eq!(a.index_item([2]), 1.);
+        assert_eq!(a.index_item([3]), 0.);
+        assert_eq!(a.index_item([4]), 2.);
+        assert_eq!(a.index_item([5]), 0.);
     }
 
     #[test]
@@ -123,37 +122,37 @@ mod deep_copy {
         let a = vec![0f32; 6];
         let b = vec![1f32, 2., 3., 4., 5., 6.];
 
-        let mut a = CpuOwnedMatrix2D::from_vec(a, dim!(2, 3));
-        let b = CpuOwnedMatrix2D::from_vec(b, dim!(2, 3));
+        let mut a = CpuOwnedMatrix2D::from_vec(a, [2, 3]);
+        let b = CpuOwnedMatrix2D::from_vec(b, [2, 3]);
 
         a.to_view_mut().copy_from(&b.to_view());
 
-        assert_eq!(a.index_item(dim!(0, 0)), 1.);
-        assert_eq!(a.index_item(dim!(0, 1)), 2.);
-        assert_eq!(a.index_item(dim!(0, 2)), 3.);
-        assert_eq!(a.index_item(dim!(1, 0)), 4.);
-        assert_eq!(a.index_item(dim!(1, 1)), 5.);
-        assert_eq!(a.index_item(dim!(1, 2)), 6.);
+        assert_eq!(a.index_item([0, 0]), 1.);
+        assert_eq!(a.index_item([0, 1]), 2.);
+        assert_eq!(a.index_item([0, 2]), 3.);
+        assert_eq!(a.index_item([1, 0]), 4.);
+        assert_eq!(a.index_item([1, 1]), 5.);
+        assert_eq!(a.index_item([1, 2]), 6.);
     }
 
     #[test]
     fn sliced_2d() {
         let a = vec![0f32; 12];
         let v = vec![0f32, 1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11.];
-        let mut a = CpuOwnedMatrix2D::from_vec(a.clone(), dim!(3, 4));
-        let v = CpuOwnedMatrix2D::from_vec(v, dim!(3, 4));
+        let mut a = CpuOwnedMatrix2D::from_vec(a.clone(), [3, 4]);
+        let v = CpuOwnedMatrix2D::from_vec(v, [3, 4]);
 
         let mut a_sliced = a.slice_mut(slice!(0..2, 0..3));
         let v_sliced = v.slice(slice!(1..3, 1..4));
 
         a_sliced.copy_from(&v_sliced);
-        assert_eq!(a.index_item(dim!(0, 0)), 5.);
-        assert_eq!(a.index_item(dim!(0, 1)), 6.);
-        assert_eq!(a.index_item(dim!(0, 2)), 7.);
-        assert_eq!(a.index_item(dim!(0, 3)), 0.);
-        assert_eq!(a.index_item(dim!(1, 0)), 9.);
-        assert_eq!(a.index_item(dim!(1, 1)), 10.);
-        assert_eq!(a.index_item(dim!(1, 2)), 11.);
-        assert_eq!(a.index_item(dim!(2, 3)), 0.);
+        assert_eq!(a.index_item([0, 0]), 5.);
+        assert_eq!(a.index_item([0, 1]), 6.);
+        assert_eq!(a.index_item([0, 2]), 7.);
+        assert_eq!(a.index_item([0, 3]), 0.);
+        assert_eq!(a.index_item([1, 0]), 9.);
+        assert_eq!(a.index_item([1, 1]), 10.);
+        assert_eq!(a.index_item([1, 2]), 11.);
+        assert_eq!(a.index_item([2, 3]), 0.);
     }
 }

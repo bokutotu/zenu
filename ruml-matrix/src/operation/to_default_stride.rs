@@ -1,6 +1,5 @@
 use crate::{
     cpu_memory::{CpuOwnedMemory, CpuViewMemory, CpuViewMutMemory},
-    dim,
     dim::{Dim1, Dim2, Dim3, Dim4},
     index::Index0D,
     matrix::{
@@ -25,7 +24,7 @@ impl<T: Num> ToDefaultStride for Matrix<CpuOwnedMemory<T>, Dim1> {
         for idx in 0..self.shape_stride().shape()[0] {
             output
                 .to_view_mut()
-                .index_item_asign(dim!(idx), self.index_item(dim!(idx)));
+                .index_item_asign([idx], self.index_item([idx]));
         }
         output
     }
@@ -38,7 +37,7 @@ impl<T: Num> ToDefaultStride for Matrix<CpuViewMemory<'_, T>, Dim1> {
         for idx in 0..self.shape_stride().shape()[0] {
             output
                 .to_view_mut()
-                .index_item_asign(dim!(idx), self.index_item(dim!(idx)));
+                .index_item_asign([idx], self.index_item([idx]));
         }
         output
     }
@@ -87,7 +86,7 @@ mod to_default_stride {
             0., 1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12., 13., 14., 15.,
         ];
 
-        let m = CpuOwnedMatrix1D::from_vec(v.clone(), dim!(16));
+        let m = CpuOwnedMatrix1D::from_vec(v.clone(), [16]);
         let sliced = m.slice(slice!(..;2));
         let default_strided = sliced.to_default_stride();
 
@@ -96,11 +95,11 @@ mod to_default_stride {
             default_stride(default_strided.shape_stride().shape())
         );
 
-        assert_eq!(default_strided.index_item(dim!(0)), 0.);
-        assert_eq!(default_strided.index_item(dim!(1)), 2.);
-        assert_eq!(default_strided.index_item(dim!(2)), 4.);
-        assert_eq!(default_strided.index_item(dim!(3)), 6.);
-        assert_eq!(default_strided.index_item(dim!(4)), 8.);
+        assert_eq!(default_strided.index_item([0]), 0.);
+        assert_eq!(default_strided.index_item([1]), 2.);
+        assert_eq!(default_strided.index_item([2]), 4.);
+        assert_eq!(default_strided.index_item([3]), 6.);
+        assert_eq!(default_strided.index_item([4]), 8.);
     }
 
     #[test]
@@ -111,7 +110,7 @@ mod to_default_stride {
             8., 9., 10., 11., 12., 13., 14., 15.,
         ];
 
-        let m = CpuOwnedMatrix2D::from_vec(v.clone(), dim!(4, 4));
+        let m = CpuOwnedMatrix2D::from_vec(v.clone(), [4, 4]);
         let sliced = m.slice(slice!(..;2, ..;2));
         let default_strided = sliced.to_default_stride();
 
@@ -120,9 +119,9 @@ mod to_default_stride {
             default_stride(default_strided.shape_stride().shape())
         );
 
-        assert_eq!(default_strided.index_item(dim!(0, 0)), 0.);
-        assert_eq!(default_strided.index_item(dim!(0, 1)), 2.);
-        assert_eq!(default_strided.index_item(dim!(1, 0)), 8.);
-        assert_eq!(default_strided.index_item(dim!(1, 1)), 10.);
+        assert_eq!(default_strided.index_item([0, 0]), 0.);
+        assert_eq!(default_strided.index_item([0, 1]), 2.);
+        assert_eq!(default_strided.index_item([1, 0]), 8.);
+        assert_eq!(default_strided.index_item([1, 1]), 10.);
     }
 }
