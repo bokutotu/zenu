@@ -2,9 +2,10 @@ use std::any::TypeId;
 
 use crate::{
     cpu_memory::{CpuOwnedMemory, CpuViewMemory, CpuViewMutMemory},
-    dim::{cal_offset, default_stride, DimTrait, LessDimTrait},
-    dim_impl::{Dim0, Dim1, Dim2, Dim3, Dim4, DimDyn},
-    index::{IndexAxisTrait, ShapeStride, SliceTrait},
+    dim::{
+        cal_offset, default_stride, Dim0, Dim1, Dim2, Dim3, Dim4, DimDyn, DimTrait, LessDimTrait,
+    },
+    index::{IndexAxisTrait, SliceTrait},
     matrix::{
         AsMutPtr, AsPtr, BlasMatrix, IndexAxis, IndexAxisMut, IndexItem, IndexItemAsign,
         MatrixBase, MatrixSlice, MatrixSliceDyn, MatrixSliceMut, OwnedMatrix, ToOwnedMatrix,
@@ -15,6 +16,7 @@ use crate::{
         ViewMutMemory,
     },
     num::Num,
+    shape_stride::ShapeStride,
     slice::Slice,
 };
 
@@ -361,7 +363,7 @@ pub type CpuViewMutMatrixDyn<'a, T> = Matrix<CpuViewMutMemory<'a, T>, DimDyn>;
 #[cfg(test)]
 mod matrix_slice {
     use crate::dim;
-    use crate::dim_impl::Dim1;
+    use crate::dim::Dim1;
     use crate::slice;
 
     use super::*;

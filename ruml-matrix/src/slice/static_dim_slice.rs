@@ -1,6 +1,7 @@
 use crate::{
-    dim_impl::{Dim0, Dim1, Dim2, Dim3, Dim4},
-    index::{ShapeStride, SliceTrait},
+    dim::{Dim0, Dim1, Dim2, Dim3, Dim4},
+    index::SliceTrait,
+    shape_stride::ShapeStride,
 };
 
 use super::slice_dim::SliceDim;
@@ -76,7 +77,7 @@ impl_slice_ty!(Slice4D, 4, Dim4);
 
 #[cfg(test)]
 mod static_dim_slice {
-    use crate::dim_impl::{Dim1, Dim2, Dim3};
+    use crate::dim::{Dim1, Dim2, Dim3};
     use crate::index::SliceTrait;
     use crate::slice;
 

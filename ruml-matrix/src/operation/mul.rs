@@ -2,9 +2,8 @@ use std::any::TypeId;
 
 use crate::{
     dim,
-    dim::DimTrait,
-    dim_impl::{Dim0, Dim1, Dim2, Dim3, Dim4},
-    index_impl::Index0D,
+    dim::{Dim0, Dim1, Dim2, Dim3, Dim4, DimTrait},
+    index::Index0D,
     matrix::{
         IndexAxis, IndexAxisMut, IndexItem, IndexItemAsign, MatrixBase, ViewMatrix, ViewMutMatix,
     },

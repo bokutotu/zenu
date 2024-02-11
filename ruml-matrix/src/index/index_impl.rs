@@ -81,7 +81,7 @@ impl_index_axis_trait!(Index3D);
 #[cfg(test)]
 mod index_xd {
     use super::{Index0D, Index1D, Index2D, Index3D};
-    use crate::dim_impl::{Dim1, Dim2, Dim3, Dim4};
+    use crate::dim::{Dim1, Dim2, Dim3, Dim4};
 
     #[test]
     fn offset_1d() {

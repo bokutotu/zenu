@@ -136,7 +136,7 @@ macro_rules! slice_dynamic {
 
     (@final [$($dim:expr),*]) => {{
         let slice = [$($dim),*];
-        let slice_ref = &slice as &[SliceDim];
+        let slice_ref = &slice as &[$crate::slice::SliceDim];
         $crate::slice::dynamic::Slice::from(slice_ref)
     }};
 

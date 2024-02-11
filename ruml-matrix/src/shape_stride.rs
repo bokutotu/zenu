@@ -1,9 +1,6 @@
 use std::fmt::Debug;
 
-use crate::{
-    dim::{default_stride, DimTrait},
-    dim_impl::{convert_dim, DimDyn},
-};
+use crate::dim::{convert_dim, default_stride, DimDyn, DimTrait};
 
 #[derive(Clone, Debug, Copy, PartialEq)]
 pub struct ShapeStride<D: DimTrait> {
@@ -122,26 +119,11 @@ impl<D: DimTrait> ShapeStride<D> {
     }
 }
 
-pub trait SliceTrait {
-    type Dim: DimTrait;
-    fn sliced_shape_stride(&self, shape: Self::Dim, stride: Self::Dim) -> ShapeStride<Self::Dim>;
-    fn sliced_offset(&self, stride: Self::Dim, original_offset: usize) -> usize;
-}
-
-pub trait IndexAxisTrait {
-    fn get_shape_stride<Din: DimTrait, Dout: DimTrait>(
-        &self,
-        shape: Din,
-        stride: Din,
-    ) -> ShapeStride<Dout>;
-    fn offset<Din: DimTrait>(&self, stride: Din) -> usize;
-}
-
 #[cfg(test)]
 mod shape_stride {
+    use super::*;
     use crate::dim;
     use crate::dim::default_stride;
-    use crate::index::ShapeStride;
 
     #[test]
     fn is_transposed_false() {

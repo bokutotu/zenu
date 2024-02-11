@@ -1,8 +1,7 @@
 use crate::{
     blas::Blas,
-    dim::DimTrait,
-    dim_impl::{Dim1, Dim2, Dim3, Dim4},
-    index_impl::Index0D,
+    dim::{Dim1, Dim2, Dim3, Dim4, DimTrait},
+    index::Index0D,
     matrix::{AsPtr, BlasMatrix, IndexAxis, IndexItem, MatrixBase, ViewMatrix},
     matrix_impl::Matrix,
     memory::{Memory, ViewMemory},

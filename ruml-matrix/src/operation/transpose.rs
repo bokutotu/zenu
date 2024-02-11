@@ -1,5 +1,5 @@
 use crate::{
-    dim_impl::{Dim2, Dim3, Dim4},
+    dim::{Dim2, Dim3, Dim4},
     matrix::MatrixBase,
     matrix_impl::Matrix,
     memory::Memory,

@@ -1,8 +1,8 @@
 use crate::{
     cpu_memory::{CpuOwnedMemory, CpuViewMemory, CpuViewMutMemory},
     dim,
-    dim_impl::{Dim1, Dim2, Dim3, Dim4},
-    index_impl::Index0D,
+    dim::{Dim1, Dim2, Dim3, Dim4},
+    index::Index0D,
     matrix::{
         IndexAxis, IndexAxisMut, IndexItem, IndexItemAsign, MatrixBase, OwnedMatrix, ToViewMatrix,
         ToViewMutMatrix,

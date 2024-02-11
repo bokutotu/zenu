@@ -1,5 +1,5 @@
 use crate::{
-    dim_impl::Dim1,
+    dim::Dim1,
     matrix::{MatrixBase, ViewMatrix},
     matrix_blas::dot::dot,
     num::Num,

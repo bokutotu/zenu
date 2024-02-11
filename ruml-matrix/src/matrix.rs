@@ -1,9 +1,9 @@
 use crate::{
     blas::Blas,
-    dim::{DimTrait, LessDimTrait},
-    dim_impl::DimDyn,
-    index::{IndexAxisTrait, ShapeStride, SliceTrait},
+    dim::{DimDyn, DimTrait, LessDimTrait},
+    index::{IndexAxisTrait, SliceTrait},
     num::Num,
+    shape_stride::ShapeStride,
     slice::Slice,
 };
 

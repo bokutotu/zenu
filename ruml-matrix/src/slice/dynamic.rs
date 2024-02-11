@@ -1,10 +1,8 @@
 use super::slice_dim::SliceDim;
-use crate::{
-    dim_impl::DimDyn,
-    index::{ShapeStride, SliceTrait},
-};
+use crate::{dim::DimDyn, index::SliceTrait, shape_stride::ShapeStride};
 
 #[derive(Clone, Debug, Copy, PartialEq)]
+
 pub struct Slice {
     pub index: [SliceDim; 4],
     pub len: usize,
@@ -80,10 +78,14 @@ impl From<&[SliceDim]> for Slice {
 
 #[cfg(test)]
 mod slice_dyn_slice {
-    use crate::dim_impl::DimDyn;
+    use crate::{dim::DimDyn, index::SliceTrait, slice_dynamic};
 
     #[test]
     fn dyn_slice() {
-        let shape = DimDyn::from(&[3, 3, 3]);
+        let shape = DimDyn::new(&[2, 3, 4]);
+        let stride = DimDyn::new(&[12, 4, 1]);
+        let slice = slice_dynamic!(.., 1, 1..2);
+        let shape_stride = slice.sliced_shape_stride(shape, stride);
+        assert_eq!(shape_stride.shape.as_slice(), &[2, 3, 1]);
     }
 }
