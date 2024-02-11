@@ -425,10 +425,23 @@ mod matrix_slice {
 
         // into dyn
         let m = m.into_dyn_dim();
-        let s = m.slice_dyn(slice_dynamic!(0..2, 0..2, 2, 0..4));
+        let s = m.slice_dyn(slice_dynamic!(.., .., 2, ..));
 
-        // assert_eq!(s.index_item([0, 0, 0]), 9.);
-        // assert_eq!(s.index_item([0, 0, 1]), 10.);
-        // assert_eq!(s.index_item([0, 1, 0]), 13.);
+        assert_eq!(s.index_item([0, 0, 0]), 9.);
+        assert_eq!(s.index_item([0, 0, 1]), 10.);
+        assert_eq!(s.index_item([0, 0, 2]), 11.);
+        assert_eq!(s.index_item([0, 0, 3]), 12.);
+        assert_eq!(s.index_item([0, 1, 0]), 25.);
+        assert_eq!(s.index_item([0, 1, 1]), 26.);
+        assert_eq!(s.index_item([0, 1, 2]), 27.);
+        assert_eq!(s.index_item([0, 1, 3]), 28.);
+        assert_eq!(s.index_item([1, 0, 0]), 41.);
+        assert_eq!(s.index_item([1, 0, 1]), 42.);
+        assert_eq!(s.index_item([1, 0, 2]), 43.);
+        assert_eq!(s.index_item([1, 0, 3]), 44.);
+        assert_eq!(s.index_item([1, 1, 0]), 57.);
+        assert_eq!(s.index_item([1, 1, 1]), 58.);
+        assert_eq!(s.index_item([1, 1, 2]), 59.);
+        assert_eq!(s.index_item([1, 1, 3]), 60.);
     }
 }
