@@ -158,18 +158,18 @@ mod add {
 
     use super::*;
 
-    // #[test]
-    // fn add_dyn_dyn() {
-    //     let a = CpuOwnedMatrix1D::from_vec(vec![1.0, 2.0, 3.0], [3]);
-    //     let b = CpuOwnedMatrix1D::from_vec(vec![1.0, 2.0, 3.0], [3]);
-    //     let ans = CpuOwnedMatrix1D::<f32>::zeros([3]);
-    //
-    //     let a = a.into_dyn_dim();
-    //     let b = b.into_dyn_dim();
-    //     let mut ans = ans.into_dyn_dim();
-    //
-    //     ans.to_view_mut().add(a.to_view(), b.to_view());
-    // }
+    #[test]
+    fn add_dyn_dyn() {
+        let a = CpuOwnedMatrix1D::from_vec(vec![1.0, 2.0, 3.0], [3]);
+        let b = CpuOwnedMatrix1D::from_vec(vec![1.0, 2.0, 3.0], [3]);
+        let ans = CpuOwnedMatrix1D::<f32>::zeros([3]);
+
+        let a = a.into_dyn_dim();
+        let b = b.into_dyn_dim();
+        let mut ans = ans.into_dyn_dim();
+
+        ans.to_view_mut().add(a.to_view(), b.to_view());
+    }
 
     #[test]
     fn add_1d_scalar() {

@@ -19,6 +19,7 @@ pub trait DimTrait:
     + Default
     + PartialEq
     + Debug
+    + for<'a> From<&'a [usize]>
     + 'static
 {
     fn len(&self) -> usize;
@@ -33,6 +34,8 @@ pub trait DimTrait:
     fn num_elm(&self) -> usize {
         self.into_iter().product()
     }
+
+    fn slice(&self) -> &[usize];
 }
 
 pub trait LessDimTrait: DimTrait {

@@ -51,6 +51,10 @@ impl DimTrait for Dim0 {
     fn is_overflow<D: DimTrait>(&self, index: D) -> bool {
         index.len() != 0
     }
+
+    fn slice(&self) -> &[usize] {
+        &[]
+    }
 }
 
 impl From<&[usize]> for Dim0 {
@@ -139,6 +143,10 @@ macro_rules! impl_dim {
 
             fn is_empty(&self) -> bool {
                 self.dim.iter().all(|&d| d == 0)
+            }
+
+            fn slice(&self) -> &[usize] {
+                &self.dim
             }
         }
 

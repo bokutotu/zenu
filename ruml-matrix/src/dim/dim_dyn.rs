@@ -96,6 +96,10 @@ impl DimTrait for DimDyn {
     fn is_overflow<D: DimTrait>(&self, index: D) -> bool {
         index.len() != self.len
     }
+
+    fn slice(&self) -> &[usize] {
+        &self.dim[0..self.len]
+    }
 }
 
 impl From<&[usize]> for DimDyn {
