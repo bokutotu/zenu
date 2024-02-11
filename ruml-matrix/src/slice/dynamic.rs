@@ -1,5 +1,9 @@
 use super::slice_dim::SliceDim;
-use crate::{dim::DimDyn, index::SliceTrait, shape_stride::ShapeStride};
+use crate::{
+    dim::{DimDyn, DimTrait},
+    index::SliceTrait,
+    shape_stride::ShapeStride,
+};
 
 #[derive(Clone, Debug, Copy, PartialEq)]
 
@@ -12,21 +16,18 @@ impl SliceTrait for Slice {
     type Dim = DimDyn;
 
     fn sliced_shape_stride(&self, shape: Self::Dim, stride: Self::Dim) -> ShapeStride<Self::Dim> {
-        let mut len = 0;
         let mut new_shape = DimDyn::default();
         let mut new_stride = DimDyn::default();
 
         for i in 0..self.len {
-            let new_dim = self.index[i].new_dim(shape[i]);
-            if new_dim == 0 {
-                continue;
+            match self.index[i].new_dim(shape[i]) {
+                0 => continue,
+                new_dim => {
+                    new_shape.push_dim(new_dim);
+                    new_stride.push_dim(self.index[i].new_stride(stride[i]));
+                }
             }
-            new_shape[i] = new_dim;
-            new_stride[i] = self.index[i].new_stride(stride[i]);
-            len += 1;
         }
-        new_shape.set_len(len);
-        new_stride.set_len(len);
 
         ShapeStride::new(new_shape, new_stride)
     }
@@ -86,6 +87,9 @@ mod slice_dyn_slice {
         let stride = DimDyn::new(&[12, 4, 1]);
         let slice = slice_dynamic!(.., 1, 1..2);
         let shape_stride = slice.sliced_shape_stride(shape, stride);
-        assert_eq!(shape_stride.shape.as_slice(), &[2, 3, 1]);
+        let result_shape = dbg!(shape_stride.shape());
+        let result_stride = dbg!(shape_stride.stride());
+        assert_eq!(result_shape, DimDyn::new(&[2, 1]));
+        assert_eq!(result_stride, DimDyn::new(&[12, 1]));
     }
 }

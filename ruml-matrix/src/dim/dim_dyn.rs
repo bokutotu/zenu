@@ -15,9 +15,8 @@ impl DimDyn {
         }
         let mut dim_dyn = DimDyn::default();
         for i in 0..dim.len() {
-            dim_dyn[i] = dim[i];
+            dim_dyn.push_dim(dim[i])
         }
-        dim_dyn.len = dim.len();
         dim_dyn
     }
 
@@ -36,12 +35,21 @@ impl DimDyn {
     pub fn get_len(&self) -> usize {
         self.len
     }
+
+    pub(crate) fn inc_len(&mut self) {
+        self.len += 1;
+    }
+
+    pub(crate) fn push_dim(&mut self, dim: usize) {
+        self.dim[self.len] = dim;
+        self.inc_len();
+    }
 }
 
 pub(crate) fn convert_dim<Din: DimTrait, Dout: DimTrait>(dim: Din) -> Dout {
     let mut dim_out = Dout::default();
     for i in 0..dim.len() {
-        dim_out[i] = dim[i];
+        // dim_out.push_dim(dim[i], i);
     }
     dim_out
 }
