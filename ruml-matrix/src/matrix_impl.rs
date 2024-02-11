@@ -422,9 +422,9 @@ mod matrix_slice {
 
         // into dyn
         let m = m.into_dyn_dim();
-        // let s = m.slice_dyn(slice_dynamic!(0..2, 0..2, 2, 0..4));
+        let s = m.slice_dyn(slice_dynamic!(0..2, 0..2, 2, 0..4));
 
-        // assert_eq!(s.index_item(dim!(0, 0, 0)), 9.);
+        assert_eq!(s.index_item(dim!(0, 0, 0)), 9.);
         // assert_eq!(s.index_item(dim!(0, 0, 1)), 10.);
         // assert_eq!(s.index_item(dim!(0, 1, 0)), 13.);
     }

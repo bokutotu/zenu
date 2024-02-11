@@ -46,10 +46,10 @@ impl DimDyn {
     }
 }
 
-pub(crate) fn convert_dim<Din: DimTrait, Dout: DimTrait>(dim: Din) -> Dout {
-    let mut dim_out = Dout::default();
+pub(crate) fn into_dyn<Din: DimTrait>(dim: Din) -> DimDyn {
+    let mut dim_out = DimDyn::default();
     for i in 0..dim.len() {
-        // dim_out.push_dim(dim[i], i);
+        dim_out.push_dim(dim[i]);
     }
     dim_out
 }

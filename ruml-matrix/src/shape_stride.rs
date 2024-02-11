@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use crate::dim::{convert_dim, default_stride, DimDyn, DimTrait};
+use crate::dim::{default_stride, into_dyn, DimDyn, DimTrait};
 
 #[derive(Clone, Debug, Copy, PartialEq)]
 pub struct ShapeStride<D: DimTrait> {
@@ -113,8 +113,8 @@ impl<D: DimTrait> ShapeStride<D> {
     }
 
     pub(crate) fn into_dyn(self) -> ShapeStride<DimDyn> {
-        let shape = convert_dim(self.shape);
-        let stride = convert_dim(self.stride);
+        let shape = into_dyn(self.shape);
+        let stride = into_dyn(self.stride);
         ShapeStride::new(shape, stride)
     }
 }
