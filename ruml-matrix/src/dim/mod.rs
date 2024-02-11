@@ -1,3 +1,12 @@
+pub mod dim_dyn;
+pub mod dim_static;
+
+pub(crate) use dim_dyn::convert_dim;
+pub use dim_dyn::DimDyn;
+pub use dim_static::{Dim0, Dim1, Dim2, Dim3, Dim4};
+// pub use dim_dyn::*;
+// pub use dim_static::*;
+
 use std::{
     fmt::Debug,
     ops::{Index, IndexMut},

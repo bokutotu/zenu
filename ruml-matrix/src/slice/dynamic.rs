@@ -14,13 +14,21 @@ impl SliceTrait for Slice {
     type Dim = DimDyn;
 
     fn sliced_shape_stride(&self, shape: Self::Dim, stride: Self::Dim) -> ShapeStride<Self::Dim> {
-        let mut new_shape = shape;
-        let mut new_stride = stride;
+        let mut len = 0;
+        let mut new_shape = DimDyn::default();
+        let mut new_stride = DimDyn::default();
 
         for i in 0..self.len {
-            new_shape[i] = self.index[i].new_dim(shape[i]);
+            let new_dim = self.index[i].new_dim(shape[i]);
+            if new_dim == 0 {
+                continue;
+            }
+            new_shape[i] = new_dim;
             new_stride[i] = self.index[i].new_stride(stride[i]);
+            len += 1;
         }
+        new_shape.set_len(len);
+        new_stride.set_len(len);
 
         ShapeStride::new(new_shape, new_stride)
     }
@@ -67,5 +75,15 @@ impl From<&[SliceDim]> for Slice {
                 len: 4,
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod slice_dyn_slice {
+    use crate::dim_impl::DimDyn;
+
+    #[test]
+    fn dyn_slice() {
+        let shape = DimDyn::from(&[3, 3, 3]);
     }
 }

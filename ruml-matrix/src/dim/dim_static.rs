@@ -2,94 +2,6 @@ use std::ops::{Index, IndexMut};
 
 use crate::dim::{DimTrait, GreaterDimTrait, LessDimTrait};
 
-#[derive(Clone, Debug, Default, PartialEq, Copy)]
-pub struct DimDyn {
-    dim: [usize; 4],
-    len: usize,
-}
-
-impl DimDyn {
-    pub fn new(dim: &[usize]) -> Self {
-        if dim.len() > 4 {
-            panic!("Dim must be smaller than 4");
-        }
-        let mut dim_dyn = DimDyn::default();
-        for i in 0..dim.len() {
-            dim_dyn[i] = dim[i];
-        }
-        dim_dyn.len = dim.len();
-        dim_dyn
-    }
-
-    pub fn dim(&self) -> [usize; 4] {
-        self.dim
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.len == 0
-    }
-
-    pub fn set_len(&mut self, len: usize) {
-        self.len = len;
-    }
-
-    pub fn get_len(&self) -> usize {
-        self.len
-    }
-}
-
-pub(crate) fn convert_dim<Din: DimTrait, Dout: DimTrait>(dim: Din) -> Dout {
-    let mut dim_out = Dout::default();
-    for i in 0..dim.len() {
-        dim_out[i] = dim[i];
-    }
-    dim_out
-}
-
-impl Index<usize> for DimDyn {
-    type Output = usize;
-
-    fn index(&self, index: usize) -> &Self::Output {
-        if index >= self.len {
-            panic!("Index out of range");
-        }
-        &self.dim[index]
-    }
-}
-
-impl IndexMut<usize> for DimDyn {
-    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
-        if index >= self.len {
-            panic!("Index out of range");
-        }
-        &mut self.dim[index]
-    }
-}
-
-impl IntoIterator for DimDyn {
-    type Item = usize;
-    type IntoIter = std::vec::IntoIter<Self::Item>;
-
-    #[allow(clippy::unnecessary_to_owned)]
-    fn into_iter(self) -> Self::IntoIter {
-        self.dim.to_vec().into_iter()
-    }
-}
-
-impl DimTrait for DimDyn {
-    fn len(&self) -> usize {
-        self.len
-    }
-
-    fn is_empty(&self) -> bool {
-        self.len == 0
-    }
-
-    fn is_overflow<D: DimTrait>(&self, index: D) -> bool {
-        index.len() != self.len
-    }
-}
-
 #[derive(Clone, Debug, Copy, Default)]
 pub struct Dim0 {}
 
@@ -237,19 +149,19 @@ impl_grater_dim_trait!(Dim3, Dim4);
 #[macro_export]
 macro_rules! dim {
     () => {
-        $crate::dim_impl::Dim0::new()
+        $crate::dim::dim_static::Dim0::new()
     };
     ($x:expr) => {
-        $crate::dim_impl::Dim1::new([$x])
+        $crate::dim::dim_static::Dim1::new([$x])
     };
     ($x:expr, $y:expr) => {
-        $crate::dim_impl::Dim2::new([$x, $y])
+        $crate::dim::dim_static::Dim2::new([$x, $y])
     };
     ($x:expr, $y:expr, $z:expr) => {
-        $crate::dim_impl::Dim3::new([$x, $y, $z])
+        $crate::dim::dim_static::Dim3::new([$x, $y, $z])
     };
     ($x:expr, $y:expr, $z:expr, $w:expr) => {
-        $crate::dim_impl::Dim4::new([$x, $y, $z, $w])
+        $crate::dim::dim_static::Dim4::new([$x, $y, $z, $w])
     };
 }
 
