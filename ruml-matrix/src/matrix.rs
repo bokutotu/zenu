@@ -108,6 +108,22 @@ where
     fn index_axis_mut(&mut self, index: I) -> Self::Output<'_>;
 }
 
+pub trait IndexAxisDyn<I: IndexAxisTrait>: ToViewMatrix {
+    type Output<'a>: MatrixBase<Dim = DimDyn, Item = Self::Item> + ViewMatrix
+    where
+        Self: 'a;
+
+    fn index_axis_dyn(&self, index: I) -> Self::Output<'_>;
+}
+
+pub trait IndexAxisMutDyn<I: IndexAxisTrait>: ToViewMutMatrix {
+    type Output<'a>: MatrixBase<Dim = DimDyn, Item = Self::Item> + ViewMutMatix
+    where
+        Self: 'a;
+
+    fn index_axis_mut_dyn(&mut self, index: I) -> Self::Output<'_>;
+}
+
 pub trait IndexItem: MatrixBase {
     fn index_item<I: Into<Self::Dim>>(&self, index: I) -> Self::Item;
 }

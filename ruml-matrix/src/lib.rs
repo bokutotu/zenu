@@ -8,6 +8,7 @@ mod impl_ops;
 pub mod index;
 pub mod matrix;
 pub mod matrix_blas;
+mod matrix_format;
 pub mod matrix_impl;
 pub mod memory;
 pub mod num;

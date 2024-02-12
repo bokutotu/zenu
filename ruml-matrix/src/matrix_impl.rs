@@ -5,9 +5,9 @@ use crate::{
     },
     index::{IndexAxisTrait, SliceTrait},
     matrix::{
-        AsMutPtr, AsPtr, BlasMatrix, IndexAxis, IndexAxisMut, IndexItem, IndexItemAsign,
-        MatrixBase, MatrixSlice, MatrixSliceDyn, MatrixSliceMut, OwnedMatrix, ToOwnedMatrix,
-        ToViewMatrix, ToViewMutMatrix, ViewMatrix, ViewMutMatix,
+        AsMutPtr, AsPtr, BlasMatrix, IndexAxis, IndexAxisDyn, IndexAxisMut, IndexAxisMutDyn,
+        IndexItem, IndexItemAsign, MatrixBase, MatrixSlice, MatrixSliceDyn, MatrixSliceMut,
+        OwnedMatrix, ToOwnedMatrix, ToViewMatrix, ToViewMutMatrix, ViewMatrix, ViewMutMatix,
     },
     memory::{
         Memory, OwnedMemory, ToOwnedMemory, ToViewMemory, ToViewMutMemory, ViewMemory,
@@ -276,6 +276,40 @@ impl<D: DimTrait, M: Memory> IndexItem for Matrix<M, D> {
     }
 }
 
+impl<I: IndexAxisTrait, M: ToViewMemory, D: DimTrait> IndexAxisDyn<I> for Matrix<M, D> {
+    type Output<'a> = Matrix<M::View<'a>, DimDyn>
+    where
+        Self: 'a;
+
+    fn index_axis_dyn(&self, index: I) -> Self::Output<'_> {
+        let shape_stride = self.shape_stride().into_dyn();
+        let new_shape_stride = index.get_shape_stride(shape_stride.shape(), shape_stride.stride());
+        let offset = index.offset(shape_stride.stride());
+        Matrix::new(
+            self.memory.to_view(offset),
+            new_shape_stride.shape(),
+            new_shape_stride.stride(),
+        )
+    }
+}
+
+impl<I: IndexAxisTrait, M: ToViewMutMemory, D: DimTrait> IndexAxisMutDyn<I> for Matrix<M, D> {
+    type Output<'a> = Matrix<M::ViewMut<'a>, DimDyn>
+    where
+        Self: 'a;
+
+    fn index_axis_mut_dyn(&mut self, index: I) -> Self::Output<'_> {
+        let shape_stride = self.shape_stride().into_dyn();
+        let new_shape_stride = index.get_shape_stride(shape_stride.shape(), shape_stride.stride());
+        let offset = index.offset(shape_stride.stride());
+        Matrix::new(
+            self.memory.to_view_mut(offset),
+            new_shape_stride.shape(),
+            new_shape_stride.stride(),
+        )
+    }
+}
+
 impl<T: Num, D: DimTrait, VM: ViewMutMemory + Memory<Item = T>> IndexItemAsign for Matrix<VM, D> {
     fn index_item_asign<I: Into<Self::Dim>>(&mut self, index: I, value: Self::Item) {
         let index = index.into();
@@ -351,6 +385,7 @@ pub type CpuViewMutMatrixDyn<'a, T> = Matrix<CpuViewMutMemory<'a, T>, DimDyn>;
 #[cfg(test)]
 mod matrix_slice {
     use crate::dim::Dim1;
+    use crate::index::Index0D;
     use crate::slice;
     use crate::slice_dynamic;
 
@@ -428,5 +463,19 @@ mod matrix_slice {
         assert_eq!(s.index_item([1, 1, 1]), 58.);
         assert_eq!(s.index_item([1, 1, 2]), 59.);
         assert_eq!(s.index_item([1, 1, 3]), 60.);
+    }
+
+    #[test]
+    fn index_axis_dyn_2d() {
+        let m = CpuOwnedMatrix2D::from_vec(
+            vec![1f32, 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12.],
+            Dim2::new([3, 4]),
+        );
+        let m = m.into_dyn_dim();
+        let s = m.index_axis_dyn(Index0D::new(0));
+        println!("{:?}", s.shape());
+        assert_eq!(s.index_item([0]), 1.);
+        assert_eq!(s.index_item([1]), 2.);
+        assert_eq!(s.index_item([2]), 3.);
     }
 }
