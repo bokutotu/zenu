@@ -1,3 +1,5 @@
+pub mod functions;
+
 use std::{
     cell::{Ref, RefCell, RefMut},
     collections::{BinaryHeap, HashSet},
@@ -6,13 +8,13 @@ use std::{
 };
 
 use ruml_matrix::{
-    matrix::MatrixBase,
+    matrix::{MatrixBase, OwnedMatrix},
     matrix_impl::CpuOwnedMatrixDyn,
     num::Num,
     operation::{ones::Ones, zeros::Zeros},
 };
 
-pub trait Function<T: Num> {
+pub trait Function<T: OwnedMatrix> {
     fn forward(&self);
     fn backward(&self);
     fn get_inputs(&self) -> Vec<Variable<T>>;
@@ -23,13 +25,13 @@ pub trait Function<T: Num> {
 }
 
 #[derive(Clone)]
-pub(crate) struct FunctionQueueItem<V> {
-    pub(crate) func: Rc<RefCell<Box<dyn Function<V>>>>,
+pub(crate) struct FunctionQueueItem<T: OwnedMatrix> {
+    pub(crate) func: Rc<RefCell<Box<dyn Function<T>>>>,
     pub(crate) gen: usize,
 }
 
-impl<V: Num> From<Rc<RefCell<Box<dyn Function<V>>>>> for FunctionQueueItem<V> {
-    fn from(func: Rc<RefCell<Box<dyn Function<V>>>>) -> Self {
+impl<T: OwnedMatrix> From<Rc<RefCell<Box<dyn Function<T>>>>> for FunctionQueueItem<T> {
+    fn from(func: Rc<RefCell<Box<dyn Function<T>>>>) -> Self {
         Self {
             func: func.clone(),
             gen: func.borrow().get_gen(),
@@ -37,29 +39,29 @@ impl<V: Num> From<Rc<RefCell<Box<dyn Function<V>>>>> for FunctionQueueItem<V> {
     }
 }
 
-impl<V: Num> PartialEq for FunctionQueueItem<V> {
+impl<T: OwnedMatrix> PartialEq for FunctionQueueItem<T> {
     fn eq(&self, other: &Self) -> bool {
         self.gen == other.gen
     }
 }
 
-impl<V: Num> Eq for FunctionQueueItem<V> {
+impl<T: OwnedMatrix> Eq for FunctionQueueItem<T> {
     fn assert_receiver_is_total_eq(&self) {}
 }
 
-impl<V: Num> PartialOrd for FunctionQueueItem<V> {
+impl<T: OwnedMatrix> PartialOrd for FunctionQueueItem<T> {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         Some(self.gen.cmp(&other.gen))
     }
 }
 
-impl<V: Num> Ord for FunctionQueueItem<V> {
+impl<T: OwnedMatrix> Ord for FunctionQueueItem<T> {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         self.gen.cmp(&other.gen)
     }
 }
 
-impl<T: Num> Deref for FunctionQueueItem<T> {
+impl<T: OwnedMatrix> Deref for FunctionQueueItem<T> {
     type Target = Rc<RefCell<Box<dyn Function<T>>>>;
 
     fn deref(&self) -> &Self::Target {
@@ -68,44 +70,16 @@ impl<T: Num> Deref for FunctionQueueItem<T> {
 }
 
 #[derive(Clone)]
-pub enum Tensor<T: Num> {
-    Cpu(CpuOwnedMatrixDyn<T>),
-    Gpu(),
-}
-
-impl<T: Num> Tensor<T> {
-    pub fn zeros_like(&self) -> Self {
-        match self {
-            Tensor::Cpu(tensor) => {
-                let shape = tensor.shape();
-                Tensor::Cpu(CpuOwnedMatrixDyn::zeros(shape))
-            }
-            Tensor::Gpu() => Tensor::Gpu(),
-        }
-    }
-
-    pub fn ones_like(&self) -> Self {
-        match self {
-            Tensor::Cpu(tensor) => {
-                let shape = tensor.shape();
-                Tensor::Cpu(CpuOwnedMatrixDyn::ones(shape))
-            }
-            Tensor::Gpu() => Tensor::Gpu(),
-        }
-    }
-}
-
-#[derive(Clone)]
-pub struct VariableInner<T: Num> {
-    data: Tensor<T>,
+pub struct VariableInner<T: OwnedMatrix> {
+    data: T,
     creator: Option<Rc<RefCell<Box<dyn Function<T>>>>>,
     grad: Option<Variable<T>>,
     gen: usize,
     name: Option<String>,
 }
 
-impl<T: Num> VariableInner<T> {
-    pub fn new(data: Tensor<T>) -> Self {
+impl<T: OwnedMatrix> VariableInner<T> {
+    pub fn new(data: T) -> Self {
         VariableInner {
             data,
             creator: None,
@@ -122,14 +96,6 @@ impl<T: Num> VariableInner<T> {
 
     fn set_creator(&mut self, creator: Rc<RefCell<Box<dyn Function<T>>>>) {
         self.creator = Some(creator);
-    }
-
-    fn get_grad(&self) -> Option<Variable<T>> {
-        self.grad.clone()
-    }
-
-    fn set_grad(&mut self, grad: Variable<T>) {
-        self.grad = Some(grad);
     }
 
     fn get_gen(&self) -> usize {
@@ -175,22 +141,22 @@ impl<T: Num> VariableInner<T> {
 }
 
 #[derive(Clone)]
-pub struct Variable<T: Num> {
+pub struct Variable<T: OwnedMatrix> {
     inner: Rc<RefCell<VariableInner<T>>>,
 }
 
-impl<T: Num> Variable<T> {
-    pub fn new(data: Tensor<T>) -> Self {
+impl<T: OwnedMatrix> Variable<T> {
+    pub fn new(data: T) -> Self {
         Variable {
             inner: Rc::new(RefCell::new(VariableInner::new(data))),
         }
     }
-    pub fn get_data<'a>(&'a self) -> Ref<'a, Tensor<T>> {
+    pub fn get_data<'a>(&'a self) -> Ref<'a, T> {
         let reference: Ref<'a, VariableInner<T>> = self.inner.borrow();
         Ref::map(reference, |r| &r.data)
     }
 
-    pub fn get_data_mut<'a>(&'a self) -> RefMut<'a, Tensor<T>> {
+    pub fn get_data_mut<'a>(&'a self) -> RefMut<'a, T> {
         let reference: RefMut<'a, VariableInner<T>> = self.inner.borrow_mut();
         RefMut::map(reference, |r| &mut r.data)
     }
@@ -214,10 +180,10 @@ impl<T: Num> Variable<T> {
     }
 
     pub fn backward(&self) {
-        if self.inner.borrow().get_grad().is_none() {
-            let zeros = self.get_data().zeros_like();
+        if self.inner.borrow().grad.is_none() {
+            let zeros = Zeros::zeros(self.get_data().shape());
             let zeros = Variable::new(zeros);
-            self.inner.borrow_mut().set_grad(zeros);
+            self.inner.borrow_mut().grad = Some(zeros);
         }
         self.inner.borrow().backward();
     }
@@ -250,11 +216,11 @@ impl<T: Num> Variable<T> {
 }
 
 #[derive(Debug, Clone)]
-pub struct VariableWeak<T: Num> {
+pub struct VariableWeak<T: OwnedMatrix> {
     inner: Weak<RefCell<VariableInner<T>>>,
 }
 
-impl<T: Num> VariableWeak<T> {
+impl<T: OwnedMatrix> VariableWeak<T> {
     pub fn upgrade(&self) -> Option<Variable<T>> {
         self.inner.upgrade().map(|inner| Variable { inner })
     }
