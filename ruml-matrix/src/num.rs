@@ -12,6 +12,7 @@ pub trait Num:
     + Add<Self, Output = Self>
     + PartialOrd
     + Mul<Output = Self>
+    + 'static
 {
     fn is_f32() -> bool;
     fn zero() -> Self;

@@ -52,7 +52,7 @@ impl DimDyn {
     // => true
     // other: [3, 4, 5]
     // => false
-    pub(crate) fn is_include(&self, other: &DimDyn) -> bool {
+    pub fn is_include(&self, other: &DimDyn) -> bool {
         if self.len < other.len {
             return false;
         }

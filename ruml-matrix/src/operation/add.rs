@@ -125,6 +125,10 @@ fn add_matrix_matrix<T, VM, L, R, D1, D2, D3>(
     D2: DimTrait,
     D3: DimTrait,
 {
+    if lhs.shape().len() < rhs.shape().len() {
+        add_matrix_matrix(to, rhs, lhs);
+        return;
+    }
     assert_eq!(to.shape().slice(), lhs.shape().slice());
     let mut to = to.into_dyn_dim();
     let lhs = lhs.into_dyn_dim();

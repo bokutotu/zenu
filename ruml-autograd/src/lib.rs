@@ -205,6 +205,17 @@ impl<M: OwnedMemory> Variable<M> {
     pub fn get_name(&self) -> Option<String> {
         self.inner.borrow().get_name().clone()
     }
+
+    pub fn with_grad_data<F>(&self, mut f: F)
+    where
+        F: FnMut(&Matrix<M, DimDyn>),
+    {
+        let inner = self.inner.borrow();
+        if let Some(grad_variable) = &inner.grad {
+            let grad_inner = grad_variable.inner.borrow();
+            f(&grad_inner.data);
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
