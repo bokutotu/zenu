@@ -1,7 +1,7 @@
 use std::{cell::RefCell, ops::Add, rc::Rc};
 
 use ruml_matrix::{
-    dim::{DimDyn, DimTrait},
+    dim::DimDyn,
     matrix::{MatrixBase, ToViewMatrix, ToViewMutMatrix},
     matrix_impl::Matrix,
     memory::OwnedMemory,
@@ -51,12 +51,11 @@ impl<M: OwnedMemory> Function<M> for Addition<M> {
 }
 
 pub(crate) fn add<M: OwnedMemory>(x: Variable<M>, y: Variable<M>) -> Variable<M> {
-    let output_shape: DimDyn;
-    if x.get_data().shape().len() > y.get_data().shape().len() {
-        output_shape = x.get_data().shape().clone();
+    let output_shape: DimDyn = if x.get_data().shape().is_include(&y.get_data().shape()) {
+        x.get_data().shape()
     } else {
-        output_shape = y.get_data().shape().clone();
-    }
+        y.get_data().shape()
+    };
     let output = Zeros::zeros(output_shape);
     let output = Variable::new(output);
     let add = Addition::new(x, y, output.clone());
