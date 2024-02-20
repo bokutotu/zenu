@@ -28,58 +28,6 @@ where
     }
 }
 
-// impl<V: ViewMemory + Memory<Item = T>, VM: ViewMutMemory + Memory<Item = T>, T: Num>
-//     CopyFrom<Matrix<V, Dim1>, T> for Matrix<VM, Dim1>
-// {
-//     fn copy_from(&mut self, rhs: &Matrix<V, Dim1>) {
-//         assert_eq!(self.shape_stride().shape(), rhs.shape_stride().shape());
-//
-//         <V as Memory>::Blas::copy(
-//             self.shape_stride().shape()[0],
-//             rhs.as_ptr(),
-//             rhs.shape_stride().stride()[0],
-//             self.as_mut_ptr() as *mut _,
-//             self.shape_stride().stride()[0],
-//         );
-//     }
-// }
-//
-// macro_rules! impl_copy_from {
-//     ($dim:ty) => {
-//         impl<V: ViewMemory + Memory<Item = T>, VM: ViewMutMemory + Memory<Item = T>, T: Num>
-//             CopyFrom<Matrix<V, $dim>, T> for Matrix<VM, $dim>
-//         {
-//             fn copy_from(&mut self, rhs: &Matrix<V, $dim>) {
-//                 assert_eq!(self.shape_stride().shape(), rhs.shape_stride().shape());
-//
-//                 if self.shape_stride().is_contiguous() && rhs.shape_stride().is_contiguous() {
-//                     let num_dims = self.shape_stride().shape().len();
-//                     let num_elms = self.shape_stride().shape().num_elm();
-//                     let self_stride = self.shape_stride().stride()[num_dims - 1];
-//                     let rhs_stride = rhs.shape_stride().stride()[num_dims - 1];
-//
-//                     <V as Memory>::Blas::copy(
-//                         num_elms,
-//                         rhs.as_ptr(),
-//                         rhs_stride,
-//                         self.as_mut_ptr() as *mut _,
-//                         self_stride,
-//                     );
-//                 } else {
-//                     for i in 0..self.shape_stride().shape()[0] {
-//                         let rhs = rhs.index_axis(Index0D::new(i));
-//                         let mut self_ = self.index_axis_mut(Index0D::new(i));
-//
-//                         self_.copy_from(&rhs);
-//                     }
-//                 }
-//             }
-//         }
-//     };
-// }
-// impl_copy_from!(Dim2);
-// impl_copy_from!(Dim3);
-// impl_copy_from!(Dim4);
 fn copy<T, VM, V>(to: &mut Matrix<VM, DimDyn>, source: &Matrix<V, DimDyn>)
 where
     T: Num,

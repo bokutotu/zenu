@@ -1,9 +1,0 @@
-[workspace]
-resolver = "2"
-members = [
-    "ruml",
-    "ruml-autograd","ruml-matrix",
-]
-
-[workspace.lints.clippy]
-pedantic = "warn"
