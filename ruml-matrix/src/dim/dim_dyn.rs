@@ -14,8 +14,8 @@ impl DimDyn {
             panic!("Dim must be smaller than 4");
         }
         let mut dim_dyn = DimDyn::default();
-        for i in 0..dim.len() {
-            dim_dyn.push_dim(dim[i])
+        for i in dim {
+            dim_dyn.push_dim(*i)
         }
         dim_dyn
     }
@@ -43,6 +43,27 @@ impl DimDyn {
     pub(crate) fn push_dim(&mut self, dim: usize) {
         self.dim[self.len] = dim;
         self.inc_len();
+    }
+
+    // otherのshapeがselfのshapeに含まれているかどうか
+    // ex
+    // self: [2, 3, 4]
+    // other: [3, 4]
+    // => true
+    // other: [3, 4, 5]
+    // => false
+    pub(crate) fn is_include(&self, other: &DimDyn) -> bool {
+        if self.len < other.len {
+            return false;
+        }
+
+        // selfのshapeの後ろからotherのshapeを比較していく
+        for i in 0..other.len {
+            if self.dim[self.len - 1 - i] != other.dim[other.len - 1 - i] {
+                return false;
+            }
+        }
+        true
     }
 }
 
@@ -80,7 +101,7 @@ impl IntoIterator for DimDyn {
 
     #[allow(clippy::unnecessary_to_owned)]
     fn into_iter(self) -> Self::IntoIter {
-        self.dim.to_vec().into_iter()
+        self.dim[0..self.len()].to_vec().into_iter()
     }
 }
 
@@ -98,6 +119,9 @@ impl DimTrait for DimDyn {
     }
 
     fn slice(&self) -> &[usize] {
+        if self.len == 0 {
+            return &[];
+        }
         &self.dim[0..self.len]
     }
 }
@@ -105,8 +129,8 @@ impl DimTrait for DimDyn {
 impl From<&[usize]> for DimDyn {
     fn from(slice: &[usize]) -> Self {
         let mut dim_dyn = DimDyn::default();
-        for i in 0..slice.len() {
-            dim_dyn.push_dim(slice[i]);
+        for i in slice {
+            dim_dyn.push_dim(*i);
         }
         dim_dyn
     }

@@ -1,3 +1,4 @@
+pub mod index_dyn_impl;
 pub mod index_impl;
 
 pub use index_impl::{Index0D, Index1D, Index2D, Index3D};

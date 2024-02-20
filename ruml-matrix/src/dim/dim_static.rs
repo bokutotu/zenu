@@ -59,7 +59,7 @@ impl DimTrait for Dim0 {
 
 impl From<&[usize]> for Dim0 {
     fn from(dim: &[usize]) -> Self {
-        if dim.len() != 0 {
+        if !dim.is_empty() {
             panic!("Invalid dimension");
         }
         Dim0 {}
@@ -68,7 +68,7 @@ impl From<&[usize]> for Dim0 {
 
 impl From<&[usize; 0]> for Dim0 {
     fn from(dim: &[usize; 0]) -> Self {
-        if dim.len() != 0 {
+        if dim.is_empty() {
             panic!("Invalid dimension");
         }
         Dim0 {}
@@ -77,7 +77,7 @@ impl From<&[usize; 0]> for Dim0 {
 
 impl From<[usize; 0]> for Dim0 {
     fn from(dim: [usize; 0]) -> Self {
-        if dim.len() != 0 {
+        if !dim.is_empty() {
             panic!("Invalid dimension");
         }
         Dim0 {}

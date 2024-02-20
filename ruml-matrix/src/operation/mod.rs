@@ -6,6 +6,7 @@ pub mod max;
 pub mod mul;
 pub mod norm2;
 pub mod ones;
+pub mod sum;
 pub mod to_default_stride;
 pub mod transpose;
 pub mod zeros;

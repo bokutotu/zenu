@@ -76,22 +76,3 @@ pub fn default_stride<D: DimTrait>(shape: D) -> D {
 
     stride
 }
-
-// #[macro_export]
-// macro_rules! dim {
-//     () => {
-//         $crate::dim::dim_static::Dim0::new()
-//     };
-//     ($x:expr) => {
-//         $crate::dim::dim_static::Dim1::new([$x])
-//     };
-//     ($x:expr, $y:expr) => {
-//         $crate::dim::dim_static::Dim2::new([$x, $y])
-//     };
-//     ($x:expr, $y:expr, $z:expr) => {
-//         $crate::dim::dim_static::Dim3::new([$x, $y, $z])
-//     };
-//     ($x:expr, $y:expr, $z:expr, $w:expr) => {
-//         $crate::dim::dim_static::Dim4::new([$x, $y, $z, $w])
-//     };
-// }

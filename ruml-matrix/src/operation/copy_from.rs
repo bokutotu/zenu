@@ -1,72 +1,131 @@
 use crate::{
     blas::Blas,
-    dim::{Dim1, Dim2, Dim3, Dim4, DimTrait},
-    index::Index0D,
-    matrix::{AsMutPtr, AsPtr, IndexAxis, IndexAxisMut, MatrixBase, ViewMatrix, ViewMutMatix},
+    dim::{DimDyn, DimTrait},
+    index::index_dyn_impl::Index,
+    matrix::{
+        AsMutPtr, AsPtr, IndexAxisDyn, IndexAxisMutDyn, MatrixBase, ViewMatrix, ViewMutMatix,
+    },
     matrix_impl::Matrix,
     memory::{Memory, ViewMemory, ViewMutMemory},
     num::Num,
 };
 
-pub trait CopyFrom<RHS, T: Num>: ViewMutMatix
+pub trait CopyFrom<RHS>: ViewMutMatix
 where
     RHS: ViewMatrix,
 {
     fn copy_from(&mut self, rhs: &RHS);
 }
 
-impl<V: ViewMemory + Memory<Item = T>, VM: ViewMutMemory + Memory<Item = T>, T: Num>
-    CopyFrom<Matrix<V, Dim1>, T> for Matrix<VM, Dim1>
+impl<T, V, VM> CopyFrom<Matrix<V, DimDyn>> for Matrix<VM, DimDyn>
+where
+    T: Num,
+    VM: ViewMutMemory<Item = T>,
+    V: ViewMemory<Item = T>,
 {
-    fn copy_from(&mut self, rhs: &Matrix<V, Dim1>) {
-        assert_eq!(self.shape_stride().shape(), rhs.shape_stride().shape());
-
-        <V as Memory>::Blas::copy(
-            self.shape_stride().shape()[0],
-            rhs.as_ptr(),
-            rhs.shape_stride().stride()[0],
-            self.as_mut_ptr() as *mut _,
-            self.shape_stride().stride()[0],
-        );
+    fn copy_from(&mut self, rhs: &Matrix<V, DimDyn>) {
+        copy(self, rhs);
     }
 }
 
-macro_rules! impl_copy_from {
-    ($dim:ty) => {
-        impl<V: ViewMemory + Memory<Item = T>, VM: ViewMutMemory + Memory<Item = T>, T: Num>
-            CopyFrom<Matrix<V, $dim>, T> for Matrix<VM, $dim>
-        {
-            fn copy_from(&mut self, rhs: &Matrix<V, $dim>) {
-                assert_eq!(self.shape_stride().shape(), rhs.shape_stride().shape());
+// impl<V: ViewMemory + Memory<Item = T>, VM: ViewMutMemory + Memory<Item = T>, T: Num>
+//     CopyFrom<Matrix<V, Dim1>, T> for Matrix<VM, Dim1>
+// {
+//     fn copy_from(&mut self, rhs: &Matrix<V, Dim1>) {
+//         assert_eq!(self.shape_stride().shape(), rhs.shape_stride().shape());
+//
+//         <V as Memory>::Blas::copy(
+//             self.shape_stride().shape()[0],
+//             rhs.as_ptr(),
+//             rhs.shape_stride().stride()[0],
+//             self.as_mut_ptr() as *mut _,
+//             self.shape_stride().stride()[0],
+//         );
+//     }
+// }
+//
+// macro_rules! impl_copy_from {
+//     ($dim:ty) => {
+//         impl<V: ViewMemory + Memory<Item = T>, VM: ViewMutMemory + Memory<Item = T>, T: Num>
+//             CopyFrom<Matrix<V, $dim>, T> for Matrix<VM, $dim>
+//         {
+//             fn copy_from(&mut self, rhs: &Matrix<V, $dim>) {
+//                 assert_eq!(self.shape_stride().shape(), rhs.shape_stride().shape());
+//
+//                 if self.shape_stride().is_contiguous() && rhs.shape_stride().is_contiguous() {
+//                     let num_dims = self.shape_stride().shape().len();
+//                     let num_elms = self.shape_stride().shape().num_elm();
+//                     let self_stride = self.shape_stride().stride()[num_dims - 1];
+//                     let rhs_stride = rhs.shape_stride().stride()[num_dims - 1];
+//
+//                     <V as Memory>::Blas::copy(
+//                         num_elms,
+//                         rhs.as_ptr(),
+//                         rhs_stride,
+//                         self.as_mut_ptr() as *mut _,
+//                         self_stride,
+//                     );
+//                 } else {
+//                     for i in 0..self.shape_stride().shape()[0] {
+//                         let rhs = rhs.index_axis(Index0D::new(i));
+//                         let mut self_ = self.index_axis_mut(Index0D::new(i));
+//
+//                         self_.copy_from(&rhs);
+//                     }
+//                 }
+//             }
+//         }
+//     };
+// }
+// impl_copy_from!(Dim2);
+// impl_copy_from!(Dim3);
+// impl_copy_from!(Dim4);
+fn copy<T, VM, V>(to: &mut Matrix<VM, DimDyn>, source: &Matrix<V, DimDyn>)
+where
+    T: Num,
+    VM: ViewMutMemory<Item = T>,
+    V: ViewMemory<Item = T>,
+{
+    assert_eq!(to.shape(), source.shape());
 
-                if self.shape_stride().is_contiguous() && rhs.shape_stride().is_contiguous() {
-                    let num_dims = self.shape_stride().shape().len();
-                    let num_elms = self.shape_stride().shape().num_elm();
-                    let self_stride = self.shape_stride().stride()[num_dims - 1];
-                    let rhs_stride = rhs.shape_stride().stride()[num_dims - 1];
+    if to.shape_stride().is_contiguous() && source.shape_stride().is_contiguous()
+        || to.shape().len() == 1
+    {
+        <VM as Memory>::Blas::copy(
+            to.shape().num_elm(),
+            source.as_ptr(),
+            source.stride()[to.shape().len() - 1],
+            to.as_mut_ptr() as *mut _,
+            to.stride()[to.shape().len() - 1],
+        );
+        return;
+    }
 
-                    <V as Memory>::Blas::copy(
-                        num_elms,
-                        rhs.as_ptr(),
-                        rhs_stride,
-                        self.as_mut_ptr() as *mut _,
-                        self_stride,
-                    );
-                } else {
-                    for i in 0..self.shape_stride().shape()[0] {
-                        let rhs = rhs.index_axis(Index0D::new(i));
-                        let mut self_ = self.index_axis_mut(Index0D::new(i));
-
-                        self_.copy_from(&rhs);
-                    }
-                }
+    match to.shape().len() {
+        2 => {
+            for i in 0..to.shape()[0] {
+                let mut to_ = to.index_axis_mut_dyn(Index::new(0, i));
+                let source_ = source.index_axis_dyn(Index::new(0, i));
+                copy(&mut to_, &source_);
             }
         }
-    };
+        3 => {
+            for i in 0..to.shape()[0] {
+                let mut to_ = to.index_axis_mut_dyn(Index::new(0, i));
+                let source_ = source.index_axis_dyn(Index::new(0, i));
+                copy(&mut to_, &source_);
+            }
+        }
+        4 => {
+            for i in 0..to.shape()[0] {
+                let mut to_ = to.index_axis_mut_dyn(Index::new(0, i));
+                let source_ = source.index_axis_dyn(Index::new(0, i));
+                copy(&mut to_, &source_);
+            }
+        }
+        _ => panic!("Not implemented"),
+    }
 }
-impl_copy_from!(Dim2);
-impl_copy_from!(Dim3);
-impl_copy_from!(Dim4);
 
 #[cfg(test)]
 mod deep_copy {
@@ -87,7 +146,12 @@ mod deep_copy {
         let mut a = CpuOwnedMatrix1D::from_vec(a, [6]);
         let b = CpuOwnedMatrix1D::from_vec(b, [6]);
 
-        a.to_view_mut().copy_from(&b.to_view());
+        let a_view_mut = a.to_view_mut();
+
+        a_view_mut
+            .into_dyn_dim()
+            .to_view_mut()
+            .copy_from(&b.to_view().into_dyn_dim());
 
         assert_eq!(a.index_item([0]), 1.);
         assert_eq!(a.index_item([1]), 2.);
@@ -105,10 +169,10 @@ mod deep_copy {
         let mut a = CpuOwnedMatrix1D::from_vec(a.clone(), [6]);
         let v = CpuOwnedMatrix1D::from_vec(v, [6]);
 
-        let mut a_sliced = a.slice_mut(slice!(..;2));
+        let a_sliced = a.slice_mut(slice!(..;2));
         let v_sliced = v.slice(slice!(0..3));
 
-        a_sliced.copy_from(&v_sliced);
+        a_sliced.into_dyn_dim().copy_from(&v_sliced.into_dyn_dim());
         assert_eq!(a.index_item([0]), 0.);
         assert_eq!(a.index_item([1]), 0.);
         assert_eq!(a.index_item([2]), 1.);
@@ -125,7 +189,12 @@ mod deep_copy {
         let mut a = CpuOwnedMatrix2D::from_vec(a, [2, 3]);
         let b = CpuOwnedMatrix2D::from_vec(b, [2, 3]);
 
-        a.to_view_mut().copy_from(&b.to_view());
+        let a_view_mut = a.to_view_mut();
+
+        a_view_mut
+            .into_dyn_dim()
+            .to_view_mut()
+            .copy_from(&b.to_view().into_dyn_dim());
 
         assert_eq!(a.index_item([0, 0]), 1.);
         assert_eq!(a.index_item([0, 1]), 2.);
@@ -142,10 +211,10 @@ mod deep_copy {
         let mut a = CpuOwnedMatrix2D::from_vec(a.clone(), [3, 4]);
         let v = CpuOwnedMatrix2D::from_vec(v, [3, 4]);
 
-        let mut a_sliced = a.slice_mut(slice!(0..2, 0..3));
+        let a_sliced = a.slice_mut(slice!(0..2, 0..3));
         let v_sliced = v.slice(slice!(1..3, 1..4));
 
-        a_sliced.copy_from(&v_sliced);
+        a_sliced.into_dyn_dim().copy_from(&v_sliced.into_dyn_dim());
         assert_eq!(a.index_item([0, 0]), 5.);
         assert_eq!(a.index_item([0, 1]), 6.);
         assert_eq!(a.index_item([0, 2]), 7.);

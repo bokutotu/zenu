@@ -1,79 +1,42 @@
 use crate::{
-    cpu_memory::{CpuOwnedMemory, CpuViewMemory, CpuViewMutMemory},
-    dim::{Dim1, Dim2, Dim3, Dim4},
-    index::Index0D,
-    matrix::{
-        IndexAxis, IndexAxisMut, IndexItem, IndexItemAsign, MatrixBase, OwnedMatrix, ToViewMatrix,
-        ToViewMutMatrix,
-    },
+    dim::{DimDyn, DimTrait},
+    matrix::{MatrixBase, ToViewMutMatrix},
     matrix_impl::Matrix,
+    memory::{OwnedMemory, ViewMemory},
     num::Num,
 };
 
 use super::{copy_from::CopyFrom, zeros::Zeros};
 
-pub trait ToDefaultStride: MatrixBase {
-    type Output: OwnedMatrix;
-    fn to_default_stride(&self) -> Self::Output;
+pub trait ToDefaultStride<T: Num> {
+    fn to_default_stride<SM: ViewMemory<Item = T>, SD: DimTrait>(source: Matrix<SM, SD>) -> Self;
 }
 
-impl<T: Num> ToDefaultStride for Matrix<CpuOwnedMemory<T>, Dim1> {
-    type Output = Matrix<CpuOwnedMemory<T>, Dim1>;
-    fn to_default_stride(&self) -> Self::Output {
-        let mut output = Self::Output::zeros(self.shape_stride().shape());
-        for idx in 0..self.shape_stride().shape()[0] {
-            output
-                .to_view_mut()
-                .index_item_asign([idx], self.index_item([idx]));
+impl<T, M> ToDefaultStride<T> for Matrix<M, DimDyn>
+where
+    T: Num,
+    M: OwnedMemory<Item = T>,
+{
+    fn to_default_stride<SM, SD>(source: Matrix<SM, SD>) -> Self
+    where
+        SM: ViewMemory<Item = T>,
+        SD: DimTrait,
+    {
+        let mut output = <Self as Zeros>::zeros(source.shape().slice());
+        {
+            let mut output_view_mut = output.to_view_mut();
+            let source_dyn = source.into_dyn_dim();
+            output_view_mut.copy_from(&source_dyn);
         }
         output
     }
 }
-
-impl<T: Num> ToDefaultStride for Matrix<CpuViewMemory<'_, T>, Dim1> {
-    type Output = Matrix<CpuOwnedMemory<T>, Dim1>;
-    fn to_default_stride(&self) -> Self::Output {
-        let mut output = Self::Output::zeros(self.shape_stride().shape());
-        for idx in 0..self.shape_stride().shape()[0] {
-            output
-                .to_view_mut()
-                .index_item_asign([idx], self.index_item([idx]));
-        }
-        output
-    }
-}
-
-macro_rules! impl_to_default_stride {
-    ($dim:ty, $($memory:tt)+) => {
-        impl<T: Num> ToDefaultStride for Matrix<$($memory)+, $dim> {
-            type Output = Matrix<CpuOwnedMemory<T>, $dim>;
-            fn to_default_stride(&self) -> Self::Output {
-                let mut output = Self::Output::zeros(self.shape_stride().shape());
-                for idx in 0..self.shape_stride().shape()[0] {
-                    let default_stride = self.index_axis(Index0D(idx)).to_default_stride();
-                    output.index_axis_mut(Index0D(idx)).copy_from(&default_stride.to_view());
-                }
-                output
-            }
-        }
-    };
-}
-impl_to_default_stride!(Dim2, CpuOwnedMemory<T>);
-impl_to_default_stride!(Dim2, CpuViewMemory<'_, T>);
-impl_to_default_stride!(Dim2, CpuViewMutMemory<'_, T>);
-impl_to_default_stride!(Dim3, CpuOwnedMemory<T>);
-impl_to_default_stride!(Dim3, CpuViewMemory<'_, T>);
-impl_to_default_stride!(Dim3, CpuViewMutMemory<'_, T>);
-impl_to_default_stride!(Dim4, CpuOwnedMemory<T>);
-impl_to_default_stride!(Dim4, CpuViewMemory<'_, T>);
-impl_to_default_stride!(Dim4, CpuViewMutMemory<'_, T>);
-
 #[cfg(test)]
 mod to_default_stride {
     use crate::{
         dim::default_stride,
-        matrix::{MatrixSlice, OwnedMatrix},
-        matrix_impl::{CpuOwnedMatrix1D, CpuOwnedMatrix2D},
+        matrix::{IndexItem, MatrixSlice, OwnedMatrix},
+        matrix_impl::{CpuOwnedMatrix1D, CpuOwnedMatrix2D, CpuOwnedMatrixDyn},
         slice,
     };
 
@@ -88,7 +51,7 @@ mod to_default_stride {
 
         let m = CpuOwnedMatrix1D::from_vec(v.clone(), [16]);
         let sliced = m.slice(slice!(..;2));
-        let default_strided = sliced.to_default_stride();
+        let default_strided: CpuOwnedMatrixDyn<f32> = ToDefaultStride::to_default_stride(sliced);
 
         assert_eq!(
             default_strided.shape_stride().stride(),
@@ -112,7 +75,7 @@ mod to_default_stride {
 
         let m = CpuOwnedMatrix2D::from_vec(v.clone(), [4, 4]);
         let sliced = m.slice(slice!(..;2, ..;2));
-        let default_strided = sliced.to_default_stride();
+        let default_strided: CpuOwnedMatrixDyn<f32> = ToDefaultStride::to_default_stride(sliced);
 
         assert_eq!(
             default_strided.shape_stride().stride(),
