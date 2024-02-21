@@ -12,7 +12,7 @@ use crate::{Function, Variable, VariableWeak};
 
 use super::gradient_sum_over_axis;
 
-pub(crate) struct Addition<M: OwnedMemory> {
+struct Addition<M: OwnedMemory> {
     x: Variable<M>,
     y: Variable<M>,
     output: VariableWeak<M>,
@@ -50,7 +50,7 @@ impl<M: OwnedMemory> Function<M> for Addition<M> {
     }
 }
 
-pub(crate) fn add<M: OwnedMemory>(x: Variable<M>, y: Variable<M>) -> Variable<M> {
+fn add<M: OwnedMemory>(x: Variable<M>, y: Variable<M>) -> Variable<M> {
     let output_shape: DimDyn = if x.get_data().shape().is_include(&y.get_data().shape()) {
         x.get_data().shape()
     } else {

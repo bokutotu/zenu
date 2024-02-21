@@ -7,7 +7,8 @@ use ruml_matrix::{
     operation::{copy_from::CopyFrom, sum::MatrixSum},
 };
 
-pub mod add;
+mod add;
+mod mul;
 
 pub(crate) fn gradient_sum_over_axis<
     T: Num,
