@@ -9,7 +9,7 @@ use ruml_matrix::{
 
 use crate::Variable;
 
-mod add;
+// mod add;
 mod mul;
 
 pub mod matmul;

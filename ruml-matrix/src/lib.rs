@@ -4,14 +4,15 @@ pub mod cpu_element_wise;
 pub mod cpu_memory;
 pub mod dim;
 pub mod element_wise;
-mod impl_ops;
 pub mod index;
 pub mod matrix;
 pub mod matrix_blas;
-mod matrix_format;
 pub mod matrix_impl;
 pub mod memory;
 pub mod num;
 pub mod operation;
 pub mod shape_stride;
 pub mod slice;
+
+mod impl_ops;
+mod matrix_format;

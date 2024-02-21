@@ -29,9 +29,12 @@ impl<M: OwnedMemory> Function<M> for Multiply<M> {
     fn forward(&self) {
         let x = self.x.get_data();
         let y = self.y.get_data();
+        let x = x.to_view();
+        let y = y.to_view();
         let output = self.output.upgrade().unwrap();
         let mut output = output.get_data_mut();
-        MatrixMul::mul(output.to_view_mut(), x.to_view(), y.to_view());
+        let output = output.to_view_mut();
+        MatrixMul::mul(output, x, y);
     }
 
     fn backward(&self) {

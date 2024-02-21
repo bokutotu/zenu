@@ -1,5 +1,5 @@
 use crate::{
-    dim::{Dim1, DimTrait},
+    dim::{Dim1, Dim2, Dim3, Dim4, DimTrait},
     index::Index0D,
     matrix::{IndexAxisDyn, IndexAxisMutDyn, IndexItem, IndexItemAsign, MatrixBase, ViewMutMatix},
     matrix_impl::{matrix_into_dim, Matrix},
@@ -14,28 +14,33 @@ where
     LM: ViewMutMemory<Item = T>,
     D: DimTrait,
 {
-    let mut to = to.into_dyn_dim();
-
     match to.shape().slice() {
-        [] => to.index_item_asign(&[] as &[usize], to.index_item(&[] as &[usize]) + other),
+        [] => {
+            let mut to = to;
+            to.index_item_asign(&[] as &[usize], to.index_item(&[] as &[usize]) + other);
+        }
         [a] => {
+            let mut to: Matrix<LM, Dim1> = matrix_into_dim(to);
             for i in 0..*a {
                 to.index_item_asign([i], to.index_item([i]) + other);
             }
         }
         [a, _] => {
+            let mut to: Matrix<LM, Dim2> = matrix_into_dim(to);
             for i in 0..*a {
                 let to = to.index_axis_mut_dyn(Index0D::new(i));
                 add_assign_matrix_scalar(to, other);
             }
         }
         [a, _, _] => {
+            let mut to: Matrix<LM, Dim3> = matrix_into_dim(to);
             for i in 0..*a {
                 let to = to.index_axis_mut_dyn(Index0D::new(i));
                 add_assign_matrix_scalar(to, other);
             }
         }
         [a, _, _, _] => {
+            let mut to: Matrix<LM, Dim4> = matrix_into_dim(to);
             for i in 0..*a {
                 let to = to.index_axis_mut_dyn(Index0D::new(i));
                 add_assign_matrix_scalar(to, other);
@@ -96,18 +101,55 @@ where
             source.index_item_asign([i], s_itm + o_itm);
         }
     } else if source.shape() == other.shape() {
-        let mut source = source;
-        for i in 0..source.shape()[0] {
-            let source = source.index_axis_mut_dyn(Index0D::new(i));
-            let other = other.index_axis_dyn(Index0D::new(i));
-            add_assign_matrix_matrix(source, other);
+        // let mut source = source;
+        // for i in 0..source.shape()[0] {
+        //     let source = source.index_axis_mut_dyn(Index0D::new(i));
+        //     let other = other.index_axis_dyn(Index0D::new(i));
+        //     add_assign_matrix_matrix(source, other);
+        // }
+        macro_rules! same_dim {
+            ($dim:ty) => {{
+                let mut source: Matrix<VM, $dim> = matrix_into_dim(source);
+                let other: Matrix<V, $dim> = matrix_into_dim(other);
+                for i in 0..source.shape()[0] {
+                    let source = source.index_axis_mut_dyn(Index0D::new(i));
+                    let other = other.index_axis_dyn(Index0D::new(i));
+                    add_assign_matrix_matrix(source, other);
+                }
+            }};
+        }
+        match source.shape().len() {
+            2 => same_dim!(Dim2),
+            3 => same_dim!(Dim3),
+            4 => same_dim!(Dim4),
+            _ => panic!("not implemented: this is bug. please report this bug."),
         }
     } else {
-        let mut source = source;
-        for i in 0..source.shape()[0] {
-            let source = source.index_axis_mut_dyn(Index0D::new(i));
-            let other = other.clone();
-            add_assign_matrix_matrix(source, other);
+        // let mut source = source;
+        // for i in 0..source.shape()[0] {
+        //     let source = source.index_axis_mut_dyn(Index0D::new(i));
+        //     let other = other.clone();
+        //     add_assign_matrix_matrix(source, other);
+        // }
+        macro_rules! diff_dim {
+            ($dim1:ty, $dim2:ty) => {{
+                let mut source: Matrix<VM, $dim1> = matrix_into_dim(source);
+                let other: Matrix<V, $dim2> = matrix_into_dim(other);
+                for i in 0..source.shape()[0] {
+                    let source = source.index_axis_mut_dyn(Index0D::new(i));
+                    let other = other.clone();
+                    add_assign_matrix_matrix(source, other);
+                }
+            }};
+        }
+        match (source.shape().len(), other.shape().len()) {
+            (2, 1) => diff_dim!(Dim2, Dim1),
+            (3, 1) => diff_dim!(Dim3, Dim1),
+            (4, 1) => diff_dim!(Dim4, Dim1),
+            (3, 2) => diff_dim!(Dim3, Dim2),
+            (4, 2) => diff_dim!(Dim4, Dim2),
+            (4, 3) => diff_dim!(Dim4, Dim3),
+            _ => panic!("not implemented: this is bug. please report this bug."),
         }
     }
 }
@@ -472,5 +514,13 @@ mod add {
         assert_eq!(ans.index_item([3, 1]), 15.0);
         assert_eq!(ans.index_item([3, 2]), 16.0);
         assert_eq!(ans.index_item([3, 3]), 17.0);
+    }
+
+    #[test]
+    fn add_4d_2d_dyn() {
+        let zeros_4d = CpuOwnedMatrixDyn::<f32>::zeros([2, 2, 2, 2]);
+        let ones_2d = CpuOwnedMatrixDyn::from_vec(vec![1., 1., 1., 1.], [2, 2]);
+        let mut ans = CpuOwnedMatrixDyn::<f32>::zeros([2, 2, 2, 2]);
+        ans.to_view_mut().add(zeros_4d.to_view(), ones_2d.to_view());
     }
 }
