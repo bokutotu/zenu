@@ -1,5 +1,3 @@
-use std::any::TypeId;
-
 use crate::{
     blas::Blas,
     dim::{Dim2, DimTrait},
@@ -56,12 +54,12 @@ where
         }};
     }
 
-    match to.shape().slice() {
-        [] => to.index_item_asign([], to.index_item([]) * other),
-        [a] => LM::Blas::scal(*a, other, to.as_mut_ptr(), to.stride()[0]),
-        [_, _] => scal!(),
-        [_, _, _] => scal!(),
-        [_, _, _, _] => scal!(),
+    match to.shape().len() {
+        0 => to.index_item_asign([], to.index_item([]) * other),
+        1 => LM::Blas::scal(to.shape().num_elm(), other, to.as_mut_ptr(), to.stride()[0]),
+        2 => scal!(),
+        3 => scal!(),
+        4 => scal!(),
         _ => panic!("not implemented: this is bug. please report this bug."),
     };
 }
