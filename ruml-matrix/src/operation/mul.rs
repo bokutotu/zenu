@@ -1,15 +1,18 @@
 use std::any::TypeId;
 
 use crate::{
-    dim::{Dim0, Dim1, Dim2, Dim3, Dim4, DimTrait},
+    blas::Blas,
+    dim::{Dim2, DimTrait},
     index::Index0D,
     matrix::{
-        IndexAxis, IndexAxisMut, IndexItem, IndexItemAsign, MatrixBase, ViewMatrix, ViewMutMatix,
+        AsMutPtr, IndexAxisDyn, IndexAxisMutDyn, IndexItem, IndexItemAsign, MatrixBase, ViewMatrix,
+        ViewMutMatix,
     },
     matrix_blas::gemm::gemm,
-    matrix_impl::{matrix_into_dim, Matrix},
+    matrix_impl::Matrix,
     memory::{ViewMemory, ViewMutMemory},
     num::Num,
+    operation::copy_from::CopyFrom,
 };
 
 fn mul_matrix_scalar<T, LM, SM, D>(self_: Matrix<SM, D>, lhs: Matrix<LM, D>, rhs: T)
@@ -20,40 +23,53 @@ where
     D: DimTrait,
 {
     assert_eq!(self_.shape(), lhs.shape());
+    let mut self_ = self_.into_dyn_dim();
+    let lhs = lhs.into_dyn_dim();
+    CopyFrom::copy_from(&mut self_, &lhs);
+    mul_assign_matrix_scalar(self_, rhs);
+}
 
-    macro_rules! mul_matrix_scalar_dim {
-        ($self_:ident, $lhs:ident, $rhs:ident, $dim:ident) => {{
-            let mut self_: Matrix<SM, $dim> = matrix_into_dim($self_);
-            let lhs: Matrix<LM, $dim> = matrix_into_dim($lhs);
-            let self_shape: $dim = self_.shape();
-            for idx in 0..self_shape[0] {
-                let self_row = self_.index_axis_mut(Index0D::new(idx));
-                let lhs_row = lhs.index_axis(Index0D::new(idx));
-                mul_matrix_scalar(self_row, lhs_row, $rhs);
+fn mul_assign_matrix_scalar<T, LM, D>(to: Matrix<LM, D>, other: T)
+where
+    T: Num,
+    LM: ViewMutMemory<Item = T>,
+    D: DimTrait,
+{
+    let mut to = to.into_dyn_dim();
+
+    macro_rules! scal {
+        () => {{
+            if to.shape_stride().is_contiguous() {
+                let num_dim = to.shape().len();
+                LM::Blas::scal(
+                    to.shape().num_elm(),
+                    other,
+                    to.as_mut_ptr(),
+                    to.stride()[num_dim - 1],
+                );
+            } else {
+                for idx in 0..to.shape()[0] {
+                    let to_ = to.index_axis_mut_dyn(Index0D::new(idx));
+                    mul_assign_matrix_scalar(to_, other);
+                }
             }
         }};
     }
 
-    match self_.shape().len() {
-        1 => {
-            let mut self_: Matrix<SM, Dim1> = matrix_into_dim(self_);
-            let lhs: Matrix<LM, Dim1> = matrix_into_dim(lhs);
-            for idx in 0..self_.shape()[0] {
-                self_.index_item_asign([idx], lhs.index_item([idx]) * rhs);
-            }
-        }
-        2 => mul_matrix_scalar_dim!(self_, lhs, rhs, Dim2),
-        3 => mul_matrix_scalar_dim!(self_, lhs, rhs, Dim3),
-        4 => mul_matrix_scalar_dim!(self_, lhs, rhs, Dim4),
+    match to.shape().slice() {
+        [] => to.index_item_asign([], to.index_item([]) * other),
+        [a] => LM::Blas::scal(*a, other, to.as_mut_ptr(), to.stride()[0]),
+        [_, _] => scal!(),
+        [_, _, _] => scal!(),
+        [_, _, _, _] => scal!(),
         _ => panic!("not implemented: this is bug. please report this bug."),
-    }
+    };
 }
 
-// // TODO: クッソ汚いコードなのでどうにかする
-fn mul_matrix_matrix<T, LM, RM, SM, D1, D2>(
+fn mul_matrix_matrix<T, LM, RM, SM, D1, D2, D3>(
     self_: Matrix<SM, D1>,
-    lhs: Matrix<LM, D1>,
-    rhs: Matrix<RM, D2>,
+    lhs: Matrix<LM, D2>,
+    rhs: Matrix<RM, D3>,
 ) where
     T: Num,
     LM: ViewMemory<Item = T>,
@@ -61,63 +77,56 @@ fn mul_matrix_matrix<T, LM, RM, SM, D1, D2>(
     SM: ViewMutMemory<Item = T>,
     D1: DimTrait,
     D2: DimTrait,
+    D3: DimTrait,
 {
-    assert_eq!(self_.shape(), lhs.shape());
-    assert!(self_.shape().len() >= rhs.shape().len());
+    if lhs.shape().len() < rhs.shape().len() {
+        mul_matrix_matrix(self_, rhs, lhs);
+        return;
+    }
+    assert_eq!(self_.shape().slice(), lhs.shape().slice());
+    let mut self_ = self_.into_dyn_dim();
+    let lhs = lhs.into_dyn_dim();
+    self_.copy_from(&lhs);
+    mul_assign_matrix_matrix(self_, rhs);
+}
+fn mul_assign_matrix_matrix<T, TM, OM, D1, D2>(to: Matrix<TM, D1>, other: Matrix<OM, D2>)
+where
+    T: Num,
+    TM: ViewMutMemory<Item = T>,
+    OM: ViewMemory<Item = T>,
+    D1: DimTrait,
+    D2: DimTrait,
+{
+    let mut to = to.into_dyn_dim();
+    let other = other.into_dyn_dim();
 
-    if TypeId::of::<D2>() == TypeId::of::<Dim0>() {
-        let rhs: Matrix<RM, Dim0> = matrix_into_dim(rhs);
-        let scalar = rhs.get_value();
-        mul_matrix_scalar(self_, lhs, scalar);
-    } else if TypeId::of::<D1>() == TypeId::of::<D2>() {
-        macro_rules! impl_mul_same_dim {
-            ($dim:ty) => {{
-                let mut self_: Matrix<SM, $dim> = matrix_into_dim(self_);
-                let lhs: Matrix<LM, $dim> = matrix_into_dim(lhs);
-                let rhs: Matrix<RM, $dim> = matrix_into_dim(rhs);
-                for idx in 0..self_.shape()[0] {
-                    let self_ = self_.index_axis_mut(Index0D::new(idx));
-                    let lhs = lhs.index_axis(Index0D::new(idx));
-                    let rhs = rhs.index_axis(Index0D::new(idx));
-                    mul_matrix_matrix(self_, lhs, rhs);
-                }
-            }};
+    assert!(to.shape().is_include(&other.shape()));
+    if to.shape().is_empty() {
+        to.index_item_asign([], other.index_item([]) * other.index_item([]));
+        return;
+    }
+    if other.shape().is_empty() {
+        let scalar = other.index_item([]);
+        mul_assign_matrix_scalar(to, scalar);
+        return;
+    }
+
+    if to.shape().len() == 1 {
+        for i in 0..to.shape()[0] {
+            let t_itm = to.index_item([i]);
+            let o_itm = other.index_item([i]);
+            to.index_item_asign([i], t_itm * o_itm);
         }
-        match self_.shape().len() {
-            1 => {
-                let mut self_: Matrix<SM, Dim1> = matrix_into_dim(self_);
-                let lhs: Matrix<LM, Dim1> = matrix_into_dim(lhs);
-                let rhs: Matrix<RM, Dim1> = matrix_into_dim(rhs);
-                for idx in 0..self_.shape()[0] {
-                    self_.index_item_asign([idx], lhs.index_item([idx]) * rhs.index_item([idx]));
-                }
-            }
-            2 => impl_mul_same_dim!(Dim2),
-            3 => impl_mul_same_dim!(Dim3),
-            4 => impl_mul_same_dim!(Dim4),
-            _ => panic!("not implemented: this is bug. please report this bug."),
+    } else if to.shape() == other.shape() {
+        for i in 0..to.shape()[0] {
+            let to_ = to.index_axis_mut_dyn(Index0D::new(i));
+            let other = other.index_axis_dyn(Index0D::new(i));
+            mul_assign_matrix_matrix(to_, other);
         }
     } else {
-        macro_rules! impl_mul_diff_dim {
-            ($dim1:ty, $dim2:ty) => {{
-                let mut self_: Matrix<SM, $dim1> = matrix_into_dim(self_);
-                let lhs: Matrix<LM, $dim1> = matrix_into_dim(lhs);
-                let rhs: Matrix<RM, $dim2> = matrix_into_dim(rhs);
-                for idx in 0..self_.shape()[0] {
-                    let self_ = self_.index_axis_mut(Index0D::new(idx));
-                    let lhs = lhs.index_axis(Index0D::new(idx));
-                    mul_matrix_matrix(self_, lhs, rhs.clone());
-                }
-            }};
-        }
-        match (self_.shape().len(), rhs.shape().len()) {
-            (2, 1) => impl_mul_diff_dim!(Dim2, Dim1),
-            (3, 1) => impl_mul_diff_dim!(Dim3, Dim1),
-            (3, 2) => impl_mul_diff_dim!(Dim3, Dim2),
-            (4, 1) => impl_mul_diff_dim!(Dim4, Dim1),
-            (4, 2) => impl_mul_diff_dim!(Dim4, Dim2),
-            (4, 3) => impl_mul_diff_dim!(Dim4, Dim3),
-            _ => panic!("not implemented: this is bug. please report this bug."),
+        for i in 0..to.shape()[0] {
+            let to_ = to.index_axis_mut_dyn(Index0D::new(i));
+            mul_assign_matrix_matrix(to_, other.clone());
         }
     }
 }
@@ -280,6 +289,8 @@ mod mul {
         let mut ans = CpuOwnedMatrix4D::<f32>::zeros([2, 2, 2, 2]);
 
         ans.to_view_mut().mul(a.to_view(), b.to_view());
+
+        println!("{:?}", ans);
 
         for i in 0..2 {
             for j in 0..2 {

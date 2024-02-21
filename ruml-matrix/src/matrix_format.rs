@@ -79,7 +79,6 @@ fn format_with_overflow(
     ellipsis: &str,
     fmt_elem: &mut dyn FnMut(&mut fmt::Formatter, usize) -> fmt::Result,
 ) -> fmt::Result {
-    println!("length: {}, limit: {}", length, limit);
     if length == 0 {
         // no-op
     } else if length <= limit {
@@ -142,7 +141,6 @@ where
     M: Memory<Item = T> + ToViewMemory,
     F: FnMut(&T, &mut fmt::Formatter<'_>) -> fmt::Result + Clone,
 {
-    println!("view shape: {:?}", view.shape());
     match view.shape().slice() {
         // If it's 0 dimensional, we just print out the scalar
         &[] => format(&view.index_item(&[] as &[usize]), f)?,
@@ -169,7 +167,6 @@ where
             f.write_str("[")?;
             let limit = fmt_opt.collapse_limit(full_ndim - depth - 1);
             format_with_overflow(f, shape[0], limit, &separator, ELLIPSIS, &mut |f, index| {
-                println!("here");
                 format_array_inner(
                     view.index_axis_dyn(Index0D::new(index)),
                     f,

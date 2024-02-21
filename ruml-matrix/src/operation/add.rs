@@ -198,7 +198,10 @@ where
 mod add {
     use crate::{
         matrix::{MatrixSlice, OwnedMatrix, ToViewMatrix, ToViewMutMatrix},
-        matrix_impl::{CpuOwnedMatrix0D, CpuOwnedMatrix1D, CpuOwnedMatrix2D, CpuOwnedMatrix3D},
+        matrix_impl::{
+            CpuOwnedMatrix0D, CpuOwnedMatrix1D, CpuOwnedMatrix2D, CpuOwnedMatrix3D,
+            CpuOwnedMatrixDyn,
+        },
         operation::zeros::Zeros,
         slice,
     };
@@ -411,5 +414,63 @@ mod add {
         assert_eq!(ans.index_item([3, 1]), 28.0);
         assert_eq!(ans.index_item([3, 2]), 30.0);
         assert_eq!(ans.index_item([3, 3]), 32.0);
+    }
+
+    #[test]
+    fn add_2d_0d() {
+        let a = CpuOwnedMatrix2D::from_vec(
+            vec![
+                1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12., 13., 14., 15., 16.,
+            ],
+            [4, 4],
+        );
+        let b = CpuOwnedMatrix0D::from_vec(vec![1.], []);
+        let mut ans = CpuOwnedMatrix2D::<f32>::zeros([4, 4]);
+        ans.to_view_mut().add(a.to_view(), b.to_view());
+        assert_eq!(ans.index_item([0, 0]), 2.0);
+        assert_eq!(ans.index_item([0, 1]), 3.0);
+        assert_eq!(ans.index_item([0, 2]), 4.0);
+        assert_eq!(ans.index_item([0, 3]), 5.0);
+        assert_eq!(ans.index_item([1, 0]), 6.0);
+        assert_eq!(ans.index_item([1, 1]), 7.0);
+        assert_eq!(ans.index_item([1, 2]), 8.0);
+        assert_eq!(ans.index_item([1, 3]), 9.0);
+        assert_eq!(ans.index_item([2, 0]), 10.0);
+        assert_eq!(ans.index_item([2, 1]), 11.0);
+        assert_eq!(ans.index_item([2, 2]), 12.0);
+        assert_eq!(ans.index_item([2, 3]), 13.0);
+        assert_eq!(ans.index_item([3, 0]), 14.0);
+        assert_eq!(ans.index_item([3, 1]), 15.0);
+        assert_eq!(ans.index_item([3, 2]), 16.0);
+        assert_eq!(ans.index_item([3, 3]), 17.0);
+    }
+
+    #[test]
+    fn add_2d_0d_dyn() {
+        let a = CpuOwnedMatrixDyn::from_vec(
+            vec![
+                1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12., 13., 14., 15., 16.,
+            ],
+            [4, 4],
+        );
+        let b = CpuOwnedMatrixDyn::from_vec(vec![1.], []);
+        let mut ans = CpuOwnedMatrixDyn::<f32>::zeros([4, 4]);
+        ans.to_view_mut().add(a.to_view(), b.to_view());
+        assert_eq!(ans.index_item([0, 0]), 2.0);
+        assert_eq!(ans.index_item([0, 1]), 3.0);
+        assert_eq!(ans.index_item([0, 2]), 4.0);
+        assert_eq!(ans.index_item([0, 3]), 5.0);
+        assert_eq!(ans.index_item([1, 0]), 6.0);
+        assert_eq!(ans.index_item([1, 1]), 7.0);
+        assert_eq!(ans.index_item([1, 2]), 8.0);
+        assert_eq!(ans.index_item([1, 3]), 9.0);
+        assert_eq!(ans.index_item([2, 0]), 10.0);
+        assert_eq!(ans.index_item([2, 1]), 11.0);
+        assert_eq!(ans.index_item([2, 2]), 12.0);
+        assert_eq!(ans.index_item([2, 3]), 13.0);
+        assert_eq!(ans.index_item([3, 0]), 14.0);
+        assert_eq!(ans.index_item([3, 1]), 15.0);
+        assert_eq!(ans.index_item([3, 2]), 16.0);
+        assert_eq!(ans.index_item([3, 3]), 17.0);
     }
 }
