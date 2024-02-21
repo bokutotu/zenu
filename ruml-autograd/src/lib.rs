@@ -9,7 +9,7 @@ use std::{
 
 use ruml_matrix::{
     dim::DimDyn, matrix::MatrixBase, matrix_impl::Matrix, memory::OwnedMemory,
-    operation::zeros::Zeros,
+    operation::ones::Ones,
 };
 
 pub trait Function<M: OwnedMemory> {
@@ -177,9 +177,9 @@ impl<M: OwnedMemory> Variable<M> {
 
     pub fn backward(&self) {
         if self.inner.borrow().grad.is_none() {
-            let zeros = Zeros::zeros(self.get_data().shape());
-            let zeros = Variable::new(zeros);
-            self.inner.borrow_mut().grad = Some(zeros);
+            let ones = Ones::ones(self.get_data().shape());
+            let ones = Variable::new(ones);
+            self.inner.borrow_mut().grad = Some(ones);
         }
         self.inner.borrow().backward();
     }
@@ -214,6 +214,8 @@ impl<M: OwnedMemory> Variable<M> {
         if let Some(grad_variable) = &inner.grad {
             let grad_inner = grad_variable.inner.borrow();
             f(&grad_inner.data);
+        } else {
+            panic!("grad is None");
         }
     }
 }

@@ -10,7 +10,7 @@ use ruml_matrix::{
 
 use crate::{Function, Variable, VariableWeak};
 
-use super::gradient_sum_over_axis;
+use super::{gradient_sum_over_axis, output_shape};
 
 struct Addition<M: OwnedMemory> {
     x: Variable<M>,
@@ -43,6 +43,8 @@ impl<M: OwnedMemory> Function<M> for Addition<M> {
             gradient_sum_over_axis(grad.to_view(), x_grad.to_view_mut());
             gradient_sum_over_axis(grad.to_view(), y_grad.to_view_mut());
         });
+        *self.x.get_grad_mut() = Some(Variable::new(x_grad));
+        *self.y.get_grad_mut() = Some(Variable::new(y_grad));
     }
 
     fn get_inputs(&self) -> Vec<Variable<M>> {
@@ -51,11 +53,7 @@ impl<M: OwnedMemory> Function<M> for Addition<M> {
 }
 
 fn add<M: OwnedMemory>(x: Variable<M>, y: Variable<M>) -> Variable<M> {
-    let output_shape: DimDyn = if x.get_data().shape().is_include(&y.get_data().shape()) {
-        x.get_data().shape()
-    } else {
-        y.get_data().shape()
-    };
+    let output_shape = output_shape(&x, &y);
     let output = Zeros::zeros(output_shape);
     let output = Variable::new(output);
     let add = Addition::new(x, y, output.clone());

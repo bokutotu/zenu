@@ -1,5 +1,5 @@
 use crate::{
-    dim::{Dim2, Dim3, Dim4},
+    dim::{Dim2, Dim3, Dim4, DimDyn},
     matrix::MatrixBase,
     matrix_impl::Matrix,
     memory::Memory,
@@ -27,3 +27,13 @@ macro_rules! impl_transpose {
 impl_transpose!(Dim2);
 impl_transpose!(Dim3);
 impl_transpose!(Dim4);
+
+impl<T: Num, M: Memory<Item = T>> Transpose for Matrix<M, DimDyn> {
+    fn transpose(&mut self) {
+        let shape_stride = self.shape_stride();
+        let transposed = shape_stride.transpose();
+
+        self.update_shape(transposed.shape());
+        self.update_stride(transposed.stride());
+    }
+}

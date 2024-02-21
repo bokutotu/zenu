@@ -1,13 +1,13 @@
 use crate::{
     blas::Blas,
-    dim::{Dim2, DimTrait},
+    dim::DimTrait,
     index::Index0D,
     matrix::{
-        AsMutPtr, IndexAxisDyn, IndexAxisMutDyn, IndexItem, IndexItemAsign, MatrixBase, ViewMatrix,
+        AsMutPtr, IndexAxisDyn, IndexAxisMutDyn, IndexItem, IndexItemAsign, MatrixBase,
         ViewMutMatix,
     },
     matrix_blas::gemm::gemm,
-    matrix_impl::Matrix,
+    matrix_impl::{matrix_into_dim, Matrix},
     memory::{ViewMemory, ViewMutMemory},
     num::Num,
     operation::copy_from::CopyFrom,
@@ -159,19 +159,28 @@ where
     }
 }
 
-pub trait MatMul<Rhs, Lhs>: ViewMutMatix {
-    fn mat_mul(self, rhs: Rhs, lhs: Lhs);
+pub trait Gemm<Rhs, Lhs>: ViewMutMatix {
+    fn gemm(self, rhs: Rhs, lhs: Lhs);
 }
 
-impl<T, S, R, L> MatMul<R, L> for S
+impl<T, S, R, L, D1, D2, D3> Gemm<Matrix<R, D1>, Matrix<L, D2>> for Matrix<S, D3>
 where
     T: Num,
-    L: ViewMatrix<Item = T> + MatrixBase<Dim = Dim2>,
-    R: ViewMatrix<Item = T> + MatrixBase<Dim = Dim2>,
-    S: ViewMutMatix<Item = T> + MatrixBase<Dim = Dim2>,
+    L: ViewMemory<Item = T>,
+    R: ViewMemory<Item = T>,
+    S: ViewMutMemory<Item = T>,
+    D1: DimTrait,
+    D2: DimTrait,
+    D3: DimTrait,
 {
-    fn mat_mul(self, rhs: R, lhs: L) {
-        gemm(rhs, lhs, self, T::one(), T::zero());
+    fn gemm(self, rhs: Matrix<R, D1>, lhs: Matrix<L, D2>) {
+        assert_eq!(self.shape().len(), 2);
+        assert_eq!(rhs.shape().len(), 2);
+        assert_eq!(lhs.shape().len(), 2);
+        let self_ = matrix_into_dim(self);
+        let rhs = matrix_into_dim(rhs);
+        let lhs = matrix_into_dim(lhs);
+        gemm(rhs, lhs, self_, T::one(), T::zero());
     }
 }
 
@@ -321,7 +330,7 @@ mod mat_mul {
         let b = CpuOwnedMatrix2D::from_vec(vec![1., 2., 3., 4., 5., 6.], [2, 3]);
         let mut ans = CpuOwnedMatrix2D::<f32>::zeros([2, 2]);
 
-        ans.to_view_mut().mat_mul(a.to_view(), b.to_view());
+        ans.to_view_mut().gemm(a.to_view(), b.to_view());
         dbg!(ans.index_item([0, 0]));
         dbg!(ans.index_item([0, 1]));
         dbg!(ans.index_item([1, 0]));
@@ -342,7 +351,7 @@ mod mat_mul {
         );
         let mut ans = CpuOwnedMatrix2D::<f32>::zeros([4, 2]);
 
-        ans.to_view_mut().mat_mul(a.to_view(), b.to_view());
+        ans.to_view_mut().gemm(a.to_view(), b.to_view());
         dbg!(ans.index_item([0, 0]));
         dbg!(ans.index_item([0, 1]));
         dbg!(ans.index_item([1, 0]));
