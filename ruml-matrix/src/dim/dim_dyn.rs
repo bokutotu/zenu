@@ -164,3 +164,4 @@ impl_from_slice_dim!(DimDyn, 4);
 impl_from_slice_dim!(DimDyn, 3);
 impl_from_slice_dim!(DimDyn, 2);
 impl_from_slice_dim!(DimDyn, 1);
+impl_from_slice_dim!(DimDyn, 0);
