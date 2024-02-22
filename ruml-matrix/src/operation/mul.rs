@@ -8,7 +8,7 @@ use crate::{
     },
     matrix_blas::gemm::gemm,
     matrix_impl::{matrix_into_dim, Matrix},
-    memory::{ViewMemory, ViewMutMemory},
+    memory::{View, ViewMut},
     num::Num,
     operation::copy_from::CopyFrom,
 };
@@ -93,8 +93,8 @@ use crate::{
 fn mul_matrix_scalar<T, LM, SM, D>(self_: Matrix<SM, D>, lhs: Matrix<LM, D>, rhs: T)
 where
     T: Num,
-    SM: ViewMutMemory<Item = T>,
-    LM: ViewMemory<Item = T>,
+    SM: ViewMut<Item = T>,
+    LM: View<Item = T>,
     D: DimTrait,
 {
     assert_eq!(self_.shape(), lhs.shape());
@@ -107,7 +107,7 @@ where
 fn mul_assign_matrix_scalar<T, LM, D>(to: Matrix<LM, D>, other: T)
 where
     T: Num,
-    LM: ViewMutMemory<Item = T>,
+    LM: ViewMut<Item = T>,
     D: DimTrait,
 {
     // let mut to = to.into_dyn_dim();
@@ -154,9 +154,9 @@ fn mul_matrix_matrix<T, LM, RM, SM, D1, D2, D3>(
     rhs: Matrix<RM, D3>,
 ) where
     T: Num,
-    LM: ViewMemory<Item = T>,
-    RM: ViewMemory<Item = T>,
-    SM: ViewMutMemory<Item = T>,
+    LM: View<Item = T>,
+    RM: View<Item = T>,
+    SM: ViewMut<Item = T>,
     D1: DimTrait,
     D2: DimTrait,
     D3: DimTrait,
@@ -175,8 +175,8 @@ fn mul_matrix_matrix<T, LM, RM, SM, D1, D2, D3>(
 fn mul_assign_matrix_matrix<T, TM, OM, D1, D2>(to: Matrix<TM, D1>, other: Matrix<OM, D2>)
 where
     T: Num,
-    TM: ViewMutMemory<Item = T>,
-    OM: ViewMemory<Item = T>,
+    TM: ViewMut<Item = T>,
+    OM: View<Item = T>,
     D1: DimTrait,
     D2: DimTrait,
 {
@@ -251,8 +251,8 @@ pub trait MatrixMul<Lhs, Rhs>: ViewMutMatix {
 impl<T, RM, SM, D> MatrixMul<Matrix<RM, D>, T> for Matrix<SM, D>
 where
     T: Num,
-    RM: ViewMemory<Item = T>,
-    SM: ViewMutMemory<Item = T>,
+    RM: View<Item = T>,
+    SM: ViewMut<Item = T>,
     D: DimTrait,
 {
     fn mul(self, lhs: Matrix<RM, D>, rhs: T) {
@@ -265,9 +265,9 @@ where
     T: Num,
     DS: DimTrait,
     DR: DimTrait,
-    SM: ViewMutMemory<Item = T>,
-    LM: ViewMemory<Item = T>,
-    RM: ViewMemory<Item = T>,
+    SM: ViewMut<Item = T>,
+    LM: View<Item = T>,
+    RM: View<Item = T>,
 {
     fn mul(self, lhs: Matrix<LM, DS>, rhs: Matrix<RM, DR>) {
         mul_matrix_matrix(self, lhs, rhs);
@@ -281,9 +281,9 @@ pub trait Gemm<Rhs, Lhs>: ViewMutMatix {
 impl<T, S, R, L, D1, D2, D3> Gemm<Matrix<R, D1>, Matrix<L, D2>> for Matrix<S, D3>
 where
     T: Num,
-    L: ViewMemory<Item = T>,
-    R: ViewMemory<Item = T>,
-    S: ViewMutMemory<Item = T>,
+    L: View<Item = T>,
+    R: View<Item = T>,
+    S: ViewMut<Item = T>,
     D1: DimTrait,
     D2: DimTrait,
     D3: DimTrait,

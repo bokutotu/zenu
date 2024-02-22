@@ -1,35 +1,32 @@
 use crate::{
     cpu_blas::CpuBlas,
     cpu_element_wise::CpuElementWise,
-    memory::{
-        Memory, OwnedMemory, ToOwnedMemory, ToViewMemory, ToViewMutMemory, ViewMemory,
-        ViewMutMemory,
-    },
+    memory::{Memory, Owned, ToOwnedMemory, ToViewMemory, ToViewMutMemory, View, ViewMut},
 };
 use std::ptr::NonNull;
 
 use crate::num::Num;
 
 #[derive(Debug)]
-pub struct CpuOwnedMemory<T: Num> {
+pub struct OwnedMem<T: Num> {
     ptr: NonNull<T>,
     offset: usize,
     length: usize,
 }
 
 #[derive(Debug)]
-pub struct CpuViewMemory<'a, T: Num> {
-    ptr: &'a CpuOwnedMemory<T>,
+pub struct ViewMem<'a, T: Num> {
+    ptr: &'a OwnedMem<T>,
     offset: usize,
 }
 
 #[derive(Debug)]
-pub struct CpuViewMutMemory<'a, T: Num> {
-    ptr: &'a mut CpuOwnedMemory<T>,
+pub struct ViewMutMem<'a, T: Num> {
+    ptr: &'a mut OwnedMem<T>,
     offset: usize,
 }
 
-impl<T: Num> Memory for CpuOwnedMemory<T> {
+impl<T: Num> Memory for OwnedMem<T> {
     type Item = T;
     type Blas = CpuBlas<T>;
     type ElmentWise = CpuElementWise<T>;
@@ -51,7 +48,7 @@ impl<T: Num> Memory for CpuOwnedMemory<T> {
     }
 }
 
-impl<T: Num> Clone for CpuOwnedMemory<T> {
+impl<T: Num> Clone for OwnedMem<T> {
     fn clone(&self) -> Self {
         let vec = unsafe { Vec::from_raw_parts(self.ptr.as_ptr(), self.len(), self.len()) };
         let mut vec_c = vec.clone();
@@ -66,58 +63,58 @@ impl<T: Num> Clone for CpuOwnedMemory<T> {
     }
 }
 
-impl<T> ToViewMemory for CpuOwnedMemory<T>
+impl<T> ToViewMemory for OwnedMem<T>
 where
     T: Num,
 {
-    type View<'a> = CpuViewMemory<'a, T>
+    type View<'a> = ViewMem<'a, T>
     where
         Self: 'a;
 
     fn to_view(&self, offset: usize) -> Self::View<'_> {
-        CpuViewMemory { ptr: self, offset }
+        ViewMem { ptr: self, offset }
     }
 }
 
-impl<T> ToViewMutMemory for CpuOwnedMemory<T>
+impl<T> ToViewMutMemory for OwnedMem<T>
 where
     T: Num,
 {
-    type ViewMut<'a> = CpuViewMutMemory<'a, T>
+    type ViewMut<'a> = ViewMutMem<'a, T>
     where
         Self: 'a;
 
     fn to_view_mut(&mut self, offset: usize) -> Self::ViewMut<'_> {
-        CpuViewMutMemory { ptr: self, offset }
+        ViewMutMem { ptr: self, offset }
     }
 }
 
-impl<'a, T> ToViewMutMemory for CpuViewMutMemory<'a, T>
+impl<'a, T> ToViewMutMemory for ViewMutMem<'a, T>
 where
     T: Num,
 {
-    type ViewMut<'b> = CpuViewMutMemory<'b, T>
+    type ViewMut<'b> = ViewMutMem<'b, T>
     where
         Self: 'b;
 
     fn to_view_mut(&mut self, offset: usize) -> Self::ViewMut<'_> {
         let offset = self.get_offset() + offset;
-        CpuViewMutMemory {
+        ViewMutMem {
             ptr: self.ptr,
             offset,
         }
     }
 }
 
-impl<T: Num> ToOwnedMemory for CpuOwnedMemory<T> {
-    type Owned = CpuOwnedMemory<T>;
+impl<T: Num> ToOwnedMemory for OwnedMem<T> {
+    type Owned = OwnedMem<T>;
 
     fn to_owned_memory(&self) -> Self::Owned {
         self.clone()
     }
 }
 
-impl<T: Num> OwnedMemory for CpuOwnedMemory<T> {
+impl<T: Num> Owned for OwnedMem<T> {
     fn from_vec(vec: Vec<Self::Item>) -> Self {
         let ptr = unsafe { NonNull::new_unchecked(vec.as_ptr() as *mut T) };
         let length = vec.len();
@@ -130,13 +127,13 @@ impl<T: Num> OwnedMemory for CpuOwnedMemory<T> {
     }
 }
 
-impl<T: Num> Drop for CpuOwnedMemory<T> {
+impl<T: Num> Drop for OwnedMem<T> {
     fn drop(&mut self) {
         let _ = unsafe { Vec::from_raw_parts(self.ptr.as_ptr(), self.len(), self.len()) };
     }
 }
 
-impl<T: Num> Clone for CpuViewMemory<'_, T> {
+impl<T: Num> Clone for ViewMem<'_, T> {
     fn clone(&self) -> Self {
         Self {
             ptr: self.ptr,
@@ -173,10 +170,10 @@ macro_rules! impl_cpu_memory_to_view {
         where
             T: Num,
         {
-            type View<'b> = CpuViewMemory<'b, T> where Self: 'b;
+            type View<'b> = ViewMem<'b, T> where Self: 'b;
 
             fn to_view(&self, offset: usize) -> Self::View<'_> {
-                CpuViewMemory {
+                ViewMem {
                     ptr: self.ptr,
                     offset: self.get_offset() + offset,
                 }
@@ -187,7 +184,7 @@ macro_rules! impl_cpu_memory_to_view {
         where
             T: Num,
         {
-            type Owned = CpuOwnedMemory<T>;
+            type Owned = OwnedMem<T>;
 
             fn to_owned_memory(&self) -> Self::Owned {
                 let mut memory = self.ptr.clone();
@@ -197,11 +194,11 @@ macro_rules! impl_cpu_memory_to_view {
         }
     };
 }
-impl_cpu_memory_to_view!(CpuViewMemory<'a, T>);
-impl_cpu_memory_to_view!(CpuViewMutMemory<'a, T>);
+impl_cpu_memory_to_view!(ViewMem<'a, T>);
+impl_cpu_memory_to_view!(ViewMutMem<'a, T>);
 
-impl<'a, T: Num> ViewMemory for CpuViewMemory<'a, T> {}
-impl<'a, T: Num> ViewMutMemory for CpuViewMutMemory<'a, T> {
+impl<'a, T: Num> View for ViewMem<'a, T> {}
+impl<'a, T: Num> ViewMut for ViewMutMem<'a, T> {
     fn as_mut_ptr(&self) -> *mut Self::Item {
         self.ptr.as_ptr() as *mut Self::Item
     }
@@ -215,7 +212,7 @@ mod memory {
 
     #[test]
     fn owned_memory_offset() {
-        let mut memory = CpuOwnedMemory::from_vec(vec![1., 2., 3., 4., 5.]);
+        let mut memory = OwnedMem::from_vec(vec![1., 2., 3., 4., 5.]);
         assert_eq!(memory.get_offset(), 0);
         assert_eq!(memory.value_offset(0), 1.);
 
@@ -226,7 +223,7 @@ mod memory {
 
     #[test]
     fn view_memory_offset_without_owned_memory_offset() {
-        let memory = CpuOwnedMemory::from_vec(vec![1., 2., 3., 4., 5.]);
+        let memory = OwnedMem::from_vec(vec![1., 2., 3., 4., 5.]);
         let view = memory.to_view(3);
         assert_eq!(view.get_offset(), 3);
         assert_eq!(view.value_offset(0), 4.);
@@ -234,7 +231,7 @@ mod memory {
 
     #[test]
     fn view_memory_offset_with_owned_memory_offset() {
-        let mut memory = CpuOwnedMemory::from_vec(vec![1., 2., 3., 4., 5.]);
+        let mut memory = OwnedMem::from_vec(vec![1., 2., 3., 4., 5.]);
         memory.set_offset(1);
         let view = memory.to_view(2);
         assert_eq!(view.get_offset(), 3);
@@ -243,7 +240,7 @@ mod memory {
 
     #[test]
     fn owned_memory_view_memory_owned_memory() {
-        let mut memory = CpuOwnedMemory::from_vec(vec![1., 2., 3., 4., 5.]);
+        let mut memory = OwnedMem::from_vec(vec![1., 2., 3., 4., 5.]);
         memory.set_offset(1);
         let view = memory.to_view(3);
         let owned_memory = view.to_owned_memory();

@@ -4,7 +4,7 @@ use crate::{
     index::Index0D,
     matrix::{AsPtr, BlasMatrix, IndexAxis, IndexItem, MatrixBase, ViewMatrix},
     matrix_impl::Matrix,
-    memory::{Memory, ViewMemory},
+    memory::{Memory, View},
 };
 
 pub trait MaxIdx<D> {
@@ -26,7 +26,7 @@ macro_rules! impl_max_idx {
     ($dim:ty) => {
         impl<M> MaxIdx<$dim> for Matrix<M, $dim>
         where
-            M: ViewMemory,
+            M: View,
         {
             fn max_idx(&self) -> $dim {
                 if self.shape_stride().is_contiguous() {

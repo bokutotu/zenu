@@ -4,7 +4,8 @@ use ruml_matrix::{
     dim::DimDyn,
     matrix::{MatrixBase, ToViewMatrix, ToViewMutMatrix},
     matrix_impl::Matrix,
-    memory::OwnedMemory,
+    memory::Owned,
+    memory_impl::OwnedMem,
     operation::{mul::MatrixMul, ones::Ones, zeros::Zeros},
 };
 
@@ -12,20 +13,20 @@ use crate::{Function, Variable, VariableWeak};
 
 use super::{gradient_sum_over_axis, output_shape};
 
-struct Multiply<M: OwnedMemory> {
+struct Multiply<M: Owned> {
     x: Variable<M>,
     y: Variable<M>,
     output: VariableWeak<M>,
 }
 
-impl<M: OwnedMemory> Multiply<M> {
+impl<M: Owned> Multiply<M> {
     pub fn new(x: Variable<M>, y: Variable<M>, output: Variable<M>) -> Self {
         let output = output.downgrade();
         Self { x, y, output }
     }
 }
 
-impl<M: OwnedMemory> Function<M> for Multiply<M> {
+impl Function<OwnedMem<f32>> for Multiply<OwnedMem<f32>> {
     fn forward(&self) {
         let x = self.x.get_data();
         let y = self.y.get_data();
@@ -40,8 +41,8 @@ impl<M: OwnedMemory> Function<M> for Multiply<M> {
     fn backward(&self) {
         let x_shape = self.x.get_data().shape();
         let y_shape = self.y.get_data().shape();
-        let mut x_grad_: Matrix<M, DimDyn> = Ones::ones(x_shape);
-        let mut y_grad_: Matrix<M, DimDyn> = Ones::ones(y_shape);
+        let mut x_grad_: Matrix<OwnedMem<f32>, DimDyn> = Ones::ones(x_shape);
+        let mut y_grad_: Matrix<OwnedMem<f32>, DimDyn> = Ones::ones(y_shape);
         self.output.upgrade().unwrap().with_grad_data(|grad| {
             let x = self.x.get_data();
             let y = self.y.get_data();
@@ -55,12 +56,12 @@ impl<M: OwnedMemory> Function<M> for Multiply<M> {
         *self.y.get_grad_mut() = Some(Variable::new(y_grad_));
     }
 
-    fn get_inputs(&self) -> Vec<Variable<M>> {
+    fn get_inputs(&self) -> Vec<Variable<OwnedMem<f32>>> {
         vec![self.x.clone(), self.y.clone()]
     }
 }
 
-fn mul<M: OwnedMemory>(x: Variable<M>, y: Variable<M>) -> Variable<M> {
+fn mul(x: Variable<OwnedMem<f32>>, y: Variable<OwnedMem<f32>>) -> Variable<OwnedMem<f32>> {
     let output_shape = output_shape(&x, &y);
     let output = Zeros::zeros(output_shape);
     let output = Variable::new(output);
@@ -70,10 +71,10 @@ fn mul<M: OwnedMemory>(x: Variable<M>, y: Variable<M>) -> Variable<M> {
     output
 }
 
-impl<M: OwnedMemory> Mul<Variable<M>> for Variable<M> {
-    type Output = Variable<M>;
+impl Mul<Variable<OwnedMem<f32>>> for Variable<OwnedMem<f32>> {
+    type Output = Variable<OwnedMem<f32>>;
 
-    fn mul(self, rhs: Variable<M>) -> Self::Output {
+    fn mul(self, rhs: Variable<OwnedMem<f32>>) -> Self::Output {
         mul(self, rhs)
     }
 }

@@ -2,23 +2,19 @@ use ruml_matrix::{
     dim::{DimDyn, DimTrait},
     matrix::{MatrixBase, ToViewMatrix, ToViewMutMatrix},
     matrix_impl::Matrix,
-    memory::{OwnedMemory, ViewMemory, ViewMutMemory},
+    memory::{Owned, View, ViewMut},
     num::Num,
     operation::{copy_from::CopyFrom, sum::MatrixSum},
 };
 
 use crate::Variable;
 
-// mod add;
+mod add;
 mod mul;
 
 pub mod matmul;
 
-pub(crate) fn gradient_sum_over_axis<
-    T: Num,
-    M: ViewMemory<Item = T>,
-    VM: ViewMutMemory<Item = T>,
->(
+pub(crate) fn gradient_sum_over_axis<T: Num, M: View<Item = T>, VM: ViewMut<Item = T>>(
     source: Matrix<M, DimDyn>,
     target: Matrix<VM, DimDyn>,
 ) {
@@ -46,7 +42,7 @@ pub(crate) fn gradient_sum_over_axis<
     }
 }
 
-pub(crate) fn output_shape<M: OwnedMemory>(x: &Variable<M>, y: &Variable<M>) -> DimDyn {
+pub(crate) fn output_shape<M: Owned>(x: &Variable<M>, y: &Variable<M>) -> DimDyn {
     if x.get_data().shape().is_include(&y.get_data().shape()) {
         x.get_data().shape()
     } else {

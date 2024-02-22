@@ -4,14 +4,14 @@ use crate::{
     dim::DimTrait,
     matrix::{ToOwnedMatrix, ToViewMatrix, ToViewMutMatrix},
     matrix_impl::Matrix,
-    memory::ViewMemory,
+    memory::View,
     num::Num,
     operation::{add::MatrixAdd, mul::MatrixMul, sub::MatrixSubAssign},
 };
 
 impl<M, D, T> Add<T> for Matrix<M, D>
 where
-    M: ViewMemory<Item = T>,
+    M: View<Item = T>,
     D: DimTrait,
     T: Num,
 {
@@ -27,8 +27,8 @@ where
 
 impl<M1, M2, D1, D2, T> Add<Matrix<M1, D1>> for Matrix<M2, D2>
 where
-    M1: ViewMemory<Item = T>,
-    M2: ViewMemory<Item = T>,
+    M1: View<Item = T>,
+    M2: View<Item = T>,
     D1: DimTrait,
     D2: DimTrait,
     T: Num,
@@ -45,7 +45,7 @@ where
 
 impl<M, D, T> Mul<T> for Matrix<M, D>
 where
-    M: ViewMemory<Item = T>,
+    M: View<Item = T>,
     D: DimTrait,
     T: Num,
 {
@@ -61,8 +61,8 @@ where
 
 impl<M1, M2, D1, D2, T> Mul<Matrix<M1, D1>> for Matrix<M2, D2>
 where
-    M1: ViewMemory<Item = T>,
-    M2: ViewMemory<Item = T>,
+    M1: View<Item = T>,
+    M2: View<Item = T>,
     D1: DimTrait,
     D2: DimTrait,
     T: Num,
@@ -79,7 +79,7 @@ where
 
 impl<M1, D1, T> Sub<T> for Matrix<M1, D1>
 where
-    M1: ViewMemory<Item = T>,
+    M1: View<Item = T>,
     D1: DimTrait,
     T: Num,
 {
@@ -94,8 +94,8 @@ where
 
 impl<M1, M2, D1, D2, T> Sub<Matrix<M1, D1>> for Matrix<M2, D2>
 where
-    M1: ViewMemory<Item = T>,
-    M2: ViewMemory<Item = T>,
+    M1: View<Item = T>,
+    M2: View<Item = T>,
     D1: DimTrait,
     D2: DimTrait,
     T: Num,

@@ -1,5 +1,4 @@
 use crate::{
-    cpu_memory::{CpuOwnedMemory, CpuViewMemory, CpuViewMutMemory},
     dim::{
         cal_offset, default_stride, Dim0, Dim1, Dim2, Dim3, Dim4, DimDyn, DimTrait, LessDimTrait,
     },
@@ -9,10 +8,8 @@ use crate::{
         IndexItem, IndexItemAsign, MatrixBase, MatrixSlice, MatrixSliceDyn, MatrixSliceMut,
         OwnedMatrix, ToOwnedMatrix, ToViewMatrix, ToViewMutMatrix, ViewMatrix, ViewMutMatix,
     },
-    memory::{
-        Memory, OwnedMemory, ToOwnedMemory, ToViewMemory, ToViewMutMemory, ViewMemory,
-        ViewMutMemory,
-    },
+    memory::{Memory, Owned, ToOwnedMemory, ToViewMemory, ToViewMutMemory, View, ViewMut},
+    memory_impl::{OwnedMem, ViewMem, ViewMutMem},
     num::Num,
     shape_stride::ShapeStride,
     slice::Slice,
@@ -32,7 +29,7 @@ where
 {
     pub fn scalar(scalar: T) -> Self
     where
-        M: OwnedMemory<Item = T>,
+        M: Owned<Item = T>,
     {
         let memory = M::from_vec(vec![scalar]);
         Matrix {
@@ -48,7 +45,7 @@ where
 
     pub fn set_value(&mut self, value: T)
     where
-        M: ViewMutMemory<Item = T>,
+        M: ViewMut<Item = T>,
     {
         unsafe {
             self.as_mut_ptr().write(value);
@@ -149,7 +146,7 @@ impl<M: ToOwnedMemory, S: DimTrait> ToOwnedMatrix for Matrix<M, S> {
     }
 }
 
-impl<M: ViewMutMemory, S: DimTrait> AsMutPtr for Matrix<M, S> {
+impl<M: ViewMut, S: DimTrait> AsMutPtr for Matrix<M, S> {
     fn as_mut_ptr(&mut self) -> *mut Self::Item {
         self.memory.as_mut_ptr_offset(0)
     }
@@ -161,11 +158,11 @@ impl<M: Memory, S: DimTrait> AsPtr for Matrix<M, S> {
     }
 }
 
-impl<M: ViewMemory, S: DimTrait> ViewMatrix for Matrix<M, S> {}
+impl<M: View, S: DimTrait> ViewMatrix for Matrix<M, S> {}
 
-impl<M: ViewMutMemory, S: DimTrait> ViewMutMatix for Matrix<M, S> {}
+impl<M: ViewMut, S: DimTrait> ViewMutMatix for Matrix<M, S> {}
 
-impl<M: OwnedMemory, S: DimTrait> OwnedMatrix for Matrix<M, S> {
+impl<M: Owned, S: DimTrait> OwnedMatrix for Matrix<M, S> {
     fn from_vec<I: Into<Self::Dim>>(vec: Vec<Self::Item>, dim: I) -> Self {
         let dim = dim.into();
         if vec.len() != dim.num_elm() {
@@ -310,7 +307,7 @@ impl<I: IndexAxisTrait, M: ToViewMutMemory, D: DimTrait> IndexAxisMutDyn<I> for 
     }
 }
 
-impl<T: Num, D: DimTrait, VM: ViewMutMemory + Memory<Item = T>> IndexItemAsign for Matrix<VM, D> {
+impl<T: Num, D: DimTrait, VM: ViewMut + Memory<Item = T>> IndexItemAsign for Matrix<VM, D> {
     fn index_item_asign<I: Into<Self::Dim>>(&mut self, index: I, value: Self::Item) {
         let index = index.into();
         if self.shape_stride().shape().is_overflow(index) {
@@ -358,29 +355,29 @@ impl<T: Num, M: Memory<Item = T>, D: DimTrait> BlasMatrix for Matrix<M, D> {
     type Blas = M::Blas;
 }
 
-pub type CpuOwnedMatrix0D<T> = Matrix<CpuOwnedMemory<T>, Dim0>;
-pub type CpuViewMatrix0D<'a, T> = Matrix<CpuViewMemory<'a, T>, Dim0>;
-pub type CpuViewMutMatrix0D<'a, T> = Matrix<CpuViewMutMemory<'a, T>, Dim0>;
+pub type CpuOwnedMatrix0D<T> = Matrix<OwnedMem<T>, Dim0>;
+pub type CpuViewMatrix0D<'a, T> = Matrix<ViewMem<'a, T>, Dim0>;
+pub type CpuViewMutMatrix0D<'a, T> = Matrix<ViewMutMem<'a, T>, Dim0>;
 
-pub type CpuOwnedMatrix1D<T> = Matrix<CpuOwnedMemory<T>, Dim1>;
-pub type CpuViewMatrix1D<'a, T> = Matrix<CpuViewMemory<'a, T>, Dim1>;
-pub type CpuViewMutMatrix1D<'a, T> = Matrix<CpuViewMutMemory<'a, T>, Dim1>;
+pub type CpuOwnedMatrix1D<T> = Matrix<OwnedMem<T>, Dim1>;
+pub type CpuViewMatrix1D<'a, T> = Matrix<ViewMem<'a, T>, Dim1>;
+pub type CpuViewMutMatrix1D<'a, T> = Matrix<ViewMutMem<'a, T>, Dim1>;
 
-pub type CpuOwnedMatrix2D<T> = Matrix<CpuOwnedMemory<T>, Dim2>;
-pub type CpuViewMatrix2D<'a, T> = Matrix<CpuViewMemory<'a, T>, Dim2>;
-pub type CpuViewMutMatrix2D<'a, T> = Matrix<CpuViewMutMemory<'a, T>, Dim2>;
+pub type CpuOwnedMatrix2D<T> = Matrix<OwnedMem<T>, Dim2>;
+pub type CpuViewMatrix2D<'a, T> = Matrix<ViewMem<'a, T>, Dim2>;
+pub type CpuViewMutMatrix2D<'a, T> = Matrix<ViewMutMem<'a, T>, Dim2>;
 
-pub type CpuOwnedMatrix3D<T> = Matrix<CpuOwnedMemory<T>, Dim3>;
-pub type CpuViewMatrix3D<'a, T> = Matrix<CpuViewMemory<'a, T>, Dim3>;
-pub type CpuViewMutMatrix3D<'a, T> = Matrix<CpuViewMutMemory<'a, T>, Dim3>;
+pub type CpuOwnedMatrix3D<T> = Matrix<OwnedMem<T>, Dim3>;
+pub type CpuViewMatrix3D<'a, T> = Matrix<ViewMem<'a, T>, Dim3>;
+pub type CpuViewMutMatrix3D<'a, T> = Matrix<ViewMutMem<'a, T>, Dim3>;
 
-pub type CpuOwnedMatrix4D<T> = Matrix<CpuOwnedMemory<T>, Dim4>;
-pub type CpuViewMatrix4D<'a, T> = Matrix<CpuViewMemory<'a, T>, Dim4>;
-pub type CpuViewMutMatrix4D<'a, T> = Matrix<CpuViewMutMemory<'a, T>, Dim4>;
+pub type CpuOwnedMatrix4D<T> = Matrix<OwnedMem<T>, Dim4>;
+pub type CpuViewMatrix4D<'a, T> = Matrix<ViewMem<'a, T>, Dim4>;
+pub type CpuViewMutMatrix4D<'a, T> = Matrix<ViewMutMem<'a, T>, Dim4>;
 
-pub type CpuOwnedMatrixDyn<T> = Matrix<CpuOwnedMemory<T>, DimDyn>;
-pub type CpuViewMatrixDyn<'a, T> = Matrix<CpuViewMemory<'a, T>, DimDyn>;
-pub type CpuViewMutMatrixDyn<'a, T> = Matrix<CpuViewMutMemory<'a, T>, DimDyn>;
+pub type CpuOwnedMatrixDyn<T> = Matrix<OwnedMem<T>, DimDyn>;
+pub type CpuViewMatrixDyn<'a, T> = Matrix<ViewMem<'a, T>, DimDyn>;
+pub type CpuViewMutMatrixDyn<'a, T> = Matrix<ViewMutMem<'a, T>, DimDyn>;
 
 #[cfg(test)]
 mod matrix_slice {

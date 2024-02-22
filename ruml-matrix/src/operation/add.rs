@@ -3,7 +3,7 @@ use crate::{
     index::Index0D,
     matrix::{IndexAxisDyn, IndexAxisMutDyn, IndexItem, IndexItemAsign, MatrixBase, ViewMutMatix},
     matrix_impl::{matrix_into_dim, Matrix},
-    memory::{ViewMemory, ViewMutMemory},
+    memory::{View, ViewMut},
     num::Num,
     operation::copy_from::CopyFrom,
 };
@@ -11,7 +11,7 @@ use crate::{
 fn add_assign_matrix_scalar<T, LM, D>(to: Matrix<LM, D>, other: T)
 where
     T: Num,
-    LM: ViewMutMemory<Item = T>,
+    LM: ViewMut<Item = T>,
     D: DimTrait,
 {
     match to.shape().slice() {
@@ -55,8 +55,8 @@ where
 fn add_matrix_scalar<T, SM, LM, D>(to: Matrix<SM, D>, lhs: Matrix<LM, D>, rhs: T)
 where
     T: Num,
-    SM: ViewMutMemory<Item = T>,
-    LM: ViewMemory<Item = T>,
+    SM: ViewMut<Item = T>,
+    LM: View<Item = T>,
     D: DimTrait,
 {
     assert_eq!(to.shape(), lhs.shape());
@@ -69,8 +69,8 @@ where
 fn add_assign_matrix_matrix<T, VM, V, D1, D2>(source: Matrix<VM, D1>, other: Matrix<V, D2>)
 where
     T: Num,
-    VM: ViewMutMemory<Item = T>,
-    V: ViewMemory<Item = T>,
+    VM: ViewMut<Item = T>,
+    V: View<Item = T>,
     D1: DimTrait,
     D2: DimTrait,
 {
@@ -160,9 +160,9 @@ fn add_matrix_matrix<T, VM, L, R, D1, D2, D3>(
     rhs: Matrix<R, D3>,
 ) where
     T: Num,
-    VM: ViewMutMemory<Item = T>,
-    L: ViewMemory<Item = T>,
-    R: ViewMemory<Item = T>,
+    VM: ViewMut<Item = T>,
+    L: View<Item = T>,
+    R: View<Item = T>,
     D1: DimTrait,
     D2: DimTrait,
     D3: DimTrait,
@@ -189,8 +189,8 @@ pub trait MatrixAddAssign<Rhs>: ViewMutMatix + MatrixBase {
 impl<T, RM, SM, D> MatrixAdd<Matrix<RM, D>, T> for Matrix<SM, D>
 where
     T: Num,
-    RM: ViewMemory<Item = T>,
-    SM: ViewMutMemory<Item = T>,
+    RM: View<Item = T>,
+    SM: ViewMut<Item = T>,
     D: DimTrait,
 {
     fn add(self, lhs: Matrix<RM, D>, rhs: T) {
@@ -201,9 +201,9 @@ where
 impl<T, RM, LM, SM, D1, D2> MatrixAdd<Matrix<LM, D1>, Matrix<RM, D2>> for Matrix<SM, D1>
 where
     T: Num,
-    RM: ViewMemory<Item = T>,
-    LM: ViewMemory<Item = T>,
-    SM: ViewMutMemory<Item = T>,
+    RM: View<Item = T>,
+    LM: View<Item = T>,
+    SM: ViewMut<Item = T>,
     D1: DimTrait,
     D2: DimTrait,
 {
@@ -215,7 +215,7 @@ where
 impl<T, SM, D> MatrixAddAssign<T> for Matrix<SM, D>
 where
     T: Num,
-    SM: ViewMutMemory<Item = T>,
+    SM: ViewMut<Item = T>,
     D: DimTrait,
 {
     fn add_assign(self, rhs: T) {
@@ -226,8 +226,8 @@ where
 impl<T, LM, SM, D1, D2> MatrixAddAssign<Matrix<LM, D1>> for Matrix<SM, D2>
 where
     T: Num,
-    LM: ViewMemory<Item = T>,
-    SM: ViewMutMemory<Item = T>,
+    LM: View<Item = T>,
+    SM: ViewMut<Item = T>,
     D1: DimTrait,
     D2: DimTrait,
 {

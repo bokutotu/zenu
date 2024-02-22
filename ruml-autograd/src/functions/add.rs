@@ -4,7 +4,8 @@ use ruml_matrix::{
     dim::DimDyn,
     matrix::{MatrixBase, ToViewMatrix, ToViewMutMatrix},
     matrix_impl::Matrix,
-    memory::OwnedMemory,
+    memory::Owned,
+    memory_impl::OwnedMem,
     operation::{add::MatrixAdd, zeros::Zeros},
 };
 
@@ -12,20 +13,20 @@ use crate::{Function, Variable, VariableWeak};
 
 use super::{gradient_sum_over_axis, output_shape};
 
-struct Addition<M: OwnedMemory> {
+struct Addition<M: Owned> {
     x: Variable<M>,
     y: Variable<M>,
     output: VariableWeak<M>,
 }
 
-impl<M: OwnedMemory> Addition<M> {
+impl<M: Owned> Addition<M> {
     pub fn new(x: Variable<M>, y: Variable<M>, output: Variable<M>) -> Self {
         let output = output.downgrade();
         Self { x, y, output }
     }
 }
 
-impl<M: OwnedMemory> Function<M> for Addition<M> {
+impl Function<OwnedMem<f32>> for Addition<OwnedMem<f32>> {
     fn forward(&self) {
         let x = self.x.get_data();
         let y = self.y.get_data();
@@ -37,8 +38,8 @@ impl<M: OwnedMemory> Function<M> for Addition<M> {
     fn backward(&self) {
         let x_shape = self.x.get_data().shape();
         let y_shape = self.y.get_data().shape();
-        let mut x_grad: Matrix<M, DimDyn> = Zeros::zeros(x_shape);
-        let mut y_grad: Matrix<M, DimDyn> = Zeros::zeros(y_shape);
+        let mut x_grad: Matrix<OwnedMem<f32>, DimDyn> = Zeros::zeros(x_shape);
+        let mut y_grad: Matrix<OwnedMem<f32>, DimDyn> = Zeros::zeros(y_shape);
         self.output.upgrade().unwrap().with_grad_data(|grad| {
             gradient_sum_over_axis(grad.to_view(), x_grad.to_view_mut());
             gradient_sum_over_axis(grad.to_view(), y_grad.to_view_mut());
@@ -47,12 +48,12 @@ impl<M: OwnedMemory> Function<M> for Addition<M> {
         *self.y.get_grad_mut() = Some(Variable::new(y_grad));
     }
 
-    fn get_inputs(&self) -> Vec<Variable<M>> {
+    fn get_inputs(&self) -> Vec<Variable<OwnedMem<f32>>> {
         vec![self.x.clone(), self.y.clone()]
     }
 }
 
-fn add<M: OwnedMemory>(x: Variable<M>, y: Variable<M>) -> Variable<M> {
+fn add(x: Variable<OwnedMem<f32>>, y: Variable<OwnedMem<f32>>) -> Variable<OwnedMem<f32>> {
     let output_shape = output_shape(&x, &y);
     let output = Zeros::zeros(output_shape);
     let output = Variable::new(output);
@@ -62,10 +63,10 @@ fn add<M: OwnedMemory>(x: Variable<M>, y: Variable<M>) -> Variable<M> {
     output
 }
 
-impl<M: OwnedMemory> Add<Variable<M>> for Variable<M> {
-    type Output = Variable<M>;
+impl Add<Variable<OwnedMem<f32>>> for Variable<OwnedMem<f32>> {
+    type Output = Variable<OwnedMem<f32>>;
 
-    fn add(self, other: Variable<M>) -> Self::Output {
+    fn add(self, other: Variable<OwnedMem<f32>>) -> Self::Output {
         add(self, other)
     }
 }

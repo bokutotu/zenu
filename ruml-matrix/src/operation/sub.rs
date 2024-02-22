@@ -2,7 +2,7 @@ use crate::{
     dim::DimTrait,
     matrix::{ToViewMatrix, ViewMutMatix},
     matrix_impl::Matrix,
-    memory::{ViewMemory, ViewMutMemory},
+    memory::{View, ViewMut},
     num::Num,
 };
 
@@ -18,8 +18,8 @@ pub trait MatrixSub<Lhs, Rhs>: ViewMutMatix {
 
 impl<T, SM, RM, D1, D2> MatrixSubAssign<Matrix<RM, D1>> for Matrix<SM, D2>
 where
-    SM: ViewMutMemory<Item = T>,
-    RM: ViewMemory<Item = T>,
+    SM: ViewMut<Item = T>,
+    RM: View<Item = T>,
     D1: DimTrait,
     D2: DimTrait,
     T: Num,
@@ -32,7 +32,7 @@ where
 
 impl<T, SM, D> MatrixSubAssign<T> for Matrix<SM, D>
 where
-    SM: ViewMutMemory<Item = T>,
+    SM: ViewMut<Item = T>,
     D: DimTrait,
     T: Num,
 {
@@ -44,9 +44,9 @@ where
 
 impl<T, SM, RM, LM, D1, D2, D3> MatrixSub<Matrix<LM, D1>, Matrix<RM, D2>> for Matrix<SM, D3>
 where
-    SM: ViewMutMemory<Item = T>,
-    RM: ViewMemory<Item = T>,
-    LM: ViewMemory<Item = T>,
+    SM: ViewMut<Item = T>,
+    RM: View<Item = T>,
+    LM: View<Item = T>,
     D1: DimTrait,
     D2: DimTrait,
     D3: DimTrait,
@@ -63,8 +63,8 @@ where
 
 impl<T, LM, D1, SM, D2> MatrixSub<Matrix<LM, D1>, T> for Matrix<SM, D2>
 where
-    SM: ViewMutMemory<Item = T>,
-    LM: ViewMemory<Item = T>,
+    SM: ViewMut<Item = T>,
+    LM: View<Item = T>,
     D1: DimTrait,
     D2: DimTrait,
     T: Num,

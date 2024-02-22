@@ -6,7 +6,7 @@ use crate::{
         AsMutPtr, AsPtr, IndexAxisDyn, IndexAxisMutDyn, MatrixBase, ViewMatrix, ViewMutMatix,
     },
     matrix_impl::Matrix,
-    memory::{Memory, ViewMemory, ViewMutMemory},
+    memory::{Memory, View, ViewMut},
     num::Num,
 };
 
@@ -20,8 +20,8 @@ where
 impl<T, V, VM> CopyFrom<Matrix<V, DimDyn>> for Matrix<VM, DimDyn>
 where
     T: Num,
-    VM: ViewMutMemory<Item = T>,
-    V: ViewMemory<Item = T>,
+    VM: ViewMut<Item = T>,
+    V: View<Item = T>,
 {
     fn copy_from(&mut self, rhs: &Matrix<V, DimDyn>) {
         copy(self, rhs);
@@ -31,8 +31,8 @@ where
 fn copy<T, VM, V>(to: &mut Matrix<VM, DimDyn>, source: &Matrix<V, DimDyn>)
 where
     T: Num,
-    VM: ViewMutMemory<Item = T>,
-    V: ViewMemory<Item = T>,
+    VM: ViewMut<Item = T>,
+    V: View<Item = T>,
 {
     assert_eq!(to.shape(), source.shape());
 

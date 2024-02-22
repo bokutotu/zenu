@@ -3,7 +3,7 @@ resolver = "2"
 members = [
     "ruml",
     "ruml-autograd",
-    "ruml-matrix",
+    "ruml-matrix"
 ]
 
 [workspace.lints.clippy]

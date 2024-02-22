@@ -2,24 +2,24 @@ use crate::{
     dim::{DimDyn, DimTrait},
     matrix::{MatrixBase, ToViewMutMatrix},
     matrix_impl::Matrix,
-    memory::{OwnedMemory, ViewMemory},
+    memory::{Owned, View},
     num::Num,
 };
 
 use super::{copy_from::CopyFrom, zeros::Zeros};
 
 pub trait ToDefaultStride<T: Num> {
-    fn to_default_stride<SM: ViewMemory<Item = T>, SD: DimTrait>(source: Matrix<SM, SD>) -> Self;
+    fn to_default_stride<SM: View<Item = T>, SD: DimTrait>(source: Matrix<SM, SD>) -> Self;
 }
 
 impl<T, M> ToDefaultStride<T> for Matrix<M, DimDyn>
 where
     T: Num,
-    M: OwnedMemory<Item = T>,
+    M: Owned<Item = T>,
 {
     fn to_default_stride<SM, SD>(source: Matrix<SM, SD>) -> Self
     where
-        SM: ViewMemory<Item = T>,
+        SM: View<Item = T>,
         SD: DimTrait,
     {
         let mut output = <Self as Zeros>::zeros(source.shape().slice());

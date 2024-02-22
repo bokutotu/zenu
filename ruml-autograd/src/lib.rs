@@ -8,11 +8,10 @@ use std::{
 };
 
 use ruml_matrix::{
-    dim::DimDyn, matrix::MatrixBase, matrix_impl::Matrix, memory::OwnedMemory,
-    operation::ones::Ones,
+    dim::DimDyn, matrix::MatrixBase, matrix_impl::Matrix, memory::Owned, operation::ones::Ones,
 };
 
-pub trait Function<M: OwnedMemory> {
+pub trait Function<M: Owned> {
     fn forward(&self);
     fn backward(&self);
     fn get_inputs(&self) -> Vec<Variable<M>>;
@@ -23,12 +22,12 @@ pub trait Function<M: OwnedMemory> {
 }
 
 #[derive(Clone)]
-pub(crate) struct FunctionQueueItem<M: OwnedMemory> {
+pub(crate) struct FunctionQueueItem<M: Owned> {
     pub(crate) func: Rc<RefCell<Box<dyn Function<M>>>>,
     pub(crate) gen: usize,
 }
 
-impl<M: OwnedMemory> From<Rc<RefCell<Box<dyn Function<M>>>>> for FunctionQueueItem<M> {
+impl<M: Owned> From<Rc<RefCell<Box<dyn Function<M>>>>> for FunctionQueueItem<M> {
     fn from(func: Rc<RefCell<Box<dyn Function<M>>>>) -> Self {
         Self {
             func: func.clone(),
@@ -37,29 +36,29 @@ impl<M: OwnedMemory> From<Rc<RefCell<Box<dyn Function<M>>>>> for FunctionQueueIt
     }
 }
 
-impl<M: OwnedMemory> PartialEq for FunctionQueueItem<M> {
+impl<M: Owned> PartialEq for FunctionQueueItem<M> {
     fn eq(&self, other: &Self) -> bool {
         self.gen == other.gen
     }
 }
 
-impl<M: OwnedMemory> Eq for FunctionQueueItem<M> {
+impl<M: Owned> Eq for FunctionQueueItem<M> {
     fn assert_receiver_is_total_eq(&self) {}
 }
 
-impl<M: OwnedMemory> PartialOrd for FunctionQueueItem<M> {
+impl<M: Owned> PartialOrd for FunctionQueueItem<M> {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         Some(self.gen.cmp(&other.gen))
     }
 }
 
-impl<M: OwnedMemory> Ord for FunctionQueueItem<M> {
+impl<M: Owned> Ord for FunctionQueueItem<M> {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         self.gen.cmp(&other.gen)
     }
 }
 
-impl<M: OwnedMemory> Deref for FunctionQueueItem<M> {
+impl<M: Owned> Deref for FunctionQueueItem<M> {
     type Target = Rc<RefCell<Box<dyn Function<M>>>>;
 
     fn deref(&self) -> &Self::Target {
@@ -68,7 +67,7 @@ impl<M: OwnedMemory> Deref for FunctionQueueItem<M> {
 }
 
 #[derive(Clone)]
-pub struct VariableInner<M: OwnedMemory> {
+pub struct VariableInner<M: Owned> {
     data: Matrix<M, DimDyn>,
     creator: Option<Rc<RefCell<Box<dyn Function<M>>>>>,
     grad: Option<Variable<M>>,
@@ -76,7 +75,7 @@ pub struct VariableInner<M: OwnedMemory> {
     name: Option<String>,
 }
 
-impl<M: OwnedMemory> VariableInner<M> {
+impl<M: Owned> VariableInner<M> {
     pub fn new(data: Matrix<M, DimDyn>) -> Self {
         VariableInner {
             data,
@@ -137,11 +136,11 @@ impl<M: OwnedMemory> VariableInner<M> {
 }
 
 #[derive(Clone)]
-pub struct Variable<M: OwnedMemory> {
+pub struct Variable<M: Owned> {
     inner: Rc<RefCell<VariableInner<M>>>,
 }
 
-impl<M: OwnedMemory> Variable<M> {
+impl<M: Owned> Variable<M> {
     pub fn new(data: Matrix<M, DimDyn>) -> Self {
         Variable {
             inner: Rc::new(RefCell::new(VariableInner::new(data))),
@@ -221,11 +220,11 @@ impl<M: OwnedMemory> Variable<M> {
 }
 
 #[derive(Debug, Clone)]
-pub struct VariableWeak<M: OwnedMemory> {
+pub struct VariableWeak<M: Owned> {
     inner: Weak<RefCell<VariableInner<M>>>,
 }
 
-impl<M: OwnedMemory> VariableWeak<M> {
+impl<M: Owned> VariableWeak<M> {
     pub fn upgrade(&self) -> Option<Variable<M>> {
         self.inner.upgrade().map(|inner| Variable { inner })
     }
