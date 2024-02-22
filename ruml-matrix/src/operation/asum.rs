@@ -40,7 +40,7 @@ where
 mod asum {
     use crate::{
         matrix::{MatrixSlice, OwnedMatrix},
-        matrix_impl::{CpuOwnedMatrix1D, CpuOwnedMatrix2D},
+        matrix_impl::{OwnedMatrix1D, OwnedMatrix2D},
         slice,
     };
 
@@ -48,19 +48,19 @@ mod asum {
 
     #[test]
     fn defualt_1d() {
-        let a = CpuOwnedMatrix1D::from_vec(vec![1.0, 2.0, 3.0], [3]);
+        let a = OwnedMatrix1D::from_vec(vec![1.0, 2.0, 3.0], [3]);
         assert_eq!(a.asum(), 6.0);
     }
 
     #[test]
     fn defualt_2d() {
-        let a = CpuOwnedMatrix2D::from_vec(vec![1.0, 2.0, 3.0, 4.0], [2, 2]);
+        let a = OwnedMatrix2D::from_vec(vec![1.0, 2.0, 3.0, 4.0], [2, 2]);
         assert_eq!(a.asum(), 10.0);
     }
 
     #[test]
     fn sliced_2d() {
-        let a = CpuOwnedMatrix2D::from_vec(vec![1.0, 2.0, 3.0, 4.0], [2, 2]);
+        let a = OwnedMatrix2D::from_vec(vec![1.0, 2.0, 3.0, 4.0], [2, 2]);
         let b = a.slice(slice!(0..2, 0..1));
         assert_eq!(b.asum(), 4.0);
     }

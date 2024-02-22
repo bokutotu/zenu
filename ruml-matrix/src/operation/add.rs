@@ -240,10 +240,7 @@ where
 mod add {
     use crate::{
         matrix::{MatrixSlice, OwnedMatrix, ToViewMatrix, ToViewMutMatrix},
-        matrix_impl::{
-            CpuOwnedMatrix0D, CpuOwnedMatrix1D, CpuOwnedMatrix2D, CpuOwnedMatrix3D,
-            CpuOwnedMatrixDyn,
-        },
+        matrix_impl::{OwnedMatrix0D, OwnedMatrix1D, OwnedMatrix2D, OwnedMatrix3D, OwnedMatrixDyn},
         operation::zeros::Zeros,
         slice,
     };
@@ -252,9 +249,9 @@ mod add {
 
     #[test]
     fn add_dyn_dyn() {
-        let a = CpuOwnedMatrix1D::from_vec(vec![1.0, 2.0, 3.0], [3]);
-        let b = CpuOwnedMatrix1D::from_vec(vec![1.0, 2.0, 3.0], [3]);
-        let ans = CpuOwnedMatrix1D::<f32>::zeros([3]);
+        let a = OwnedMatrix1D::from_vec(vec![1.0, 2.0, 3.0], [3]);
+        let b = OwnedMatrix1D::from_vec(vec![1.0, 2.0, 3.0], [3]);
+        let ans = OwnedMatrix1D::<f32>::zeros([3]);
 
         let a = a.into_dyn_dim();
         let b = b.into_dyn_dim();
@@ -265,9 +262,9 @@ mod add {
 
     #[test]
     fn add_1d_scalar() {
-        let a = CpuOwnedMatrix1D::from_vec(vec![1.0, 2.0, 3.0], [3]);
-        let mut ans = CpuOwnedMatrix1D::<f32>::zeros([3]);
-        let b = CpuOwnedMatrix0D::from_vec(vec![2.0], []);
+        let a = OwnedMatrix1D::from_vec(vec![1.0, 2.0, 3.0], [3]);
+        let mut ans = OwnedMatrix1D::<f32>::zeros([3]);
+        let b = OwnedMatrix0D::from_vec(vec![2.0], []);
         ans.to_view_mut().add(a.to_view(), b.to_view());
 
         assert_eq!(ans.index_item([0]), 3.0);
@@ -277,8 +274,8 @@ mod add {
 
     #[test]
     fn add_1d_scalar_default_stride() {
-        let a = CpuOwnedMatrix1D::from_vec(vec![1.0, 2.0, 3.0], [3]);
-        let mut ans = CpuOwnedMatrix1D::<f32>::zeros([3]);
+        let a = OwnedMatrix1D::from_vec(vec![1.0, 2.0, 3.0], [3]);
+        let mut ans = OwnedMatrix1D::<f32>::zeros([3]);
         ans.to_view_mut().add(a.to_view(), 1.0);
 
         assert_eq!(ans.index_item([0]), 2.0);
@@ -288,8 +285,8 @@ mod add {
 
     #[test]
     fn add_1d_scalar_sliced() {
-        let a = CpuOwnedMatrix1D::from_vec(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], [6]);
-        let mut ans = CpuOwnedMatrix1D::<f32>::zeros([3]);
+        let a = OwnedMatrix1D::from_vec(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], [6]);
+        let mut ans = OwnedMatrix1D::<f32>::zeros([3]);
 
         let sliced = a.slice(slice!(..;2));
 
@@ -302,7 +299,7 @@ mod add {
 
     #[test]
     fn add_3d_scalar_sliced() {
-        let a = CpuOwnedMatrix3D::from_vec(
+        let a = OwnedMatrix3D::from_vec(
             vec![
                 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0,
                 16.0, 17.0, 18.0, 19.0, 20.0, 21.0, 22.0, 23.0, 24.0, 25.0, 26.0, 27.0, 28.0, 29.0,
@@ -311,7 +308,7 @@ mod add {
             [3, 3, 4],
         );
 
-        let mut ans = CpuOwnedMatrix3D::<f32>::zeros([3, 3, 2]);
+        let mut ans = OwnedMatrix3D::<f32>::zeros([3, 3, 2]);
 
         let sliced = a.slice(slice!(.., .., ..;2));
 
@@ -339,9 +336,9 @@ mod add {
 
     #[test]
     fn add_1d_1d_default_stride() {
-        let a = CpuOwnedMatrix1D::from_vec(vec![1.0, 2.0, 3.0], [3]);
-        let b = CpuOwnedMatrix1D::from_vec(vec![1.0, 2.0, 3.0], [3]);
-        let mut ans = CpuOwnedMatrix1D::<f32>::zeros([3]);
+        let a = OwnedMatrix1D::from_vec(vec![1.0, 2.0, 3.0], [3]);
+        let b = OwnedMatrix1D::from_vec(vec![1.0, 2.0, 3.0], [3]);
+        let mut ans = OwnedMatrix1D::<f32>::zeros([3]);
         ans.to_view_mut().add(a.to_view(), b.to_view());
 
         assert_eq!(ans.index_item([0]), 2.0);
@@ -351,10 +348,10 @@ mod add {
 
     #[test]
     fn add_1d_1d_sliced() {
-        let a = CpuOwnedMatrix1D::from_vec(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], [6]);
-        let b = CpuOwnedMatrix1D::from_vec(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], [6]);
+        let a = OwnedMatrix1D::from_vec(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], [6]);
+        let b = OwnedMatrix1D::from_vec(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], [6]);
 
-        let mut ans = CpuOwnedMatrix1D::<f32>::zeros([3]);
+        let mut ans = OwnedMatrix1D::<f32>::zeros([3]);
 
         let sliced_a = a.slice(slice!(..;2));
         let sliced_b = b.slice(slice!(1..;2));
@@ -369,16 +366,16 @@ mod add {
 
     #[test]
     fn add_2d_1d_default() {
-        let a = CpuOwnedMatrix2D::from_vec(
+        let a = OwnedMatrix2D::from_vec(
             vec![
                 1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12., 13., 14., 15., 16.,
             ],
             [4, 4],
         );
 
-        let b = CpuOwnedMatrix1D::from_vec(vec![1., 2., 3., 4., 5., 6., 7., 8.], [8]);
+        let b = OwnedMatrix1D::from_vec(vec![1., 2., 3., 4., 5., 6., 7., 8.], [8]);
 
-        let mut ans = CpuOwnedMatrix2D::<f32>::zeros([2, 2]);
+        let mut ans = OwnedMatrix2D::<f32>::zeros([2, 2]);
 
         let sliced_a = a.slice(slice!(..2, ..2));
         let sliced_b = b.slice(slice!(..2));
@@ -399,11 +396,11 @@ mod add {
         for i in 0..num_elm {
             v.push(i as f32);
         }
-        let a = CpuOwnedMatrix3D::from_vec(v, [4, 4, 4]);
+        let a = OwnedMatrix3D::from_vec(v, [4, 4, 4]);
 
-        let b = CpuOwnedMatrix1D::from_vec(vec![1., 2., 3., 4.], [4]);
+        let b = OwnedMatrix1D::from_vec(vec![1., 2., 3., 4.], [4]);
 
-        let mut ans = CpuOwnedMatrix3D::<f32>::zeros([2, 2, 2]);
+        let mut ans = OwnedMatrix3D::<f32>::zeros([2, 2, 2]);
 
         let sliced_a = a.slice(slice!(..2, 1..;2, ..2));
         let sliced_b = b.slice(slice!(..2));
@@ -423,21 +420,21 @@ mod add {
 
     #[test]
     fn add_2d_2d_default() {
-        let a = CpuOwnedMatrix2D::from_vec(
+        let a = OwnedMatrix2D::from_vec(
             vec![
                 1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12., 13., 14., 15., 16.,
             ],
             [4, 4],
         );
 
-        let b = CpuOwnedMatrix2D::from_vec(
+        let b = OwnedMatrix2D::from_vec(
             vec![
                 1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12., 13., 14., 15., 16.,
             ],
             [4, 4],
         );
 
-        let mut ans = CpuOwnedMatrix2D::<f32>::zeros([4, 4]);
+        let mut ans = OwnedMatrix2D::<f32>::zeros([4, 4]);
         ans.to_view_mut().add(a.to_view(), b.to_view());
 
         assert_eq!(ans.index_item([0, 0]), 2.0);
@@ -460,14 +457,14 @@ mod add {
 
     #[test]
     fn add_2d_0d() {
-        let a = CpuOwnedMatrix2D::from_vec(
+        let a = OwnedMatrix2D::from_vec(
             vec![
                 1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12., 13., 14., 15., 16.,
             ],
             [4, 4],
         );
-        let b = CpuOwnedMatrix0D::from_vec(vec![1.], []);
-        let mut ans = CpuOwnedMatrix2D::<f32>::zeros([4, 4]);
+        let b = OwnedMatrix0D::from_vec(vec![1.], []);
+        let mut ans = OwnedMatrix2D::<f32>::zeros([4, 4]);
         ans.to_view_mut().add(a.to_view(), b.to_view());
         assert_eq!(ans.index_item([0, 0]), 2.0);
         assert_eq!(ans.index_item([0, 1]), 3.0);
@@ -489,14 +486,14 @@ mod add {
 
     #[test]
     fn add_2d_0d_dyn() {
-        let a = CpuOwnedMatrixDyn::from_vec(
+        let a = OwnedMatrixDyn::from_vec(
             vec![
                 1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12., 13., 14., 15., 16.,
             ],
             [4, 4],
         );
-        let b = CpuOwnedMatrixDyn::from_vec(vec![1.], []);
-        let mut ans = CpuOwnedMatrixDyn::<f32>::zeros([4, 4]);
+        let b = OwnedMatrixDyn::from_vec(vec![1.], []);
+        let mut ans = OwnedMatrixDyn::<f32>::zeros([4, 4]);
         ans.to_view_mut().add(a.to_view(), b.to_view());
         assert_eq!(ans.index_item([0, 0]), 2.0);
         assert_eq!(ans.index_item([0, 1]), 3.0);
@@ -518,9 +515,9 @@ mod add {
 
     #[test]
     fn add_4d_2d_dyn() {
-        let zeros_4d = CpuOwnedMatrixDyn::<f32>::zeros([2, 2, 2, 2]);
-        let ones_2d = CpuOwnedMatrixDyn::from_vec(vec![1., 1., 1., 1.], [2, 2]);
-        let mut ans = CpuOwnedMatrixDyn::<f32>::zeros([2, 2, 2, 2]);
+        let zeros_4d = OwnedMatrixDyn::<f32>::zeros([2, 2, 2, 2]);
+        let ones_2d = OwnedMatrixDyn::from_vec(vec![1., 1., 1., 1.], [2, 2]);
+        let mut ans = OwnedMatrixDyn::<f32>::zeros([2, 2, 2, 2]);
         ans.to_view_mut().add(zeros_4d.to_view(), ones_2d.to_view());
     }
 }

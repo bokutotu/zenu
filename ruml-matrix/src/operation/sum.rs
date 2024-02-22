@@ -50,7 +50,7 @@ mod sum {
     use crate::{
         dim::DimTrait,
         matrix::{MatrixBase, OwnedMatrix, ToViewMatrix},
-        matrix_impl::{CpuOwnedMatrix3D, CpuOwnedMatrix4D},
+        matrix_impl::{OwnedMatrix3D, OwnedMatrix4D},
         operation::{asum::Asum, sum::MatrixSum},
     };
 
@@ -60,7 +60,7 @@ mod sum {
         for i in 0..2 * 3 * 4 * 5 {
             source_vec.push(i as f32);
         }
-        let source = CpuOwnedMatrix4D::from_vec(source_vec, [2, 3, 4, 5]);
+        let source = OwnedMatrix4D::from_vec(source_vec, [2, 3, 4, 5]);
 
         let sum_0 = source.clone().to_view().sum(0);
         let sum_1 = source.clone().to_view().sum(1);
@@ -78,7 +78,7 @@ mod sum {
                 ans_vec_0.push(i as f32);
             }
         }
-        let ans_0 = CpuOwnedMatrix3D::from_vec(ans_vec_0, [3, 4, 5]);
+        let ans_0 = OwnedMatrix3D::from_vec(ans_vec_0, [3, 4, 5]);
         let diff = sum_0.to_view() - ans_0.to_view();
         let diff_sum = Asum::asum(diff);
         assert!(diff_sum < 1e-6);
@@ -89,7 +89,7 @@ mod sum {
             291, 294, 297,
         ];
         let nas_vec_1 = ans_vec_1.into_iter().map(|x| x as f32).collect();
-        let ans_1 = CpuOwnedMatrix3D::from_vec(nas_vec_1, [2, 4, 5]);
+        let ans_1 = OwnedMatrix3D::from_vec(nas_vec_1, [2, 4, 5]);
         let diff = sum_1.to_view() - ans_1.to_view();
         let diff_sum = Asum::asum(diff);
         assert!(diff_sum < 1e-6);
@@ -99,7 +99,7 @@ mod sum {
             282, 286, 350, 354, 358, 362, 366, 430, 434, 438, 442, 446,
         ];
         let nas_vec_2 = ans_vec_2.into_iter().map(|x| x as f32).collect();
-        let ans_2 = CpuOwnedMatrix3D::from_vec(nas_vec_2, [2, 3, 5]);
+        let ans_2 = OwnedMatrix3D::from_vec(nas_vec_2, [2, 3, 5]);
         let diff = sum_2.to_view() - ans_2.to_view();
         let diff_sum = Asum::asum(diff);
         assert!(diff_sum < 1e-6);
@@ -109,7 +109,7 @@ mod sum {
             460, 485, 510, 535, 560, 585,
         ];
         let nas_vec_3 = ans_vec_3.into_iter().map(|x| x as f32).collect();
-        let ans_3 = CpuOwnedMatrix3D::from_vec(nas_vec_3, [2, 3, 4]);
+        let ans_3 = OwnedMatrix3D::from_vec(nas_vec_3, [2, 3, 4]);
         let diff = sum_3.to_view() - ans_3.to_view();
         let diff_sum = Asum::asum(diff);
         assert!(diff_sum < 1e-6);

@@ -36,7 +36,7 @@ mod to_default_stride {
     use crate::{
         dim::default_stride,
         matrix::{IndexItem, MatrixSlice, OwnedMatrix},
-        matrix_impl::{CpuOwnedMatrix1D, CpuOwnedMatrix2D, CpuOwnedMatrixDyn},
+        matrix_impl::{OwnedMatrix1D, OwnedMatrix2D, OwnedMatrixDyn},
         slice,
     };
 
@@ -49,9 +49,9 @@ mod to_default_stride {
             0., 1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12., 13., 14., 15.,
         ];
 
-        let m = CpuOwnedMatrix1D::from_vec(v.clone(), [16]);
+        let m = OwnedMatrix1D::from_vec(v.clone(), [16]);
         let sliced = m.slice(slice!(..;2));
-        let default_strided: CpuOwnedMatrixDyn<f32> = ToDefaultStride::to_default_stride(sliced);
+        let default_strided: OwnedMatrixDyn<f32> = ToDefaultStride::to_default_stride(sliced);
 
         assert_eq!(
             default_strided.shape_stride().stride(),
@@ -73,9 +73,9 @@ mod to_default_stride {
             8., 9., 10., 11., 12., 13., 14., 15.,
         ];
 
-        let m = CpuOwnedMatrix2D::from_vec(v.clone(), [4, 4]);
+        let m = OwnedMatrix2D::from_vec(v.clone(), [4, 4]);
         let sliced = m.slice(slice!(..;2, ..;2));
-        let default_strided: CpuOwnedMatrixDyn<f32> = ToDefaultStride::to_default_stride(sliced);
+        let default_strided: OwnedMatrixDyn<f32> = ToDefaultStride::to_default_stride(sliced);
 
         assert_eq!(
             default_strided.shape_stride().stride(),

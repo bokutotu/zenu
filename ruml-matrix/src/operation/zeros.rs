@@ -26,13 +26,13 @@ where
 
 #[cfg(test)]
 mod zeros {
-    use crate::matrix_impl::CpuOwnedMatrix0D;
+    use crate::matrix_impl::OwnedMatrix0D;
 
     use super::Zeros;
 
     #[test]
     fn zeros_scalar() {
-        let x: CpuOwnedMatrix0D<f32> = Zeros::zeros([]);
+        let x: OwnedMatrix0D<f32> = Zeros::zeros([]);
         assert_eq!(x.get_value(), 0.0);
     }
 }

@@ -75,7 +75,7 @@ impl Add<Variable<OwnedMem<f32>>> for Variable<OwnedMem<f32>> {
 mod add {
     use ruml_matrix::{
         matrix::ToViewMatrix,
-        matrix_impl::CpuOwnedMatrixDyn,
+        matrix_impl::OwnedMatrixDyn,
         operation::{asum::Asum, ones::Ones},
     };
 
@@ -83,28 +83,28 @@ mod add {
 
     #[test]
     fn add() {
-        let x: CpuOwnedMatrixDyn<f32> = Ones::ones([100, 200]);
-        let y: CpuOwnedMatrixDyn<f32> = Ones::ones([20, 100, 200]);
+        let x: OwnedMatrixDyn<f32> = Ones::ones([100, 200]);
+        let y: OwnedMatrixDyn<f32> = Ones::ones([20, 100, 200]);
         let x_val = Variable::new(x);
         let y_val = Variable::new(y);
         let z = x_val.clone() + y_val.clone();
         z.backward();
         let z_data = z.get_data();
-        let ans: CpuOwnedMatrixDyn<f32> = CpuOwnedMatrixDyn::ones([20, 100, 200]).to_view() * 2.0;
+        let ans: OwnedMatrixDyn<f32> = OwnedMatrixDyn::ones([20, 100, 200]).to_view() * 2.0;
         let diff = z_data.to_view() - ans.to_view();
         let diff_sum = diff.asum();
         assert!(diff_sum < 1e-6);
 
         x_val.with_grad_data(|grad| {
             let grad = grad.to_view();
-            let ans: CpuOwnedMatrixDyn<f32> = CpuOwnedMatrixDyn::ones([100, 200]).to_view() * 20.;
+            let ans: OwnedMatrixDyn<f32> = OwnedMatrixDyn::ones([100, 200]).to_view() * 20.;
             let diff = grad - ans.to_view();
             let diff_sum = diff.asum();
             assert!(diff_sum < 1e-6);
         });
         y_val.with_grad_data(|grad| {
             let grad = grad.to_view();
-            let ans: CpuOwnedMatrixDyn<f32> = CpuOwnedMatrixDyn::ones([20, 100, 200]);
+            let ans: OwnedMatrixDyn<f32> = OwnedMatrixDyn::ones([20, 100, 200]);
             let diff = grad - ans.to_view();
             let diff_sum = diff.asum();
             assert!(diff_sum < 1e-6);

@@ -355,29 +355,29 @@ impl<T: Num, M: Memory<Item = T>, D: DimTrait> BlasMatrix for Matrix<M, D> {
     type Blas = M::Blas;
 }
 
-pub type CpuOwnedMatrix0D<T> = Matrix<OwnedMem<T>, Dim0>;
-pub type CpuViewMatrix0D<'a, T> = Matrix<ViewMem<'a, T>, Dim0>;
-pub type CpuViewMutMatrix0D<'a, T> = Matrix<ViewMutMem<'a, T>, Dim0>;
+pub type OwnedMatrix0D<T> = Matrix<OwnedMem<T>, Dim0>;
+pub type ViewMatrix0D<'a, T> = Matrix<ViewMem<'a, T>, Dim0>;
+pub type ViewMutMatrix0D<'a, T> = Matrix<ViewMutMem<'a, T>, Dim0>;
 
-pub type CpuOwnedMatrix1D<T> = Matrix<OwnedMem<T>, Dim1>;
-pub type CpuViewMatrix1D<'a, T> = Matrix<ViewMem<'a, T>, Dim1>;
-pub type CpuViewMutMatrix1D<'a, T> = Matrix<ViewMutMem<'a, T>, Dim1>;
+pub type OwnedMatrix1D<T> = Matrix<OwnedMem<T>, Dim1>;
+pub type ViewMatrix1D<'a, T> = Matrix<ViewMem<'a, T>, Dim1>;
+pub type ViewMutMatrix1D<'a, T> = Matrix<ViewMutMem<'a, T>, Dim1>;
 
-pub type CpuOwnedMatrix2D<T> = Matrix<OwnedMem<T>, Dim2>;
-pub type CpuViewMatrix2D<'a, T> = Matrix<ViewMem<'a, T>, Dim2>;
-pub type CpuViewMutMatrix2D<'a, T> = Matrix<ViewMutMem<'a, T>, Dim2>;
+pub type OwnedMatrix2D<T> = Matrix<OwnedMem<T>, Dim2>;
+pub type ViewMatrix2D<'a, T> = Matrix<ViewMem<'a, T>, Dim2>;
+pub type ViewMutMatrix2D<'a, T> = Matrix<ViewMutMem<'a, T>, Dim2>;
 
-pub type CpuOwnedMatrix3D<T> = Matrix<OwnedMem<T>, Dim3>;
-pub type CpuViewMatrix3D<'a, T> = Matrix<ViewMem<'a, T>, Dim3>;
-pub type CpuViewMutMatrix3D<'a, T> = Matrix<ViewMutMem<'a, T>, Dim3>;
+pub type OwnedMatrix3D<T> = Matrix<OwnedMem<T>, Dim3>;
+pub type ViewMatrix3D<'a, T> = Matrix<ViewMem<'a, T>, Dim3>;
+pub type ViewMutMatrix3D<'a, T> = Matrix<ViewMutMem<'a, T>, Dim3>;
 
-pub type CpuOwnedMatrix4D<T> = Matrix<OwnedMem<T>, Dim4>;
-pub type CpuViewMatrix4D<'a, T> = Matrix<ViewMem<'a, T>, Dim4>;
-pub type CpuViewMutMatrix4D<'a, T> = Matrix<ViewMutMem<'a, T>, Dim4>;
+pub type OwnedMatrix4D<T> = Matrix<OwnedMem<T>, Dim4>;
+pub type ViewMatrix4D<'a, T> = Matrix<ViewMem<'a, T>, Dim4>;
+pub type ViewMutMatrix4D<'a, T> = Matrix<ViewMutMem<'a, T>, Dim4>;
 
-pub type CpuOwnedMatrixDyn<T> = Matrix<OwnedMem<T>, DimDyn>;
-pub type CpuViewMatrixDyn<'a, T> = Matrix<ViewMem<'a, T>, DimDyn>;
-pub type CpuViewMutMatrixDyn<'a, T> = Matrix<ViewMutMem<'a, T>, DimDyn>;
+pub type OwnedMatrixDyn<T> = Matrix<OwnedMem<T>, DimDyn>;
+pub type ViewMatrixDyn<'a, T> = Matrix<ViewMem<'a, T>, DimDyn>;
+pub type ViewMutMatrixDyn<'a, T> = Matrix<ViewMutMem<'a, T>, DimDyn>;
 
 #[cfg(test)]
 mod matrix_slice {
@@ -390,16 +390,14 @@ mod matrix_slice {
 
     #[test]
     fn index_item_1d() {
-        let m =
-            CpuOwnedMatrix1D::from_vec(vec![1f32, 2., 3., 4., 5., 6., 7., 8., 9.], Dim1::new([9]));
+        let m = OwnedMatrix1D::from_vec(vec![1f32, 2., 3., 4., 5., 6., 7., 8., 9.], Dim1::new([9]));
         let item = m.index_item(Dim1::new([1]));
         assert_eq!(item, 2.);
     }
 
     #[test]
     fn slice_1d() {
-        let m =
-            CpuOwnedMatrix1D::from_vec(vec![1f32, 2., 3., 4., 5., 6., 7., 8., 9.], Dim1::new([9]));
+        let m = OwnedMatrix1D::from_vec(vec![1f32, 2., 3., 4., 5., 6., 7., 8., 9.], Dim1::new([9]));
         let s = m.slice(slice!(1..4));
         assert_eq!(s.index_item([0]), 2.);
         assert_eq!(s.index_item([1]), 3.);
@@ -410,7 +408,7 @@ mod matrix_slice {
 
     #[test]
     fn slice_2d() {
-        let m = CpuOwnedMatrix2D::from_vec(
+        let m = OwnedMatrix2D::from_vec(
             vec![1f32, 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12.],
             Dim2::new([3, 4]),
         );
@@ -430,7 +428,7 @@ mod matrix_slice {
     #[test]
     fn slice_dyn() {
         // define 4d matrix
-        let m: CpuOwnedMatrix4D<f32> = CpuOwnedMatrix4D::from_vec(
+        let m: OwnedMatrix4D<f32> = OwnedMatrix4D::from_vec(
             vec![
                 1f32, 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12., 13., 14., 15., 16., 17., 18.,
                 19., 20., 21., 22., 23., 24., 25., 26., 27., 28., 29., 30., 31., 32., 33., 34.,
@@ -464,7 +462,7 @@ mod matrix_slice {
 
     #[test]
     fn index_axis_dyn_2d() {
-        let m = CpuOwnedMatrix2D::from_vec(
+        let m = OwnedMatrix2D::from_vec(
             vec![1f32, 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12.],
             Dim2::new([3, 4]),
         );

@@ -83,7 +83,7 @@ impl Mul<Variable<OwnedMem<f32>>> for Variable<OwnedMem<f32>> {
 mod mul {
     use ruml_matrix::{
         matrix::{OwnedMatrix, ToViewMatrix},
-        matrix_impl::CpuOwnedMatrixDyn,
+        matrix_impl::OwnedMatrixDyn,
         operation::asum::Asum,
     };
 
@@ -91,13 +91,13 @@ mod mul {
 
     #[test]
     fn mul_2d_1d() {
-        let a_mat: CpuOwnedMatrixDyn<f32> =
-            CpuOwnedMatrixDyn::from_vec(vec![1., 2., 3., 4., 5., 6.], [2, 3]);
-        let b_mat: CpuOwnedMatrixDyn<f32> = CpuOwnedMatrixDyn::from_vec(vec![1., 2., 3.], [3]);
+        let a_mat: OwnedMatrixDyn<f32> =
+            OwnedMatrixDyn::from_vec(vec![1., 2., 3., 4., 5., 6.], [2, 3]);
+        let b_mat: OwnedMatrixDyn<f32> = OwnedMatrixDyn::from_vec(vec![1., 2., 3.], [3]);
         let a = Variable::new(a_mat);
         let b = Variable::new(b_mat);
         let c = a.clone() * b.clone();
-        let c_ans = CpuOwnedMatrixDyn::from_vec(vec![1., 4., 9., 4., 10., 18.], [2, 3]);
+        let c_ans = OwnedMatrixDyn::from_vec(vec![1., 4., 9., 4., 10., 18.], [2, 3]);
         let diff = c.get_data().to_view() - c_ans.to_view();
         let diff_sum = diff.asum();
         assert!(diff_sum < 1e-6);
@@ -105,14 +105,14 @@ mod mul {
 
         a.with_grad_data(|grad| {
             let grad = grad.to_view();
-            let ans = CpuOwnedMatrixDyn::from_vec(vec![1., 2., 3., 1., 2., 3.], [2, 3]);
+            let ans = OwnedMatrixDyn::from_vec(vec![1., 2., 3., 1., 2., 3.], [2, 3]);
             let diff = dbg!(grad - ans.to_view());
             let diff_sum = diff.asum();
             assert!(diff_sum < 1e-6);
         });
         b.with_grad_data(|grad| {
             let grad = grad.to_view();
-            let ans = CpuOwnedMatrixDyn::from_vec(vec![5., 7., 9.], [3]);
+            let ans = OwnedMatrixDyn::from_vec(vec![5., 7., 9.], [3]);
             let diff = dbg!(grad - ans.to_view());
             let diff_sum = diff.asum();
             assert!(diff_sum < 1e-6);

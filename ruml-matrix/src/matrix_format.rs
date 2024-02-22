@@ -225,7 +225,7 @@ where
 mod matrix_format {
     use crate::{
         matrix::OwnedMatrix,
-        matrix_impl::{CpuOwnedMatrix1D, CpuOwnedMatrix2D, CpuOwnedMatrix3D, CpuOwnedMatrix4D},
+        matrix_impl::{OwnedMatrix1D, OwnedMatrix2D, OwnedMatrix3D, OwnedMatrix4D},
         operation::ones::Ones,
     };
 
@@ -241,13 +241,13 @@ mod matrix_format {
 
     #[test]
     fn small_array_1d() {
-        let a = CpuOwnedMatrix1D::from_vec(vec![1., 2., 3., 4., 5.], [5]);
+        let a = OwnedMatrix1D::from_vec(vec![1., 2., 3., 4., 5.], [5]);
         assert_eq!(format!("{}", a), "[1, 2, 3, 4, 5]");
     }
 
     #[test]
     fn mid_array_1d() {
-        let a = CpuOwnedMatrix1D::from_vec(vec![1., 2., 3., 4., 5., 6., 7., 8., 9., 10.], [10]);
+        let a = OwnedMatrix1D::from_vec(vec![1., 2., 3., 4., 5., 6., 7., 8., 9., 10.], [10]);
         assert_eq!(format!("{}", a), "[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]");
     }
 
@@ -257,7 +257,7 @@ mod matrix_format {
         for i in 1..=1000 {
             v.push(i as f32);
         }
-        let a = CpuOwnedMatrix1D::from_vec(v, [1000]);
+        let a = OwnedMatrix1D::from_vec(v, [1000]);
         assert_eq!(
             format!("{}", a),
             "[1, 2, 3, 4, 5, ..., 996, 997, 998, 999, 1000]"
@@ -266,7 +266,7 @@ mod matrix_format {
 
     #[test]
     fn dim_2_last_axis_overflow() {
-        let a = CpuOwnedMatrix2D::<f32>::ones([22, 24]);
+        let a = OwnedMatrix2D::<f32>::ones([22, 24]);
         let actual = format!("{}", a);
         let expected = "\
 [[1, 1, 1, 1, 1, ..., 1, 1, 1, 1, 1],
@@ -302,7 +302,7 @@ mod matrix_format {
         //         1000. + (100. * ((i as f64).sqrt() + (j as f64).sin() + k as f64)).round() / 100.
         //     },
         // );
-        let a = CpuOwnedMatrix3D::from_vec(v, [7, 11, 12]);
+        let a = OwnedMatrix3D::from_vec(v, [7, 11, 12]);
         let actual = format!("{:6.1}", a);
         let expected = "\
 [[[1000.0, 1001.0, 1002.0, 1003.0, 1004.0, ..., 1007.0, 1008.0, 1009.0, 1010.0, 1011.0],
@@ -394,7 +394,7 @@ mod matrix_format {
                 }
             }
         }
-        let a = CpuOwnedMatrix4D::from_vec(v, [10, 10, 3, 3]);
+        let a = OwnedMatrix4D::from_vec(v, [10, 10, 3, 3]);
         let actual = format!("{:2}", a);
         // Generated using NumPy with:
         // np.set_printoptions(threshold=500, edgeitems=3)

@@ -82,7 +82,7 @@ mod deep_copy {
         matrix::{
             IndexItem, MatrixSlice, MatrixSliceMut, OwnedMatrix, ToViewMatrix, ToViewMutMatrix,
         },
-        matrix_impl::{CpuOwnedMatrix1D, CpuOwnedMatrix2D},
+        matrix_impl::{OwnedMatrix1D, OwnedMatrix2D},
         slice,
     };
 
@@ -91,8 +91,8 @@ mod deep_copy {
         let a = vec![0f32; 6];
         let b = vec![1f32, 2., 3., 4., 5., 6.];
 
-        let mut a = CpuOwnedMatrix1D::from_vec(a, [6]);
-        let b = CpuOwnedMatrix1D::from_vec(b, [6]);
+        let mut a = OwnedMatrix1D::from_vec(a, [6]);
+        let b = OwnedMatrix1D::from_vec(b, [6]);
 
         let a_view_mut = a.to_view_mut();
 
@@ -114,8 +114,8 @@ mod deep_copy {
         let a = vec![0f32; 6];
         let v = vec![0f32, 1., 2., 3., 4., 5.];
 
-        let mut a = CpuOwnedMatrix1D::from_vec(a.clone(), [6]);
-        let v = CpuOwnedMatrix1D::from_vec(v, [6]);
+        let mut a = OwnedMatrix1D::from_vec(a.clone(), [6]);
+        let v = OwnedMatrix1D::from_vec(v, [6]);
 
         let a_sliced = a.slice_mut(slice!(..;2));
         let v_sliced = v.slice(slice!(0..3));
@@ -134,8 +134,8 @@ mod deep_copy {
         let a = vec![0f32; 6];
         let b = vec![1f32, 2., 3., 4., 5., 6.];
 
-        let mut a = CpuOwnedMatrix2D::from_vec(a, [2, 3]);
-        let b = CpuOwnedMatrix2D::from_vec(b, [2, 3]);
+        let mut a = OwnedMatrix2D::from_vec(a, [2, 3]);
+        let b = OwnedMatrix2D::from_vec(b, [2, 3]);
 
         let a_view_mut = a.to_view_mut();
 
@@ -156,8 +156,8 @@ mod deep_copy {
     fn sliced_2d() {
         let a = vec![0f32; 12];
         let v = vec![0f32, 1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11.];
-        let mut a = CpuOwnedMatrix2D::from_vec(a.clone(), [3, 4]);
-        let v = CpuOwnedMatrix2D::from_vec(v, [3, 4]);
+        let mut a = OwnedMatrix2D::from_vec(a.clone(), [3, 4]);
+        let v = OwnedMatrix2D::from_vec(v, [3, 4]);
 
         let a_sliced = a.slice_mut(slice!(0..2, 0..3));
         let v_sliced = v.slice(slice!(1..3, 1..4));

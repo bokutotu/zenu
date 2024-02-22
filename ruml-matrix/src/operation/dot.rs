@@ -24,15 +24,15 @@ where
 mod dot {
     use crate::{
         matrix::{OwnedMatrix, ToViewMatrix},
-        matrix_impl::CpuOwnedMatrix1D,
+        matrix_impl::OwnedMatrix1D,
     };
 
     use super::Dot;
 
     #[test]
     fn dot() {
-        let a = CpuOwnedMatrix1D::from_vec(vec![1.0, 2.0, 3.0], [3]);
-        let b = CpuOwnedMatrix1D::from_vec(vec![4.0, 5.0, 6.0], [3]);
+        let a = OwnedMatrix1D::from_vec(vec![1.0, 2.0, 3.0], [3]);
+        let b = OwnedMatrix1D::from_vec(vec![4.0, 5.0, 6.0], [3]);
         let c = a.to_view().dot(b.to_view());
 
         assert_eq!(c, 32.0);
