@@ -1,17 +1,58 @@
 use crate::{
     cpu_blas::CpuBlas,
     cpu_element_wise::CpuElementWise,
-    memory::{Memory, Owned, ToOwnedMemory, ToViewMemory, ToViewMutMemory, View, ViewMut},
+    memory::{
+        Memory, MemoryAccessor, Owned, ToOwnedMemory, ToViewMemory, ToViewMutMemory, View, ViewMut,
+    },
 };
 use std::ptr::NonNull;
 
 use crate::num::Num;
+
+#[derive(Clone, Copy, Debug, Default)]
+pub struct CpuAccessor<T: Num> {
+    phantom: std::marker::PhantomData<T>,
+}
+
+impl<T: Num> CpuAccessor<T> {
+    pub fn new() -> Self {
+        Self {
+            phantom: std::marker::PhantomData,
+        }
+    }
+}
+
+impl<T: Num> MemoryAccessor for CpuAccessor<T> {
+    type Item = T;
+
+    fn value(&self, ptr: NonNull<Self::Item>, offset: usize) -> Self::Item {
+        unsafe { *ptr.as_ptr().add(offset) }
+    }
+
+    fn set_value(&mut self, ptr: NonNull<Self::Item>, offset: usize, value: Self::Item) {
+        unsafe { *ptr.as_ptr().add(offset) = value };
+    }
+
+    fn clone_ptr(&self, ptr: NonNull<Self::Item>, len: usize) -> NonNull<Self::Item> {
+        let vec = unsafe { Vec::from_raw_parts(ptr.as_ptr(), len, len) };
+        let mut vec_c = vec.clone();
+        std::mem::forget(vec);
+        let ptr = NonNull::new(vec_c.as_mut_ptr()).unwrap();
+        std::mem::forget(vec_c);
+        ptr
+    }
+
+    fn drop(&self, ptr: *const Self::Item, len: usize) {
+        let _ = unsafe { Vec::from_raw_parts(ptr as *mut T, len, len) };
+    }
+}
 
 #[derive(Debug)]
 pub struct OwnedMem<T: Num> {
     ptr: NonNull<T>,
     offset: usize,
     length: usize,
+    accessor: CpuAccessor<T>,
 }
 
 #[derive(Debug)]
@@ -50,15 +91,12 @@ impl<T: Num> Memory for OwnedMem<T> {
 
 impl<T: Num> Clone for OwnedMem<T> {
     fn clone(&self) -> Self {
-        let vec = unsafe { Vec::from_raw_parts(self.ptr.as_ptr(), self.len(), self.len()) };
-        let mut vec_c = vec.clone();
-        std::mem::forget(vec);
-        let ptr = NonNull::new(vec_c.as_mut_ptr()).unwrap();
-        std::mem::forget(vec_c);
+        let ptr = self.accessor.clone_ptr(self.ptr, self.len());
         Self {
             ptr,
             offset: self.offset,
             length: self.length,
+            accessor: self.accessor,
         }
     }
 }
@@ -123,13 +161,15 @@ impl<T: Num> Owned for OwnedMem<T> {
             ptr,
             offset: 0,
             length,
+            accessor: CpuAccessor::new(),
         }
     }
 }
 
 impl<T: Num> Drop for OwnedMem<T> {
     fn drop(&mut self) {
-        let _ = unsafe { Vec::from_raw_parts(self.ptr.as_ptr(), self.len(), self.len()) };
+        // let _ = unsafe { Vec::from_raw_parts(self.ptr.as_ptr(), self.len(), self.len()) };
+        self.accessor.drop(self.ptr.as_ptr(), self.len());
     }
 }
 

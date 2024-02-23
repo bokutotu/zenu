@@ -1,4 +1,15 @@
+use std::ptr::NonNull;
+
 use crate::{blas::Blas, element_wise::ElementWise, num::Num};
+
+pub trait MemoryAccessor: Copy {
+    type Item: Num;
+
+    fn value(&self, ptr: NonNull<Self::Item>, offset: usize) -> Self::Item;
+    fn set_value(&mut self, ptr: NonNull<Self::Item>, offset: usize, value: Self::Item);
+    fn clone_ptr(&self, ptr: NonNull<Self::Item>, len: usize) -> NonNull<Self::Item>;
+    fn drop(&self, ptr: *const Self::Item, len: usize);
+}
 
 /// Matrixの要素を保持するメモリを表すトレイト
 #[allow(clippy::len_without_is_empty)]
