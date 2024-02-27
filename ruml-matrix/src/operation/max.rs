@@ -25,8 +25,7 @@ where
             default_stride.as_ptr(),
             default_stride.stride()[default_stride.shape().len() - 1],
         );
-        println!("idx: {}", idx);
-        dbg!(default_stride.shape_stride()).get_dim_by_offset(idx)
+        default_stride.shape_stride().get_dim_by_offset(idx)
     }
 }
 
