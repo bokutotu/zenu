@@ -152,19 +152,11 @@ pub trait BlasMatrix: MatrixBase {
     type Blas: Blas<Self::Item>;
 }
 
-pub trait ViewMatrix:
-    MatrixBase + ToViewMatrix + ToOwnedMatrix + AsPtr + BlasMatrix + IndexItem
-{
-}
+pub trait ViewMatrix: MatrixBase + ToViewMatrix + ToOwnedMatrix + AsPtr + BlasMatrix {}
 pub trait ViewMutMatix:
-    MatrixBase
-    + ToViewMatrix
-    + ToViewMutMatrix
-    + AsMutPtr
-    + BlasMatrix
-    + AsPtr
-    + IndexItem
-    + IndexItemAsign
+    MatrixBase + ToViewMatrix + ToViewMutMatrix + AsMutPtr + BlasMatrix + AsPtr
+// + IndexItem
+// + IndexItemAsign
 {
 }
 

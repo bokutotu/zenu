@@ -2,7 +2,8 @@ use ruml_matrix::{
     dim::{DimDyn, DimTrait},
     matrix::{MatrixBase, ToViewMatrix, ToViewMutMatrix},
     matrix_impl::Matrix,
-    memory::{Owned, View, ViewMut},
+    memory::Owned,
+    memory_impl::{ViewMem, ViewMutMem},
     num::Num,
     operation::{copy_from::CopyFrom, sum::MatrixSum},
 };
@@ -14,9 +15,9 @@ mod mul;
 
 pub mod matmul;
 
-pub(crate) fn gradient_sum_over_axis<T: Num, M: View<Item = T>, VM: ViewMut<Item = T>>(
-    source: Matrix<M, DimDyn>,
-    target: Matrix<VM, DimDyn>,
+pub(crate) fn gradient_sum_over_axis<T: Num>(
+    source: Matrix<ViewMem<T>, DimDyn>,
+    target: Matrix<ViewMutMem<T>, DimDyn>,
 ) {
     if source.shape().len() < target.shape().len() {
         panic!("source.shape().len() < target.shape().len()");

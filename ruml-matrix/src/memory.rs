@@ -9,6 +9,7 @@ pub trait MemoryAccessor: Copy {
     fn set_value(&mut self, ptr: NonNull<Self::Item>, offset: usize, value: Self::Item);
     fn clone_ptr(&self, ptr: NonNull<Self::Item>, len: usize) -> NonNull<Self::Item>;
     fn drop(&self, ptr: *const Self::Item, len: usize);
+    fn offset_ptr(&self, ptr: NonNull<Self::Item>, offset: usize) -> NonNull<Self::Item>;
 }
 
 /// Matrixの要素を保持するメモリを表すトレイト
@@ -22,15 +23,8 @@ pub trait Memory {
     /// 確保しているメモリの先頭のポインタを返す
     /// offsetがある場合でもoffsetは考慮されない
     fn as_ptr(&self) -> *const Self::Item;
-    fn as_ptr_offset(&self, offset: usize) -> *const Self::Item {
-        if self.get_offset() + offset >= self.len() {
-            panic!("out of range");
-        }
-        unsafe { self.as_ptr().add(self.get_offset() + offset) }
-    }
-    fn value_offset(&self, offset: usize) -> Self::Item {
-        unsafe { *self.as_ptr_offset(offset) }
-    }
+    fn as_ptr_offset(&self, offset: usize) -> *const Self::Item;
+    fn value_offset(&self, offset: usize) -> Self::Item;
     fn get_offset(&self) -> usize;
     fn set_offset(&mut self, offset: usize);
 }

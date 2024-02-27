@@ -1,6 +1,6 @@
 use std::{
     fmt::{Debug, Display},
-    ops::{Add, Mul},
+    ops::{Add, AddAssign, Mul, MulAssign},
 };
 
 pub trait Num:
@@ -12,6 +12,8 @@ pub trait Num:
     + Add<Self, Output = Self>
     + PartialOrd
     + Mul<Output = Self>
+    + AddAssign
+    + MulAssign
     + 'static
 {
     fn is_f32() -> bool;

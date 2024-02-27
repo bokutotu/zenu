@@ -70,16 +70,6 @@ impl<D: DimTrait> ShapeStride<D> {
         last > last_2
     }
 
-    pub fn get_dim_by_offset(&self, offset: usize) -> D {
-        let mut offset = offset;
-        let mut dim = D::default();
-        for i in 0..self.shape.len() {
-            dim[i] = offset / self.stride[i];
-            offset %= self.stride[i];
-        }
-        dim
-    }
-
     pub fn transpose(&self) -> Self {
         let mut shape = self.shape();
         let mut stride = self.stride();
@@ -116,6 +106,18 @@ impl<D: DimTrait> ShapeStride<D> {
         let shape = into_dyn(self.shape);
         let stride = into_dyn(self.stride);
         ShapeStride::new(shape, stride)
+    }
+}
+
+impl ShapeStride<DimDyn> {
+    pub fn get_dim_by_offset(&self, offset: usize) -> DimDyn {
+        let mut offset = offset;
+        let mut dim = DimDyn::default();
+        for i in 0..self.shape.len() {
+            dim.push_dim(offset / self.stride[i]);
+            offset %= self.stride[i];
+        }
+        dim
     }
 }
 

@@ -3,7 +3,8 @@ use crate::{
     index::index_dyn_impl::Index,
     matrix::{IndexAxisDyn, MatrixBase, OwnedMatrix, ToViewMutMatrix, ViewMatrix},
     matrix_impl::Matrix,
-    memory::View,
+    memory_impl::{OwnedMem, ViewMem},
+    num::Num,
     operation::zeros::Zeros,
 };
 
@@ -14,8 +15,8 @@ pub trait MatrixSum: ViewMatrix {
     fn sum(self, axis: usize) -> Self::Output;
 }
 
-impl<M: View, D: DimTrait> MatrixSum for Matrix<M, D> {
-    type Output = Matrix<M::Owned, DimDyn>;
+impl<'a, T: Num, D: DimTrait> MatrixSum for Matrix<ViewMem<'a, T>, D> {
+    type Output = Matrix<OwnedMem<T>, DimDyn>;
     fn sum(self, axis: usize) -> Self::Output {
         let self_dyn = self.into_dyn_dim();
         let shape = self_dyn.shape();

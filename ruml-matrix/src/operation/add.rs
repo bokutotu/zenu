@@ -1,46 +1,82 @@
 use crate::{
     dim::{Dim1, Dim2, Dim3, Dim4, DimTrait},
     index::Index0D,
-    matrix::{IndexAxisDyn, IndexAxisMutDyn, IndexItem, IndexItemAsign, MatrixBase, ViewMutMatix},
+    matrix::{AsMutPtr, AsPtr, IndexAxisDyn, IndexAxisMutDyn, MatrixBase, ViewMutMatix},
     matrix_impl::{matrix_into_dim, Matrix},
-    memory::{View, ViewMut},
+    memory_impl::{ViewMem, ViewMutMem},
     num::Num,
     operation::copy_from::CopyFrom,
 };
 
-fn add_assign_matrix_scalar<T, LM, D>(to: Matrix<LM, D>, other: T)
+/// shape, strideのチェックは一切行わない
+/// この関数で入力されるMatrixはsliceが行われていないことが前提
+fn add_assign_1d_1d_cpu<T: Num, D: DimTrait>(
+    a: &mut Matrix<ViewMutMem<T>, D>,
+    b: &Matrix<ViewMem<T>, D>,
+) {
+    let num_elm = a.shape().num_elm();
+    let inner_slice_a = a.stride()[a.shape().len() - 1];
+    let inner_slice_b = b.stride()[b.shape().len() - 1];
+    let a_slice =
+        unsafe { std::slice::from_raw_parts_mut(a.as_mut_ptr(), num_elm * inner_slice_a) };
+    let b_slice = unsafe { std::slice::from_raw_parts(b.as_ptr(), num_elm * inner_slice_b) };
+    if inner_slice_a == 1 && inner_slice_b == 1 {
+        for i in 0..num_elm {
+            a_slice[i] += b_slice[i];
+        }
+    } else {
+        for i in 0..num_elm {
+            a_slice[i * inner_slice_a] += b_slice[i * inner_slice_b];
+        }
+    }
+}
+
+fn add_1d_scalar_cpu<T: Num, D: DimTrait>(a: &mut Matrix<ViewMutMem<T>, D>, b: T) {
+    let num_elm = a.shape().num_elm();
+    let inner_slice_a = a.stride()[a.shape().len() - 1];
+    let a_slice =
+        unsafe { std::slice::from_raw_parts_mut(a.as_mut_ptr(), num_elm * inner_slice_a) };
+    if inner_slice_a == 1 {
+        for i in 0..num_elm {
+            a_slice[i] += b;
+        }
+    } else {
+        for i in 0..num_elm {
+            a_slice[i * inner_slice_a] += b;
+        }
+    }
+}
+
+fn add_assign_matrix_scalar<T, D>(to: Matrix<ViewMutMem<T>, D>, other: T)
 where
     T: Num,
-    LM: ViewMut<Item = T>,
     D: DimTrait,
 {
     match to.shape().slice() {
         [] => {
             let mut to = to;
-            to.index_item_asign(&[] as &[usize], to.index_item(&[] as &[usize]) + other);
+            unsafe { to.as_mut_ptr().write(*to.as_ptr() + other) }
         }
-        [a] => {
-            let mut to: Matrix<LM, Dim1> = matrix_into_dim(to);
-            for i in 0..*a {
-                to.index_item_asign([i], to.index_item([i]) + other);
-            }
+        [_] => {
+            let mut to: Matrix<ViewMutMem<T>, Dim1> = matrix_into_dim(to);
+            add_1d_scalar_cpu(&mut to, other);
         }
         [a, _] => {
-            let mut to: Matrix<LM, Dim2> = matrix_into_dim(to);
+            let mut to: Matrix<ViewMutMem<T>, Dim2> = matrix_into_dim(to);
             for i in 0..*a {
                 let to = to.index_axis_mut_dyn(Index0D::new(i));
                 add_assign_matrix_scalar(to, other);
             }
         }
         [a, _, _] => {
-            let mut to: Matrix<LM, Dim3> = matrix_into_dim(to);
+            let mut to: Matrix<ViewMutMem<T>, Dim3> = matrix_into_dim(to);
             for i in 0..*a {
                 let to = to.index_axis_mut_dyn(Index0D::new(i));
                 add_assign_matrix_scalar(to, other);
             }
         }
         [a, _, _, _] => {
-            let mut to: Matrix<LM, Dim4> = matrix_into_dim(to);
+            let mut to: Matrix<ViewMutMem<T>, Dim4> = matrix_into_dim(to);
             for i in 0..*a {
                 let to = to.index_axis_mut_dyn(Index0D::new(i));
                 add_assign_matrix_scalar(to, other);
@@ -52,11 +88,9 @@ where
 
 // matrix_add_scalar_assignを使用して,
 // add_matrix_scalarを実装する
-fn add_matrix_scalar<T, SM, LM, D>(to: Matrix<SM, D>, lhs: Matrix<LM, D>, rhs: T)
+fn add_matrix_scalar<T, D>(to: Matrix<ViewMutMem<T>, D>, lhs: Matrix<ViewMem<T>, D>, rhs: T)
 where
     T: Num,
-    SM: ViewMut<Item = T>,
-    LM: View<Item = T>,
     D: DimTrait,
 {
     assert_eq!(to.shape(), lhs.shape());
@@ -66,11 +100,11 @@ where
     add_assign_matrix_scalar(to, rhs);
 }
 
-fn add_assign_matrix_matrix<T, VM, V, D1, D2>(source: Matrix<VM, D1>, other: Matrix<V, D2>)
-where
+fn add_assign_matrix_matrix<T, D1, D2>(
+    source: Matrix<ViewMutMem<T>, D1>,
+    other: Matrix<ViewMem<T>, D2>,
+) where
     T: Num,
-    VM: ViewMut<Item = T>,
-    V: View<Item = T>,
     D1: DimTrait,
     D2: DimTrait,
 {
@@ -80,37 +114,27 @@ where
     assert!(source.shape().is_include(&other.shape()));
 
     if source.shape().is_empty() {
-        source.index_item_asign(
-            &[] as &[usize],
-            source.index_item(&[] as &[usize]) + other.index_item(&[] as &[usize]),
-        );
+        unsafe {
+            source
+                .as_mut_ptr()
+                .write(*source.as_ptr() + *other.as_ptr());
+        }
         return;
     }
     if other.shape().is_empty() {
-        let scalar = other.index_item(&[] as &[usize]);
-        add_assign_matrix_scalar(source, scalar);
+        let s = unsafe { *other.as_ptr() };
+        add_assign_matrix_scalar(source, s);
         return;
     }
     //
 
     if source.shape().len() == 1 {
-        let mut source: Matrix<VM, Dim1> = matrix_into_dim(source);
-        for i in 0..source.shape()[0] {
-            let s_itm = source.index_item([i]);
-            let o_itm = other.index_item([i]);
-            source.index_item_asign([i], s_itm + o_itm);
-        }
+        add_assign_1d_1d_cpu(&mut source, &other);
     } else if source.shape() == other.shape() {
-        // let mut source = source;
-        // for i in 0..source.shape()[0] {
-        //     let source = source.index_axis_mut_dyn(Index0D::new(i));
-        //     let other = other.index_axis_dyn(Index0D::new(i));
-        //     add_assign_matrix_matrix(source, other);
-        // }
         macro_rules! same_dim {
             ($dim:ty) => {{
-                let mut source: Matrix<VM, $dim> = matrix_into_dim(source);
-                let other: Matrix<V, $dim> = matrix_into_dim(other);
+                let mut source: Matrix<ViewMutMem<T>, $dim> = matrix_into_dim(source);
+                let other: Matrix<ViewMem<T>, $dim> = matrix_into_dim(other);
                 for i in 0..source.shape()[0] {
                     let source = source.index_axis_mut_dyn(Index0D::new(i));
                     let other = other.index_axis_dyn(Index0D::new(i));
@@ -133,8 +157,8 @@ where
         // }
         macro_rules! diff_dim {
             ($dim1:ty, $dim2:ty) => {{
-                let mut source: Matrix<VM, $dim1> = matrix_into_dim(source);
-                let other: Matrix<V, $dim2> = matrix_into_dim(other);
+                let mut source: Matrix<ViewMutMem<T>, $dim1> = matrix_into_dim(source);
+                let other: Matrix<ViewMem<T>, $dim2> = matrix_into_dim(other);
                 for i in 0..source.shape()[0] {
                     let source = source.index_axis_mut_dyn(Index0D::new(i));
                     let other = other.clone();
@@ -154,15 +178,12 @@ where
     }
 }
 
-fn add_matrix_matrix<T, VM, L, R, D1, D2, D3>(
-    to: Matrix<VM, D1>,
-    lhs: Matrix<L, D2>,
-    rhs: Matrix<R, D3>,
+fn add_matrix_matrix<T, D1, D2, D3>(
+    to: Matrix<ViewMutMem<T>, D1>,
+    lhs: Matrix<ViewMem<T>, D2>,
+    rhs: Matrix<ViewMem<T>, D3>,
 ) where
     T: Num,
-    VM: ViewMut<Item = T>,
-    L: View<Item = T>,
-    R: View<Item = T>,
     D1: DimTrait,
     D2: DimTrait,
     D3: DimTrait,
@@ -186,36 +207,31 @@ pub trait MatrixAddAssign<Rhs>: ViewMutMatix + MatrixBase {
 }
 
 // matrix add scalar
-impl<T, RM, SM, D> MatrixAdd<Matrix<RM, D>, T> for Matrix<SM, D>
+impl<'a, 'b, T, D> MatrixAdd<Matrix<ViewMem<'b, T>, D>, T> for Matrix<ViewMutMem<'b, T>, D>
 where
     T: Num,
-    RM: View<Item = T>,
-    SM: ViewMut<Item = T>,
     D: DimTrait,
 {
-    fn add(self, lhs: Matrix<RM, D>, rhs: T) {
+    fn add(self, lhs: Matrix<ViewMem<T>, D>, rhs: T) {
         add_matrix_scalar(self, lhs, rhs);
     }
 }
 
-impl<T, RM, LM, SM, D1, D2> MatrixAdd<Matrix<LM, D1>, Matrix<RM, D2>> for Matrix<SM, D1>
+impl<'a, 'b, 'c, T, D1, D2> MatrixAdd<Matrix<ViewMem<'a, T>, D1>, Matrix<ViewMem<'b, T>, D2>>
+    for Matrix<ViewMutMem<'c, T>, D1>
 where
     T: Num,
-    RM: View<Item = T>,
-    LM: View<Item = T>,
-    SM: ViewMut<Item = T>,
     D1: DimTrait,
     D2: DimTrait,
 {
-    fn add(self, lhs: Matrix<LM, D1>, rhs: Matrix<RM, D2>) {
+    fn add(self, lhs: Matrix<ViewMem<T>, D1>, rhs: Matrix<ViewMem<T>, D2>) {
         add_matrix_matrix(self, lhs, rhs);
     }
 }
 
-impl<T, SM, D> MatrixAddAssign<T> for Matrix<SM, D>
+impl<'a, T, D> MatrixAddAssign<T> for Matrix<ViewMutMem<'a, T>, D>
 where
     T: Num,
-    SM: ViewMut<Item = T>,
     D: DimTrait,
 {
     fn add_assign(self, rhs: T) {
@@ -223,15 +239,14 @@ where
     }
 }
 
-impl<T, LM, SM, D1, D2> MatrixAddAssign<Matrix<LM, D1>> for Matrix<SM, D2>
+impl<'a, 'b, T, D1, D2> MatrixAddAssign<Matrix<ViewMem<'a, T>, D1>>
+    for Matrix<ViewMutMem<'b, T>, D2>
 where
     T: Num,
-    LM: View<Item = T>,
-    SM: ViewMut<Item = T>,
     D1: DimTrait,
     D2: DimTrait,
 {
-    fn add_assign(self, rhs: Matrix<LM, D1>) {
+    fn add_assign(self, rhs: Matrix<ViewMem<T>, D1>) {
         add_assign_matrix_matrix(self, rhs);
     }
 }
@@ -239,7 +254,7 @@ where
 #[cfg(test)]
 mod add {
     use crate::{
-        matrix::{MatrixSlice, OwnedMatrix, ToViewMatrix, ToViewMutMatrix},
+        matrix::{IndexItem, MatrixSlice, OwnedMatrix, ToViewMatrix, ToViewMutMatrix},
         matrix_impl::{OwnedMatrix0D, OwnedMatrix1D, OwnedMatrix2D, OwnedMatrix3D, OwnedMatrixDyn},
         operation::zeros::Zeros,
         slice,

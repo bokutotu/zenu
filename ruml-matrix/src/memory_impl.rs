@@ -45,6 +45,10 @@ impl<T: Num> MemoryAccessor for CpuAccessor<T> {
     fn drop(&self, ptr: *const Self::Item, len: usize) {
         let _ = unsafe { Vec::from_raw_parts(ptr as *mut T, len, len) };
     }
+
+    fn offset_ptr(&self, ptr: NonNull<Self::Item>, offset: usize) -> NonNull<Self::Item> {
+        NonNull::new(unsafe { ptr.as_ptr().add(offset) }).unwrap()
+    }
 }
 
 #[derive(Debug)]
@@ -86,6 +90,16 @@ impl<T: Num> Memory for OwnedMem<T> {
 
     fn set_offset(&mut self, offset: usize) {
         self.offset = offset;
+    }
+
+    fn as_ptr_offset(&self, offset: usize) -> *const Self::Item {
+        self.accessor
+            .offset_ptr(self.ptr, self.get_offset() + offset)
+            .as_ptr()
+    }
+
+    fn value_offset(&self, offset: usize) -> Self::Item {
+        self.accessor.value(self.ptr, self.get_offset() + offset)
     }
 }
 
@@ -168,7 +182,6 @@ impl<T: Num> Owned for OwnedMem<T> {
 
 impl<T: Num> Drop for OwnedMem<T> {
     fn drop(&mut self) {
-        // let _ = unsafe { Vec::from_raw_parts(self.ptr.as_ptr(), self.len(), self.len()) };
         self.accessor.drop(self.ptr.as_ptr(), self.len());
     }
 }
@@ -198,11 +211,19 @@ macro_rules! impl_cpu_memory_to_view {
             }
 
             fn get_offset(&self) -> usize {
-                self.offset + self.ptr.get_offset()
+                self.offset
             }
 
             fn set_offset(&mut self, offset: usize) {
                 self.offset = offset - self.ptr.get_offset();
+            }
+
+            fn as_ptr_offset(&self, offset: usize) -> *const Self::Item {
+                self.ptr.as_ptr_offset(self.get_offset() + offset)
+            }
+
+            fn value_offset(&self, offset: usize) -> Self::Item {
+                self.ptr.value_offset(self.get_offset() + offset)
             }
         }
 
@@ -274,7 +295,7 @@ mod memory {
         let mut memory = OwnedMem::from_vec(vec![1., 2., 3., 4., 5.]);
         memory.set_offset(1);
         let view = memory.to_view(2);
-        assert_eq!(view.get_offset(), 3);
+        assert_eq!(view.get_offset(), 2);
         assert_eq!(view.value_offset(0), 4.);
     }
 

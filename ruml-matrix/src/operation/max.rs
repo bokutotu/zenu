@@ -1,65 +1,34 @@
 use crate::{
     blas::Blas,
-    dim::{Dim1, Dim2, Dim3, Dim4, DimTrait},
-    index::Index0D,
-    matrix::{AsPtr, BlasMatrix, IndexAxis, IndexItem, MatrixBase, ViewMatrix},
+    dim::{DimDyn, DimTrait},
+    matrix::{AsPtr, BlasMatrix, MatrixBase},
     matrix_impl::Matrix,
-    memory::{Memory, View},
+    memory_impl::{OwnedMem, ViewMem},
+    num::Num,
 };
 
+use super::to_default_stride::ToDefaultStride;
+
 pub trait MaxIdx<D> {
-    fn max_idx(&self) -> D;
+    fn max_idx(self) -> DimDyn;
 }
 
-impl<M: ViewMatrix + MatrixBase<Dim = Dim1>> MaxIdx<Dim1> for M {
-    fn max_idx(&self) -> Dim1 {
-        let idx = <M as BlasMatrix>::Blas::amax(
-            self.shape_stride().shape().num_elm(),
-            self.as_ptr(),
-            self.shape_stride().stride()[0],
+impl<'a, T, D> MaxIdx<D> for Matrix<ViewMem<'a, T>, D>
+where
+    T: Num,
+    D: DimTrait,
+{
+    fn max_idx(self) -> DimDyn {
+        let default_stride: Matrix<OwnedMem<T>, DimDyn> = ToDefaultStride::to_default_stride(self);
+        let idx = <Self as BlasMatrix>::Blas::amax(
+            default_stride.shape().num_elm(),
+            default_stride.as_ptr(),
+            default_stride.stride()[default_stride.shape().len() - 1],
         );
-        Dim1::new([idx])
+        println!("idx: {}", idx);
+        dbg!(default_stride.shape_stride()).get_dim_by_offset(idx)
     }
 }
-
-macro_rules! impl_max_idx {
-    ($dim:ty) => {
-        impl<M> MaxIdx<$dim> for Matrix<M, $dim>
-        where
-            M: View,
-        {
-            fn max_idx(&self) -> $dim {
-                if self.shape_stride().is_contiguous() {
-                    let idx = <M as Memory>::Blas::amax(
-                        self.shape_stride().shape().num_elm(),
-                        self.as_ptr(),
-                        self.shape_stride().stride()[self.shape_stride().shape().len() - 1],
-                    );
-                    self.shape_stride().get_dim_by_offset(idx)
-                } else {
-                    let mut max = self.shape_stride().get_dim_by_offset(0);
-                    let mut max_val = self.index_item(max);
-                    for i in 0..self.shape_stride().shape()[0] {
-                        let tmp_matrix = self.index_axis(Index0D::new(i));
-                        let tmp_max_dim = tmp_matrix.max_idx();
-                        let tmp_max_val = tmp_matrix.index_item(tmp_max_dim);
-                        if tmp_max_val > max_val {
-                            max_val = tmp_max_val;
-                            max[0] = i;
-                            for j in 1..max.len() {
-                                max[j] = tmp_max_dim[j - 1];
-                            }
-                        }
-                    }
-                    max
-                }
-            }
-        }
-    };
-}
-impl_max_idx!(Dim2);
-impl_max_idx!(Dim3);
-impl_max_idx!(Dim4);
 
 #[cfg(test)]
 mod max_idx {
