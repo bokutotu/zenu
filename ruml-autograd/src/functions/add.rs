@@ -4,8 +4,8 @@ use ruml_matrix::{
     dim::DimDyn,
     matrix::{MatrixBase, ToViewMatrix, ToViewMutMatrix},
     matrix_impl::Matrix,
-    memory::Owned,
     memory_impl::OwnedMem,
+    num::Num,
     operation::{add::MatrixAdd, zeros::Zeros},
 };
 
@@ -13,20 +13,20 @@ use crate::{Function, Variable, VariableWeak};
 
 use super::{gradient_sum_over_axis, output_shape};
 
-struct Addition<M: Owned> {
-    x: Variable<M>,
-    y: Variable<M>,
-    output: VariableWeak<M>,
+struct Addition<T: Num> {
+    x: Variable<T>,
+    y: Variable<T>,
+    output: VariableWeak<T>,
 }
 
-impl<M: Owned> Addition<M> {
-    pub fn new(x: Variable<M>, y: Variable<M>, output: Variable<M>) -> Self {
+impl<T: Num> Addition<T> {
+    pub fn new(x: Variable<T>, y: Variable<T>, output: Variable<T>) -> Self {
         let output = output.downgrade();
         Self { x, y, output }
     }
 }
 
-impl Function<OwnedMem<f32>> for Addition<OwnedMem<f32>> {
+impl<T: Num> Function<T> for Addition<T> {
     fn forward(&self) {
         let x = self.x.get_data();
         let y = self.y.get_data();
@@ -38,8 +38,8 @@ impl Function<OwnedMem<f32>> for Addition<OwnedMem<f32>> {
     fn backward(&self) {
         let x_shape = self.x.get_data().shape();
         let y_shape = self.y.get_data().shape();
-        let mut x_grad: Matrix<OwnedMem<f32>, DimDyn> = Zeros::zeros(x_shape);
-        let mut y_grad: Matrix<OwnedMem<f32>, DimDyn> = Zeros::zeros(y_shape);
+        let mut x_grad: Matrix<OwnedMem<T>, DimDyn> = Zeros::zeros(x_shape);
+        let mut y_grad: Matrix<OwnedMem<T>, DimDyn> = Zeros::zeros(y_shape);
         self.output.upgrade().unwrap().with_grad_data(|grad| {
             gradient_sum_over_axis(grad.to_view(), x_grad.to_view_mut());
             gradient_sum_over_axis(grad.to_view(), y_grad.to_view_mut());
@@ -48,12 +48,12 @@ impl Function<OwnedMem<f32>> for Addition<OwnedMem<f32>> {
         *self.y.get_grad_mut() = Some(Variable::new(y_grad));
     }
 
-    fn get_inputs(&self) -> Vec<Variable<OwnedMem<f32>>> {
+    fn get_inputs(&self) -> Vec<Variable<T>> {
         vec![self.x.clone(), self.y.clone()]
     }
 }
 
-fn add(x: Variable<OwnedMem<f32>>, y: Variable<OwnedMem<f32>>) -> Variable<OwnedMem<f32>> {
+fn add<T: Num>(x: Variable<T>, y: Variable<T>) -> Variable<T> {
     let output_shape = output_shape(&x, &y);
     let output = Zeros::zeros(output_shape);
     let output = Variable::new(output);
@@ -63,10 +63,10 @@ fn add(x: Variable<OwnedMem<f32>>, y: Variable<OwnedMem<f32>>) -> Variable<Owned
     output
 }
 
-impl Add<Variable<OwnedMem<f32>>> for Variable<OwnedMem<f32>> {
-    type Output = Variable<OwnedMem<f32>>;
+impl<T: Num> Add<Variable<T>> for Variable<T> {
+    type Output = Variable<T>;
 
-    fn add(self, other: Variable<OwnedMem<f32>>) -> Self::Output {
+    fn add(self, other: Variable<T>) -> Self::Output {
         add(self, other)
     }
 }

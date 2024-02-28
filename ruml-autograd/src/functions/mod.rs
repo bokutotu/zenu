@@ -2,7 +2,6 @@ use ruml_matrix::{
     dim::{DimDyn, DimTrait},
     matrix::{MatrixBase, ToViewMatrix, ToViewMutMatrix},
     matrix_impl::Matrix,
-    memory::Owned,
     memory_impl::{ViewMem, ViewMutMem},
     num::Num,
     operation::{copy_from::CopyFrom, sum::MatrixSum},
@@ -43,7 +42,7 @@ pub(crate) fn gradient_sum_over_axis<T: Num>(
     }
 }
 
-pub(crate) fn output_shape<M: Owned>(x: &Variable<M>, y: &Variable<M>) -> DimDyn {
+pub(crate) fn output_shape<T: Num>(x: &Variable<T>, y: &Variable<T>) -> DimDyn {
     if x.get_data().shape().is_include(&y.get_data().shape()) {
         x.get_data().shape()
     } else {
