@@ -8,13 +8,14 @@ use std::{
 };
 
 use ruml_matrix::{
-    dim::DimDyn, matrix::MatrixBase, matrix_impl::Matrix, memory::Owned, operation::ones::Ones,
+    dim::DimDyn, matrix::MatrixBase, matrix_impl::Matrix, memory_impl::OwnedMem, num::Num,
+    operation::ones::Ones,
 };
 
-pub trait Function<M: Owned> {
+pub trait Function<T: Num> {
     fn forward(&self);
     fn backward(&self);
-    fn get_inputs(&self) -> Vec<Variable<M>>;
+    fn get_inputs(&self) -> Vec<Variable<T>>;
     fn get_gen(&self) -> usize {
         let inputs = self.get_inputs();
         inputs.iter().map(|input| input.get_gen()).max().unwrap()
@@ -22,13 +23,13 @@ pub trait Function<M: Owned> {
 }
 
 #[derive(Clone)]
-pub(crate) struct FunctionQueueItem<M: Owned> {
-    pub(crate) func: Rc<RefCell<Box<dyn Function<M>>>>,
+pub(crate) struct FunctionQueueItem<T: Num> {
+    pub(crate) func: Rc<RefCell<Box<dyn Function<T>>>>,
     pub(crate) gen: usize,
 }
 
-impl<M: Owned> From<Rc<RefCell<Box<dyn Function<M>>>>> for FunctionQueueItem<M> {
-    fn from(func: Rc<RefCell<Box<dyn Function<M>>>>) -> Self {
+impl<T: Num> From<Rc<RefCell<Box<dyn Function<T>>>>> for FunctionQueueItem<T> {
+    fn from(func: Rc<RefCell<Box<dyn Function<T>>>>) -> Self {
         Self {
             func: func.clone(),
             gen: func.borrow().get_gen(),
@@ -36,30 +37,30 @@ impl<M: Owned> From<Rc<RefCell<Box<dyn Function<M>>>>> for FunctionQueueItem<M> 
     }
 }
 
-impl<M: Owned> PartialEq for FunctionQueueItem<M> {
+impl<T: Num> PartialEq for FunctionQueueItem<T> {
     fn eq(&self, other: &Self) -> bool {
         self.gen == other.gen
     }
 }
 
-impl<M: Owned> Eq for FunctionQueueItem<M> {
+impl<T: Num> Eq for FunctionQueueItem<T> {
     fn assert_receiver_is_total_eq(&self) {}
 }
 
-impl<M: Owned> PartialOrd for FunctionQueueItem<M> {
+impl<T: Num> PartialOrd for FunctionQueueItem<T> {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         Some(self.gen.cmp(&other.gen))
     }
 }
 
-impl<M: Owned> Ord for FunctionQueueItem<M> {
+impl<T: Num> Ord for FunctionQueueItem<T> {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         self.gen.cmp(&other.gen)
     }
 }
 
-impl<M: Owned> Deref for FunctionQueueItem<M> {
-    type Target = Rc<RefCell<Box<dyn Function<M>>>>;
+impl<T: Num> Deref for FunctionQueueItem<T> {
+    type Target = Rc<RefCell<Box<dyn Function<T>>>>;
 
     fn deref(&self) -> &Self::Target {
         &self.func
@@ -67,16 +68,16 @@ impl<M: Owned> Deref for FunctionQueueItem<M> {
 }
 
 #[derive(Clone)]
-pub struct VariableInner<M: Owned> {
-    data: Matrix<M, DimDyn>,
-    creator: Option<Rc<RefCell<Box<dyn Function<M>>>>>,
-    grad: Option<Variable<M>>,
+pub struct VariableInner<T: Num> {
+    data: Matrix<OwnedMem<T>, DimDyn>,
+    creator: Option<Rc<RefCell<Box<dyn Function<T>>>>>,
+    grad: Option<Variable<T>>,
     gen: usize,
     name: Option<String>,
 }
 
-impl<M: Owned> VariableInner<M> {
-    pub fn new(data: Matrix<M, DimDyn>) -> Self {
+impl<T: Num> VariableInner<T> {
+    pub fn new(data: Matrix<OwnedMem<T>, DimDyn>) -> Self {
         VariableInner {
             data,
             creator: None,
@@ -87,11 +88,11 @@ impl<M: Owned> VariableInner<M> {
     }
 
     #[allow(clippy::type_complexity)]
-    fn get_creator(&self) -> Option<Rc<RefCell<Box<dyn Function<M>>>>> {
+    fn get_creator(&self) -> Option<Rc<RefCell<Box<dyn Function<T>>>>> {
         self.creator.clone()
     }
 
-    fn set_creator(&mut self, creator: Rc<RefCell<Box<dyn Function<M>>>>) {
+    fn set_creator(&mut self, creator: Rc<RefCell<Box<dyn Function<T>>>>) {
         self.creator = Some(creator);
         let gen = self.creator.as_ref().unwrap().borrow().get_gen();
         self.gen = gen + 1;
@@ -110,7 +111,7 @@ impl<M: Owned> VariableInner<M> {
     }
 
     pub fn backward(&self) {
-        let mut funcs: BinaryHeap<FunctionQueueItem<M>> = BinaryHeap::new();
+        let mut funcs: BinaryHeap<FunctionQueueItem<T>> = BinaryHeap::new();
         let mut seen_rc = HashSet::new();
 
         funcs.push(self.creator.clone().unwrap().into());
@@ -136,41 +137,41 @@ impl<M: Owned> VariableInner<M> {
 }
 
 #[derive(Clone)]
-pub struct Variable<M: Owned> {
-    inner: Rc<RefCell<VariableInner<M>>>,
+pub struct Variable<T: Num> {
+    inner: Rc<RefCell<VariableInner<T>>>,
 }
 
-impl<M: Owned> Variable<M> {
-    pub fn new(data: Matrix<M, DimDyn>) -> Self {
+impl<T: Num> Variable<T> {
+    pub fn new(data: Matrix<OwnedMem<T>, DimDyn>) -> Self {
         Variable {
             inner: Rc::new(RefCell::new(VariableInner::new(data))),
         }
     }
-    pub fn get_data<'a>(&'a self) -> Ref<'a, Matrix<M, DimDyn>> {
-        let reference: Ref<'a, VariableInner<M>> = self.inner.borrow();
+    pub fn get_data<'a>(&'a self) -> Ref<'a, Matrix<OwnedMem<T>, DimDyn>> {
+        let reference: Ref<'a, VariableInner<T>> = self.inner.borrow();
         Ref::map(reference, |r| &r.data)
     }
 
-    pub fn get_data_mut<'a>(&'a self) -> RefMut<'a, Matrix<M, DimDyn>> {
-        let reference: RefMut<'a, VariableInner<M>> = self.inner.borrow_mut();
+    pub fn get_data_mut<'a>(&'a self) -> RefMut<'a, Matrix<OwnedMem<T>, DimDyn>> {
+        let reference: RefMut<'a, VariableInner<T>> = self.inner.borrow_mut();
         RefMut::map(reference, |r| &mut r.data)
     }
 
-    pub fn set_creator(&self, creator: Rc<RefCell<Box<dyn Function<M>>>>) {
+    pub fn set_creator(&self, creator: Rc<RefCell<Box<dyn Function<T>>>>) {
         self.inner.borrow_mut().set_creator(creator);
     }
 
-    pub fn get_creator(&self) -> Option<Rc<RefCell<Box<dyn Function<M>>>>> {
+    pub fn get_creator(&self) -> Option<Rc<RefCell<Box<dyn Function<T>>>>> {
         self.inner.borrow().get_creator().clone()
     }
 
-    pub fn get_grad<'a>(&'a self) -> Ref<'a, Option<Variable<M>>> {
-        let reference: Ref<'a, VariableInner<M>> = self.inner.borrow();
+    pub fn get_grad<'a>(&'a self) -> Ref<'a, Option<Variable<T>>> {
+        let reference: Ref<'a, VariableInner<T>> = self.inner.borrow();
         Ref::map(reference, |r| &r.grad)
     }
 
-    pub fn get_grad_mut<'a>(&'a self) -> RefMut<'a, Option<Variable<M>>> {
-        let reference: RefMut<'a, VariableInner<M>> = self.inner.borrow_mut();
+    pub fn get_grad_mut<'a>(&'a self) -> RefMut<'a, Option<Variable<T>>> {
+        let reference: RefMut<'a, VariableInner<T>> = self.inner.borrow_mut();
         RefMut::map(reference, |r| &mut r.grad)
     }
 
@@ -183,7 +184,7 @@ impl<M: Owned> Variable<M> {
         self.inner.borrow().backward();
     }
 
-    pub fn downgrade(self) -> VariableWeak<M> {
+    pub fn downgrade(self) -> VariableWeak<T> {
         VariableWeak {
             inner: Rc::downgrade(&self.inner),
         }
@@ -207,7 +208,7 @@ impl<M: Owned> Variable<M> {
 
     pub fn with_grad_data<F>(&self, mut f: F)
     where
-        F: FnMut(&Matrix<M, DimDyn>),
+        F: FnMut(&Matrix<OwnedMem<T>, DimDyn>),
     {
         let inner = self.inner.borrow();
         if let Some(grad_variable) = &inner.grad {
@@ -220,12 +221,12 @@ impl<M: Owned> Variable<M> {
 }
 
 #[derive(Debug, Clone)]
-pub struct VariableWeak<M: Owned> {
-    inner: Weak<RefCell<VariableInner<M>>>,
+pub struct VariableWeak<T: Num> {
+    inner: Weak<RefCell<VariableInner<T>>>,
 }
 
-impl<M: Owned> VariableWeak<M> {
-    pub fn upgrade(&self) -> Option<Variable<M>> {
+impl<T: Num> VariableWeak<T> {
+    pub fn upgrade(&self) -> Option<Variable<T>> {
         self.inner.upgrade().map(|inner| Variable { inner })
     }
 }

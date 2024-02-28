@@ -29,7 +29,7 @@ where
             let mut sum = T::zero();
             for i in 0..s.shape()[0] {
                 let tmp = s.index_axis_dyn(Index0D::new(i));
-                sum = sum + tmp.asum();
+                sum += tmp.asum();
             }
             sum
         }

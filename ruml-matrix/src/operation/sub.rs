@@ -41,7 +41,7 @@ where
 }
 
 impl<'a, 'b, 'c, T, D1, D2, D3> MatrixSub<Matrix<ViewMem<'a, T>, D1>, Matrix<ViewMem<'b, T>, D2>>
-    for Matrix<ViewMutMem<'b, T>, D3>
+    for Matrix<ViewMutMem<'c, T>, D3>
 where
     D1: DimTrait,
     D2: DimTrait,

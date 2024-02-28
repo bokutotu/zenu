@@ -37,8 +37,8 @@ fn add_1d_scalar_cpu<T: Num, D: DimTrait>(a: &mut Matrix<ViewMutMem<T>, D>, b: T
     let a_slice =
         unsafe { std::slice::from_raw_parts_mut(a.as_mut_ptr(), num_elm * inner_slice_a) };
     if inner_slice_a == 1 {
-        for i in 0..num_elm {
-            a_slice[i] += b;
+        for item in a_slice.iter_mut() {
+            *item += b;
         }
     } else {
         for i in 0..num_elm {
@@ -207,7 +207,7 @@ pub trait MatrixAddAssign<Rhs>: ViewMutMatix + MatrixBase {
 }
 
 // matrix add scalar
-impl<'a, 'b, T, D> MatrixAdd<Matrix<ViewMem<'b, T>, D>, T> for Matrix<ViewMutMem<'b, T>, D>
+impl<'a, 'b, T, D> MatrixAdd<Matrix<ViewMem<'a, T>, D>, T> for Matrix<ViewMutMem<'b, T>, D>
 where
     T: Num,
     D: DimTrait,
