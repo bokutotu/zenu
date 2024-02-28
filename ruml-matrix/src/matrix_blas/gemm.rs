@@ -24,14 +24,14 @@ where
 
     assert!(!is_transposed_c);
 
-    let m = a_shape[1];
-    let n = b_shape[0];
-    let k = a_shape[0];
+    let m = a_shape[0];
+    let n = b_shape[1];
+    let k = a_shape[1];
 
     // shape check
-    assert_eq!(a_shape[1], c_shape[1]);
-    assert_eq!(b_shape[0], c_shape[0]);
-    assert_eq!(a_shape[0], b_shape[1]);
+    assert_eq!(a_shape[0], c_shape[0]);
+    assert_eq!(b_shape[1], c_shape[1]);
+    assert_eq!(a_shape[1], b_shape[0]);
 
     let get_inner_stride = |stride: Dim2, is_transpose| {
         if is_transpose {
@@ -42,9 +42,9 @@ where
     };
     let get_leading_dim = |shape: Dim2, is_transpose| {
         if is_transpose {
-            shape[1]
-        } else {
             shape[0]
+        } else {
+            shape[1]
         }
     };
 
@@ -57,7 +57,7 @@ where
     assert_eq!(inner_stride_a, 1);
 
     let inner_stride_b = get_inner_stride(b.stride(), is_transposed_b);
-    assert!(b.is_default_stride() || a.is_transposed_default_stride());
+    assert!(b.is_default_stride() || b.is_transposed_default_stride());
     assert_eq!(inner_stride_b, 1);
 
     let inner_stride_c = get_inner_stride(c.stride(), is_transposed_c);
@@ -99,7 +99,7 @@ mod gemm {
     use crate::{
         matrix::{IndexItem, MatrixBase, MatrixSlice, OwnedMatrix, ToViewMatrix, ToViewMutMatrix},
         matrix_impl::OwnedMatrix2D,
-        operation::transpose::Transpose,
+        operation::{transpose::Transpose, zeros::Zeros},
         slice,
     };
 
@@ -162,5 +162,15 @@ mod gemm {
         let b = b.slice(slice!(.., ..2));
 
         gemm(a.to_view(), b.to_view(), c.to_view_mut(), 1.0, 1.0);
+    }
+
+    #[test]
+    fn gemm_3x4d_4x2d() {
+        let x = vec![1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12.];
+        let y = vec![1., 2., 3., 4., 5., 6., 7., 8.];
+        let x = OwnedMatrix2D::from_vec(x, [3, 4]);
+        let y = OwnedMatrix2D::from_vec(y, [4, 2]);
+        let mut output = OwnedMatrix2D::zeros([3, 2]);
+        gemm(x.to_view(), y.to_view(), output.to_view_mut(), 1.0, 0.0);
     }
 }

@@ -11,8 +11,6 @@ use ruml_matrix::{
 
 use crate::{Function, Variable, VariableWeak};
 
-use super::output_shape;
-
 struct MatMul<T: Num> {
     x: Variable<T>,
     y: Variable<T>,
@@ -43,17 +41,20 @@ impl<T: Num> Function<T> for MatMul<T> {
     }
 
     fn backward(&self) {
-        let x = self.x.get_data();
-        let y = self.y.get_data();
-        let x_shape = x.shape();
-        let y_shape = y.shape();
+        println!("here");
+        let x_shape = self.x.get_data().shape();
+        let y_shape = self.y.get_data().shape();
         let mut x_grad: Matrix<OwnedMem<T>, DimDyn> = Zeros::zeros(x_shape);
         let mut y_grad: Matrix<OwnedMem<T>, DimDyn> = Zeros::zeros(y_shape);
         self.output.upgrade().unwrap().with_grad_data(|grad| {
-            let mut y_t = y.to_view();
-            y_t.transpose();
-            let mut x_t = x.to_view();
+            let x = self.x.get_data();
+            let y = self.y.get_data();
+            let x = x.to_view();
+            let y = y.to_view();
+            let mut x_t = x.clone();
+            let mut y_t = y.clone();
             x_t.transpose();
+            y_t.transpose();
             x_grad.to_view_mut().gemm(grad.to_view(), y_t);
             y_grad.to_view_mut().gemm(x_t, grad.to_view());
         });
@@ -68,8 +69,6 @@ impl<T: Num> Function<T> for MatMul<T> {
 
 pub fn matmul<T: Num>(x: Variable<T>, y: Variable<T>) -> Variable<T> {
     let output_shape = DimDyn::new(&[x.get_data().shape()[0], y.get_data().shape()[1]]);
-    println!("output_shape: {:?}", output_shape);
-
     let output = Zeros::zeros(output_shape);
     let output = Variable::new(output);
     let matmul = MatMul::new(x, y, output.clone());
@@ -80,7 +79,13 @@ pub fn matmul<T: Num>(x: Variable<T>, y: Variable<T>) -> Variable<T> {
 
 #[cfg(test)]
 mod matmul {
-    use ruml_matrix::{matrix::OwnedMatrix, matrix_impl::OwnedMatrixDyn};
+    use ruml_matrix::{
+        dim::DimDyn,
+        matrix::{OwnedMatrix, ToViewMatrix},
+        matrix_impl::Matrix,
+        memory_impl::OwnedMem,
+        operation::asum::Asum,
+    };
 
     use crate::Variable;
 
@@ -88,13 +93,35 @@ mod matmul {
 
     #[test]
     fn matmul_test() {
-        let x = OwnedMatrixDyn::from_vec(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], [2, 3]);
-        let y = OwnedMatrixDyn::from_vec(vec![7.0, 8.0, 9.0, 10.0, 11.0, 12.0], [3, 2]);
+        let x = vec![1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12.];
+        let y = vec![1., 2., 3., 4., 5., 6., 7., 8.];
+        let x = OwnedMatrix::from_vec(x, &[3, 4]);
+        let y = OwnedMatrix::from_vec(y, &[4, 2]);
 
         let x = Variable::new(x);
         let y = Variable::new(y);
 
-        let output = matmul(x, y);
+        let output = matmul(x.clone(), y.clone());
+        let ans = vec![50., 60., 114., 140., 178., 220.];
+        let ans: Matrix<OwnedMem<f64>, DimDyn> = OwnedMatrix::from_vec(ans, &[3, 2]);
+        let diff = output.get_data().to_view() - ans.to_view();
+        let diff_asum = diff.asum();
+        assert!(diff_asum < 1e-6);
+
         output.backward();
+        x.with_grad_data(|grad| {
+            let ans = vec![3., 7., 11., 15., 3., 7., 11., 15., 3., 7., 11., 15.];
+            let ans: Matrix<OwnedMem<f64>, DimDyn> = OwnedMatrix::from_vec(ans, &[3, 4]);
+            let diff = grad.to_view() - ans.to_view();
+            let diff_asum = diff.asum();
+            assert!(diff_asum < 1e-6);
+        });
+        y.with_grad_data(|grad| {
+            let ans = vec![15., 15., 18., 18., 21., 21., 24., 24.];
+            let ans: Matrix<OwnedMem<f64>, DimDyn> = OwnedMatrix::from_vec(ans, &[4, 2]);
+            let diff = grad.to_view() - ans.to_view();
+            let diff_asum = diff.asum();
+            assert!(diff_asum < 1e-6);
+        });
     }
 }

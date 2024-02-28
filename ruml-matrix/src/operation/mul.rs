@@ -388,48 +388,59 @@ mod mat_mul {
 
     #[test]
     fn default() {
-        let a = OwnedMatrix2D::from_vec(vec![1., 2., 3., 4., 5., 6.], [3, 2]);
-        let b = OwnedMatrix2D::from_vec(vec![1., 2., 3., 4., 5., 6.], [2, 3]);
-        let mut ans = OwnedMatrix2D::<f32>::zeros([2, 2]);
+        let a = OwnedMatrix2D::from_vec(vec![1., 2., 3., 4., 5., 6.], [2, 3]);
+        let b = OwnedMatrix2D::from_vec(
+            vec![
+                1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12., 13., 14., 15.,
+            ],
+            [3, 5],
+        );
+        let mut ans = OwnedMatrix2D::<f32>::zeros([2, 5]);
 
         ans.to_view_mut().gemm(a.to_view(), b.to_view());
         dbg!(ans.index_item([0, 0]));
         dbg!(ans.index_item([0, 1]));
         dbg!(ans.index_item([1, 0]));
         dbg!(ans.index_item([1, 1]));
-        assert_eq!(ans.index_item([0, 0]), 22.);
-        assert_eq!(ans.index_item([0, 1]), 28.);
-        assert_eq!(ans.index_item([1, 0]), 49.);
-        assert_eq!(ans.index_item([1, 1]), 64.);
+        assert_eq!(ans.index_item([0, 0]), 46.);
+        assert_eq!(ans.index_item([0, 1]), 52.);
+        assert_eq!(ans.index_item([0, 2]), 58.);
+        assert_eq!(ans.index_item([0, 3]), 64.);
+        assert_eq!(ans.index_item([0, 4]), 70.);
+        assert_eq!(ans.index_item([1, 0]), 100.);
+        assert_eq!(ans.index_item([1, 1]), 115.);
+        assert_eq!(ans.index_item([1, 2]), 130.);
+        assert_eq!(ans.index_item([1, 3]), 145.);
+        assert_eq!(ans.index_item([1, 4]), 160.);
     }
 
     #[test]
     fn default_stride_2() {
-        let a = OwnedMatrix2D::from_vec(vec![1., 2., 3., 4., 5., 6.], [3, 2]);
+        let a = OwnedMatrix2D::from_vec(vec![1., 2., 3., 4., 5., 6.], [2, 3]);
         // shape 3 4
         let b = OwnedMatrix2D::from_vec(
             vec![1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12.],
-            [4, 3],
+            [3, 4],
         );
-        let mut ans = OwnedMatrix2D::<f32>::zeros([4, 2]);
+        let mut ans = OwnedMatrix2D::<f32>::zeros([2, 4]);
 
         ans.to_view_mut().gemm(a.to_view(), b.to_view());
         dbg!(ans.index_item([0, 0]));
         dbg!(ans.index_item([0, 1]));
+        dbg!(ans.index_item([0, 2]));
+        dbg!(ans.index_item([0, 3]));
         dbg!(ans.index_item([1, 0]));
         dbg!(ans.index_item([1, 1]));
-        dbg!(ans.index_item([2, 0]));
-        dbg!(ans.index_item([2, 1]));
-        dbg!(ans.index_item([3, 0]));
-        dbg!(ans.index_item([3, 1]));
+        dbg!(ans.index_item([1, 2]));
+        dbg!(ans.index_item([1, 3]));
 
         assert_eq!(ans.index_item([0, 0]), 38.);
         assert_eq!(ans.index_item([0, 1]), 44.);
-        assert_eq!(ans.index_item([1, 0]), 50.);
-        assert_eq!(ans.index_item([1, 1]), 56.);
-        assert_eq!(ans.index_item([2, 0]), 83.);
-        assert_eq!(ans.index_item([2, 1]), 98.);
-        assert_eq!(ans.index_item([3, 0]), 113.);
-        assert_eq!(ans.index_item([3, 1]), 128.);
+        assert_eq!(ans.index_item([0, 2]), 50.);
+        assert_eq!(ans.index_item([0, 3]), 56.);
+        assert_eq!(ans.index_item([1, 0]), 83.);
+        assert_eq!(ans.index_item([1, 1]), 98.);
+        assert_eq!(ans.index_item([1, 2]), 113.);
+        assert_eq!(ans.index_item([1, 3]), 128.);
     }
 }
