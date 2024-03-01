@@ -87,6 +87,7 @@ fn mul_matrix_matrix<T, D1, D2, D3>(
     let mut self_ = self_.into_dyn_dim();
     let lhs = lhs.into_dyn_dim();
     self_.copy_from(&lhs);
+    dbg!(self_.shape());
     mul_assign_matrix_matrix(self_, rhs);
 }
 
@@ -351,8 +352,6 @@ mod mul {
 
         ans.to_view_mut().mul(a.to_view(), b.to_view());
 
-        println!("{:?}", ans);
-
         for i in 0..2 {
             for j in 0..2 {
                 for k in 0..2 {
@@ -373,6 +372,15 @@ mod mul {
         let ones_2d = OwnedMatrixDyn::ones([2, 2]);
         let mut ans = OwnedMatrixDyn::zeros([2, 2, 2, 2]);
         ans.to_view_mut().mul(ones_4d.to_view(), ones_2d.to_view());
+    }
+
+    #[test]
+    fn default_0d_0d() {
+        let a = OwnedMatrixDyn::from_vec(vec![10.], &[]);
+        let b = OwnedMatrixDyn::from_vec(vec![20.], &[]);
+        let mut ans = OwnedMatrixDyn::<f32>::zeros(&[]);
+        ans.to_view_mut().mul(a.to_view(), b.to_view());
+        assert_eq!(ans.index_item(&[]), 200.);
     }
 }
 

@@ -36,6 +36,13 @@ where
 {
     assert_eq!(to.shape(), source.shape());
 
+    if to.shape().is_empty() {
+        unsafe {
+            to.as_mut_ptr().write(source.as_ptr().read());
+        }
+        return;
+    }
+
     if to.shape_stride().is_contiguous() && source.shape_stride().is_contiguous()
         || to.shape().len() == 1
     {

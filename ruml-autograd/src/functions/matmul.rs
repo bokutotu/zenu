@@ -41,7 +41,6 @@ impl<T: Num> Function<T> for MatMul<T> {
     }
 
     fn backward(&self) {
-        println!("here");
         let x_shape = self.x.get_data().shape();
         let y_shape = self.y.get_data().shape();
         let mut x_grad: Matrix<OwnedMem<T>, DimDyn> = Zeros::zeros(x_shape);

@@ -8,7 +8,11 @@ use std::{
 };
 
 use ruml_matrix::{
-    dim::DimDyn, matrix::MatrixBase, matrix_impl::Matrix, memory_impl::OwnedMem, num::Num,
+    dim::DimDyn,
+    matrix::{MatrixBase, OwnedMatrix},
+    matrix_impl::Matrix,
+    memory_impl::OwnedMem,
+    num::Num,
     operation::ones::Ones,
 };
 
@@ -141,6 +145,19 @@ pub struct Variable<T: Num> {
     inner: Rc<RefCell<VariableInner<T>>>,
 }
 
+impl<T: Num> From<T> for Variable<T> {
+    fn from(data: T) -> Self {
+        let data = Matrix::from_vec(vec![data], DimDyn::new(&[]));
+        Variable::new(data)
+    }
+}
+
+impl<T: Num> From<Matrix<OwnedMem<T>, DimDyn>> for Variable<T> {
+    fn from(data: Matrix<OwnedMem<T>, DimDyn>) -> Self {
+        Variable::new(data)
+    }
+}
+
 impl<T: Num> Variable<T> {
     pub fn new(data: Matrix<OwnedMem<T>, DimDyn>) -> Self {
         Variable {
@@ -217,6 +234,10 @@ impl<T: Num> Variable<T> {
         } else {
             panic!("grad is None");
         }
+    }
+
+    pub fn set_grad(&self, grad: Variable<T>) {
+        *self.get_grad_mut() = Some(grad);
     }
 }
 
