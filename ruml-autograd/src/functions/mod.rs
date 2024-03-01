@@ -1,11 +1,4 @@
-use ruml_matrix::{
-    dim::{DimDyn, DimTrait},
-    matrix::{MatrixBase, ToViewMatrix, ToViewMutMatrix},
-    matrix_impl::Matrix,
-    memory_impl::{ViewMem, ViewMutMem},
-    num::Num,
-    operation::{copy_from::CopyFrom, sum::MatrixSum},
-};
+use ruml_matrix::{dim::DimDyn, matrix::MatrixBase, num::Num};
 
 use crate::Variable;
 
@@ -15,34 +8,6 @@ mod mul;
 pub mod broadcast;
 pub mod matmul;
 pub mod sum_to;
-
-pub(crate) fn gradient_sum_over_axis<T: Num>(
-    source: Matrix<ViewMem<T>, DimDyn>,
-    target: Matrix<ViewMutMem<T>, DimDyn>,
-) {
-    if source.shape().len() < target.shape().len() {
-        panic!("source.shape().len() < target.shape().len()");
-    }
-
-    let diff_len = source.shape().len() - target.shape().len();
-    if diff_len == 0 {
-        let mut target = target;
-        target.to_view_mut().copy_from(&source.to_view());
-        return;
-    }
-
-    if !source.shape().is_include(&target.shape()) {
-        panic!("!source.shape().is_include(target.shape())");
-    }
-
-    if diff_len == 1 {
-        let mut target = target;
-        let ans = source.to_view().sum(0);
-        target.to_view_mut().copy_from(&ans.to_view());
-    } else {
-        gradient_sum_over_axis(source.to_view().sum(0).to_view(), target);
-    }
-}
 
 pub(crate) fn output_shape<T: Num>(x: &Variable<T>, y: &Variable<T>) -> DimDyn {
     if x.get_data().shape().is_include(&y.get_data().shape()) {

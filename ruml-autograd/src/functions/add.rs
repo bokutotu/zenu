@@ -1,17 +1,14 @@
 use std::{cell::RefCell, ops::Add, rc::Rc};
 
 use ruml_matrix::{
-    dim::DimDyn,
     matrix::{MatrixBase, ToViewMatrix, ToViewMutMatrix},
-    matrix_impl::Matrix,
-    memory_impl::OwnedMem,
     num::Num,
     operation::{add::MatrixAdd, zeros::Zeros},
 };
 
 use crate::{Function, Variable, VariableWeak};
 
-use super::{gradient_sum_over_axis, output_shape};
+use super::{output_shape, sum_to::sum_to};
 
 struct Addition<T: Num> {
     x: Variable<T>,
@@ -38,14 +35,10 @@ impl<T: Num> Function<T> for Addition<T> {
     fn backward(&self) {
         let x_shape = self.x.get_data().shape();
         let y_shape = self.y.get_data().shape();
-        let mut x_grad: Matrix<OwnedMem<T>, DimDyn> = Zeros::zeros(x_shape);
-        let mut y_grad: Matrix<OwnedMem<T>, DimDyn> = Zeros::zeros(y_shape);
-        self.output.upgrade().unwrap().with_grad_data(|grad| {
-            gradient_sum_over_axis(grad.to_view(), x_grad.to_view_mut());
-            gradient_sum_over_axis(grad.to_view(), y_grad.to_view_mut());
-        });
-        *self.x.get_grad_mut() = Some(Variable::new(x_grad));
-        *self.y.get_grad_mut() = Some(Variable::new(y_grad));
+        let output = self.output.upgrade().unwrap();
+        let grad = output.get_grad().clone().unwrap();
+        self.x.set_grad(sum_to(grad.clone(), x_shape));
+        self.y.set_grad(sum_to(grad, y_shape));
     }
 
     fn get_inputs(&self) -> Vec<Variable<T>> {
