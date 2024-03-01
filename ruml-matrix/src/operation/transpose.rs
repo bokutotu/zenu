@@ -37,3 +37,25 @@ impl<T: Num, M: Memory<Item = T>> Transpose for Matrix<M, DimDyn> {
         self.update_stride(transposed.stride());
     }
 }
+
+#[cfg(test)]
+mod transpose {
+    use crate::{
+        matrix::{IndexItem, OwnedMatrix},
+        matrix_impl::OwnedMatrixDyn,
+    };
+
+    use super::Transpose;
+
+    #[test]
+    fn transpose_2d() {
+        let mut a = OwnedMatrixDyn::from_vec(vec![1., 2., 3., 4., 5., 6.], [2, 3]);
+        a.transpose();
+        assert_eq!(a.index_item([0, 0]), 1.);
+        assert_eq!(a.index_item([0, 1]), 4.);
+        assert_eq!(a.index_item([1, 0]), 2.);
+        assert_eq!(a.index_item([1, 1]), 5.);
+        assert_eq!(a.index_item([2, 0]), 3.);
+        assert_eq!(a.index_item([2, 1]), 6.);
+    }
+}

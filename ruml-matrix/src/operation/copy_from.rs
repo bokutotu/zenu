@@ -8,6 +8,7 @@ use crate::{
     matrix_impl::Matrix,
     memory::{Memory, View, ViewMut},
     num::Num,
+    shape_stride::ShapeStride,
 };
 
 pub trait CopyFrom<RHS>: ViewMutMatix
@@ -28,6 +29,19 @@ where
     }
 }
 
+fn check_can_use_blas<D: DimTrait>(to: ShapeStride<D>, source: ShapeStride<D>) -> bool {
+    if to.shape().len() == 1 {
+        return true;
+    }
+    if to.is_transposed() != source.is_transposed() {
+        return false;
+    }
+    if to.is_contiguous() && source.is_contiguous() {
+        return true;
+    }
+    false
+}
+
 fn copy<T, VM, V>(to: &mut Matrix<VM, DimDyn>, source: &Matrix<V, DimDyn>)
 where
     T: Num,
@@ -43,15 +57,15 @@ where
         return;
     }
 
-    if to.shape_stride().is_contiguous() && source.shape_stride().is_contiguous()
-        || to.shape().len() == 1
-    {
+    if check_can_use_blas(to.shape_stride(), source.shape_stride()) {
+        let s_stride_max = source.shape_stride().min_stride();
+        let t_stride_max = to.shape_stride().min_stride();
         <VM as Memory>::Blas::copy(
             to.shape().num_elm(),
             source.as_ptr(),
-            source.stride()[to.shape().len() - 1],
+            s_stride_max,
             to.as_mut_ptr() as *mut _,
-            to.stride()[to.shape().len() - 1],
+            t_stride_max,
         );
         return;
     }

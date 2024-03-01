@@ -39,6 +39,11 @@ impl<D: DimTrait> ShapeStride<D> {
         Self::new(new_shape, new_stride)
     }
 
+    pub fn min_stride(&self) -> usize {
+        let slice = self.stride.slice();
+        slice.iter().min().unwrap().clone()
+    }
+
     /// このShapeStrideが連続しているかどうかを判定する
     /// transposeされていた場合は並び替えを行い、
     /// そのストライドが、default_strideのn倍になっているかどうかを判定する

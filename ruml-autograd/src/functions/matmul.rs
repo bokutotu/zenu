@@ -3,13 +3,13 @@ use std::{cell::RefCell, rc::Rc};
 use ruml_matrix::{
     dim::{DimDyn, DimTrait},
     matrix::{MatrixBase, ToViewMatrix, ToViewMutMatrix},
-    matrix_impl::Matrix,
-    memory_impl::OwnedMem,
     num::Num,
-    operation::{mul::Gemm, transpose::Transpose, zeros::Zeros},
+    operation::{mul::Gemm, zeros::Zeros},
 };
 
 use crate::{Function, Variable, VariableWeak};
+
+use super::transpose::transpose;
 
 struct MatMul<T: Num> {
     x: Variable<T>,
@@ -41,24 +41,12 @@ impl<T: Num> Function<T> for MatMul<T> {
     }
 
     fn backward(&self) {
-        let x_shape = self.x.get_data().shape();
-        let y_shape = self.y.get_data().shape();
-        let mut x_grad: Matrix<OwnedMem<T>, DimDyn> = Zeros::zeros(x_shape);
-        let mut y_grad: Matrix<OwnedMem<T>, DimDyn> = Zeros::zeros(y_shape);
-        self.output.upgrade().unwrap().with_grad_data(|grad| {
-            let x = self.x.get_data();
-            let y = self.y.get_data();
-            let x = x.to_view();
-            let y = y.to_view();
-            let mut x_t = x.clone();
-            let mut y_t = y.clone();
-            x_t.transpose();
-            y_t.transpose();
-            x_grad.to_view_mut().gemm(grad.to_view(), y_t);
-            y_grad.to_view_mut().gemm(x_t, grad.to_view());
-        });
-        *self.x.get_grad_mut() = Some(Variable::new(x_grad));
-        *self.y.get_grad_mut() = Some(Variable::new(y_grad));
+        let output = self.output.upgrade().unwrap();
+        let grad = output.get_grad().clone().unwrap();
+        let x_grad = matmul(grad.clone(), transpose(self.y.clone()));
+        let y_grad = matmul(transpose(self.x.clone()), grad);
+        self.x.set_grad(x_grad);
+        self.y.set_grad(y_grad);
     }
 
     fn get_inputs(&self) -> Vec<Variable<T>> {
@@ -109,6 +97,7 @@ mod matmul {
 
         output.backward();
         x.with_grad_data(|grad| {
+            println!("{:?}", grad);
             let ans = vec![3., 7., 11., 15., 3., 7., 11., 15., 3., 7., 11., 15.];
             let ans: Matrix<OwnedMem<f64>, DimDyn> = OwnedMatrix::from_vec(ans, &[3, 4]);
             let diff = grad.to_view() - ans.to_view();

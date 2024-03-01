@@ -8,6 +8,7 @@ mod mul;
 pub mod broadcast;
 pub mod matmul;
 pub mod sum_to;
+pub mod transpose;
 
 pub(crate) fn output_shape<T: Num>(x: &Variable<T>, y: &Variable<T>) -> DimDyn {
     if x.get_data().shape().is_include(&y.get_data().shape()) {
