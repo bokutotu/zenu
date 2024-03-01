@@ -12,7 +12,9 @@ use crate::Variable;
 mod add;
 mod mul;
 
+pub mod broadcast;
 pub mod matmul;
+pub mod sum_to;
 
 pub(crate) fn gradient_sum_over_axis<T: Num>(
     source: Matrix<ViewMem<T>, DimDyn>,

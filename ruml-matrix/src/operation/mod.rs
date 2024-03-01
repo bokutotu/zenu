@@ -1,5 +1,6 @@
 pub mod add;
 pub mod asum;
+pub mod broadcast;
 pub mod copy_from;
 pub mod dot;
 pub mod max;
