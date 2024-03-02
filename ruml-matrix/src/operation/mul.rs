@@ -87,7 +87,6 @@ fn mul_matrix_matrix<T, D1, D2, D3>(
     let mut self_ = self_.into_dyn_dim();
     let lhs = lhs.into_dyn_dim();
     self_.copy_from(&lhs);
-    dbg!(self_.shape());
     mul_assign_matrix_matrix(self_, rhs);
 }
 
