@@ -1,6 +1,6 @@
 use std::{cell::RefCell, rc::Rc};
 
-use ruml_matrix::{
+use zenu_matrix::{
     dim::{DimDyn, DimTrait},
     matrix::{MatrixBase, ToViewMatrix, ToViewMutMatrix},
     matrix_impl::Matrix,
@@ -66,7 +66,7 @@ pub fn transpose<T: Num>(x: Variable<T>) -> Variable<T> {
 
 #[cfg(test)]
 mod transpose {
-    use ruml_matrix::{
+    use zenu_matrix::{
         dim::DimDyn,
         matrix::{OwnedMatrix, ToViewMatrix},
         matrix_impl::Matrix,

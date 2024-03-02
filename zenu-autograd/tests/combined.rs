@@ -1,5 +1,5 @@
-use ruml_autograd::Variable;
-use ruml_matrix::matrix::{AsPtr, ToViewMatrix};
+use zenu_autograd::Variable;
+use zenu_matrix::matrix::{AsPtr, ToViewMatrix};
 
 fn formula(x: Variable<f32>, y: Variable<f32>, z: Variable<f32>) -> Variable<f32> {
     let a = x * y;

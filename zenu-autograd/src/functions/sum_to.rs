@@ -1,6 +1,6 @@
 use std::{cell::RefCell, rc::Rc};
 
-use ruml_matrix::{
+use zenu_matrix::{
     dim::{DimDyn, DimTrait},
     matrix::{MatrixBase, ToViewMatrix, ToViewMutMatrix},
     matrix_impl::Matrix,
@@ -80,7 +80,7 @@ pub fn sum_to<T: Num>(x: Variable<T>, shape: DimDyn) -> Variable<T> {
 
 #[cfg(test)]
 mod sum_to {
-    use ruml_matrix::{
+    use zenu_matrix::{
         dim::DimDyn,
         matrix::{OwnedMatrix, ToViewMatrix},
         matrix_impl::Matrix,

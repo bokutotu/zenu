@@ -7,7 +7,7 @@ use std::{
     rc::{Rc, Weak},
 };
 
-use ruml_matrix::{
+use zenu_matrix::{
     dim::DimDyn,
     matrix::{MatrixBase, OwnedMatrix},
     matrix_impl::Matrix,

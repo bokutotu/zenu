@@ -1,6 +1,6 @@
 use std::{cell::RefCell, ops::Mul, rc::Rc};
 
-use ruml_matrix::{
+use zenu_matrix::{
     matrix::{MatrixBase, ToViewMatrix, ToViewMutMatrix},
     num::Num,
     operation::{mul::MatrixMul, zeros::Zeros},
@@ -71,7 +71,7 @@ impl<T: Num> Mul<Variable<T>> for Variable<T> {
 
 #[cfg(test)]
 mod mul {
-    use ruml_matrix::{
+    use zenu_matrix::{
         matrix::{OwnedMatrix, ToViewMatrix},
         matrix_impl::OwnedMatrixDyn,
         operation::asum::Asum,

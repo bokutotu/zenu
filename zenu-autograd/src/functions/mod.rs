@@ -1,4 +1,4 @@
-use ruml_matrix::{dim::DimDyn, matrix::MatrixBase, num::Num};
+use zenu_matrix::{dim::DimDyn, matrix::MatrixBase, num::Num};
 
 use crate::Variable;
 

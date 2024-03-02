@@ -1,6 +1,6 @@
 use std::{cell::RefCell, rc::Rc};
 
-use ruml_matrix::{
+use zenu_matrix::{
     dim::DimDyn,
     matrix::{MatrixBase, ToViewMatrix, ToViewMutMatrix},
     num::Num,
@@ -57,7 +57,7 @@ pub fn broadcast<T: Num>(x: Variable<T>, shape: DimDyn) -> Variable<T> {
 
 #[cfg(test)]
 mod broadcast {
-    use ruml_matrix::{
+    use zenu_matrix::{
         dim::DimDyn,
         matrix::{OwnedMatrix, ToViewMatrix},
         matrix_impl::Matrix,

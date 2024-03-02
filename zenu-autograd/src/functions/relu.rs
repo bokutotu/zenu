@@ -1,6 +1,6 @@
 use std::{cell::RefCell, rc::Rc};
 
-use ruml_matrix::{
+use zenu_matrix::{
     dim::DimDyn,
     matrix::{MatrixBase, ToViewMatrix, ToViewMutMatrix},
     matrix_impl::{Matrix, OwnedMatrixDyn},
@@ -62,7 +62,7 @@ pub fn relu<T: Num>(input: Variable<T>) -> Variable<T> {
 
 #[cfg(test)]
 mod relu {
-    use ruml_matrix::{
+    use zenu_matrix::{
         matrix::{OwnedMatrix, ToViewMatrix},
         matrix_impl::OwnedMatrixDyn,
         operation::asum::Asum,
