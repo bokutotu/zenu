@@ -33,6 +33,7 @@ impl<T: Num> Function<T> for Relu<T> {
     }
 
     fn backward(&self) {
+        // リファレンスカウンタの関係でスコープを切る必要がある
         let input_grad = {
             let input = self.input.get_data();
             let output = self.output.upgrade().unwrap();
