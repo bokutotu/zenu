@@ -41,7 +41,7 @@ impl<D: DimTrait> ShapeStride<D> {
 
     pub fn min_stride(&self) -> usize {
         let slice = self.stride.slice();
-        slice.iter().min().unwrap().clone()
+        *slice.iter().min().unwrap()
     }
 
     /// このShapeStrideが連続しているかどうかを判定する

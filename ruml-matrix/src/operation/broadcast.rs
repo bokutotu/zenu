@@ -29,7 +29,7 @@ impl<'a, T: Num> Broadcast<T> for Matrix<ViewMutMem<'a, T>, DimDyn> {
         if diff_len == 1 {
             for i in 0..self.shape()[0] {
                 let mut to = self.index_axis_mut_dyn(Index0D::new(i));
-                to.copy_from(&source);
+                to.copy_from(source);
             }
         } else {
             for i in 0..self.shape()[0] {
