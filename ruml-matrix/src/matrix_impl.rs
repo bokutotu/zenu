@@ -61,7 +61,6 @@ impl<M, S> Matrix<M, S> {
             stride,
         }
     }
-
     pub(crate) fn update_shape(&mut self, shape: S) {
         self.shape = shape;
     }
@@ -90,6 +89,35 @@ impl<M, S> Matrix<M, S> {
         }
 
         Matrix::new(self.memory, shape_new, stride_new)
+    }
+}
+impl<T: Num, M: Memory<Item = T>, D: DimTrait> Matrix<M, D> {
+    /// Matrixが所有している範囲のメモリをスライスの参照にして返す
+    /// Matrixのnumber of dimが1の時のみ有効
+    pub(crate) fn as_slice(&self) -> &[T] {
+        let l = self.shape().len();
+        if l == 1 {
+            unsafe { std::slice::from_raw_parts(self.as_ptr(), self.shape()[0] * self.stride()[0]) }
+        } else if l == 0 {
+            unsafe { std::slice::from_raw_parts(self.as_ptr(), 1) }
+        } else {
+            panic!("this is inner bug. please make issue `as_slice`");
+        }
+    }
+
+    /// Matrixが所有しているメモリの範囲を可変のスライスの参照にして返す
+    /// Matrixのnumber of dims が1のときのみ有効
+    pub(crate) fn as_mut_slice<'a>(&'a mut self) -> &'a mut [T] {
+        if self.shape().len() == 1 {
+            unsafe {
+                std::slice::from_raw_parts_mut(
+                    self.as_ptr() as *mut T,
+                    self.shape()[0] * self.stride()[0],
+                )
+            }
+        } else {
+            panic!("this is bug. please make issue `as_mut_slice`");
+        }
     }
 }
 

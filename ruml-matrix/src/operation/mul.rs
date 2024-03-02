@@ -99,20 +99,17 @@ fn mul_1d_1d_cpu<T: Num, D: DimTrait>(
 ) {
     let to_stride = to.stride();
     let other_stride = other.stride();
+    let num_elm = to.shape().num_elm();
     let inner_stride_to = to_stride[to_stride.len() - 1];
     let inner_stride_other = other_stride[other_stride.len() - 1];
-    let to_slice = unsafe {
-        std::slice::from_raw_parts_mut(to.as_mut_ptr(), to.shape().num_elm() * inner_stride_to)
-    };
-    let other_slice = unsafe {
-        std::slice::from_raw_parts(other.as_ptr(), other.shape().num_elm() * inner_stride_other)
-    };
+    let to_slice = to.as_mut_slice();
+    let other_slice = other.as_slice();
     if inner_stride_to == 0 && inner_stride_other == 0 {
-        for i in 0..to.shape().num_elm() {
+        for i in 0..num_elm {
             to_slice[i] *= other_slice[i];
         }
     } else {
-        for i in 0..to.shape().num_elm() {
+        for i in 0..num_elm {
             to_slice[i * inner_stride_to] *= other_slice[i * inner_stride_other];
         }
     }

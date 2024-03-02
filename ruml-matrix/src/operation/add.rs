@@ -17,9 +17,8 @@ fn add_assign_1d_1d_cpu<T: Num, D: DimTrait>(
     let num_elm = a.shape().num_elm();
     let inner_slice_a = a.stride()[a.shape().len() - 1];
     let inner_slice_b = b.stride()[b.shape().len() - 1];
-    let a_slice =
-        unsafe { std::slice::from_raw_parts_mut(a.as_mut_ptr(), num_elm * inner_slice_a) };
-    let b_slice = unsafe { std::slice::from_raw_parts(b.as_ptr(), num_elm * inner_slice_b) };
+    let a_slice = a.as_mut_slice();
+    let b_slice = b.as_slice();
     if inner_slice_a == 1 && inner_slice_b == 1 {
         for i in 0..num_elm {
             a_slice[i] += b_slice[i];

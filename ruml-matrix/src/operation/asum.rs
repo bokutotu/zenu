@@ -20,7 +20,9 @@ where
 {
     fn asum(self) -> M::Item {
         let s = self.into_dyn_dim();
-        if s.shape_stride().is_contiguous() {
+        if s.shape().len() == 0 {
+            unsafe { *s.as_ptr() }
+        } else if s.shape_stride().is_contiguous() {
             let num_elm = s.shape().num_elm();
             let num_dim = s.shape().len();
             let stride = s.stride();
