@@ -3,6 +3,7 @@ pub mod asum;
 pub mod broadcast;
 pub mod copy_from;
 pub mod dot;
+pub mod exp;
 pub mod max;
 pub mod mul;
 pub mod norm2;

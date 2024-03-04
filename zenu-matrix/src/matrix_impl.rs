@@ -54,19 +54,28 @@ where
 }
 
 impl<M, S> Matrix<M, S> {
-    pub fn new(memory: M, shape: S, stride: S) -> Self {
+    pub(crate) fn new(memory: M, shape: S, stride: S) -> Self {
         Matrix {
             memory,
             shape,
             stride,
         }
     }
+
     pub(crate) fn update_shape(&mut self, shape: S) {
         self.shape = shape;
     }
 
     pub(crate) fn update_stride(&mut self, stride: S) {
         self.stride = stride;
+    }
+
+    pub(crate) fn memory(&self) -> &M {
+        &self.memory
+    }
+
+    pub(crate) fn memory_mut(&mut self) -> &mut M {
+        &mut self.memory
     }
 
     pub fn into_dyn_dim(self) -> Matrix<M, DimDyn>
@@ -115,6 +124,8 @@ impl<T: Num, M: Memory<Item = T>, D: DimTrait> Matrix<M, D> {
                     self.shape()[0] * self.stride()[0],
                 )
             }
+        } else if self.shape().len() == 0 {
+            unsafe { std::slice::from_raw_parts_mut(self.as_ptr() as *mut T, 1) }
         } else {
             panic!("this is bug. please make issue `as_mut_slice`");
         }
@@ -378,7 +389,6 @@ where
         )
     }
 }
-
 impl<T: Num, M: Memory<Item = T>, D: DimTrait> BlasMatrix for Matrix<M, D> {
     type Blas = M::Blas;
 }

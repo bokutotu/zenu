@@ -2,8 +2,10 @@
 name = "zenu"
 version = "0.1.0"
 edition = "2021"
+description = "A simple Deep Learning library for Rust"
+license = "MIT"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-zenu-matrix = { path = "../zenu-matrix" }
+zenu-matrix = { path = "../zenu-matrix", version = "0.1.0" }

@@ -20,6 +20,7 @@ pub trait Num:
     fn zero() -> Self;
     fn one() -> Self;
     fn minus_one() -> Self;
+    fn exp(self) -> Self;
 }
 
 impl Num for f32 {
@@ -38,6 +39,10 @@ impl Num for f32 {
     fn minus_one() -> f32 {
         -1.0
     }
+
+    fn exp(self) -> f32 {
+        self.exp()
+    }
 }
 impl Num for f64 {
     fn is_f32() -> bool {
@@ -54,5 +59,9 @@ impl Num for f64 {
 
     fn minus_one() -> f64 {
         -1.0
+    }
+
+    fn exp(self) -> f64 {
+        self.exp()
     }
 }
