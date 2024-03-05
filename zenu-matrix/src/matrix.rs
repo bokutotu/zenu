@@ -2,6 +2,8 @@ use crate::{
     blas::Blas,
     dim::{DimDyn, DimTrait, LessDimTrait},
     index::{IndexAxisTrait, SliceTrait},
+    matrix_impl::Matrix,
+    memory_impl::{ViewMem, ViewMutMem},
     num::Num,
     shape_stride::ShapeStride,
     slice::Slice,
@@ -31,19 +33,15 @@ pub trait MatrixBase: Sized {
 }
 
 pub trait ToViewMatrix: MatrixBase {
-    type View<'a>: ViewMatrix
-    where
-        Self: 'a;
-
-    fn to_view(&self) -> Self::View<'_>;
+    fn to_view(&self) -> Matrix<ViewMem<Self::Item>, Self::Dim>;
 }
 
 pub trait ToViewMutMatrix: MatrixBase {
-    type ViewMut<'a>: ViewMutMatix
-    where
-        Self: 'a;
+    // type ViewMut<'a>: ViewMutMatix
+    // where
+    //     Self: 'a;
 
-    fn to_view_mut(&mut self) -> Self::ViewMut<'_>;
+    fn to_view_mut(&mut self) -> Matrix<ViewMutMem<Self::Item>, Self::Dim>;
 }
 
 pub trait ToOwnedMatrix: MatrixBase {

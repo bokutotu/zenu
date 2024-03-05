@@ -1,78 +1,81 @@
 use crate::{
     dim::{DimDyn, DimTrait},
-    matrix::MatrixBase,
+    matrix::{MatrixBase, ToViewMutMatrix},
     matrix_impl::Matrix,
-    memory::{Memory, ToViewMemory, ToViewMutMemory},
+    memory::ToViewMutMemory,
+    memory_impl::ViewMutMem,
+    num::Num,
+    shape_stride::ShapeStride,
 };
 
-pub struct MatrixIterByAxis<'a, M: Memory, D: DimTrait> {
-    matrix: &'a Matrix<M, D>,
+struct MapAxis<'a, T: Num, F>
+where
+    F: FnMut(Matrix<ViewMutMem<T>, DimDyn>),
+{
+    matrix: Matrix<ViewMutMem<'a, T>, DimDyn>,
     axis: usize,
-    len: usize,
-    idx: usize,
+    fn_map: F,
 }
 
-impl<'a, M: Memory, D: DimTrait> MatrixIterByAxis<'a, M, D> {
-    fn new(matrix: &'a Matrix<M, D>, axis: usize, len: usize) -> Self {
+impl<'a, T: Num, F> MapAxis<'a, T, F>
+where
+    F: FnMut(Matrix<ViewMutMem<T>, DimDyn>),
+{
+    fn new(matrix: Matrix<ViewMutMem<'a, T>, DimDyn>, axis: usize, fn_map: F) -> Self {
         Self {
             matrix,
             axis,
-            len,
-            idx: 0,
+            fn_map,
+        }
+    }
+
+    fn target_shape_stride(&self) -> ShapeStride<DimDyn> {
+        let sh = self.target_shape();
+        let st = self.target_stride();
+        ShapeStride::new(DimDyn::from([sh]), DimDyn::from([st]))
+    }
+
+    fn target_stride(&self) -> usize {
+        self.matrix.stride()[self.axis]
+    }
+
+    fn target_shape(&self) -> usize {
+        self.matrix.shape()[self.axis]
+    }
+
+    fn target_offset(&self, index: usize) -> usize {
+        self.target_shape() * self.target_stride() * index
+    }
+
+    fn num_loop(&self) -> usize {
+        self.matrix.shape().num_elm() / self.target_shape()
+    }
+
+    fn apply(&mut self) {
+        let shapt_stride = self.target_shape_stride();
+        for idx in 0..self.num_loop() {
+            let offset = self.target_offset(idx);
+            let m = self.matrix.memory_mut();
+            let view = m.to_view_mut(offset);
+            let matrix = Matrix::new(view, shapt_stride.shape(), shapt_stride.stride());
+            (self.fn_map)(matrix);
         }
     }
 }
 
-pub struct MatrixInterByAxisMut<'a, M: Memory, D: DimTrait> {
-    matrix: &'a mut Matrix<M, D>,
-    axis: usize,
-    len: usize,
-    idx: usize,
+pub trait MatrixIter<T: Num> {
+    fn map_axis<F>(&mut self, axis: usize, fn_map: F)
+    where
+        F: FnMut(Matrix<ViewMutMem<T>, DimDyn>);
 }
 
-impl<'a, M: Memory, D: DimTrait> MatrixInterByAxisMut<'a, M, D> {
-    fn new(matrix: &'a mut Matrix<M, D>, axis: usize, len: usize) -> Self {
-        Self {
-            matrix,
-            axis,
-            len,
-            idx: 0,
-        }
+impl<T: Num, M: ToViewMutMemory<Item = T>> MatrixIter<T> for Matrix<M, DimDyn> {
+    fn map_axis<F>(&mut self, axis: usize, fn_map: F)
+    where
+        F: FnMut(Matrix<ViewMutMem<T>, DimDyn>),
+    {
+        let mut_matrix = self.to_view_mut();
+        let mut map_axis = MapAxis::new(mut_matrix, axis, fn_map);
+        map_axis.apply();
     }
 }
-
-impl<'a, M: ToViewMemory, D: DimTrait> Iterator for MatrixIterByAxis<'a, M, D> {
-    type Item = Matrix<M::View<'a>, DimDyn>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.idx < self.len {
-            let stride = self.matrix.stride()[self.axis];
-            let offset = self.idx * stride;
-            let view = self.matrix.memory().to_view(offset);
-            self.idx += 1;
-            let new_shape = DimDyn::from(&[self.matrix.shape()[self.axis]]);
-            let new_stride = DimDyn::from(&[stride]);
-            Some(Matrix::new(view, new_shape, new_stride))
-        } else {
-            None
-        }
-    }
-}
-
-// impl<'a, M: ToViewMutMemory, D: DimTrait> Iterator for MatrixInterByAxisMut<'a, M, D> {
-//     type Item = Matrix<M::ViewMut<'a>, DimDyn>;
-//
-//     fn next(&mut self) -> Option<Self::Item> {
-//         if self.idx < self.len {
-//             let stride = self.matrix.stride()[self.axis];
-//             let offset = self.idx * stride;
-//             let shape = DimDyn::from(&[self.matrix.shape()[self.axis]]);
-//             let view = self.matrix.memory_mut().to_view_mut(offset);
-//             self.idx += 1;
-//             let new_stride = DimDyn::from(&[stride]);
-//             Some(Matrix::new(view, shape, new_stride))
-//         } else {
-//             None
-//         }
-//     }
-// }

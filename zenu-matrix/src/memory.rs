@@ -1,6 +1,11 @@
 use std::ptr::NonNull;
 
-use crate::{blas::Blas, element_wise::ElementWise, num::Num};
+use crate::{
+    blas::Blas,
+    element_wise::ElementWise,
+    memory_impl::{ViewMem, ViewMutMem},
+    num::Num,
+};
 
 pub trait MemoryAccessor: Copy {
     type Item: Num;
@@ -30,19 +35,19 @@ pub trait Memory {
 }
 
 pub trait ToViewMemory: Memory {
-    type View<'a>: View<Item = Self::Item>
-    where
-        Self: 'a;
+    // type View<'a>: View<Item = Self::Item>
+    // where
+    //     Self: 'a;
 
-    fn to_view(&self, offset: usize) -> Self::View<'_>;
+    fn to_view(&self, offset: usize) -> ViewMem<Self::Item>;
 }
 
 pub trait ToViewMutMemory: Memory {
-    type ViewMut<'a>: ViewMut<Item = Self::Item>
-    where
-        Self: 'a;
+    // type ViewMut<'a>: ViewMut<Item = Self::Item>
+    // where
+    //     Self: 'a;
 
-    fn to_view_mut(&mut self, offset: usize) -> Self::ViewMut<'_>;
+    fn to_view_mut(&mut self, offset: usize) -> ViewMutMem<Self::Item>;
 }
 
 pub trait ToOwnedMemory: Memory {

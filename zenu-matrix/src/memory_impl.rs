@@ -119,11 +119,11 @@ impl<T> ToViewMemory for OwnedMem<T>
 where
     T: Num,
 {
-    type View<'a> = ViewMem<'a, T>
-    where
-        Self: 'a;
+    // type View<'a> = ViewMem<'a, T>
+    // where
+    //     Self: 'a;
 
-    fn to_view(&self, offset: usize) -> Self::View<'_> {
+    fn to_view(&self, offset: usize) -> ViewMem<T> {
         ViewMem { ptr: self, offset }
     }
 }
@@ -132,11 +132,11 @@ impl<T> ToViewMutMemory for OwnedMem<T>
 where
     T: Num,
 {
-    type ViewMut<'a> = ViewMutMem<'a, T>
-    where
-        Self: 'a;
+    // type ViewMut<'a> = ViewMutMem<'a, T>
+    // where
+    //     Self: 'a;
 
-    fn to_view_mut(&mut self, offset: usize) -> Self::ViewMut<'_> {
+    fn to_view_mut(&mut self, offset: usize) -> ViewMutMem<'_, T> {
         ViewMutMem { ptr: self, offset }
     }
 }
@@ -145,11 +145,11 @@ impl<'a, T> ToViewMutMemory for ViewMutMem<'a, T>
 where
     T: Num,
 {
-    type ViewMut<'b> = ViewMutMem<'b, T>
-    where
-        Self: 'b;
+    // type ViewMut<'b> = ViewMutMem<'b, T>
+    // where
+    //     Self: 'b;
 
-    fn to_view_mut(&mut self, offset: usize) -> Self::ViewMut<'_> {
+    fn to_view_mut(&mut self, offset: usize) -> ViewMutMem<'_, T> {
         let offset = self.get_offset() + offset;
         ViewMutMem {
             ptr: self.ptr,
@@ -231,9 +231,9 @@ macro_rules! impl_cpu_memory_to_view {
         where
             T: Num,
         {
-            type View<'b> = ViewMem<'b, T> where Self: 'b;
+            // type View<'b> = ViewMem<'b, T> where Self: 'b;
 
-            fn to_view(&self, offset: usize) -> Self::View<'_> {
+            fn to_view(&self, offset: usize) -> ViewMem<'_, T> {
                 ViewMem {
                     ptr: self.ptr,
                     offset: self.get_offset() + offset,

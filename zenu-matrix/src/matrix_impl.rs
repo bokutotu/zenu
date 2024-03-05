@@ -70,10 +70,6 @@ impl<M, S> Matrix<M, S> {
         self.stride = stride;
     }
 
-    pub(crate) fn memory(&self) -> &M {
-        &self.memory
-    }
-
     pub(crate) fn memory_mut(&mut self) -> &mut M {
         &mut self.memory
     }
@@ -146,11 +142,7 @@ impl<T: Num, M: Memory<Item = T>, S: DimTrait> MatrixBase for Matrix<M, S> {
 }
 
 impl<M: ToViewMemory, S: DimTrait> ToViewMatrix for Matrix<M, S> {
-    type View<'a> = Matrix<M::View<'a>, S>
-    where
-        Self: 'a;
-
-    fn to_view(&self) -> Self::View<'_> {
+    fn to_view(&self) -> Matrix<ViewMem<M::Item>, S> {
         Matrix {
             memory: self.memory.to_view(0),
             shape: self.shape,
@@ -160,11 +152,7 @@ impl<M: ToViewMemory, S: DimTrait> ToViewMatrix for Matrix<M, S> {
 }
 
 impl<M: ToViewMutMemory, S: DimTrait> ToViewMutMatrix for Matrix<M, S> {
-    type ViewMut<'a> = Matrix<M::ViewMut<'a>, S>
-    where
-        Self: 'a;
-
-    fn to_view_mut(&mut self) -> Self::ViewMut<'_> {
+    fn to_view_mut(&mut self) -> Matrix<ViewMutMem<M::Item>, S> {
         Matrix {
             memory: self.memory.to_view_mut(0),
             shape: self.shape,
@@ -218,7 +206,7 @@ impl<M: Owned, S: DimTrait> OwnedMatrix for Matrix<M, S> {
 }
 
 impl<M: ToViewMemory, D: DimTrait, S: SliceTrait<Dim = D>> MatrixSlice<S> for Matrix<M, D> {
-    type Output<'a> = Matrix<M::View<'a>, D>
+    type Output<'a> = Matrix<ViewMem<'a, M::Item>, D>
     where
         Self: 'a;
 
@@ -237,7 +225,7 @@ impl<M: ToViewMemory, D: DimTrait, S: SliceTrait<Dim = D>> MatrixSlice<S> for Ma
 }
 
 impl<M: ToViewMutMemory, D: DimTrait, S: SliceTrait<Dim = D>> MatrixSliceMut<S> for Matrix<M, D> {
-    type Output<'a> = Matrix<M::ViewMut<'a>, D>
+    type Output<'a> = Matrix<ViewMutMem<'a, M::Item>, D>
     where
         Self: 'a;
 
@@ -259,7 +247,7 @@ impl<I: IndexAxisTrait, M: ToViewMemory, D: DimTrait + LessDimTrait> IndexAxis<I
 where
     <D as LessDimTrait>::LessDim: DimTrait,
 {
-    type Output<'a> = Matrix<M::View<'a>, <D as LessDimTrait>::LessDim>
+    type Output<'a> = Matrix<ViewMem<'a, M::Item>, <D as LessDimTrait>::LessDim>
     where
         Self: 'a;
 
@@ -282,7 +270,7 @@ impl<I: IndexAxisTrait, M: ToViewMutMemory, D: DimTrait + LessDimTrait> IndexAxi
 where
     <D as LessDimTrait>::LessDim: DimTrait,
 {
-    type Output<'a> = Matrix<M::ViewMut<'a>, <D as LessDimTrait>::LessDim>
+    type Output<'a> = Matrix<ViewMutMem<'a, M::Item>, <D as LessDimTrait>::LessDim>
     where
         Self: 'a;
 
@@ -313,7 +301,7 @@ impl<D: DimTrait, M: Memory> IndexItem for Matrix<M, D> {
 }
 
 impl<I: IndexAxisTrait, M: ToViewMemory, D: DimTrait> IndexAxisDyn<I> for Matrix<M, D> {
-    type Output<'a> = Matrix<M::View<'a>, DimDyn>
+    type Output<'a> = Matrix<ViewMem<'a, Self::Item>, DimDyn>
     where
         Self: 'a;
 
@@ -330,7 +318,7 @@ impl<I: IndexAxisTrait, M: ToViewMemory, D: DimTrait> IndexAxisDyn<I> for Matrix
 }
 
 impl<I: IndexAxisTrait, M: ToViewMutMemory, D: DimTrait> IndexAxisMutDyn<I> for Matrix<M, D> {
-    type Output<'a> = Matrix<M::ViewMut<'a>, DimDyn>
+    type Output<'a> = Matrix<ViewMutMem<'a, M::Item>, DimDyn>
     where
         Self: 'a;
 
@@ -374,7 +362,7 @@ where
     M: Memory<Item = T> + ToViewMemory,
     D: DimTrait,
 {
-    type Output<'a> = Matrix<M::View<'a>, DimDyn>
+    type Output<'a> = Matrix<ViewMem<'a, Self::Item>, DimDyn>
     where
         Self: 'a;
     fn slice_dyn(&self, index: Slice) -> Self::Output<'_> {
