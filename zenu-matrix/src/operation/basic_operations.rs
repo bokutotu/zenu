@@ -718,3 +718,147 @@ mod div {
         assert_eq!(asum, 0.0);
     }
 }
+#[cfg(test)]
+mod mul {
+    use crate::{
+        matrix::{IndexItem, MatrixSlice, OwnedMatrix, ToViewMatrix, ToViewMutMatrix},
+        matrix_impl::{OwnedMatrix0D, OwnedMatrix1D, OwnedMatrix2D, OwnedMatrix4D, OwnedMatrixDyn},
+        operation::{basic_operations::MatrixMul, ones::Ones, zeros::Zeros},
+        slice,
+    };
+
+    #[test]
+    fn mul_1d_scalar() {
+        let a = OwnedMatrix1D::from_vec(vec![1.0, 2.0, 3.0], [3]);
+        let b = OwnedMatrix0D::from_vec(vec![2.0], []);
+        let mut ans = OwnedMatrix1D::<f32>::zeros([3]);
+        ans.to_view_mut().mul(a.to_view(), b.to_view());
+
+        assert_eq!(ans.index_item([0]), 2.0);
+        assert_eq!(ans.index_item([1]), 4.0);
+        assert_eq!(ans.index_item([2]), 6.0);
+    }
+
+    #[test]
+    fn scalar_1d() {
+        let a = OwnedMatrix1D::from_vec(vec![1., 2., 3.], [3]);
+        let mut ans = OwnedMatrix1D::<f32>::zeros([3]);
+        ans.to_view_mut().mul(a.to_view(), 2.);
+
+        assert_eq!(ans.index_item([0]), 2.);
+        assert_eq!(ans.index_item([1]), 4.);
+        assert_eq!(ans.index_item([2]), 6.);
+    }
+
+    #[test]
+    fn sliced_scalar_1d() {
+        let a = OwnedMatrix1D::from_vec(vec![1., 2., 3., 4.], [4]);
+        let mut ans = OwnedMatrix1D::<f32>::zeros([2]);
+        ans.to_view_mut().mul(a.to_view().slice(slice!(..;2)), 2.);
+
+        assert_eq!(ans.index_item([0]), 2.);
+        assert_eq!(ans.index_item([1]), 6.);
+    }
+
+    #[test]
+    fn scalar_2d() {
+        let a = OwnedMatrix2D::from_vec(vec![1., 2., 3., 4., 5., 6.], [2, 3]);
+        let mut ans = OwnedMatrix2D::<f32>::zeros([2, 3]);
+        ans.to_view_mut().mul(a.to_view(), 2.);
+
+        assert_eq!(ans.index_item([0, 0]), 2.);
+        assert_eq!(ans.index_item([0, 1]), 4.);
+        assert_eq!(ans.index_item([0, 2]), 6.);
+        assert_eq!(ans.index_item([1, 0]), 8.);
+        assert_eq!(ans.index_item([1, 1]), 10.);
+        assert_eq!(ans.index_item([1, 2]), 12.);
+    }
+
+    #[test]
+    fn default_1d_1d() {
+        let a = OwnedMatrix1D::from_vec(vec![1., 2., 3.], [3]);
+        let b = OwnedMatrix1D::from_vec(vec![1., 2., 3.], [3]);
+        let mut ans = OwnedMatrix1D::<f32>::zeros([3]);
+        ans.to_view_mut().mul(a.to_view(), b.to_view());
+
+        assert_eq!(ans.index_item([0]), 1.);
+        assert_eq!(ans.index_item([1]), 4.);
+        assert_eq!(ans.index_item([2]), 9.);
+    }
+
+    #[test]
+    fn sliced_1d_1d() {
+        let a = OwnedMatrix1D::from_vec(vec![1., 2., 3., 4.], [4]);
+        let b = OwnedMatrix1D::from_vec(vec![1., 2., 3., 4.], [4]);
+        let mut ans = OwnedMatrix1D::<f32>::zeros([2]);
+        ans.to_view_mut().mul(
+            a.to_view().slice(slice!(..;2)),
+            b.to_view().slice(slice!(..;2)),
+        );
+
+        assert_eq!(ans.index_item([0]), 1.);
+        assert_eq!(ans.index_item([1]), 9.);
+    }
+
+    #[test]
+    fn default_2d_2d() {
+        let a = OwnedMatrix2D::from_vec(vec![1., 2., 3., 4., 5., 6.], [2, 3]);
+        let b = OwnedMatrix2D::from_vec(vec![1., 2., 3., 4., 5., 6.], [2, 3]);
+        let mut ans = OwnedMatrix2D::<f32>::zeros([2, 3]);
+        ans.to_view_mut().mul(a.to_view(), b.to_view());
+
+        assert_eq!(ans.index_item([0, 0]), 1.);
+        assert_eq!(ans.index_item([0, 1]), 4.);
+        assert_eq!(ans.index_item([0, 2]), 9.);
+        assert_eq!(ans.index_item([1, 0]), 16.);
+        assert_eq!(ans.index_item([1, 1]), 25.);
+        assert_eq!(ans.index_item([1, 2]), 36.);
+    }
+
+    #[test]
+    fn sliced_4d_2d() {
+        let mut a_vec = Vec::new();
+        for i in 0..2 * 2 * 2 * 2 {
+            a_vec.push(i as f32);
+        }
+
+        let a = OwnedMatrix4D::from_vec(a_vec, [2, 2, 2, 2]);
+        let b = OwnedMatrix1D::from_vec(vec![1., 2.], [2]);
+
+        let mut ans = OwnedMatrix4D::<f32>::zeros([2, 2, 2, 2]);
+
+        ans.to_view_mut().mul(a.to_view(), b.to_view());
+
+        for i in 0..2 {
+            for j in 0..2 {
+                for k in 0..2 {
+                    for l in 0..2 {
+                        assert_eq!(
+                            ans.index_item([i, j, k, l]),
+                            a.index_item([i, j, k, l]) * b.index_item([l])
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn mul_4d_2d_dyn() {
+        let ones_4d = OwnedMatrixDyn::<f32>::ones([2, 2, 2, 2]);
+        let ones_2d = OwnedMatrixDyn::ones([2, 2]);
+        let mut ans = OwnedMatrixDyn::zeros([2, 2, 2, 2]);
+        ans.to_view_mut().mul(ones_4d.to_view(), ones_2d.to_view());
+    }
+
+    #[test]
+    fn default_0d_0d() {
+        let a = OwnedMatrixDyn::from_vec(vec![10.], &[]);
+        let b = OwnedMatrixDyn::from_vec(vec![20.], &[]);
+        let mut ans = OwnedMatrixDyn::<f32>::zeros(&[]);
+        ans.to_view_mut().mul(a.to_view(), b.to_view());
+        assert_eq!(ans.index_item(&[]), 200.);
+    }
+}
+
+
