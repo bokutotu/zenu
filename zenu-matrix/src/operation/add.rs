@@ -66,8 +66,11 @@ where
             panic!("Matrix shape mismatch");
         }
 
+        println!("hoge");
         if self.shape().is_empty() {
-            self.as_mut_slice()[0] = lhs.as_slice()[0] / rhs;
+            let self_slice = self.as_mut_slice();
+            let lhs_slice = lhs.as_slice();
+            self_slice[0] = lhs_slice[0] + rhs;
         } else if self.shape().len() == 1 {
             add_1d_scalar_cpu(&mut self.to_view_mut(), lhs.to_view(), rhs);
         } else {
@@ -182,6 +185,15 @@ mod add {
     };
 
     use super::*;
+
+    #[test]
+    fn add_0d_0d() {
+        let a = OwnedMatrix0D::from_vec(vec![1.0], []);
+        let b = OwnedMatrix0D::from_vec(vec![1.0], []);
+        let mut ans = OwnedMatrix0D::<f32>::zeros([]);
+        ans.to_view_mut().add_assign(a.to_view(), b.to_view());
+        assert_eq!(ans.index_item([]), 2.0);
+    }
 
     #[test]
     fn add_dyn_dyn() {
