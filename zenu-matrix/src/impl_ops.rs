@@ -9,9 +9,9 @@ use crate::{
     num::Num,
     operation::{
         add::{MatrixAdd, MatrixAddAssign},
-        div::{MatrixDiv, MatrixDivAssign},
+        div::MatrixDiv,
         mul::MatrixMul,
-        sub::MatrixSubAssign,
+        sub::{MatrixSub, MatrixSubAssign},
     },
 };
 
@@ -24,24 +24,23 @@ where
 
     fn add(self, rhs: T) -> Self::Output {
         let mut owned = ToOwnedMatrix::to_owned(&self);
-        let view_mut = owned.to_view_mut();
-        MatrixAdd::add(view_mut, self, rhs);
+        MatrixAddAssign::add_assign(&mut owned, self, rhs);
         owned
     }
 }
 
-impl<'a, 'b, D1, D2, T> Add<Matrix<ViewMem<'a, T>, D1>> for Matrix<ViewMem<'b, T>, D2>
+impl<D1, D2, M1, M2, T> Add<Matrix<M1, D1>> for Matrix<M2, D2>
 where
     D1: DimTrait,
     D2: DimTrait,
+    M1: ToViewMemory<Item = T>,
+    M2: ToViewMemory<Item = T> + ToOwnedMemory,
     T: Num,
 {
-    type Output = Matrix<OwnedMem<T>, D2>;
+    type Output = Matrix<M2::Owned, D2>;
 
-    fn add(self, rhs: Matrix<ViewMem<T>, D1>) -> Self::Output {
-        let mut owned = ToOwnedMatrix::to_owned(&self);
-        MatrixAddAssign::add_assign(owned.to_view_mut(), rhs);
-        owned
+    fn add(self, rhs: Matrix<M1, D1>) -> Self::Output {
+        MatrixAdd::add(self, rhs)
     }
 }
 
@@ -77,32 +76,31 @@ where
     }
 }
 
-impl<'a, D1, T> Sub<T> for Matrix<ViewMem<'a, T>, D1>
+impl<T, D, M> Sub<T> for Matrix<M, D>
 where
-    D1: DimTrait,
+    M: ToViewMemory<Item = T> + ToOwnedMemory,
+    D: DimTrait,
     T: Num,
 {
-    type Output = Matrix<OwnedMem<T>, D1>;
+    type Output = Matrix<M::Owned, D>;
 
     fn sub(self, rhs: T) -> Self::Output {
-        let mut ans = ToOwnedMatrix::to_owned(&self);
-        ans.to_view_mut().sub_assign(rhs);
-        ans
+        MatrixSub::sub(self, rhs)
     }
 }
 
-impl<'a, 'b, D1, D2, T> Sub<Matrix<ViewMem<'a, T>, D1>> for Matrix<ViewMem<'b, T>, D2>
+impl<T, D1, D2, M1, M2> Sub<Matrix<M1, D1>> for Matrix<M2, D2>
 where
+    T: Num,
     D1: DimTrait,
     D2: DimTrait,
-    T: Num,
+    M1: ToViewMemory<Item = T>,
+    M2: ToViewMemory<Item = T> + ToOwnedMemory,
 {
-    type Output = Matrix<OwnedMem<T>, D2>;
+    type Output = Matrix<M2::Owned, D2>;
 
-    fn sub(self, rhs: Matrix<ViewMem<T>, D1>) -> Self::Output {
-        let mut ans = ToOwnedMatrix::to_owned(&self);
-        ans.to_view_mut().sub_assign(rhs.to_view());
-        ans
+    fn sub(self, rhs: Matrix<M1, D1>) -> Self::Output {
+        MatrixSub::sub(self, rhs)
     }
 }
 

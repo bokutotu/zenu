@@ -1,252 +1,174 @@
 use crate::{
-    dim::{Dim1, Dim2, Dim3, Dim4, DimTrait},
+    dim::{DimDyn, DimTrait},
     index::Index0D,
-    matrix::{AsMutPtr, AsPtr, IndexAxisDyn, IndexAxisMutDyn, MatrixBase, ViewMutMatix},
-    matrix_impl::{matrix_into_dim, Matrix},
+    matrix::{
+        IndexAxisDyn, IndexAxisMutDyn, MatrixBase, OwnedMatrix, ToOwnedMatrix, ToViewMatrix,
+        ToViewMutMatrix,
+    },
+    matrix_impl::Matrix,
+    memory::{ToOwnedMemory, ToViewMemory, ToViewMutMemory},
     memory_impl::{ViewMem, ViewMutMem},
     num::Num,
-    operation::copy_from::CopyFrom,
 };
 
-/// shape, strideのチェックは一切行わない
-/// この関数で入力されるMatrixはsliceが行われていないことが前提
-fn add_assign_1d_1d_cpu<T: Num, D: DimTrait>(
-    a: &mut Matrix<ViewMutMem<T>, D>,
-    b: &Matrix<ViewMem<T>, D>,
+pub trait MatrixAdd<L> {
+    type Output: OwnedMatrix;
+    fn add(self, lhs: L) -> Self::Output;
+}
+
+pub trait MatrixAddAssign<L, R> {
+    fn add_assign(&mut self, lhs: L, rhs: R);
+}
+
+fn add_1d_1d_cpu<T: Num, D1: DimTrait, D2: DimTrait, D3: DimTrait>(
+    to: &mut Matrix<ViewMutMem<T>, D1>,
+    lhs: Matrix<ViewMem<T>, D2>,
+    rhs: Matrix<ViewMem<T>, D3>,
 ) {
-    let num_elm = a.shape().num_elm();
-    let inner_slice_a = a.stride()[a.shape().len() - 1];
-    let inner_slice_b = b.stride()[b.shape().len() - 1];
-    let a_slice = a.as_mut_slice();
-    let b_slice = b.as_slice();
-    if inner_slice_a == 1 && inner_slice_b == 1 {
-        for i in 0..num_elm {
-            a_slice[i] += b_slice[i];
-        }
-    } else {
-        for i in 0..num_elm {
-            a_slice[i * inner_slice_a] += b_slice[i * inner_slice_b];
-        }
+    let num_elm = to.shape().num_elm();
+    let inner_slice_to = to.stride()[to.shape().len() - 1];
+    let inner_slice_lhs = lhs.stride()[lhs.shape().len() - 1];
+    let inner_slice_rhs = rhs.stride()[rhs.shape().len() - 1];
+    let to_slice = to.as_mut_slice();
+    let lhs_slice = lhs.as_slice();
+    let rhs_slice = rhs.as_slice();
+    for i in 0..num_elm {
+        to_slice[i * inner_slice_to] =
+            lhs_slice[i * inner_slice_lhs] + rhs_slice[i * inner_slice_rhs];
     }
 }
 
-fn add_1d_scalar_cpu<T: Num, D: DimTrait>(a: &mut Matrix<ViewMutMem<T>, D>, b: T) {
-    let num_elm = a.shape().num_elm();
-    let inner_slice_a = a.stride()[a.shape().len() - 1];
-    let a_slice =
-        unsafe { std::slice::from_raw_parts_mut(a.as_mut_ptr(), num_elm * inner_slice_a) };
-    if inner_slice_a == 1 {
-        for item in a_slice.iter_mut() {
-            *item += b;
-        }
-    } else {
-        for i in 0..num_elm {
-            a_slice[i * inner_slice_a] += b;
-        }
+fn add_1d_scalar_cpu<T: Num, D1: DimTrait, D2: DimTrait>(
+    to: &mut Matrix<ViewMutMem<T>, D1>,
+    lhs: Matrix<ViewMem<T>, D2>,
+    rhs: T,
+) {
+    let num_elm = to.shape().num_elm();
+    let inner_slice_to = to.stride()[to.shape().len() - 1];
+    let inner_slice_lhs = lhs.stride()[lhs.shape().len() - 1];
+    let to_slice = to.as_mut_slice();
+    let lhs_slice = lhs.as_slice();
+    for i in 0..num_elm {
+        to_slice[i * inner_slice_to] = lhs_slice[i * inner_slice_lhs] + rhs;
     }
 }
 
-fn add_assign_matrix_scalar<T, D>(to: Matrix<ViewMutMem<T>, D>, other: T)
+impl<T, D1, D2, M1, M2> MatrixAddAssign<Matrix<M1, D1>, T> for Matrix<M2, D2>
 where
-    T: Num,
-    D: DimTrait,
-{
-    match to.shape().slice() {
-        [] => {
-            let mut to = to;
-            unsafe { to.as_mut_ptr().write(*to.as_ptr() + other) }
-        }
-        [_] => {
-            let mut to: Matrix<ViewMutMem<T>, Dim1> = matrix_into_dim(to);
-            add_1d_scalar_cpu(&mut to, other);
-        }
-        [a, _] => {
-            let mut to: Matrix<ViewMutMem<T>, Dim2> = matrix_into_dim(to);
-            for i in 0..*a {
-                let to = to.index_axis_mut_dyn(Index0D::new(i));
-                add_assign_matrix_scalar(to, other);
-            }
-        }
-        [a, _, _] => {
-            let mut to: Matrix<ViewMutMem<T>, Dim3> = matrix_into_dim(to);
-            for i in 0..*a {
-                let to = to.index_axis_mut_dyn(Index0D::new(i));
-                add_assign_matrix_scalar(to, other);
-            }
-        }
-        [a, _, _, _] => {
-            let mut to: Matrix<ViewMutMem<T>, Dim4> = matrix_into_dim(to);
-            for i in 0..*a {
-                let to = to.index_axis_mut_dyn(Index0D::new(i));
-                add_assign_matrix_scalar(to, other);
-            }
-        }
-        _ => panic!("not implemented: this is bug. please report this bug."),
-    }
-}
-
-// matrix_add_scalar_assignを使用して,
-// add_matrix_scalarを実装する
-fn add_matrix_scalar<T, D>(to: Matrix<ViewMutMem<T>, D>, lhs: Matrix<ViewMem<T>, D>, rhs: T)
-where
-    T: Num,
-    D: DimTrait,
-{
-    assert_eq!(to.shape(), lhs.shape());
-    let mut to = to.into_dyn_dim();
-    let lhs = lhs.into_dyn_dim();
-    to.copy_from(&lhs);
-    add_assign_matrix_scalar(to, rhs);
-}
-
-fn add_assign_matrix_matrix<T, D1, D2>(
-    source: Matrix<ViewMutMem<T>, D1>,
-    other: Matrix<ViewMem<T>, D2>,
-) where
     T: Num,
     D1: DimTrait,
     D2: DimTrait,
+    M1: ToViewMemory<Item = T>,
+    M2: ToViewMutMemory<Item = T>,
 {
-    let mut source = source.into_dyn_dim();
-    let other = other.into_dyn_dim();
+    fn add_assign(&mut self, lhs: Matrix<M1, D1>, rhs: T) {
+        if self.shape().slice() != lhs.shape().slice() {
+            panic!("Matrix shape mismatch");
+        }
 
-    assert!(source.shape().is_include(&other.shape()));
-
-    if source.shape().is_empty() {
-        unsafe {
-            source
-                .as_mut_ptr()
-                .write(*source.as_ptr() + *other.as_ptr());
-        }
-        return;
-    }
-    if other.shape().is_empty() {
-        let s = unsafe { *other.as_ptr() };
-        add_assign_matrix_scalar(source, s);
-        return;
-    }
-    //
-
-    if source.shape().len() == 1 {
-        add_assign_1d_1d_cpu(&mut source, &other);
-    } else if source.shape() == other.shape() {
-        macro_rules! same_dim {
-            ($dim:ty) => {{
-                let mut source: Matrix<ViewMutMem<T>, $dim> = matrix_into_dim(source);
-                let other: Matrix<ViewMem<T>, $dim> = matrix_into_dim(other);
-                for i in 0..source.shape()[0] {
-                    let source = source.index_axis_mut_dyn(Index0D::new(i));
-                    let other = other.index_axis_dyn(Index0D::new(i));
-                    add_assign_matrix_matrix(source, other);
-                }
-            }};
-        }
-        match source.shape().len() {
-            2 => same_dim!(Dim2),
-            3 => same_dim!(Dim3),
-            4 => same_dim!(Dim4),
-            _ => panic!("not implemented: this is bug. please report this bug."),
-        }
-    } else {
-        // let mut source = source;
-        // for i in 0..source.shape()[0] {
-        //     let source = source.index_axis_mut_dyn(Index0D::new(i));
-        //     let other = other.clone();
-        //     add_assign_matrix_matrix(source, other);
-        // }
-        macro_rules! diff_dim {
-            ($dim1:ty, $dim2:ty) => {{
-                let mut source: Matrix<ViewMutMem<T>, $dim1> = matrix_into_dim(source);
-                let other: Matrix<ViewMem<T>, $dim2> = matrix_into_dim(other);
-                for i in 0..source.shape()[0] {
-                    let source = source.index_axis_mut_dyn(Index0D::new(i));
-                    let other = other.clone();
-                    add_assign_matrix_matrix(source, other);
-                }
-            }};
-        }
-        match (source.shape().len(), other.shape().len()) {
-            (2, 1) => diff_dim!(Dim2, Dim1),
-            (3, 1) => diff_dim!(Dim3, Dim1),
-            (4, 1) => diff_dim!(Dim4, Dim1),
-            (3, 2) => diff_dim!(Dim3, Dim2),
-            (4, 2) => diff_dim!(Dim4, Dim2),
-            (4, 3) => diff_dim!(Dim4, Dim3),
-            _ => panic!("not implemented: this is bug. please report this bug."),
+        if self.shape().is_empty() {
+            self.as_mut_slice()[0] = lhs.as_slice()[0] / rhs;
+        } else if self.shape().len() == 1 {
+            add_1d_scalar_cpu(&mut self.to_view_mut(), lhs.to_view(), rhs);
+        } else {
+            let num_iter = self.shape()[0];
+            for idx in 0..num_iter {
+                let mut s = self.index_axis_mut_dyn(Index0D::new(idx));
+                let lhs = lhs.index_axis_dyn(Index0D::new(idx));
+                s.add_assign(lhs, rhs);
+            }
         }
     }
 }
 
-fn add_matrix_matrix<T, D1, D2, D3>(
-    to: Matrix<ViewMutMem<T>, D1>,
-    lhs: Matrix<ViewMem<T>, D2>,
-    rhs: Matrix<ViewMem<T>, D3>,
-) where
+impl<T, D, M> MatrixAdd<T> for Matrix<M, D>
+where
+    T: Num,
+    D: DimTrait,
+    M: ToViewMemory<Item = T> + ToOwnedMemory,
+{
+    type Output = Matrix<M::Owned, D>;
+    fn add(self, lhs: T) -> Self::Output {
+        let mut owned = self.to_owned();
+        let s = self.into_dyn_dim();
+        let s_v = s.to_view();
+        owned.to_view_mut().add_assign(s_v, lhs);
+        owned
+    }
+}
+
+impl<T, D1, D2, D3, M1, M2, M3> MatrixAddAssign<Matrix<M1, D1>, Matrix<M2, D2>> for Matrix<M3, D3>
+where
     T: Num,
     D1: DimTrait,
     D2: DimTrait,
     D3: DimTrait,
+    M1: ToViewMemory<Item = T>,
+    M2: ToViewMemory<Item = T>,
+    M3: ToViewMutMemory<Item = T>,
 {
-    if lhs.shape().len() < rhs.shape().len() {
-        add_matrix_matrix(to, rhs, lhs);
-        return;
+    fn add_assign(&mut self, lhs: Matrix<M1, D1>, rhs: Matrix<M2, D2>) {
+        if lhs.shape().len() < rhs.shape().len() {
+            self.add_assign(rhs, lhs);
+            return;
+        }
+
+        if self.shape().slice() != lhs.shape().slice() {
+            panic!("Matrix shape mismatch");
+        }
+
+        let self_shape_dyn = DimDyn::from(self.shape().slice());
+        let rhs_shape_dyn = DimDyn::from(rhs.shape().slice());
+        if !self_shape_dyn.is_include(&rhs_shape_dyn) {
+            panic!("Matrix shape mismatch");
+        }
+
+        if rhs.shape().is_empty() {
+            self.add_assign(lhs, rhs.as_slice()[0]);
+            return;
+        }
+
+        if self.shape().is_empty() {
+            self.as_mut_slice()[0] = lhs.as_slice()[0] / rhs.as_slice()[0];
+        } else if self.shape().len() == 1 {
+            add_1d_1d_cpu(&mut self.to_view_mut(), lhs.to_view(), rhs.to_view());
+        } else {
+            let self_dim_len = self.shape().len();
+            let rhs_dim_len = rhs.shape().len();
+            let num_iter = self.shape()[0];
+            for idx in 0..num_iter {
+                let mut s = self.index_axis_mut_dyn(Index0D::new(idx));
+                let lhs = lhs.index_axis_dyn(Index0D::new(idx));
+                let rhs = if self_dim_len == rhs_dim_len {
+                    rhs.index_axis_dyn(Index0D::new(idx))
+                } else if self_dim_len > rhs_dim_len {
+                    rhs.to_view().into_dyn_dim()
+                } else {
+                    panic!("this is bug");
+                };
+                s.add_assign(lhs, rhs);
+            }
+        }
     }
-    assert_eq!(to.shape().slice(), lhs.shape().slice());
-    let mut to = to.into_dyn_dim();
-    let lhs = lhs.into_dyn_dim();
-    to.copy_from(&lhs);
-    add_assign_matrix_matrix(to, rhs);
-}
-pub trait MatrixAdd<Rhs, Lhs>: ViewMutMatix + MatrixBase {
-    fn add(self, lhs: Rhs, rhs: Lhs);
 }
 
-pub trait MatrixAddAssign<Rhs>: ViewMutMatix + MatrixBase {
-    fn add_assign(self, rhs: Rhs);
-}
-
-// matrix add scalar
-impl<'a, 'b, T, D> MatrixAdd<Matrix<ViewMem<'a, T>, D>, T> for Matrix<ViewMutMem<'b, T>, D>
-where
-    T: Num,
-    D: DimTrait,
-{
-    fn add(self, lhs: Matrix<ViewMem<T>, D>, rhs: T) {
-        add_matrix_scalar(self, lhs, rhs);
-    }
-}
-
-impl<'a, 'b, 'c, T, D1, D2> MatrixAdd<Matrix<ViewMem<'a, T>, D1>, Matrix<ViewMem<'b, T>, D2>>
-    for Matrix<ViewMutMem<'c, T>, D1>
+// impl<T: Num, D: DimTrait, M1: ToViewMemory + ToOwnedMemory + ToViewMutMemory<Item = T>>
+//     MatrixDiv<Matrix<M1, D>> for Matrix<M1, D>
+impl<T, M1, M2, D1, D2> MatrixAdd<Matrix<M1, D1>> for Matrix<M2, D2>
 where
     T: Num,
     D1: DimTrait,
     D2: DimTrait,
+    M1: ToViewMemory<Item = T>,
+    M2: ToViewMemory<Item = T> + ToOwnedMemory,
 {
-    fn add(self, lhs: Matrix<ViewMem<T>, D1>, rhs: Matrix<ViewMem<T>, D2>) {
-        add_matrix_matrix(self, lhs, rhs);
-    }
-}
-
-impl<'a, T, D> MatrixAddAssign<T> for Matrix<ViewMutMem<'a, T>, D>
-where
-    T: Num,
-    D: DimTrait,
-{
-    fn add_assign(self, rhs: T) {
-        add_assign_matrix_scalar(self, rhs);
-    }
-}
-
-impl<'a, 'b, T, D1, D2> MatrixAddAssign<Matrix<ViewMem<'a, T>, D1>>
-    for Matrix<ViewMutMem<'b, T>, D2>
-where
-    T: Num,
-    D1: DimTrait,
-    D2: DimTrait,
-{
-    fn add_assign(self, rhs: Matrix<ViewMem<T>, D1>) {
-        add_assign_matrix_matrix(self, rhs);
+    type Output = Matrix<M2::Owned, D2>;
+    fn add(self, lhs: Matrix<M1, D1>) -> Self::Output {
+        let mut owned = self.to_owned();
+        let s = self.into_dyn_dim();
+        let s_v = s.to_view();
+        owned.to_view_mut().add_assign(s_v, lhs.to_view());
+        owned
     }
 }
 
@@ -271,7 +193,7 @@ mod add {
         let b = b.into_dyn_dim();
         let mut ans = ans.into_dyn_dim();
 
-        ans.to_view_mut().add(a.to_view(), b.to_view());
+        ans.to_view_mut().add_assign(a.to_view(), b.to_view());
     }
 
     #[test]
@@ -279,7 +201,7 @@ mod add {
         let a = OwnedMatrix1D::from_vec(vec![1.0, 2.0, 3.0], [3]);
         let mut ans = OwnedMatrix1D::<f32>::zeros([3]);
         let b = OwnedMatrix0D::from_vec(vec![2.0], []);
-        ans.to_view_mut().add(a.to_view(), b.to_view());
+        ans.to_view_mut().add_assign(a.to_view(), b.to_view());
 
         assert_eq!(ans.index_item([0]), 3.0);
         assert_eq!(ans.index_item([1]), 4.0);
@@ -290,7 +212,7 @@ mod add {
     fn add_1d_scalar_default_stride() {
         let a = OwnedMatrix1D::from_vec(vec![1.0, 2.0, 3.0], [3]);
         let mut ans = OwnedMatrix1D::<f32>::zeros([3]);
-        ans.to_view_mut().add(a.to_view(), 1.0);
+        ans.to_view_mut().add_assign(a.to_view(), 1.0);
 
         assert_eq!(ans.index_item([0]), 2.0);
         assert_eq!(ans.index_item([1]), 3.0);
@@ -304,7 +226,7 @@ mod add {
 
         let sliced = a.slice(slice!(..;2));
 
-        ans.to_view_mut().add(sliced.to_view(), 1.0);
+        ans.to_view_mut().add_assign(sliced.to_view(), 1.0);
 
         assert_eq!(ans.index_item([0]), 2.0);
         assert_eq!(ans.index_item([1]), 4.0);
@@ -326,7 +248,7 @@ mod add {
 
         let sliced = a.slice(slice!(.., .., ..;2));
 
-        ans.to_view_mut().add(sliced.to_view(), 1.0);
+        ans.to_view_mut().add_assign(sliced.to_view(), 1.0);
 
         assert_eq!(ans.index_item([0, 0, 0]), 2.0);
         assert_eq!(ans.index_item([0, 0, 1]), 4.0);
@@ -353,7 +275,7 @@ mod add {
         let a = OwnedMatrix1D::from_vec(vec![1.0, 2.0, 3.0], [3]);
         let b = OwnedMatrix1D::from_vec(vec![1.0, 2.0, 3.0], [3]);
         let mut ans = OwnedMatrix1D::<f32>::zeros([3]);
-        ans.to_view_mut().add(a.to_view(), b.to_view());
+        ans.to_view_mut().add_assign(a.to_view(), b.to_view());
 
         assert_eq!(ans.index_item([0]), 2.0);
         assert_eq!(ans.index_item([1]), 4.0);
@@ -371,7 +293,7 @@ mod add {
         let sliced_b = b.slice(slice!(1..;2));
 
         ans.to_view_mut()
-            .add(sliced_a.to_view(), sliced_b.to_view());
+            .add_assign(sliced_a.to_view(), sliced_b.to_view());
 
         assert_eq!(ans.index_item([0]), 3.0);
         assert_eq!(ans.index_item([1]), 7.0);
@@ -395,7 +317,7 @@ mod add {
         let sliced_b = b.slice(slice!(..2));
 
         ans.to_view_mut()
-            .add(sliced_a.to_view(), sliced_b.to_view());
+            .add_assign(sliced_a.to_view(), sliced_b.to_view());
 
         assert_eq!(ans.index_item([0, 0]), 2.0);
         assert_eq!(ans.index_item([0, 1]), 4.0);
@@ -420,7 +342,7 @@ mod add {
         let sliced_b = b.slice(slice!(..2));
 
         ans.to_view_mut()
-            .add(sliced_a.to_view(), sliced_b.to_view());
+            .add_assign(sliced_a.to_view(), sliced_b.to_view());
 
         assert_eq!(ans.index_item([0, 0, 0]), 5.);
         assert_eq!(ans.index_item([0, 0, 1]), 7.);
@@ -449,7 +371,7 @@ mod add {
         );
 
         let mut ans = OwnedMatrix2D::<f32>::zeros([4, 4]);
-        ans.to_view_mut().add(a.to_view(), b.to_view());
+        ans.to_view_mut().add_assign(a.to_view(), b.to_view());
 
         assert_eq!(ans.index_item([0, 0]), 2.0);
         assert_eq!(ans.index_item([0, 1]), 4.0);
@@ -479,7 +401,7 @@ mod add {
         );
         let b = OwnedMatrix0D::from_vec(vec![1.], []);
         let mut ans = OwnedMatrix2D::<f32>::zeros([4, 4]);
-        ans.to_view_mut().add(a.to_view(), b.to_view());
+        ans.to_view_mut().add_assign(a.to_view(), b.to_view());
         assert_eq!(ans.index_item([0, 0]), 2.0);
         assert_eq!(ans.index_item([0, 1]), 3.0);
         assert_eq!(ans.index_item([0, 2]), 4.0);
@@ -508,7 +430,7 @@ mod add {
         );
         let b = OwnedMatrixDyn::from_vec(vec![1.], []);
         let mut ans = OwnedMatrixDyn::<f32>::zeros([4, 4]);
-        ans.to_view_mut().add(a.to_view(), b.to_view());
+        ans.to_view_mut().add_assign(a.to_view(), b.to_view());
         assert_eq!(ans.index_item([0, 0]), 2.0);
         assert_eq!(ans.index_item([0, 1]), 3.0);
         assert_eq!(ans.index_item([0, 2]), 4.0);
@@ -532,6 +454,7 @@ mod add {
         let zeros_4d = OwnedMatrixDyn::<f32>::zeros([2, 2, 2, 2]);
         let ones_2d = OwnedMatrixDyn::from_vec(vec![1., 1., 1., 1.], [2, 2]);
         let mut ans = OwnedMatrixDyn::<f32>::zeros([2, 2, 2, 2]);
-        ans.to_view_mut().add(zeros_4d.to_view(), ones_2d.to_view());
+        ans.to_view_mut()
+            .add_assign(zeros_4d.to_view(), ones_2d.to_view());
     }
 }

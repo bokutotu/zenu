@@ -1,9 +1,13 @@
-use std::{cell::RefCell, ops::Add, rc::Rc};
+use std::{
+    cell::RefCell,
+    ops::{Add, DerefMut},
+    rc::Rc,
+};
 
 use zenu_matrix::{
-    matrix::{MatrixBase, ToViewMatrix, ToViewMutMatrix},
+    matrix::{MatrixBase, ToViewMatrix},
     num::Num,
-    operation::{add::MatrixAdd, zeros::Zeros},
+    operation::{add::MatrixAddAssign, zeros::Zeros},
 };
 
 use crate::{Function, Variable, VariableWeak};
@@ -29,7 +33,7 @@ impl<T: Num> Function<T> for Addition<T> {
         let y = self.y.get_data();
         let output = self.output.upgrade().unwrap();
         let mut output = output.get_data_mut();
-        MatrixAdd::add(output.to_view_mut(), x.to_view(), y.to_view());
+        MatrixAddAssign::add_assign(output.deref_mut(), x.to_view(), y.to_view());
     }
 
     fn backward(&self) {
@@ -84,7 +88,10 @@ mod add {
         z.backward();
         let z_data = z.get_data();
         let ans: OwnedMatrixDyn<f32> = OwnedMatrixDyn::ones([20, 100, 200]).to_view() * 2.0;
+        println!("{:?}", ans);
+        println!("{:?}", z_data);
         let diff = z_data.to_view() - ans.to_view();
+        println!("{:?}", diff);
         let diff_sum = diff.asum();
         assert!(diff_sum < 1e-6);
 

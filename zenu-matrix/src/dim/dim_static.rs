@@ -45,7 +45,7 @@ impl DimTrait for Dim0 {
     }
 
     fn is_empty(&self) -> bool {
-        todo!();
+        true
     }
 
     fn is_overflow<D: DimTrait>(&self, index: D) -> bool {

@@ -1,14 +1,14 @@
 use crate::{
     dim::{DimDyn, DimTrait},
     index::index_dyn_impl::Index,
-    matrix::{IndexAxisDyn, MatrixBase, OwnedMatrix, ToViewMutMatrix, ViewMatrix},
+    matrix::{IndexAxisDyn, MatrixBase, OwnedMatrix, ToViewMatrix, ToViewMutMatrix, ViewMatrix},
     matrix_impl::Matrix,
     memory_impl::{OwnedMem, ViewMem},
     num::Num,
     operation::zeros::Zeros,
 };
 
-use super::add::MatrixAddAssign;
+use super::{add::MatrixAdd, copy_from::CopyFrom};
 
 pub trait MatrixSum: ViewMatrix {
     type Output: OwnedMatrix;
@@ -39,7 +39,8 @@ impl<'a, T: Num, D: DimTrait> MatrixSum for Matrix<ViewMem<'a, T>, D> {
             let result_view_mut = result.to_view_mut();
             let s = self_dyn.clone();
             let s = s.index_axis_dyn(Index::new(axis, i));
-            result_view_mut.add_assign(s);
+            let tmp = result_view_mut.add(s);
+            result.to_view_mut().copy_from(&tmp.to_view());
         }
 
         result
@@ -80,6 +81,8 @@ mod sum {
             }
         }
         let ans_0 = OwnedMatrix3D::from_vec(ans_vec_0, [3, 4, 5]);
+        println!("{:?}", sum_0.to_view());
+        println!("{:?}", ans_0.to_view());
         let diff = sum_0.to_view() - ans_0.to_view();
         let diff_sum = Asum::asum(diff);
         assert!(diff_sum < 1e-6);
