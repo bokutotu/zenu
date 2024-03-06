@@ -120,3 +120,16 @@ where
         MatrixDiv::div(self, rhs)
     }
 }
+
+impl<M, D, T> Div<T> for Matrix<M, D>
+where
+    M: ToViewMemory<Item = T> + ToOwnedMemory,
+    D: DimTrait,
+    T: Num,
+{
+    type Output = Matrix<M::Owned, D>;
+
+    fn div(self, rhs: T) -> Self::Output {
+        MatrixDiv::div(self, rhs)
+    }
+}
