@@ -58,4 +58,34 @@ mod softmax {
         let diff = b.to_view() - ans.to_view();
         assert!(diff.asum() < 1e-6);
     }
+
+    #[test]
+    fn softmax_2d() {
+        let a = OwnedMatrixDyn::from_vec(vec![1., 2., 3., 4., 5., 6.], [2, 3]);
+        let mut b = OwnedMatrixDyn::zeros([2, 3]);
+        b.softmax_assign(a.to_view(), 1);
+        let ans = OwnedMatrixDyn::from_vec(
+            vec![
+                0.09003057, 0.24472847, 0.66524096, 0.09003057, 0.24472847, 0.66524096,
+            ],
+            [2, 3],
+        );
+        let diff = b.to_view() - ans.to_view();
+        assert!(diff.asum() < 1e-6);
+
+        let a = OwnedMatrixDyn::from_vec(vec![1., 2., 3., 4., 5., 6.], [2, 3]);
+        let mut b = OwnedMatrixDyn::zeros([2, 3]);
+        b.softmax_assign(a.to_view(), 0);
+        let ans_2 = OwnedMatrixDyn::from_vec(
+            vec![
+                0.04742587, 0.04742587, 0.04742587, 0.95257413, 0.95257413, 0.95257413,
+            ],
+            [2, 3],
+        );
+        println!("{:?}", b.to_view());
+        println!("{:?}", ans_2.to_view());
+        let diff = b.to_view() - ans_2.to_view();
+        println!("{:?}", diff);
+        assert!(diff.asum() < 1e-6);
+    }
 }
