@@ -6,6 +6,7 @@ use crate::{
 
 pub trait Zeros: MatrixBase {
     fn zeros<I: Into<Self::Dim>>(dim: I) -> Self;
+    fn zeros_like<M: MatrixBase>(m: M) -> Self;
 }
 impl<T, D, OM> Zeros for OM
 where
@@ -21,6 +22,10 @@ where
             data.push(T::zero());
         }
         <Self as OwnedMatrix>::from_vec(data, dim)
+    }
+
+    fn zeros_like<M: MatrixBase>(m: M) -> Self {
+        Self::zeros(m.shape().slice())
     }
 }
 

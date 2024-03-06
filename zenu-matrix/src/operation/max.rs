@@ -1,7 +1,7 @@
 use crate::{
     blas::Blas,
     dim::{DimDyn, DimTrait},
-    matrix::{AsPtr, BlasMatrix, MatrixBase},
+    matrix::{AsPtr, BlasMatrix, IndexItem, MatrixBase},
     matrix_impl::Matrix,
     memory_impl::{OwnedMem, ViewMem},
     num::Num,
@@ -9,11 +9,12 @@ use crate::{
 
 use super::to_default_stride::ToDefaultStride;
 
-pub trait MaxIdx<D> {
+pub trait MaxIdx<T, D> {
     fn max_idx(self) -> DimDyn;
+    fn max(self) -> T;
 }
 
-impl<'a, T, D> MaxIdx<D> for Matrix<ViewMem<'a, T>, D>
+impl<'a, T, D> MaxIdx<T, D> for Matrix<ViewMem<'a, T>, D>
 where
     T: Num,
     D: DimTrait,
@@ -26,6 +27,12 @@ where
             default_stride.stride()[default_stride.shape().len() - 1],
         );
         default_stride.shape_stride().get_dim_by_offset(idx)
+    }
+
+    fn max(self) -> T {
+        let s = self.into_dyn_dim();
+        let idx = s.clone().max_idx();
+        s.index_item(idx)
     }
 }
 

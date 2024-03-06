@@ -35,18 +35,10 @@ pub trait Memory {
 }
 
 pub trait ToViewMemory: Memory {
-    // type View<'a>: View<Item = Self::Item>
-    // where
-    //     Self: 'a;
-
     fn to_view(&self, offset: usize) -> ViewMem<Self::Item>;
 }
 
 pub trait ToViewMutMemory: Memory {
-    // type ViewMut<'a>: ViewMut<Item = Self::Item>
-    // where
-    //     Self: 'a;
-
     fn to_view_mut(&mut self, offset: usize) -> ViewMutMem<Self::Item>;
 }
 

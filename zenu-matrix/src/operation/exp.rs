@@ -1,18 +1,34 @@
 use crate::{
     dim::{DimDyn, DimTrait},
     index::Index0D,
-    matrix::{IndexAxisDyn, IndexAxisMutDyn, MatrixBase},
+    matrix::{IndexAxisDyn, IndexAxisMutDyn, MatrixBase, ToViewMatrix, ToViewMutMatrix},
     matrix_impl::Matrix,
-    memory_impl::{ViewMem, ViewMutMem},
+    memory::{ToOwnedMemory, ToViewMemory},
+    memory_impl::{OwnedMem, ViewMem, ViewMutMem},
     num::Num,
 };
 
+use super::zeros::Zeros;
+
 pub trait Exp<T: Num> {
-    fn exp<'b>(&mut self, y: Matrix<ViewMem<'b, T>, DimDyn>);
+    fn exp(&self) -> Matrix<OwnedMem<T>, DimDyn>;
 }
 
-impl<'a, T: Num> Exp<T> for Matrix<ViewMutMem<'a, T>, DimDyn> {
-    fn exp<'b>(&mut self, y: Matrix<ViewMem<'b, T>, DimDyn>) {
+impl<'a, T: Num, M: ToViewMemory<Item = T>> Exp<T> for Matrix<M, DimDyn> {
+    fn exp(&self) -> Matrix<OwnedMem<T>, DimDyn> {
+        let mut owned = Matrix::<OwnedMem<T>, DimDyn>::zeros_like(self.to_view());
+        let v = self.to_view();
+        owned.to_view_mut().exp_assign(v);
+        owned
+    }
+}
+
+pub trait ExpAssign<T: Num> {
+    fn exp_assign<'b>(&mut self, y: Matrix<ViewMem<'b, T>, DimDyn>);
+}
+
+impl<'a, T: Num> ExpAssign<T> for Matrix<ViewMutMem<'a, T>, DimDyn> {
+    fn exp_assign<'b>(&mut self, y: Matrix<ViewMem<'b, T>, DimDyn>) {
         assert_eq!(self.shape(), y.shape());
         let len = self.shape().len();
         if len <= 1 {
@@ -23,7 +39,7 @@ impl<'a, T: Num> Exp<T> for Matrix<ViewMutMem<'a, T>, DimDyn> {
         } else {
             for i in 0..self.shape()[0] {
                 self.index_axis_mut_dyn(Index0D::new(i))
-                    .exp(y.index_axis_dyn(Index0D::new(i)));
+                    .exp_assign(y.index_axis_dyn(Index0D::new(i)));
             }
         }
     }
@@ -49,13 +65,13 @@ mod exp {
         operation::{asum::Asum, zeros::Zeros},
     };
 
-    use super::Exp;
+    use super::ExpAssign;
 
     #[test]
     fn exp_0d() {
         let x = OwnedMatrixDyn::from_vec(vec![2.], &[]);
         let mut y = OwnedMatrixDyn::zeros(&[]);
-        y.to_view_mut().exp(x.to_view());
+        y.to_view_mut().exp_assign(x.to_view());
 
         let diff: f64 = dbg!(y.to_view()).as_slice()[0] - 7.3890560989306495;
         let diff: f64 = diff.abs();
@@ -67,7 +83,7 @@ mod exp {
     fn exp_2d() {
         let x = OwnedMatrixDyn::from_vec(vec![1., 2., 3., 4.], &[2, 2]);
         let mut y = OwnedMatrixDyn::zeros(&[2, 2]);
-        y.to_view_mut().exp(x.to_view());
+        y.to_view_mut().exp_assign(x.to_view());
         let ans = OwnedMatrixDyn::from_vec(
             vec![
                 2.718281828459045,

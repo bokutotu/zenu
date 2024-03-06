@@ -1,14 +1,15 @@
-use std::ops::{Add, Mul, Sub};
+use std::ops::{Add, Div, Mul, Sub};
 
 use crate::{
     dim::DimTrait,
     matrix::{ToOwnedMatrix, ToViewMatrix, ToViewMutMatrix},
     matrix_impl::Matrix,
-    memory::View,
+    memory::{ToOwnedMemory, ToViewMemory, View},
     memory_impl::{OwnedMem, ViewMem},
     num::Num,
     operation::{
         add::{MatrixAdd, MatrixAddAssign},
+        div::{MatrixDiv, MatrixDivAssign},
         mul::MatrixMul,
         sub::MatrixSubAssign,
     },
@@ -102,5 +103,20 @@ where
         let mut ans = ToOwnedMatrix::to_owned(&self);
         ans.to_view_mut().sub_assign(rhs.to_view());
         ans
+    }
+}
+
+impl<M1, M2, D1, D2, T> Div<Matrix<M1, D1>> for Matrix<M2, D2>
+where
+    D1: DimTrait,
+    D2: DimTrait,
+    M1: ToViewMemory<Item = T>,
+    M2: ToViewMemory<Item = T> + ToOwnedMemory,
+    T: Num,
+{
+    type Output = Matrix<M2::Owned, D2>;
+
+    fn div(self, rhs: Matrix<M1, D1>) -> Self::Output {
+        MatrixDiv::div(self, rhs)
     }
 }

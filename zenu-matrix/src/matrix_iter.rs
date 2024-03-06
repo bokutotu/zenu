@@ -1,10 +1,11 @@
 use crate::{
     dim::{cal_offset, DimDyn, DimTrait},
-    matrix::{MatrixBase, ToViewMutMatrix},
-    matrix_impl::Matrix,
-    memory::ToViewMutMemory,
-    memory_impl::ViewMutMem,
+    matrix::{MatrixBase, ToViewMatrix, ToViewMutMatrix},
+    matrix_impl::{Matrix, OwnedMatrixDyn},
+    memory::{ToViewMemory, ToViewMutMemory},
+    memory_impl::{OwnedMem, ViewMutMem},
     num::Num,
+    operation::{copy_from::CopyFrom, zeros::Zeros},
     shape_stride::ShapeStride,
 };
 
@@ -107,13 +108,26 @@ fn generate_combinations(nums: &[usize]) -> Vec<Vec<usize>> {
 }
 
 pub trait MatrixIter<T: Num> {
-    fn map_axis<F>(&mut self, axis: usize, fn_map: F)
+    fn map_axis<F>(&self, axis: usize, fn_map: F) -> Matrix<OwnedMem<T>, DimDyn>
+    where
+        F: FnMut(Matrix<ViewMutMem<T>, DimDyn>);
+    fn map_axis_mut<F>(&mut self, axis: usize, fn_map: F)
     where
         F: FnMut(Matrix<ViewMutMem<T>, DimDyn>);
 }
 
-impl<T: Num, M: ToViewMutMemory<Item = T>> MatrixIter<T> for Matrix<M, DimDyn> {
-    fn map_axis<F>(&mut self, axis: usize, fn_map: F)
+impl<T: Num, M: ToViewMutMemory<Item = T> + ToViewMemory> MatrixIter<T> for Matrix<M, DimDyn> {
+    fn map_axis<F>(&self, axis: usize, fn_map: F) -> Matrix<OwnedMem<T>, DimDyn>
+    where
+        F: FnMut(Matrix<ViewMutMem<T>, DimDyn>),
+    {
+        let mut ans = OwnedMatrixDyn::zeros(self.shape());
+        ans.to_view_mut().copy_from(&self.to_view());
+        ans.map_axis_mut(axis, fn_map);
+        ans
+    }
+
+    fn map_axis_mut<F>(&mut self, axis: usize, fn_map: F)
     where
         F: FnMut(Matrix<ViewMutMem<T>, DimDyn>),
     {
@@ -139,7 +153,7 @@ mod map_axis {
     #[test]
     fn test_2d_0() {
         let mut a = OwnedMatrixDyn::from_vec(vec![1., 2., 3., 4., 5., 6.], [2, 3]);
-        a.map_axis(0, |m| {
+        a.map_axis_mut(0, |m| {
             let mut m = m;
             let ans = OwnedMatrixDyn::from_vec(vec![2., 1.], [2]);
             CopyFrom::copy_from(&mut m, &ans.to_view());
@@ -154,7 +168,7 @@ mod map_axis {
     #[test]
     fn test_2d_1() {
         let mut a = OwnedMatrixDyn::from_vec(vec![1., 2., 3., 4., 5., 6.], [2, 3]);
-        a.map_axis(1, |m| {
+        a.map_axis_mut(1, |m| {
             let mut m = m;
             let ans = OwnedMatrixDyn::from_vec(vec![3., 2., 1.], [3]);
             CopyFrom::copy_from(&mut m, &ans.to_view());
@@ -173,7 +187,7 @@ mod map_axis {
             [2, 2, 3],
         );
 
-        a.map_axis(0, |m| {
+        a.map_axis_mut(0, |m| {
             let mut m = m;
             let ans = OwnedMatrixDyn::from_vec(vec![2., 1.], [2]);
             CopyFrom::copy_from(&mut m, &ans.to_view());
@@ -198,7 +212,7 @@ mod map_axis {
             [2, 2, 3],
         );
 
-        a.map_axis(1, |m| {
+        a.map_axis_mut(1, |m| {
             let mut m = m;
             let ans = OwnedMatrixDyn::from_vec(vec![2., 1.], [2]);
             CopyFrom::copy_from(&mut m, &ans.to_view());
@@ -221,7 +235,7 @@ mod map_axis {
             [2, 2, 3],
         );
 
-        a.map_axis(2, |m| {
+        a.map_axis_mut(2, |m| {
             let mut m = m;
             let ans = OwnedMatrixDyn::from_vec(vec![3., 2., 1.], [3]);
             CopyFrom::copy_from(&mut m, &ans.to_view());

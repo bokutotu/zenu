@@ -2,6 +2,7 @@ pub mod add;
 pub mod asum;
 pub mod broadcast;
 pub mod copy_from;
+pub mod div;
 pub mod dot;
 pub mod exp;
 pub mod max;
