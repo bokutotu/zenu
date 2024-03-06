@@ -1,9 +1,7 @@
-pub mod add;
 pub mod asum;
 pub mod basic_operations;
 pub mod broadcast;
 pub mod copy_from;
-pub mod div;
 pub mod dot;
 pub mod exp;
 pub mod max;
@@ -12,7 +10,6 @@ pub mod norm2;
 pub mod ones;
 pub mod relu;
 pub mod softmax;
-pub mod sub;
 pub mod sum;
 pub mod to_default_stride;
 pub mod transpose;

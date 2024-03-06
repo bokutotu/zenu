@@ -609,3 +609,112 @@ mod sub {
         assert_eq!(ans.index_item([]), 0.0);
     }
 }
+
+#[cfg(test)]
+mod div {
+    use crate::{
+        matrix::{OwnedMatrix, ToViewMatrix},
+        matrix_impl::OwnedMatrixDyn,
+        operation::{
+            asum::Asum,
+            basic_operations::{MatrixDiv, MatrixDivAssign},
+            zeros::Zeros,
+        },
+    };
+
+    #[test]
+    fn div_0d_0d() {
+        let mut a = OwnedMatrixDyn::from_vec(vec![2.0], &[]);
+        let b = OwnedMatrixDyn::from_vec(vec![3.0], &[]);
+        let mut c = OwnedMatrixDyn::zeros_like(a.to_view());
+
+        c.div(a.to_view(), b.to_view());
+        assert_eq!(c.as_slice(), &[2.0 / 3.0]);
+
+        a.div_assign(b);
+        assert_eq!(a.as_slice(), &[2.0 / 3.0]);
+    }
+
+    #[test]
+    fn div_1d_0d() {
+        let mut a = OwnedMatrixDyn::from_vec(vec![2.0, 3.0], &[2]);
+        let b = OwnedMatrixDyn::from_vec(vec![3.0], &[]);
+        let mut c = OwnedMatrixDyn::zeros_like(a.to_view());
+        c.div(a.to_view(), b.to_view());
+        assert_eq!(c.as_slice(), &[2.0 / 3.0, 3.0 / 3.0]);
+
+        a.div_assign(b);
+        assert_eq!(a.as_slice(), &[2.0 / 3.0, 3.0 / 3.0]);
+    }
+
+    #[test]
+    fn div_3d_3d() {
+        let mut a =
+            OwnedMatrixDyn::from_vec(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0], &[2, 2, 2]);
+        let b = OwnedMatrixDyn::from_vec(vec![2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0], &[2, 2, 2]);
+        let mut c = OwnedMatrixDyn::zeros_like(a.to_view());
+        c.div(a.to_view(), b.to_view());
+        let ans = vec![
+            1.0 / 2.0,
+            2.0 / 3.0,
+            3.0 / 4.0,
+            4.0 / 5.0,
+            5.0 / 6.0,
+            6.0 / 7.0,
+            7.0 / 8.0,
+            8.0 / 9.0,
+        ];
+        let ans = OwnedMatrixDyn::from_vec(ans, &[2, 2, 2]);
+        let diff = c.to_view() - ans.to_view();
+        let asum = diff.asum();
+        assert_eq!(asum, 0.0);
+
+        a.div_assign(b);
+        let diff = a.to_view() - ans.to_view();
+        let asum = diff.asum();
+        assert_eq!(asum, 0.0);
+    }
+
+    #[test]
+    fn div_4d_2d() {
+        let mut a = OwnedMatrixDyn::from_vec(
+            vec![
+                1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0,
+            ],
+            &[2, 2, 2, 2],
+        );
+        println!("{:?}", a.to_view());
+        let b = OwnedMatrixDyn::from_vec(vec![2.0, 3.0, 4.0, 5.0], &[2, 2]);
+        let mut c = OwnedMatrixDyn::zeros_like(a.to_view());
+        println!("{:?}", b.to_view());
+        println!("{:?}", c.to_view());
+        c.div(a.to_view(), b.to_view());
+        let ans = vec![
+            1.0 / 2.0,
+            2.0 / 3.0,
+            3.0 / 4.0,
+            4.0 / 5.0,
+            5.0 / 2.0,
+            6.0 / 3.0,
+            7.0 / 4.0,
+            8.0 / 5.0,
+            1.0 / 2.0,
+            2.0 / 3.0,
+            3.0 / 4.0,
+            4.0 / 5.0,
+            5.0 / 2.0,
+            6.0 / 3.0,
+            7.0 / 4.0,
+            8.0 / 5.0,
+        ];
+        let ans = OwnedMatrixDyn::from_vec(ans, &[2, 2, 2, 2]);
+        let diff = c.to_view() - ans.to_view();
+        let asum = diff.asum();
+        assert_eq!(asum, 0.0);
+
+        a.div_assign(b);
+        let diff = a.to_view() - ans.to_view();
+        let asum = diff.asum();
+        assert_eq!(asum, 0.0);
+    }
+}
