@@ -1,6 +1,6 @@
 use std::{
     fmt::{Debug, Display},
-    ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign},
+    ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign},
 };
 
 pub trait Num:
@@ -13,6 +13,8 @@ pub trait Num:
     + PartialOrd
     + Mul<Output = Self>
     + Div<Output = Self>
+    + Sub<Output = Self>
+    + SubAssign
     + DivAssign
     + AddAssign
     + MulAssign

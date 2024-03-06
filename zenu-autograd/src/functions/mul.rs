@@ -1,9 +1,13 @@
-use std::{cell::RefCell, ops::Mul, rc::Rc};
+use std::{
+    cell::RefCell,
+    ops::{DerefMut, Mul},
+    rc::Rc,
+};
 
 use zenu_matrix::{
-    matrix::{MatrixBase, ToViewMatrix, ToViewMutMatrix},
+    matrix::{MatrixBase, ToViewMatrix},
     num::Num,
-    operation::{mul::MatrixMul, zeros::Zeros},
+    operation::{basic_operations::MatrixMul, zeros::Zeros},
 };
 
 use crate::{Function, Variable, VariableWeak};
@@ -31,8 +35,7 @@ impl<T: Num> Function<T> for Multiply<T> {
         let y = y.to_view();
         let output = self.output.upgrade().unwrap();
         let mut output = output.get_data_mut();
-        let output = output.to_view_mut();
-        MatrixMul::mul(output, x, y);
+        MatrixMul::mul(output.deref_mut(), x, y);
     }
 
     fn backward(&self) {

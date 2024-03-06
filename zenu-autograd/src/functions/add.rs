@@ -7,7 +7,7 @@ use std::{
 use zenu_matrix::{
     matrix::{MatrixBase, ToViewMatrix},
     num::Num,
-    operation::{add::MatrixAddAssign, zeros::Zeros},
+    operation::{basic_operations::MatrixAdd, zeros::Zeros},
 };
 
 use crate::{Function, Variable, VariableWeak};
@@ -33,7 +33,7 @@ impl<T: Num> Function<T> for Addition<T> {
         let y = self.y.get_data();
         let output = self.output.upgrade().unwrap();
         let mut output = output.get_data_mut();
-        MatrixAddAssign::add_assign(output.deref_mut(), x.to_view(), y.to_view());
+        MatrixAdd::add(output.deref_mut(), x.to_view(), y.to_view());
     }
 
     fn backward(&self) {

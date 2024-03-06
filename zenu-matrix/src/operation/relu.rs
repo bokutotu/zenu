@@ -160,7 +160,9 @@ mod relu {
         let mut y = OwnedMatrixDyn::zeros([]);
         y.to_view_mut().relu(x.to_view());
         let ans = OwnedMatrixDyn::from_vec(vec![1.0], []);
+        println!("{:?}", y);
         let diff = y.to_view() - ans.to_view();
+        println!("{:?}", diff.to_view());
         let diff_asum = diff.asum();
         assert!(diff_asum < 1.0e-6);
     }
@@ -170,8 +172,10 @@ mod relu {
         let x = OwnedMatrixDyn::from_vec(vec![1.0], []);
         let mut y = OwnedMatrixDyn::zeros([]);
         y.to_view_mut().relu_backward_mask(x.to_view());
+        println!("{:?}", y);
         let ans = OwnedMatrixDyn::from_vec(vec![1.0], []);
         let diff = y.to_view() - ans.to_view();
+        println!("{:?}", diff);
         let diff_asum = diff.asum();
         assert!(diff_asum < 1.0e-6);
     }

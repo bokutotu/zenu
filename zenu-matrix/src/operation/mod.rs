@@ -1,5 +1,6 @@
 pub mod add;
 pub mod asum;
+pub mod basic_operations;
 pub mod broadcast;
 pub mod copy_from;
 pub mod div;

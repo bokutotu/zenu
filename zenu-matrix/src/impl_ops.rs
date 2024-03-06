@@ -2,17 +2,12 @@ use std::ops::{Add, Div, Mul, Sub};
 
 use crate::{
     dim::DimTrait,
-    matrix::{ToOwnedMatrix, ToViewMatrix, ToViewMutMatrix},
+    matrix::ToOwnedMatrix,
     matrix_impl::Matrix,
     memory::{ToOwnedMemory, ToViewMemory, View},
     memory_impl::{OwnedMem, ViewMem},
     num::Num,
-    operation::{
-        add::{MatrixAdd, MatrixAddAssign},
-        div::MatrixDivAssign,
-        mul::MatrixMul,
-        sub::{MatrixSub, MatrixSubAssign},
-    },
+    operation::basic_operations::{MatrixAdd, MatrixDivAssign, MatrixMul, MatrixSub},
 };
 
 impl<'a, D, T> Add<T> for Matrix<ViewMem<'a, T>, D>
@@ -24,7 +19,7 @@ where
 
     fn add(self, rhs: T) -> Self::Output {
         let mut owned = ToOwnedMatrix::to_owned(&self);
-        MatrixAddAssign::add_assign(&mut owned, self, rhs);
+        MatrixAdd::add(&mut owned, self, rhs);
         owned
     }
 }
@@ -40,7 +35,9 @@ where
     type Output = Matrix<M2::Owned, D2>;
 
     fn add(self, rhs: Matrix<M1, D1>) -> Self::Output {
-        MatrixAdd::add(self, rhs)
+        let mut owned = ToOwnedMatrix::to_owned(&self);
+        MatrixAdd::add(&mut owned, self, rhs);
+        owned
     }
 }
 
@@ -54,8 +51,7 @@ where
 
     fn mul(self, rhs: T) -> Self::Output {
         let mut owned = ToOwnedMatrix::to_owned(&self);
-        let view_mut = owned.to_view_mut();
-        MatrixMul::mul(view_mut, self, rhs);
+        MatrixMul::mul(&mut owned, self, rhs);
         owned
     }
 }
@@ -70,8 +66,7 @@ where
 
     fn mul(self, rhs: Matrix<ViewMem<T>, D1>) -> Self::Output {
         let mut owned = ToOwnedMatrix::to_owned(&self);
-        let view_mut = owned.to_view_mut();
-        MatrixMul::mul(view_mut, self, rhs);
+        MatrixMul::mul(&mut owned, self, rhs);
         owned
     }
 }
@@ -85,7 +80,9 @@ where
     type Output = Matrix<M::Owned, D>;
 
     fn sub(self, rhs: T) -> Self::Output {
-        MatrixSub::sub(self, rhs)
+        let mut owned = ToOwnedMatrix::to_owned(&self);
+        MatrixSub::sub(&mut owned, self, rhs);
+        owned
     }
 }
 
@@ -100,7 +97,9 @@ where
     type Output = Matrix<M2::Owned, D2>;
 
     fn sub(self, rhs: Matrix<M1, D1>) -> Self::Output {
-        MatrixSub::sub(self, rhs)
+        let mut owned = ToOwnedMatrix::to_owned(&self);
+        MatrixSub::sub(&mut owned, self, rhs);
+        owned
     }
 }
 

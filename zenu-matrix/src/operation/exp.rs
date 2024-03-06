@@ -3,7 +3,7 @@ use crate::{
     index::Index0D,
     matrix::{IndexAxisDyn, IndexAxisMutDyn, MatrixBase, ToViewMatrix, ToViewMutMatrix},
     matrix_impl::Matrix,
-    memory::{ToOwnedMemory, ToViewMemory},
+    memory::ToViewMemory,
     memory_impl::{OwnedMem, ViewMem, ViewMutMem},
     num::Num,
 };

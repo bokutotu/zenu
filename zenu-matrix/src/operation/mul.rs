@@ -1,217 +1,213 @@
 use crate::{
-    blas::Blas,
-    dim::{Dim1, Dim2, Dim3, Dim4, DimTrait},
-    index::Index0D,
-    matrix::{AsMutPtr, AsPtr, IndexAxisDyn, IndexAxisMutDyn, MatrixBase, ViewMutMatix},
+    dim::DimTrait,
+    matrix::{MatrixBase, ViewMutMatix},
     matrix_blas::gemm::gemm,
     matrix_impl::{matrix_into_dim, Matrix},
-    memory::{View, ViewMut},
     memory_impl::{ViewMem, ViewMutMem},
     num::Num,
-    operation::copy_from::CopyFrom,
 };
 
-fn mul_matrix_scalar<T, LM, SM, D>(self_: Matrix<SM, D>, lhs: Matrix<LM, D>, rhs: T)
-where
-    T: Num,
-    SM: ViewMut<Item = T>,
-    LM: View<Item = T>,
-    D: DimTrait,
-{
-    assert_eq!(self_.shape(), lhs.shape());
-    let mut self_ = self_.into_dyn_dim();
-    let lhs = lhs.into_dyn_dim();
-    CopyFrom::copy_from(&mut self_, &lhs);
-    mul_assign_matrix_scalar(self_, rhs);
-}
-
-fn mul_assign_matrix_scalar<T, LM, D>(to: Matrix<LM, D>, other: T)
-where
-    T: Num,
-    LM: ViewMut<Item = T>,
-    D: DimTrait,
-{
-    // let mut to = to.into_dyn_dim();
-
-    macro_rules! scal {
-        ($dim:ty) => {{
-            let mut to: Matrix<LM, $dim> = matrix_into_dim(to);
-            if to.shape_stride().is_contiguous() {
-                let num_dim = to.shape().len();
-                LM::Blas::scal(
-                    to.shape().num_elm(),
-                    other,
-                    to.as_mut_ptr(),
-                    to.stride()[num_dim - 1],
-                );
-            } else {
-                for idx in 0..to.shape()[0] {
-                    let to_ = to.index_axis_mut_dyn(Index0D::new(idx));
-                    mul_assign_matrix_scalar(to_, other);
-                }
-            }
-        }};
-    }
-
-    match to.shape().len() {
-        0 => {
-            let mut to = to;
-            LM::Blas::scal(1, other, to.as_mut_ptr(), 1);
-        }
-        1 => {
-            let mut to = to;
-            LM::Blas::scal(to.shape().num_elm(), other, to.as_mut_ptr(), to.stride()[0]);
-        }
-        2 => scal!(Dim2),
-        3 => scal!(Dim3),
-        4 => scal!(Dim4),
-        _ => panic!("not implemented: this is bug. please report this bug."),
-    };
-}
-
-fn mul_matrix_matrix<T, D1, D2, D3>(
-    self_: Matrix<ViewMutMem<T>, D1>,
-    lhs: Matrix<ViewMem<T>, D2>,
-    rhs: Matrix<ViewMem<T>, D3>,
-) where
-    T: Num,
-    D1: DimTrait,
-    D2: DimTrait,
-    D3: DimTrait,
-{
-    if lhs.shape().len() < rhs.shape().len() {
-        mul_matrix_matrix(self_, rhs, lhs);
-        return;
-    }
-    assert_eq!(self_.shape().slice(), lhs.shape().slice());
-    let mut self_ = self_.into_dyn_dim();
-    let lhs = lhs.into_dyn_dim();
-    self_.copy_from(&lhs);
-    mul_assign_matrix_matrix(self_, rhs);
-}
-
-/// 入力の行列はsliceされていないものが必ず入力される
-/// shape, strideに関するチェックは一切行いわない
-fn mul_1d_1d_cpu<T: Num, D: DimTrait>(
-    to: &mut Matrix<ViewMutMem<T>, D>,
-    other: &Matrix<ViewMem<T>, D>,
-) {
-    let to_stride = to.stride();
-    let other_stride = other.stride();
-    let num_elm = to.shape().num_elm();
-    let inner_stride_to = to_stride[to_stride.len() - 1];
-    let inner_stride_other = other_stride[other_stride.len() - 1];
-    let to_slice = to.as_mut_slice();
-    let other_slice = other.as_slice();
-    if inner_stride_to == 0 && inner_stride_other == 0 {
-        for i in 0..num_elm {
-            to_slice[i] *= other_slice[i];
-        }
-    } else {
-        for i in 0..num_elm {
-            to_slice[i * inner_stride_to] *= other_slice[i * inner_stride_other];
-        }
-    }
-}
-
-fn mul_assign_matrix_matrix<T, D1, D2>(to: Matrix<ViewMutMem<T>, D1>, other: Matrix<ViewMem<T>, D2>)
-where
-    T: Num,
-    D1: DimTrait,
-    D2: DimTrait,
-{
-    let mut to = to.into_dyn_dim();
-    let other = other.into_dyn_dim();
-
-    assert!(to.shape().is_include(&other.shape()));
-    if to.shape().is_empty() {
-        let ptr = to.as_mut_ptr();
-        let other = other.as_ptr();
-        unsafe {
-            *ptr = *other * *ptr;
-        }
-        return;
-    }
-    if other.shape().is_empty() {
-        let scalar = unsafe { *other.as_ptr() };
-        mul_assign_matrix_scalar(to, scalar);
-        return;
-    }
-
-    if to.shape().len() == 1 {
-        let mut to: Matrix<ViewMutMem<T>, Dim1> = matrix_into_dim(to);
-        let other: Matrix<ViewMem<T>, Dim1> = matrix_into_dim(other);
-        mul_1d_1d_cpu(&mut to, &other);
-    } else if to.shape() == other.shape() {
-        macro_rules! same_dim {
-            ($dim:ty) => {{
-                let mut to: Matrix<ViewMutMem<T>, $dim> = matrix_into_dim(to);
-                let other: Matrix<ViewMem<T>, $dim> = matrix_into_dim(other);
-
-                for i in 0..to.shape()[0] {
-                    let to_ = to.index_axis_mut_dyn(Index0D::new(i));
-                    let other = other.index_axis_dyn(Index0D::new(i));
-                    mul_assign_matrix_matrix(to_, other);
-                }
-            }};
-        }
-        match to.shape().len() {
-            2 => same_dim!(Dim2),
-            3 => same_dim!(Dim3),
-            4 => same_dim!(Dim4),
-            _ => panic!("not implemented: this is bug. please report this bug."),
-        }
-    } else {
-        macro_rules! diff_dim {
-            ($dim1:ty, $dim2:ty) => {{
-                let mut to: Matrix<ViewMutMem<T>, $dim1> = matrix_into_dim(to);
-                let other: Matrix<ViewMem<T>, $dim2> = matrix_into_dim(other);
-                for i in 0..to.shape()[0] {
-                    let to_ = to.index_axis_mut_dyn(Index0D::new(i));
-                    mul_assign_matrix_matrix(to_, other.clone());
-                }
-            }};
-        }
-        match (to.shape().len(), other.shape().len()) {
-            (2, 1) => diff_dim!(Dim2, Dim1),
-            (3, 1) => diff_dim!(Dim3, Dim1),
-            (4, 1) => diff_dim!(Dim4, Dim1),
-            (3, 2) => diff_dim!(Dim3, Dim2),
-            (4, 2) => diff_dim!(Dim4, Dim2),
-            (4, 3) => diff_dim!(Dim4, Dim3),
-            _ => panic!("not implemented: this is bug. please report this bug."),
-        }
-    }
-}
-
-pub trait MatrixMul<Lhs, Rhs>: ViewMutMatix {
-    fn mul(self, lhs: Lhs, rhs: Rhs);
-}
-
-impl<T, RM, SM, D> MatrixMul<Matrix<RM, D>, T> for Matrix<SM, D>
-where
-    T: Num,
-    RM: View<Item = T>,
-    SM: ViewMut<Item = T>,
-    D: DimTrait,
-{
-    fn mul(self, lhs: Matrix<RM, D>, rhs: T) {
-        mul_matrix_scalar(self, lhs, rhs);
-    }
-}
-
-impl<'a, 'b, 'c, T, DS, DR> MatrixMul<Matrix<ViewMem<'a, T>, DS>, Matrix<ViewMem<'b, T>, DR>>
-    for Matrix<ViewMutMem<'c, T>, DS>
-where
-    T: Num,
-    DS: DimTrait,
-    DR: DimTrait,
-{
-    fn mul(self, lhs: Matrix<ViewMem<T>, DS>, rhs: Matrix<ViewMem<T>, DR>) {
-        mul_matrix_matrix(self, lhs, rhs);
-    }
-}
-
+// fn mul_matrix_scalar<T, LM, SM, D>(self_: Matrix<SM, D>, lhs: Matrix<LM, D>, rhs: T)
+// where
+//     T: Num,
+//     SM: ViewMut<Item = T>,
+//     LM: View<Item = T>,
+//     D: DimTrait,
+// {
+//     assert_eq!(self_.shape(), lhs.shape());
+//     let mut self_ = self_.into_dyn_dim();
+//     let lhs = lhs.into_dyn_dim();
+//     CopyFrom::copy_from(&mut self_, &lhs);
+//     mul_assign_matrix_scalar(self_, rhs);
+// }
+//
+// fn mul_assign_matrix_scalar<T, LM, D>(to: Matrix<LM, D>, other: T)
+// where
+//     T: Num,
+//     LM: ViewMut<Item = T>,
+//     D: DimTrait,
+// {
+//     // let mut to = to.into_dyn_dim();
+//
+//     macro_rules! scal {
+//         ($dim:ty) => {{
+//             let mut to: Matrix<LM, $dim> = matrix_into_dim(to);
+//             if to.shape_stride().is_contiguous() {
+//                 let num_dim = to.shape().len();
+//                 LM::Blas::scal(
+//                     to.shape().num_elm(),
+//                     other,
+//                     to.as_mut_ptr(),
+//                     to.stride()[num_dim - 1],
+//                 );
+//             } else {
+//                 for idx in 0..to.shape()[0] {
+//                     let to_ = to.index_axis_mut_dyn(Index0D::new(idx));
+//                     mul_assign_matrix_scalar(to_, other);
+//                 }
+//             }
+//         }};
+//     }
+//
+//     match to.shape().len() {
+//         0 => {
+//             let mut to = to;
+//             LM::Blas::scal(1, other, to.as_mut_ptr(), 1);
+//         }
+//         1 => {
+//             let mut to = to;
+//             LM::Blas::scal(to.shape().num_elm(), other, to.as_mut_ptr(), to.stride()[0]);
+//         }
+//         2 => scal!(Dim2),
+//         3 => scal!(Dim3),
+//         4 => scal!(Dim4),
+//         _ => panic!("not implemented: this is bug. please report this bug."),
+//     };
+// }
+//
+// fn mul_matrix_matrix<T, D1, D2, D3>(
+//     self_: Matrix<ViewMutMem<T>, D1>,
+//     lhs: Matrix<ViewMem<T>, D2>,
+//     rhs: Matrix<ViewMem<T>, D3>,
+// ) where
+//     T: Num,
+//     D1: DimTrait,
+//     D2: DimTrait,
+//     D3: DimTrait,
+// {
+//     if lhs.shape().len() < rhs.shape().len() {
+//         mul_matrix_matrix(self_, rhs, lhs);
+//         return;
+//     }
+//     assert_eq!(self_.shape().slice(), lhs.shape().slice());
+//     let mut self_ = self_.into_dyn_dim();
+//     let lhs = lhs.into_dyn_dim();
+//     self_.copy_from(&lhs);
+//     mul_assign_matrix_matrix(self_, rhs);
+// }
+//
+// /// 入力の行列はsliceされていないものが必ず入力される
+// /// shape, strideに関するチェックは一切行いわない
+// fn mul_1d_1d_cpu<T: Num, D: DimTrait>(
+//     to: &mut Matrix<ViewMutMem<T>, D>,
+//     other: &Matrix<ViewMem<T>, D>,
+// ) {
+//     let to_stride = to.stride();
+//     let other_stride = other.stride();
+//     let num_elm = to.shape().num_elm();
+//     let inner_stride_to = to_stride[to_stride.len() - 1];
+//     let inner_stride_other = other_stride[other_stride.len() - 1];
+//     let to_slice = to.as_mut_slice();
+//     let other_slice = other.as_slice();
+//     if inner_stride_to == 0 && inner_stride_other == 0 {
+//         for i in 0..num_elm {
+//             to_slice[i] *= other_slice[i];
+//         }
+//     } else {
+//         for i in 0..num_elm {
+//             to_slice[i * inner_stride_to] *= other_slice[i * inner_stride_other];
+//         }
+//     }
+// }
+//
+// fn mul_assign_matrix_matrix<T, D1, D2>(to: Matrix<ViewMutMem<T>, D1>, other: Matrix<ViewMem<T>, D2>)
+// where
+//     T: Num,
+//     D1: DimTrait,
+//     D2: DimTrait,
+// {
+//     let mut to = to.into_dyn_dim();
+//     let other = other.into_dyn_dim();
+//
+//     assert!(to.shape().is_include(&other.shape()));
+//     if to.shape().is_empty() {
+//         let ptr = to.as_mut_ptr();
+//         let other = other.as_ptr();
+//         unsafe {
+//             *ptr = *other * *ptr;
+//         }
+//         return;
+//     }
+//     if other.shape().is_empty() {
+//         let scalar = unsafe { *other.as_ptr() };
+//         mul_assign_matrix_scalar(to, scalar);
+//         return;
+//     }
+//
+//     if to.shape().len() == 1 {
+//         let mut to: Matrix<ViewMutMem<T>, Dim1> = matrix_into_dim(to);
+//         let other: Matrix<ViewMem<T>, Dim1> = matrix_into_dim(other);
+//         mul_1d_1d_cpu(&mut to, &other);
+//     } else if to.shape() == other.shape() {
+//         macro_rules! same_dim {
+//             ($dim:ty) => {{
+//                 let mut to: Matrix<ViewMutMem<T>, $dim> = matrix_into_dim(to);
+//                 let other: Matrix<ViewMem<T>, $dim> = matrix_into_dim(other);
+//
+//                 for i in 0..to.shape()[0] {
+//                     let to_ = to.index_axis_mut_dyn(Index0D::new(i));
+//                     let other = other.index_axis_dyn(Index0D::new(i));
+//                     mul_assign_matrix_matrix(to_, other);
+//                 }
+//             }};
+//         }
+//         match to.shape().len() {
+//             2 => same_dim!(Dim2),
+//             3 => same_dim!(Dim3),
+//             4 => same_dim!(Dim4),
+//             _ => panic!("not implemented: this is bug. please report this bug."),
+//         }
+//     } else {
+//         macro_rules! diff_dim {
+//             ($dim1:ty, $dim2:ty) => {{
+//                 let mut to: Matrix<ViewMutMem<T>, $dim1> = matrix_into_dim(to);
+//                 let other: Matrix<ViewMem<T>, $dim2> = matrix_into_dim(other);
+//                 for i in 0..to.shape()[0] {
+//                     let to_ = to.index_axis_mut_dyn(Index0D::new(i));
+//                     mul_assign_matrix_matrix(to_, other.clone());
+//                 }
+//             }};
+//         }
+//         match (to.shape().len(), other.shape().len()) {
+//             (2, 1) => diff_dim!(Dim2, Dim1),
+//             (3, 1) => diff_dim!(Dim3, Dim1),
+//             (4, 1) => diff_dim!(Dim4, Dim1),
+//             (3, 2) => diff_dim!(Dim3, Dim2),
+//             (4, 2) => diff_dim!(Dim4, Dim2),
+//             (4, 3) => diff_dim!(Dim4, Dim3),
+//             _ => panic!("not implemented: this is bug. please report this bug."),
+//         }
+//     }
+// }
+//
+// pub trait MatrixMul<Lhs, Rhs>: ViewMutMatix {
+//     fn mul(self, lhs: Lhs, rhs: Rhs);
+// }
+//
+// impl<T, RM, SM, D> MatrixMul<Matrix<RM, D>, T> for Matrix<SM, D>
+// where
+//     T: Num,
+//     RM: View<Item = T>,
+//     SM: ViewMut<Item = T>,
+//     D: DimTrait,
+// {
+//     fn mul(self, lhs: Matrix<RM, D>, rhs: T) {
+//         mul_matrix_scalar(self, lhs, rhs);
+//     }
+// }
+//
+// impl<'a, 'b, 'c, T, DS, DR> MatrixMul<Matrix<ViewMem<'a, T>, DS>, Matrix<ViewMem<'b, T>, DR>>
+//     for Matrix<ViewMutMem<'c, T>, DS>
+// where
+//     T: Num,
+//     DS: DimTrait,
+//     DR: DimTrait,
+// {
+//     fn mul(self, lhs: Matrix<ViewMem<T>, DS>, rhs: Matrix<ViewMem<T>, DR>) {
+//         mul_matrix_matrix(self, lhs, rhs);
+//     }
+// }
+//
 pub trait Gemm<Rhs, Lhs>: ViewMutMatix {
     fn gemm(self, rhs: Rhs, lhs: Lhs);
 }
@@ -240,11 +236,9 @@ mod mul {
     use crate::{
         matrix::{IndexItem, MatrixSlice, OwnedMatrix, ToViewMatrix, ToViewMutMatrix},
         matrix_impl::{OwnedMatrix0D, OwnedMatrix1D, OwnedMatrix2D, OwnedMatrix4D, OwnedMatrixDyn},
-        operation::{ones::Ones, zeros::Zeros},
+        operation::{basic_operations::MatrixMul, ones::Ones, zeros::Zeros},
         slice,
     };
-
-    use super::MatrixMul;
 
     #[test]
     fn mul_1d_scalar() {
