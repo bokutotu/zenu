@@ -66,7 +66,6 @@ where
             panic!("Matrix shape mismatch");
         }
 
-        println!("hoge");
         if self.shape().is_empty() {
             let self_slice = self.as_mut_slice();
             let lhs_slice = lhs.as_slice();

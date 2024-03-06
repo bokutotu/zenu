@@ -9,7 +9,7 @@ use crate::{
     num::Num,
     operation::{
         add::{MatrixAdd, MatrixAddAssign},
-        div::MatrixDiv,
+        div::MatrixDivAssign,
         mul::MatrixMul,
         sub::{MatrixSub, MatrixSubAssign},
     },
@@ -115,7 +115,9 @@ where
     type Output = Matrix<M2::Owned, D2>;
 
     fn div(self, rhs: Matrix<M1, D1>) -> Self::Output {
-        MatrixDiv::div(self, rhs)
+        let mut owned = ToOwnedMatrix::to_owned(&self);
+        MatrixDivAssign::div_assign(&mut owned, rhs);
+        owned
     }
 }
 
@@ -128,6 +130,8 @@ where
     type Output = Matrix<M::Owned, D>;
 
     fn div(self, rhs: T) -> Self::Output {
-        MatrixDiv::div(self, rhs)
+        let mut owned = ToOwnedMatrix::to_owned(&self);
+        MatrixDivAssign::div_assign(&mut owned, rhs);
+        owned
     }
 }
