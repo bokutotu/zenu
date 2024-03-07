@@ -777,7 +777,6 @@ mod div {
         assert_eq!(asum, 0.0);
 
         c.div(b.to_view(), a.to_view());
-        println!("{:?}", c);
         let ans = vec![
             2.0 / 1.0,
             3.0 / 2.0,

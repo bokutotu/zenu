@@ -43,10 +43,10 @@ fn inner<T: Num>(source: Matrix<ViewMem<T>, DimDyn>, target: Matrix<ViewMutMem<T
 
     if diff_len == 1 {
         let mut target = target;
-        let ans = source.to_view().sum(0);
+        let ans = source.to_view().sum(0, false);
         target.to_view_mut().copy_from(&ans.to_view());
     } else {
-        inner(source.to_view().sum(0).to_view(), target);
+        inner(source.to_view().sum(0, false).to_view(), target);
     }
 }
 

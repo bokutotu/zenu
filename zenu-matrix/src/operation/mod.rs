@@ -1,3 +1,4 @@
+pub mod add_axis;
 pub mod asum;
 pub mod basic_operations;
 pub mod broadcast;

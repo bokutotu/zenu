@@ -124,6 +124,25 @@ impl ShapeStride<DimDyn> {
         }
         dim
     }
+
+    pub(crate) fn add_axis(self, axis: usize) -> Self {
+        let mut shape: DimDyn = Default::default();
+        let mut stride: DimDyn = Default::default();
+
+        for i in 0..self.shape.len() {
+            if i == axis {
+                shape.push_dim(1);
+                stride.push_dim(self.stride[i]);
+            }
+            shape.push_dim(self.shape[i]);
+            stride.push_dim(self.stride[i]);
+        }
+        if axis == self.shape.len() {
+            shape.push_dim(1);
+            stride.push_dim(1);
+        }
+        ShapeStride::new(shape, stride)
+    }
 }
 
 #[cfg(test)]
