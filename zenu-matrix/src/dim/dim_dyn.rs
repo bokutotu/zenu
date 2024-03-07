@@ -8,6 +8,19 @@ pub struct DimDyn {
     len: usize,
 }
 
+pub(crate) fn larger_shape<D1: DimTrait, D2: DimTrait>(x: D1, y: D2) -> DimDyn {
+    let x = DimDyn::from(x.slice());
+    let y = DimDyn::from(y.slice());
+
+    if x.is_include(y) {
+        x
+    } else if y.is_include(x) {
+        y
+    } else {
+        panic!("Shape is not compatible");
+    }
+}
+
 impl DimDyn {
     pub fn new(dim: &[usize]) -> Self {
         if dim.len() > 4 {
@@ -52,10 +65,10 @@ impl DimDyn {
     // => true
     // other: [3, 4, 5]
     // => false
-    pub fn is_include(&self, other: &DimDyn) -> bool {
+    pub fn is_include(&self, other: DimDyn) -> bool {
         // selfのshapeの後ろからotherのshapeを比較していく
         if self.len() < other.len() {
-            return other.is_include(self);
+            return other.is_include(*self);
         }
         for i in 0..other.len {
             if self.dim[self.len - 1 - i] != other.dim[other.len - 1 - i] {
@@ -68,7 +81,7 @@ impl DimDyn {
     // selfとotherがadd, sub, mul, divで演算可能かを調べる
     // [10, 10, 1, 10]と[10, 1, 1, 10]は演算可能である
     // is_includeではfalseになるが演算可能なものを調べる
-    pub(crate) fn is_include_bradcast(&self, other: &DimDyn) -> bool {
+    pub(crate) fn is_include_bradcast(&self, other: DimDyn) -> bool {
         if self.len() < other.len() {
             panic!("this is bug please make issue");
         }

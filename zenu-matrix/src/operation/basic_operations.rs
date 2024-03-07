@@ -190,7 +190,7 @@ macro_rules! impl_traits {
                     )
                 };
 
-                if !larger_dim.is_include(&smaller_dim) {
+                if !(larger_dim.is_include(smaller_dim) || DimDyn::from(self.shape().slice()).is_include_bradcast(smaller_dim)) {
                     panic!(
                         "self dim is not match other dims self dim {:?}, lhs dim {:?} rhs dim {:?}",
                         self.shape(),
@@ -198,12 +198,8 @@ macro_rules! impl_traits {
                         rhs.shape()
                     );
                 }
-                if self.shape().slice() != larger_dim.slice() {
+                if self.shape().slice() != larger_dim.slice() && self.shape().slice() != smaller_dim.slice() {
                     panic!("longer shape lhs or rhs is same shape to self\n self.shape = {:?}\n lhs.shape() = {:?} \n rhs.shape() = {:?}", self.shape(), lhs.shape(), rhs.shape());
-                }
-
-                if !DimDyn::from(self.shape().slice()).is_include_bradcast(&smaller_dim) {
-                    panic!("Matrix shape mismatc");
                 }
 
                 if rhs.shape().is_empty() {
@@ -242,10 +238,23 @@ macro_rules! impl_traits {
             > $assign_trait<Matrix<M1, D1>> for Matrix<M2, D2>
         {
             fn $assign_trait_method(&mut self, rhs: Matrix<M1, D1>) {
-                if !DimDyn::from(self.shape().slice())
-                    .is_include(&DimDyn::from(rhs.shape().slice()))
+                if self.shape().len() < rhs.shape().len() {
+                    panic!("Self shape len is larger than rhs shape len {:?} {:?}", self.shape(), rhs.shape());
+                }
+
+                if !(DimDyn::from(self.shape().slice())
+                    .is_include(DimDyn::from(rhs.shape().slice()))
+                    || DimDyn::from(self.shape().slice())
+                    .is_include_bradcast(DimDyn::from(rhs.shape().slice()))
+                )
                 {
-                    panic!("Matrix shape mismatch");
+                    panic!("rhs shape is not include self shape {:?} {:?}", self.shape(), rhs.shape());
+                }
+
+                if !DimDyn::from(self.shape().slice())
+                    .is_include_bradcast(DimDyn::from(rhs.shape().slice()))
+                {
+                    panic!("rhs shape is not include self shape {:?} {:?}", self.shape(), rhs.shape());
                 }
 
                 if self.shape().is_empty() {
@@ -262,11 +271,7 @@ macro_rules! impl_traits {
                     let rhs_shape_len = rhs.shape().len();
                     for idx in 0..num_iter {
                         let mut s = self.index_axis_mut_dyn(Index0D::new(idx));
-                        let rhs = if self_shape_len == rhs_shape_len {
-                            rhs.index_axis_dyn(Index0D::new(idx))
-                        } else {
-                            rhs.to_view().into_dyn_dim()
-                        };
+                        let rhs = get_tmp_matrix(&rhs, rhs_shape_len, idx, self_shape_len);
                         s.$assign_trait_method(rhs);
                     }
                 }
@@ -733,6 +738,66 @@ mod div {
 
         a.div_assign(b);
         let diff = a.to_view() - ans.to_view();
+        let asum = diff.asum();
+        assert_eq!(asum, 0.0);
+    }
+
+    #[test]
+    fn broadcast_4d_4d() {
+        let a = OwnedMatrixDyn::from_vec(
+            vec![
+                1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0,
+            ],
+            &[2, 2, 2, 2],
+        );
+        let b = OwnedMatrixDyn::from_vec(vec![2.0, 3.0, 4.0, 5.0], &[1, 1, 2, 2]);
+        let mut c = OwnedMatrixDyn::zeros_like(a.to_view());
+        c.div(a.to_view(), b.to_view());
+        let ans = vec![
+            1.0 / 2.0,
+            2.0 / 3.0,
+            3.0 / 4.0,
+            4.0 / 5.0,
+            5.0 / 2.0,
+            6.0 / 3.0,
+            7.0 / 4.0,
+            8.0 / 5.0,
+            1.0 / 2.0,
+            2.0 / 3.0,
+            3.0 / 4.0,
+            4.0 / 5.0,
+            5.0 / 2.0,
+            6.0 / 3.0,
+            7.0 / 4.0,
+            8.0 / 5.0,
+        ];
+        let ans = OwnedMatrixDyn::from_vec(ans, &[2, 2, 2, 2]);
+        let diff = c.to_view() - ans.to_view();
+        let asum = diff.asum();
+        assert_eq!(asum, 0.0);
+
+        c.div(b.to_view(), a.to_view());
+        println!("{:?}", c);
+        let ans = vec![
+            2.0 / 1.0,
+            3.0 / 2.0,
+            4.0 / 3.0,
+            5.0 / 4.0,
+            2.0 / 5.0,
+            3.0 / 6.0,
+            4.0 / 7.0,
+            5.0 / 8.0,
+            2.0 / 1.0,
+            3.0 / 2.0,
+            4.0 / 3.0,
+            5.0 / 4.0,
+            2.0 / 5.0,
+            3.0 / 6.0,
+            4.0 / 7.0,
+            5.0 / 8.0,
+        ];
+        let ans = OwnedMatrixDyn::from_vec(ans, &[2, 2, 2, 2]);
+        let diff = c.to_view() - ans.to_view();
         let asum = diff.asum();
         assert_eq!(asum, 0.0);
     }

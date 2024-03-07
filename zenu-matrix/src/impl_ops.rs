@@ -1,7 +1,7 @@
 use std::ops::{Add, Div, Mul, Sub};
 
 use crate::{
-    dim::{DimDyn, DimTrait},
+    dim::{larger_shape, DimDyn, DimTrait},
     matrix::{MatrixBase, ToOwnedMatrix},
     matrix_impl::Matrix,
     memory::{ToOwnedMemory, ToViewMemory},
@@ -38,12 +38,14 @@ macro_rules! impl_ops {
             type Output = Matrix<OwnedMem<T>, D2>;
 
             fn $method(self, rhs: Matrix<M1, D1>) -> Self::Output {
-                let larger_shape = if self.shape().len() >= rhs.shape().len() {
+                let larger = if self.shape().len() == rhs.shape().len() {
+                    DimDyn::from(larger_shape(self.shape(), rhs.shape()))
+                } else if self.shape().len() > rhs.shape().len() {
                     DimDyn::from(self.shape().slice())
                 } else {
                     DimDyn::from(rhs.shape().slice())
                 };
-                let mut owned = Self::Output::zeros(larger_shape.slice());
+                let mut owned = Self::Output::zeros(larger.slice());
                 $use_trait_method::$method(&mut owned, self, rhs);
                 owned
             }

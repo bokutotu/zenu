@@ -37,7 +37,7 @@ fn inner<T: Num>(source: Matrix<ViewMem<T>, DimDyn>, target: Matrix<ViewMutMem<T
         return;
     }
 
-    if !source.shape().is_include(&target.shape()) {
+    if !source.shape().is_include(target.shape()) {
         panic!("!source.shape().is_include(target.shape())");
     }
 

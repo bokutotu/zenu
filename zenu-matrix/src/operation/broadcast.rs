@@ -15,7 +15,7 @@ pub trait Broadcast<T: Num> {
 
 impl<'a, T: Num> Broadcast<T> for Matrix<ViewMutMem<'a, T>, DimDyn> {
     fn broadcast(&mut self, source: &Matrix<ViewMem<T>, DimDyn>) {
-        if !self.shape().is_include(&source.shape()) {
+        if !self.shape().is_include(source.shape()) {
             panic!("!self.shape().is_include(source.shape())");
         }
 
