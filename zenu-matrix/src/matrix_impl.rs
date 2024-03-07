@@ -494,7 +494,6 @@ mod matrix_slice {
         );
         let m = m.into_dyn_dim();
         let s = m.index_axis_dyn(Index0D::new(0));
-        println!("{:?}", s.shape());
         assert_eq!(s.index_item([0]), 1.);
         assert_eq!(s.index_item([1]), 2.);
         assert_eq!(s.index_item([2]), 3.);

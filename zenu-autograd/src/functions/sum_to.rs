@@ -105,7 +105,6 @@ mod sum_to {
         y.backward();
         let x_grad: Matrix<OwnedMem<f32>, DimDyn> = Ones::ones([2, 3]);
         x.with_grad_data(|grad| {
-            println!("grad: {:?}", grad.to_view());
             let diff = grad.to_view() - x_grad.to_view();
             assert!(diff.asum() == 0.);
         });

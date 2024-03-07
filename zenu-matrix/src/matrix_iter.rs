@@ -48,7 +48,7 @@ where
     fn get_index(&self) -> Vec<DimDyn> {
         // axisのIndexを除いたIndexのVecを返す
         let mut candidates = Vec::with_capacity(self.matrix.shape().len() - 1);
-        for (i, s) in self.matrix.shape().clone().into_iter().enumerate() {
+        for (i, s) in self.matrix.shape().into_iter().enumerate() {
             if i != self.axis {
                 candidates.push(s);
             }
@@ -192,8 +192,6 @@ mod map_axis {
             let ans = OwnedMatrixDyn::from_vec(vec![2., 1.], [2]);
             CopyFrom::copy_from(&mut m, &ans.to_view());
         });
-
-        println!("{:?}", a);
 
         let ans = OwnedMatrixDyn::from_vec(
             vec![2., 2., 2., 2., 2., 2., 1., 1., 1., 1., 1., 1.],

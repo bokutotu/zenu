@@ -14,7 +14,7 @@ pub trait SoftMax<T: Num> {
     fn softmax_assign(&mut self, source: Matrix<ViewMem<T>, DimDyn>, axis: usize);
 }
 
-impl<'a, T: Num, M: ToViewMutMemory<Item = T>> SoftMax<T> for Matrix<M, DimDyn> {
+impl<T: Num, M: ToViewMutMemory<Item = T>> SoftMax<T> for Matrix<M, DimDyn> {
     fn softmax_assign(&mut self, source: Matrix<ViewMem<T>, DimDyn>, axis: usize) {
         if axis >= self.shape().len() {
             panic!("axis must be less than the number of dimensions");
@@ -82,10 +82,7 @@ mod softmax {
             ],
             [2, 3],
         );
-        println!("{:?}", b.to_view());
-        println!("{:?}", ans_2.to_view());
         let diff = b.to_view() - ans_2.to_view();
-        println!("{:?}", diff);
         assert!(diff.asum() < 1e-6);
     }
 }

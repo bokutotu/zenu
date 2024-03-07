@@ -80,8 +80,6 @@ mod sum {
             }
         }
         let ans_0 = OwnedMatrix3D::from_vec(ans_vec_0, [3, 4, 5]);
-        println!("{:?}", sum_0.to_view());
-        println!("{:?}", ans_0.to_view());
         let diff = sum_0.to_view() - ans_0.to_view();
         let diff_sum = Asum::asum(diff);
         assert!(diff_sum < 1e-6);

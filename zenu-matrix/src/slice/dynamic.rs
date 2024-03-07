@@ -83,8 +83,8 @@ mod slice_dyn_slice {
         let stride = DimDyn::new(&[12, 4, 1]);
         let slice = slice_dynamic!(.., 1, 1..2);
         let shape_stride = slice.sliced_shape_stride(shape, stride);
-        let result_shape = dbg!(shape_stride.shape());
-        let result_stride = dbg!(shape_stride.stride());
+        let result_shape = shape_stride.shape();
+        let result_stride = shape_stride.stride();
         assert_eq!(result_shape, DimDyn::new(&[2, 1]));
         assert_eq!(result_stride, DimDyn::new(&[12, 1]));
     }

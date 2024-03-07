@@ -1,4 +1,8 @@
-use zenu_matrix::{dim::DimDyn, matrix::MatrixBase, num::Num};
+use zenu_matrix::{
+    dim::{DimDyn, DimTrait},
+    matrix::MatrixBase,
+    num::Num,
+};
 
 use crate::Variable;
 
@@ -13,7 +17,7 @@ pub mod sum_to;
 pub mod transpose;
 
 pub(crate) fn output_shape<T: Num>(x: &Variable<T>, y: &Variable<T>) -> DimDyn {
-    if x.get_data().shape().is_include(&y.get_data().shape()) {
+    if x.get_data().shape().len() > y.get_data().shape().len() {
         x.get_data().shape()
     } else {
         y.get_data().shape()

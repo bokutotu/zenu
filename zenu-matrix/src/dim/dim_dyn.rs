@@ -53,13 +53,31 @@ impl DimDyn {
     // other: [3, 4, 5]
     // => false
     pub fn is_include(&self, other: &DimDyn) -> bool {
-        if self.len < other.len {
-            return false;
-        }
-
         // selfのshapeの後ろからotherのshapeを比較していく
+        if self.len() < other.len() {
+            return other.is_include(self);
+        }
         for i in 0..other.len {
             if self.dim[self.len - 1 - i] != other.dim[other.len - 1 - i] {
+                return false;
+            }
+        }
+        true
+    }
+
+    // selfとotherがadd, sub, mul, divで演算可能かを調べる
+    // [10, 10, 1, 10]と[10, 1, 1, 10]は演算可能である
+    // is_includeではfalseになるが演算可能なものを調べる
+    pub(crate) fn is_include_bradcast(&self, other: &DimDyn) -> bool {
+        if self.len() < other.len() {
+            panic!("this is bug please make issue");
+        }
+        for i in 0..other.len() {
+            if self.dim[self.len() - 1 - i] == other.dim[other.len() - 1 - i]
+                || other.dim[other.len() - i - 1] == 1
+            {
+                continue;
+            } else {
                 return false;
             }
         }

@@ -35,8 +35,6 @@ impl<T: Num> Function<T> for Transpose<T> {
             .get_data_mut()
             .to_view_mut()
             .copy_from(&out.to_view());
-        println!("out");
-        println!("{:?}", out.to_view());
     }
 
     // FIXME: メモリを使いまわす
@@ -85,7 +83,6 @@ mod transpose {
         let x = Variable::from(x);
         let y = transpose(x);
         let y = y.get_data();
-        println!("{:?}", y.to_view());
         let ans: Matrix<OwnedMem<f32>, DimDyn> =
             OwnedMatrix::from_vec(vec![1., 4., 2., 5., 3., 6.], [3, 2]);
         let diff = y.to_view() - ans.to_view();

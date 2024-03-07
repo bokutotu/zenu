@@ -99,14 +99,14 @@ mod mul {
         a.with_grad_data(|grad| {
             let grad = grad.to_view();
             let ans = OwnedMatrixDyn::from_vec(vec![1., 2., 3., 1., 2., 3.], [2, 3]);
-            let diff = dbg!(grad - ans.to_view());
+            let diff = grad - ans.to_view();
             let diff_sum = diff.asum();
             assert!(diff_sum < 1e-6);
         });
         b.with_grad_data(|grad| {
             let grad = grad.to_view();
             let ans = OwnedMatrixDyn::from_vec(vec![5., 7., 9.], [3]);
-            let diff = dbg!(grad - ans.to_view());
+            let diff = grad - ans.to_view();
             let diff_sum = diff.asum();
             assert!(diff_sum < 1e-6);
         });

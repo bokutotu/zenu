@@ -87,7 +87,7 @@ mod static_dim_slice {
         let stride = Dim1::new([1]);
         let slice = slice!(..;2);
 
-        let stride_shape = dbg!(slice.sliced_shape_stride(shape, stride));
+        let stride_shape = slice.sliced_shape_stride(shape, stride);
 
         assert_eq!(stride_shape.shape(), Dim1::new([3]));
         assert_eq!(stride_shape.stride(), Dim1::new([2]));

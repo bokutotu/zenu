@@ -88,10 +88,7 @@ mod add {
         z.backward();
         let z_data = z.get_data();
         let ans: OwnedMatrixDyn<f32> = OwnedMatrixDyn::ones([20, 100, 200]).to_view() * 2.0;
-        println!("{:?}", ans);
-        println!("{:?}", z_data);
         let diff = z_data.to_view() - ans.to_view();
-        println!("{:?}", diff);
         let diff_sum = diff.asum();
         assert!(diff_sum < 1e-6);
 

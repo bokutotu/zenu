@@ -52,10 +52,6 @@ mod mat_mul {
         let mut ans = OwnedMatrix2D::<f32>::zeros([2, 5]);
 
         ans.to_view_mut().gemm(a.to_view(), b.to_view());
-        dbg!(ans.index_item([0, 0]));
-        dbg!(ans.index_item([0, 1]));
-        dbg!(ans.index_item([1, 0]));
-        dbg!(ans.index_item([1, 1]));
         assert_eq!(ans.index_item([0, 0]), 46.);
         assert_eq!(ans.index_item([0, 1]), 52.);
         assert_eq!(ans.index_item([0, 2]), 58.);
@@ -79,14 +75,6 @@ mod mat_mul {
         let mut ans = OwnedMatrix2D::<f32>::zeros([2, 4]);
 
         ans.to_view_mut().gemm(a.to_view(), b.to_view());
-        dbg!(ans.index_item([0, 0]));
-        dbg!(ans.index_item([0, 1]));
-        dbg!(ans.index_item([0, 2]));
-        dbg!(ans.index_item([0, 3]));
-        dbg!(ans.index_item([1, 0]));
-        dbg!(ans.index_item([1, 1]));
-        dbg!(ans.index_item([1, 2]));
-        dbg!(ans.index_item([1, 3]));
 
         assert_eq!(ans.index_item([0, 0]), 38.);
         assert_eq!(ans.index_item([0, 1]), 44.);

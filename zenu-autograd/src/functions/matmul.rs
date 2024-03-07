@@ -97,7 +97,6 @@ mod matmul {
 
         output.backward();
         x.with_grad_data(|grad| {
-            println!("{:?}", grad);
             let ans = vec![3., 7., 11., 15., 3., 7., 11., 15., 3., 7., 11., 15.];
             let ans: Matrix<OwnedMem<f64>, DimDyn> = OwnedMatrix::from_vec(ans, &[3, 4]);
             let diff = grad.to_view() - ans.to_view();

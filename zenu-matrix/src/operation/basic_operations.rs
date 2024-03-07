@@ -4,8 +4,26 @@ use crate::{
     matrix::{IndexAxisDyn, IndexAxisMutDyn, MatrixBase, ToViewMatrix, ToViewMutMatrix},
     matrix_impl::Matrix,
     memory::{ToViewMemory, ToViewMutMemory},
+    memory_impl::ViewMem,
     num::Num,
 };
+
+fn get_tmp_matrix<M: ToViewMemory, D: DimTrait>(
+    a: &Matrix<M, D>,
+    len: usize,
+    idx: usize,
+    self_len: usize,
+) -> Matrix<ViewMem<M::Item>, DimDyn> {
+    if self_len == len {
+        // if a.shape()[0] == 1 {
+        //     a.to_view().into_dyn_dim()
+        // } else {
+        a.index_axis_dyn(Index0D::new(idx))
+        // }
+    } else {
+        a.to_view().into_dyn_dim()
+    }
+}
 
 macro_rules! impl_basic_1d_functions {
     (
@@ -83,13 +101,13 @@ macro_rules! impl_basic_1d_functions {
     };
 }
 macro_rules! impl_traits {
-    (   
-        $trait:ident, 
-        $trait_method:ident, 
-        $assign_trait:ident, 
-        $assign_trait_method:ident, 
-        $mod_name:ident, 
-        $method:ident, 
+    (
+        $trait:ident,
+        $trait_method:ident,
+        $assign_trait:ident,
+        $assign_trait_method:ident,
+        $mod_name:ident,
+        $method:ident,
         $assign_method:ident,
         $is_check_shape:expr
     ) => {
@@ -160,30 +178,37 @@ macro_rules! impl_traits {
             M3: ToViewMutMemory<Item = T>,
         {
             fn $trait_method(&mut self, lhs: Matrix<M1, D1>, rhs: Matrix<M2, D2>) {
-                if $is_check_shape {
-                    if lhs.shape().len() < rhs.shape().len() {
-                        self.$trait_method(rhs, lhs);
-                        return;
-                    }
+                let (larger_dim, smaller_dim) = if lhs.shape().len() < rhs.shape().len() {
+                    (
+                        DimDyn::from(rhs.shape().slice()),
+                        DimDyn::from(lhs.shape().slice()),
+                    )
                 } else {
-                    if lhs.shape().len() < rhs.shape().len() {
-                        panic!("Matrix shape mismatch");
-                    }
+                    (
+                        DimDyn::from(lhs.shape().slice()),
+                        DimDyn::from(rhs.shape().slice()),
+                    )
+                };
+
+                if !larger_dim.is_include(&smaller_dim) {
+                    panic!(
+                        "self dim is not match other dims self dim {:?}, lhs dim {:?} rhs dim {:?}",
+                        self.shape(),
+                        lhs.shape(),
+                        rhs.shape()
+                    );
+                }
+                if self.shape().slice() != larger_dim.slice() {
+                    panic!("longer shape lhs or rhs is same shape to self\n self.shape = {:?}\n lhs.shape() = {:?} \n rhs.shape() = {:?}", self.shape(), lhs.shape(), rhs.shape());
+                }
+
+                if !DimDyn::from(self.shape().slice()).is_include_bradcast(&smaller_dim) {
+                    panic!("Matrix shape mismatc");
                 }
 
                 if rhs.shape().is_empty() {
                     self.$trait_method(lhs, rhs.as_slice()[0]);
                     return;
-                }
-
-                if self.shape().slice() != lhs.shape().slice() {
-                    panic!("Matrix shape mismatch");
-                }
-
-                if !DimDyn::from(self.shape().slice())
-                    .is_include(&DimDyn::from(rhs.shape().slice()))
-                {
-                    panic!("Matrix shape mismatch");
                 }
 
                 if self.shape().is_empty() {
@@ -197,14 +222,11 @@ macro_rules! impl_traits {
                     let num_iter = self.shape()[0];
                     let self_dim_len = self.shape().len();
                     let rhs_dim_len = rhs.shape().len();
+                    let lhs_dim_len = lhs.shape().len();
                     for idx in 0..num_iter {
                         let mut s = self.index_axis_mut_dyn(Index0D::new(idx));
-                        let lhs = lhs.index_axis_dyn(Index0D::new(idx));
-                        let rhs = if self_dim_len == rhs_dim_len {
-                            rhs.index_axis_dyn(Index0D::new(idx))
-                        } else {
-                            rhs.to_view().into_dyn_dim()
-                        };
+                        let lhs = get_tmp_matrix(&lhs, lhs_dim_len, idx, self_dim_len);
+                        let rhs = get_tmp_matrix(&rhs, rhs_dim_len, idx, self_dim_len);
                         s.$trait_method(lhs, rhs);
                     }
                 }
@@ -683,11 +705,8 @@ mod div {
             ],
             &[2, 2, 2, 2],
         );
-        println!("{:?}", a.to_view());
         let b = OwnedMatrixDyn::from_vec(vec![2.0, 3.0, 4.0, 5.0], &[2, 2]);
         let mut c = OwnedMatrixDyn::zeros_like(a.to_view());
-        println!("{:?}", b.to_view());
-        println!("{:?}", c.to_view());
         c.div(a.to_view(), b.to_view());
         let ans = vec![
             1.0 / 2.0,
@@ -860,5 +879,3 @@ mod mul {
         assert_eq!(ans.index_item(&[]), 200.);
     }
 }
-
-
