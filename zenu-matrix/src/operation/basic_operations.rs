@@ -15,11 +15,11 @@ fn get_tmp_matrix<M: ToViewMemory, D: DimTrait>(
     self_len: usize,
 ) -> Matrix<ViewMem<M::Item>, DimDyn> {
     if self_len == len {
-        // if a.shape()[0] == 1 {
-        //     a.to_view().into_dyn_dim()
-        // } else {
-        a.index_axis_dyn(Index0D::new(idx))
-        // }
+        if a.shape()[0] == 1 {
+            a.index_axis_dyn(Index0D::new(0))
+        } else {
+            a.index_axis_dyn(Index0D::new(idx))
+        }
     } else {
         a.to_view().into_dyn_dim()
     }
