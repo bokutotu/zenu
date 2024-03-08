@@ -1,6 +1,6 @@
 use std::ops::{Index, IndexMut};
 
-use super::DimTrait;
+use super::{DimTrait, GreaterDimTrait, LessDimTrait};
 
 #[derive(Clone, Debug, Default, PartialEq, Copy)]
 pub struct DimDyn {
@@ -96,6 +96,14 @@ impl DimDyn {
         }
         true
     }
+}
+
+impl LessDimTrait for DimDyn {
+    type LessDim = DimDyn;
+}
+
+impl GreaterDimTrait for DimDyn {
+    type GreaterDim = DimDyn;
 }
 
 pub(crate) fn into_dyn<Din: DimTrait>(dim: Din) -> DimDyn {

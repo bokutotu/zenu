@@ -1,5 +1,5 @@
 use crate::{
-    dim::{DimDyn, DimTrait},
+    dim::{DimDyn, DimTrait, LessDimTrait},
     index::index_dyn_impl::Index,
     matrix::{IndexAxisDyn, MatrixBase, OwnedMatrix, ToViewMutMatrix, ViewMatrix},
     matrix_impl::Matrix,
@@ -15,29 +15,21 @@ pub trait MatrixSum: ViewMatrix {
     fn sum(self, axis: usize, keep_dim: bool) -> Self::Output;
 }
 
-impl<'a, T: Num, D: DimTrait> MatrixSum for Matrix<ViewMem<'a, T>, D> {
+impl<'a, T: Num> MatrixSum for Matrix<ViewMem<'a, T>, DimDyn> {
     type Output = Matrix<OwnedMem<T>, DimDyn>;
     fn sum(self, axis: usize, keep_dim: bool) -> Self::Output {
-        let self_dyn = self.into_dyn_dim();
-        let shape = self_dyn.shape();
+        let shape = self.shape();
         if axis >= shape.len() {
             panic!("Invalid axis");
         }
-        let result_shape = {
-            let mut shape_ = DimDyn::default();
-            for (i, &s) in shape.slice().iter().enumerate() {
-                if i != axis {
-                    shape_.push_dim(s);
-                }
-            }
-            shape_
-        };
+
+        let result_shape = self.shape().remove_axis(axis);
 
         let mut result = Self::Output::zeros(result_shape);
 
         for i in 0..shape[axis] {
             let mut result_view_mut = result.to_view_mut();
-            let s = self_dyn.clone();
+            let s = self.clone();
             let s = s.index_axis_dyn(Index::new(axis, i));
             result_view_mut.add_assign(s);
         }
@@ -66,10 +58,10 @@ mod sum {
         }
         let source = OwnedMatrix4D::from_vec(source_vec, [2, 3, 4, 5]);
 
-        let sum_0 = source.clone().to_view().sum(0, false);
-        let sum_1 = source.clone().to_view().sum(1, false);
-        let sum_2 = source.clone().to_view().sum(2, false);
-        let sum_3 = source.clone().to_view().sum(3, false);
+        let sum_0 = source.clone().into_dyn_dim().to_view().sum(0, false);
+        let sum_1 = source.clone().into_dyn_dim().to_view().sum(1, false);
+        let sum_2 = source.clone().into_dyn_dim().to_view().sum(2, false);
+        let sum_3 = source.clone().into_dyn_dim().to_view().sum(3, false);
 
         assert_eq!(sum_0.shape().slice(), [3, 4, 5]);
         assert_eq!(sum_1.shape().slice(), [2, 4, 5]);
@@ -127,10 +119,10 @@ mod sum {
         }
         let source = OwnedMatrix4D::from_vec(source_vec, [2, 3, 4, 5]);
 
-        let sum_0 = source.clone().to_view().sum(0, true);
-        let sum_1 = source.clone().to_view().sum(1, true);
-        let sum_2 = source.clone().to_view().sum(2, true);
-        let sum_3 = source.clone().to_view().sum(3, true);
+        let sum_0 = source.clone().into_dyn_dim().to_view().sum(0, true);
+        let sum_1 = source.clone().into_dyn_dim().to_view().sum(1, true);
+        let sum_2 = source.clone().into_dyn_dim().to_view().sum(2, true);
+        let sum_3 = source.clone().into_dyn_dim().to_view().sum(3, true);
 
         assert_eq!(sum_0.shape().slice(), [1, 3, 4, 5]);
         assert_eq!(sum_1.shape().slice(), [2, 1, 4, 5]);

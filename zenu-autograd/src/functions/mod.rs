@@ -13,6 +13,7 @@ pub mod broadcast;
 pub mod matmul;
 pub mod relu;
 pub mod softmax;
+pub mod sum;
 pub mod sum_to;
 pub mod transpose;
 

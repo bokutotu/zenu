@@ -26,7 +26,6 @@ mod add_axis {
     fn test() {
         let mut a = OwnedMatrixDyn::from_vec(vec![1., 2., 3., 4.], &[2, 2]);
         a.add_axis(0);
-        println!("{:?}", a);
         assert_eq!(a.shape().slice(), [1, 2, 2]);
         let ans = OwnedMatrixDyn::from_vec(vec![1., 2., 3., 4.], &[1, 2, 2]);
         let diff = a.to_view() - ans.to_view();

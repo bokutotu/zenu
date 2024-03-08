@@ -125,7 +125,7 @@ impl ShapeStride<DimDyn> {
         dim
     }
 
-    pub(crate) fn add_axis(self, axis: usize) -> Self {
+    pub fn add_axis(self, axis: usize) -> Self {
         let mut shape: DimDyn = Default::default();
         let mut stride: DimDyn = Default::default();
 

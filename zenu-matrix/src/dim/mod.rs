@@ -40,6 +40,17 @@ pub trait DimTrait:
 
 pub trait LessDimTrait: DimTrait {
     type LessDim: DimTrait;
+
+    fn remove_axis(&self, axis: usize) -> Self::LessDim {
+        let mut default = DimDyn::default();
+        for i in 0..self.len() {
+            if i == axis {
+                continue;
+            }
+            default.push_dim(self[i]);
+        }
+        Self::LessDim::from(default.slice())
+    }
 }
 
 pub trait GreaterDimTrait: DimTrait {
