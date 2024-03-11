@@ -1,7 +1,7 @@
 use crate::{
     dim::{DimDyn, DimTrait},
     index::Index0D,
-    matrix::{IndexAxisMutDyn, MatrixBase},
+    matrix::{IndexAxisDyn, IndexAxisMutDyn, MatrixBase},
     matrix_impl::Matrix,
     memory_impl::{ViewMem, ViewMutMem},
     num::Num,
@@ -15,7 +15,9 @@ pub trait Broadcast<T: Num> {
 
 impl<'a, T: Num> Broadcast<T> for Matrix<ViewMutMem<'a, T>, DimDyn> {
     fn broadcast(&mut self, source: &Matrix<ViewMem<T>, DimDyn>) {
-        if !self.shape().is_include(source.shape()) {
+        if !(self.shape().is_include(source.shape())
+            || self.shape().is_include_bradcast(source.shape()))
+        {
             panic!("!self.shape().is_include(source.shape())");
         }
 
@@ -25,6 +27,12 @@ impl<'a, T: Num> Broadcast<T> for Matrix<ViewMutMem<'a, T>, DimDyn> {
         }
 
         let diff_len = self.shape().len() - source.shape().len();
+
+        if source.shape()[0] == 1 {
+            let source = source.index_axis_dyn(Index0D::new(0));
+            self.broadcast(&source);
+            return;
+        }
 
         if diff_len == 1 {
             for i in 0..self.shape()[0] {
@@ -45,7 +53,7 @@ mod broadcast {
     use crate::{
         dim::DimDyn,
         matrix::{OwnedMatrix, ToViewMatrix, ToViewMutMatrix},
-        matrix_impl::Matrix,
+        matrix_impl::{Matrix, OwnedMatrixDyn},
         memory_impl::OwnedMem,
         operation::{asum::Asum, zeros::Zeros},
     };
@@ -73,6 +81,27 @@ mod broadcast {
             vec![1., 2., 1., 2., 1., 2., 1., 2., 1., 2., 1., 2.],
             &[2, 3, 1, 2],
         );
+        let diff = ans.to_view() - res.to_view();
+        let diff_sum = diff.to_view().asum();
+        assert_eq!(diff_sum, 0.);
+    }
+
+    #[test]
+    fn broadcast_4d_4d() {
+        let source = OwnedMatrixDyn::from_vec(vec![1., 2., 3., 4.], &[1, 1, 1, 4]);
+        let mut res = OwnedMatrixDyn::zeros([2, 3, 4, 4]);
+        res.to_view_mut().broadcast(&source.to_view());
+        let ans = OwnedMatrixDyn::from_vec(
+            vec![
+                1., 2., 3., 4., 1., 2., 3., 4., 1., 2., 3., 4., 1., 2., 3., 4., 1., 2., 3., 4., 1.,
+                2., 3., 4., 1., 2., 3., 4., 1., 2., 3., 4., 1., 2., 3., 4., 1., 2., 3., 4., 1., 2.,
+                3., 4., 1., 2., 3., 4., 1., 2., 3., 4., 1., 2., 3., 4., 1., 2., 3., 4., 1., 2., 3.,
+                4., 1., 2., 3., 4., 1., 2., 3., 4., 1., 2., 3., 4., 1., 2., 3., 4., 1., 2., 3., 4.,
+                1., 2., 3., 4., 1., 2., 3., 4., 1., 2., 3., 4.,
+            ],
+            [2, 3, 4, 4],
+        );
+
         let diff = ans.to_view() - res.to_view();
         let diff_sum = diff.to_view().asum();
         assert_eq!(diff_sum, 0.);

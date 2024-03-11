@@ -5,7 +5,7 @@ use zenu_matrix::{
     matrix::{MatrixBase, ToViewMatrix, ToViewMutMatrix},
     matrix_impl::OwnedMatrixDyn,
     num::Num,
-    operation::{copy_from::CopyFrom, sum::MatrixSum, zeros::Zeros},
+    operation::{add_axis::MatrixAddAxis, copy_from::CopyFrom, sum::MatrixSum, zeros::Zeros},
 };
 
 use crate::{Function, Variable, VariableWeak};
@@ -52,11 +52,49 @@ impl<T: Num> Function<T> for Sum<T> {
     }
 }
 
+// FIXME: 汚いのでどうにかする
 pub fn sum<T: Num>(input: Variable<T>, axis: usize, keep_dim: bool) -> Variable<T> {
     let output_shape = input.get_data().shape().remove_axis(axis);
-    let output = Variable::from(OwnedMatrixDyn::zeros(output_shape));
+    let mut zeros = OwnedMatrixDyn::zeros(output_shape);
+    if keep_dim {
+        zeros.add_axis(axis);
+    }
+    let output = Variable::from(zeros);
     let sum = Sum::new(input, output.clone().downgrade(), axis, keep_dim);
     sum.forward();
     output.set_creator(Rc::new(RefCell::new(Box::new(sum))));
     output
+}
+
+#[cfg(test)]
+mod sum {
+    use zenu_matrix::{
+        dim::DimTrait,
+        matrix::{MatrixBase, OwnedMatrix, ToViewMatrix},
+        matrix_impl::OwnedMatrixDyn,
+        operation::asum::Asum,
+    };
+
+    use crate::creator::from_vec::from_vec;
+
+    use super::sum;
+
+    #[test]
+    fn sum_3d_keep_dim() {
+        let input = from_vec(
+            vec![
+                1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12., 13., 14., 15., 16., 17., 18.,
+                19., 20., 21., 22., 23., 24., 25., 26., 27.,
+            ],
+            [3, 3, 3],
+        );
+        let output = sum(input, 0, true);
+        assert_eq!(output.get_data().shape().slice(), [1, 3, 3]);
+        output.backward();
+        let ans =
+            OwnedMatrixDyn::from_vec(vec![30., 33., 36., 39., 42., 45., 48., 51., 54.], [1, 3, 3]);
+        let diff = output.get_data().to_view() - ans;
+        let diff = diff.asum();
+        assert!(diff < 1e-6);
+    }
 }

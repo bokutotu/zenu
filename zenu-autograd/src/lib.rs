@@ -4,13 +4,14 @@ pub mod functions;
 use std::{
     cell::{Ref, RefCell, RefMut},
     collections::{BinaryHeap, HashSet},
+    fmt::{Debug, Display},
     ops::Deref,
     rc::{Rc, Weak},
 };
 
 use zenu_matrix::{
     dim::DimDyn,
-    matrix::{MatrixBase, OwnedMatrix},
+    matrix::{MatrixBase, OwnedMatrix, ToViewMatrix},
     matrix_impl::Matrix,
     memory_impl::OwnedMem,
     num::Num,
@@ -250,5 +251,21 @@ pub struct VariableWeak<T: Num> {
 impl<T: Num> VariableWeak<T> {
     pub fn upgrade(&self) -> Option<Variable<T>> {
         self.inner.upgrade().map(|inner| Variable { inner })
+    }
+}
+
+impl<T: Num> Debug for Variable<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let inner = self.get_data().clone();
+        write!(f, "Variable {{ data: {:?} }}", inner)?;
+        Ok(())
+    }
+}
+
+impl<T: Num> Display for Variable<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let inner = self.get_data().clone();
+        write!(f, "Variable {{ data: {:?} }}", inner)?;
+        Ok(())
     }
 }
