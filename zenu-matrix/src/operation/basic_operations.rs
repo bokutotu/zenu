@@ -1,5 +1,5 @@
 use crate::{
-    dim::{DimDyn, DimTrait},
+    dim::{larger_shape, smaller_shape, DimDyn, DimTrait},
     index::Index0D,
     matrix::{IndexAxisDyn, IndexAxisMutDyn, MatrixBase, ToViewMatrix, ToViewMutMatrix},
     matrix_impl::Matrix,
@@ -23,6 +23,13 @@ fn get_tmp_matrix<M: ToViewMemory, D: DimTrait>(
     } else {
         a.to_view().into_dyn_dim()
     }
+}
+
+/// 1dのMatrixを受け取る(これは入力側でチェック)
+/// その配列の中身が1かどうかを確認
+/// 1ならtrueを返す
+fn is_1d_1(a: &[usize]) -> bool {
+    a[0] == 1
 }
 
 macro_rules! impl_basic_1d_functions {
@@ -178,17 +185,8 @@ macro_rules! impl_traits {
             M3: ToViewMutMemory<Item = T>,
         {
             fn $trait_method(&mut self, lhs: Matrix<M1, D1>, rhs: Matrix<M2, D2>) {
-                let (larger_dim, smaller_dim) = if lhs.shape().len() < rhs.shape().len() {
-                    (
-                        DimDyn::from(rhs.shape().slice()),
-                        DimDyn::from(lhs.shape().slice()),
-                    )
-                } else {
-                    (
-                        DimDyn::from(lhs.shape().slice()),
-                        DimDyn::from(rhs.shape().slice()),
-                    )
-                };
+                let larger_dim = larger_shape(lhs.shape(), rhs.shape());
+                let smaller_dim = smaller_shape(lhs.shape(), rhs.shape());
 
                 if !(larger_dim.is_include(smaller_dim) || DimDyn::from(self.shape().slice()).is_include_bradcast(smaller_dim)) {
                     panic!(
@@ -207,12 +205,21 @@ macro_rules! impl_traits {
                     return;
                 }
 
+
                 if self.shape().is_empty() {
                     let self_slice = self.as_mut_slice();
                     let lhs_slice = lhs.as_slice();
                     let rhs_slice = rhs.as_slice();
                     self_slice[0] = lhs_slice[0] + rhs_slice[0];
                 } else if self.shape().len() == 1 {
+                    if is_1d_1(lhs.shape().slice()) {
+                        $mod_name::_1d_scalar_cpu(&mut self.to_view_mut(),&rhs.to_view(), lhs.as_slice()[0]);
+                        return;
+                    } else if is_1d_1(rhs.shape().slice()) {
+                        $mod_name::_1d_scalar_cpu(&mut self.to_view_mut(),&lhs.to_view(), rhs.as_slice()[0]);
+                        return;
+                    }
+
                     $mod_name::_1d_1d_cpu(&mut self.to_view_mut(), &lhs.to_view(), &rhs.to_view());
                 } else {
                     let num_iter = self.shape()[0];
@@ -257,6 +264,8 @@ macro_rules! impl_traits {
                     panic!("rhs shape is not include self shape {:?} {:?}", self.shape(), rhs.shape());
                 }
 
+
+
                 if self.shape().is_empty() {
                     let self_slice = self.as_mut_slice();
                     let rhs_slice = rhs.as_slice();
@@ -264,6 +273,11 @@ macro_rules! impl_traits {
                 } else if rhs.shape().is_empty() {
                     self.$assign_trait_method(rhs.as_slice()[0]);
                 } else if self.shape().len() == 1 {
+                    if is_1d_1(rhs.shape().slice()) {
+                        self.$assign_trait_method(rhs.as_slice()[0]);
+                        return ;
+                    }
+
                     $mod_name::assign_1d_1d_cpu(&mut self.to_view_mut(), &rhs.to_view());
                 } else {
                     let num_iter = self.shape()[0];

@@ -11,7 +11,7 @@ use std::{
 
 use zenu_matrix::{
     dim::DimDyn,
-    matrix::{MatrixBase, OwnedMatrix, ToViewMatrix},
+    matrix::{MatrixBase, OwnedMatrix},
     matrix_impl::Matrix,
     memory_impl::OwnedMem,
     num::Num,
@@ -166,9 +166,10 @@ impl<T: Num> Variable<T> {
             inner: Rc::new(RefCell::new(VariableInner::new(data))),
         }
     }
-    pub fn get_data<'a>(&'a self) -> Ref<'a, Matrix<OwnedMem<T>, DimDyn>> {
+    pub fn get_data<'a>(&'a self) -> Matrix<OwnedMem<T>, DimDyn> {
         let reference: Ref<'a, VariableInner<T>> = self.inner.borrow();
-        Ref::map(reference, |r| &r.data)
+        let ref_v = Ref::map(reference, |r| &r.data);
+        ref_v.clone()
     }
 
     pub fn get_data_mut<'a>(&'a self) -> RefMut<'a, Matrix<OwnedMem<T>, DimDyn>> {
@@ -184,12 +185,13 @@ impl<T: Num> Variable<T> {
         self.inner.borrow().get_creator().clone()
     }
 
-    pub fn get_grad<'a>(&'a self) -> Ref<'a, Option<Variable<T>>> {
+    pub fn get_grad<'a>(&'a self) -> Option<Variable<T>> {
         let reference: Ref<'a, VariableInner<T>> = self.inner.borrow();
-        Ref::map(reference, |r| &r.grad)
+        let ref_option = Ref::map(reference, |r| &r.grad);
+        ref_option.clone()
     }
 
-    pub fn get_grad_mut<'a>(&'a self) -> RefMut<'a, Option<Variable<T>>> {
+    fn get_grad_mut<'a>(&'a self) -> RefMut<'a, Option<Variable<T>>> {
         let reference: RefMut<'a, VariableInner<T>> = self.inner.borrow_mut();
         RefMut::map(reference, |r| &mut r.grad)
     }
@@ -239,7 +241,18 @@ impl<T: Num> Variable<T> {
     }
 
     pub fn set_grad(&self, grad: Variable<T>) {
-        *self.get_grad_mut() = Some(grad);
+        if self.get_data().shape() != grad.get_data().shape() {
+            panic!("shape of grad and data must be same");
+        }
+        let mut grad_mut = self.get_grad_mut();
+        match *grad_mut {
+            Some(ref mut grad_variable) => {
+                *grad_variable = grad + grad_variable.clone();
+            }
+            None => {
+                *grad_mut = Some(grad);
+            }
+        }
     }
 }
 

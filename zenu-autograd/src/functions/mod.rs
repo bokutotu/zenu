@@ -1,5 +1,5 @@
 use zenu_matrix::{
-    dim::{DimDyn, DimTrait},
+    dim::{larger_shape, DimDyn},
     matrix::MatrixBase,
     num::Num,
 };
@@ -13,14 +13,13 @@ pub mod broadcast;
 pub mod matmul;
 pub mod relu;
 pub mod softmax;
+pub mod sub;
 pub mod sum;
 pub mod sum_to;
 pub mod transpose;
 
 pub(crate) fn output_shape<T: Num>(x: &Variable<T>, y: &Variable<T>) -> DimDyn {
-    if x.get_data().shape().len() > y.get_data().shape().len() {
-        x.get_data().shape()
-    } else {
-        y.get_data().shape()
-    }
+    let x_shape = x.get_data().shape();
+    let y_shape = y.get_data().shape();
+    larger_shape(x_shape, y_shape)
 }

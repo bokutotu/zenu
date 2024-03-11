@@ -1,8 +1,9 @@
 pub mod dim_dyn;
 pub mod dim_static;
 
+pub use dim_dyn::larger_shape;
 pub use dim_dyn::DimDyn;
-pub(crate) use dim_dyn::{into_dyn, larger_shape};
+pub(crate) use dim_dyn::{into_dyn, smaller_shape};
 pub use dim_static::{Dim0, Dim1, Dim2, Dim3, Dim4};
 
 use std::{

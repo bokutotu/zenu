@@ -80,6 +80,14 @@ mod sum {
     use super::sum;
 
     #[test]
+    fn sum_2d_1d_keep_dim() {
+        let input = from_vec(vec![1., 2., 3., 4., 5., 6.], [2, 3]);
+        let output = sum(input, 1, true);
+        let ans = OwnedMatrixDyn::from_vec(vec![6., 15.], [2, 1]);
+        assert_eq!((output.get_data().to_view() - ans.to_view()).asum(), 0.);
+    }
+
+    #[test]
     fn sum_3d_keep_dim() {
         let input = from_vec(
             vec![

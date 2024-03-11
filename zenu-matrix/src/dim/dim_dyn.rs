@@ -7,17 +7,53 @@ pub struct DimDyn {
     dim: [usize; 4],
     len: usize,
 }
-
-pub(crate) fn larger_shape<D1: DimTrait, D2: DimTrait>(x: D1, y: D2) -> DimDyn {
+/// larger_shapeは2つのshapeのうち大きい方のshapeを返す
+/// xとyを受け取り、xがlarger_shapeである場合はtrueを返す
+/// xがyよりも小さい場合はfalseを返す
+fn larger_shape_is_x<D1: DimTrait, D2: DimTrait>(x: D1, y: D2) -> bool {
     let x = DimDyn::from(x.slice());
     let y = DimDyn::from(y.slice());
 
-    if x.is_include(y) {
+    if x.len() < y.len() {
+        if y.is_include(x) {
+            false
+        } else {
+            panic!("This is bug please make issue");
+        }
+    } else if x.len() > y.len() {
+        if x.is_include(y) {
+            true
+        } else {
+            panic!("This is bug please make issue");
+        }
+    } else if x.is_include_bradcast(y) {
+        true
+    } else if y.is_include_bradcast(x) {
+        false
+    } else {
+        panic!("This is bug please make issue");
+    }
+}
+
+pub fn larger_shape<D1: DimTrait, D2: DimTrait>(x: D1, y: D2) -> DimDyn {
+    let x = DimDyn::from(x.slice());
+    let y = DimDyn::from(y.slice());
+
+    if larger_shape_is_x(x, y) {
         x
-    } else if y.is_include(x) {
+    } else {
+        y
+    }
+}
+
+pub(crate) fn smaller_shape<D1: DimTrait, D2: DimTrait>(x: D1, y: D2) -> DimDyn {
+    let x = DimDyn::from(x.slice());
+    let y = DimDyn::from(y.slice());
+
+    if larger_shape_is_x(x, y) {
         y
     } else {
-        panic!("Shape is not compatible");
+        x
     }
 }
 

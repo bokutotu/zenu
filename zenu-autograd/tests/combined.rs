@@ -39,6 +39,6 @@ fn test_use_twice() {
     assert_eq!(unsafe { *result.get_data().to_view().as_ptr() }, 12.0);
     result.backward();
     x.with_grad_data(|grad| {
-        assert_eq!(unsafe { *grad.to_view().as_ptr() }, 3.0);
+        assert_eq!(unsafe { *grad.to_view().as_ptr() }, 6.0);
     });
 }
