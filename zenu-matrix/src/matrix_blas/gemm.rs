@@ -1,7 +1,13 @@
 use crate::{
     blas::{Blas, BlasLayout, BlasTrans},
     dim::{Dim2, DimTrait},
-    matrix::{MatrixBase, ViewMatrix, ViewMutMatix},
+    index::Index0D,
+    matrix::{
+        IndexAxisDyn, IndexAxisMutDyn, MatrixBase, ToViewMatrix, ToViewMutMatrix, ViewMatrix,
+        ViewMutMatix,
+    },
+    matrix_impl::{matrix_into_dim, Matrix},
+    memory::{ToViewMemory, View, ViewMut},
     num::Num,
 };
 
@@ -135,6 +141,132 @@ where
     gemm_shape_check(&a, &b, &c).unwrap();
     gemm_unchecked(a, b, c, alpha, beta);
 }
+
+pub(crate) fn gemm_batch_shape_check<AM, BM, CM, AD, BD, CD>(
+    a: &Matrix<AM, AD>,
+    b: &Matrix<BM, BD>,
+    c: &Matrix<CM, CD>,
+) -> Result<(), String>
+where
+    AM: View + ToViewMemory,
+    BM: View + ToViewMemory,
+    CM: ViewMut + ToViewMemory,
+    AD: DimTrait,
+    BD: DimTrait,
+    CD: DimTrait,
+{
+    let a_shape = a.shape();
+    let b_shape = b.shape();
+    let c_shape = c.shape();
+
+    // Check dimensions
+    let min_dim = 2;
+    let max_dim = 3;
+    if a_shape.len() < min_dim || b_shape.len() < min_dim || c_shape.len() < min_dim {
+        return Err("The input and output matrices must be at least 2-D.".to_string());
+    }
+    if a_shape.len() > max_dim || b_shape.len() > max_dim || c_shape.len() > max_dim {
+        return Err("The input and output matrices must be at most 3-D.".to_string());
+    }
+
+    // Check broadcast dimensions
+    if a_shape.len() == max_dim && b_shape.len() == max_dim && c_shape.len() == max_dim {
+        if a_shape[0] != b_shape[0] || a_shape[0] != c_shape[0] {
+            return Err(format!(
+                "Mismatched batch dimensions: a.shape() = {:?}, b.shape() = {:?}, c.shape() = {:?}",
+                a_shape, b_shape, c_shape
+            ));
+        }
+    }
+
+    let a_dyn = a.to_view().into_dyn_dim();
+    let a_view = if a_dyn.shape().len() == 3 {
+        a_dyn.index_axis_dyn(Index0D::new(0))
+    } else {
+        a_dyn.to_view()
+    };
+
+    let b_dyn = b.to_view().into_dyn_dim();
+    let b_view = if b_dyn.shape().len() == 3 {
+        b_dyn.index_axis_dyn(Index0D::new(0))
+    } else {
+        b_dyn.to_view()
+    };
+
+    let c_dyn = c.to_view().into_dyn_dim();
+    let c_view = if c_dyn.shape().len() == 3 {
+        c_dyn.index_axis_dyn(Index0D::new(0))
+    } else {
+        c_dyn.to_view()
+    };
+
+    gemm_shape_check(&a_view, &b_view, &c_view)?;
+    Ok(())
+}
+
+pub(crate) fn gemm_batch_unchecked<T, AM, BM, CM, AD, BD, CD>(
+    a: Matrix<AM, AD>,
+    b: Matrix<BM, BD>,
+    c: Matrix<CM, CD>,
+    alpha: T,
+    beta: T,
+) where
+    T: Num,
+    AM: View + ToViewMemory<Item = T>,
+    BM: View + ToViewMemory<Item = T>,
+    CM: ViewMut + ToViewMemory<Item = T>,
+    AD: DimTrait,
+    BD: DimTrait,
+    CD: DimTrait,
+{
+    let a = a.into_dyn_dim();
+    let b = b.into_dyn_dim();
+    let mut c = c.into_dyn_dim();
+
+    for idx in 0..c.shape()[0] {
+        let a = if a.shape().len() == 3 {
+            a.index_axis_dyn(Index0D::new(idx))
+        } else {
+            a.to_view()
+        };
+        let b = if b.shape().len() == 3 {
+            b.index_axis_dyn(Index0D::new(idx))
+        } else {
+            b.to_view()
+        };
+        let c = if c.shape().len() == 3 {
+            c.index_axis_mut_dyn(Index0D::new(idx))
+        } else {
+            c.to_view_mut()
+        };
+
+        let a = matrix_into_dim(a);
+        let b = matrix_into_dim(b);
+        let c = matrix_into_dim(c);
+
+        gemm_unchecked(a, b, c, alpha, beta);
+    }
+}
+
+pub fn gemm_batch<T, AM, BM, CM, AD, BD, CD>(
+    a: Matrix<AM, AD>,
+    b: Matrix<BM, BD>,
+    c: Matrix<CM, CD>,
+    alpha: T,
+    beta: T,
+) where
+    T: Num,
+    AM: View + ToViewMemory<Item = T>,
+    BM: View + ToViewMemory<Item = T>,
+    CM: ViewMut + ToViewMemory<Item = T>,
+    AD: DimTrait,
+    BD: DimTrait,
+    CD: DimTrait,
+{
+    gemm_batch_shape_check(&a, &b, &c).unwrap();
+    gemm_batch_unchecked(a, b, c, alpha, beta);
+}
+
 #[cfg(test)]
 mod gemm {
     use crate::{

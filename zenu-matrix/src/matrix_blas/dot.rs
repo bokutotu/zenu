@@ -1,6 +1,6 @@
 use crate::{
     blas::Blas,
-    dim::{Dim1, Dim2, DimTrait},
+    dim::{Dim1, DimTrait},
     index::Index0D,
     matrix::{IndexAxisDyn, IndexItemAsign, MatrixBase, ToViewMatrix, ToViewMutMatrix, ViewMatrix},
     matrix_impl::{matrix_into_dim, Matrix},

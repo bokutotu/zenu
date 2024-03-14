@@ -21,12 +21,12 @@ use crate::{
 /// # Examples
 ///
 /// ```
-/// use crate::{
+/// use zenu_matrix::{
 ///     matrix::{IndexItem, OwnedMatrix, ToViewMutMatrix},
 ///     matrix_impl::{OwnedMatrix1D, OwnedMatrix2D},
 /// };
 ///
-/// use super::Dot;
+/// use zenu_matrix::operation::dot::Dot;
 ///
 /// let a = OwnedMatrix2D::from_vec(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], [2, 3]);
 /// let b = OwnedMatrix1D::from_vec(vec![7.0, 8.0, 9.0], [3]);
