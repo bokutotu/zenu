@@ -76,7 +76,7 @@ pub trait Gemm<Rhs, Lhs>: ToViewMutMatrix {
     fn gemm(self, rhs: Rhs, lhs: Lhs);
 }
 
-impl<'a, 'b, 'c, T, M1, M2, M3, D1, D2, D3> Gemm<Matrix<M1, D1>, Matrix<M2, D2>> for Matrix<M3, D3>
+impl<T, M1, M2, M3, D1, D2, D3> Gemm<Matrix<M1, D1>, Matrix<M2, D2>> for Matrix<M3, D3>
 where
     T: Num,
     D1: DimTrait,
@@ -87,26 +87,22 @@ where
     M3: ViewMut<Item = T>,
 {
     fn gemm(self, rhs: Matrix<M1, D1>, lhs: Matrix<M2, D2>) {
-        match gemm_shape_check(&rhs, &lhs, &self) {
-            Ok(()) => {
-                gemm_unchecked(
-                    matrix_into_dim(rhs),
-                    matrix_into_dim(lhs),
-                    matrix_into_dim(self),
-                    T::one(),
-                    T::zero(),
-                );
-                return;
-            }
-            Err(_) => (),
-        };
-        match gemm_batch_shape_check(&rhs, &lhs, &self) {
-            Ok(()) => {
-                gemm_batch_unchecked(rhs, lhs, self, T::one(), T::zero());
-                return;
-            }
-            Err(_) => (),
+        // したのコードをif let Ok(())に続く形で書き直して
+        if let Ok(()) = gemm_shape_check(&rhs, &lhs, &self) {
+            gemm_unchecked(
+                matrix_into_dim(rhs),
+                matrix_into_dim(lhs),
+                matrix_into_dim(self),
+                T::one(),
+                T::zero(),
+            );
+            return;
         }
+        if let Ok(()) = gemm_batch_shape_check(&rhs, &lhs, &self) {
+            gemm_batch_unchecked(rhs, lhs, self, T::one(), T::zero());
+            return;
+        }
+
         panic!("Dimension mismatch");
     }
 }

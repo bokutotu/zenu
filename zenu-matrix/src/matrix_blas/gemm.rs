@@ -169,14 +169,15 @@ where
         return Err("The input and output matrices must be at most 3-D.".to_string());
     }
 
-    // Check broadcast dimensions
-    if a_shape.len() == max_dim && b_shape.len() == max_dim && c_shape.len() == max_dim {
-        if a_shape[0] != b_shape[0] || a_shape[0] != c_shape[0] {
-            return Err(format!(
-                "Mismatched batch dimensions: a.shape() = {:?}, b.shape() = {:?}, c.shape() = {:?}",
-                a_shape, b_shape, c_shape
-            ));
-        }
+    if a_shape.len() == max_dim
+        && b_shape.len() == max_dim
+        && c_shape.len() == max_dim
+        && (a_shape[0] != b_shape[0] || a_shape[0] != c_shape[0])
+    {
+        return Err(format!(
+            "Mismatched batch dimensions: a.shape() = {:?}, b.shape() = {:?}, c.shape() = {:?}",
+            a_shape, b_shape, c_shape
+        ));
     }
 
     let a_dyn = a.to_view().into_dyn_dim();

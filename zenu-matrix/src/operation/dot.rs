@@ -51,43 +51,28 @@ where
     DL: DimTrait,
 {
     fn dot(self, rhs: Matrix<RM, DR>, lhs: Matrix<LM, DL>) {
-        // 1d 1d dot
-        match dot_shape_check(rhs.shape(), lhs.shape()) {
-            Ok(()) => {
-                let result = dot_unchecked(
-                    matrix_into_dim(rhs).to_view(),
-                    matrix_into_dim(lhs).to_view(),
-                );
-                self.into_dyn_dim().index_item_asign([], result);
-                return;
-            }
-            Err(_) => (),
+        // if let Ok(())にするように書き換えて
+        if let Ok(()) = dot_shape_check(rhs.shape(), lhs.shape()) {
+            let result = dot_unchecked(
+                matrix_into_dim(rhs).to_view(),
+                matrix_into_dim(lhs).to_view(),
+            );
+            self.into_dyn_dim().index_item_asign([], result);
+            return;
         }
-        // 2d 1d dot -> dot_batch
-        match dbg!(dot_batch_shape_check(
-            self.shape(),
-            rhs.shape(),
-            lhs.shape()
-        )) {
-            Ok(()) => {
-                dot_batch_unchecked(self, rhs, lhs);
-                return;
-            }
-            Err(_) => (),
+        if let Ok(()) = dot_batch_shape_check(self.shape(), rhs.shape(), lhs.shape()) {
+            dot_batch_unchecked(self, rhs, lhs);
+            return;
         }
-        // 2d 2d dot -> gemm
-        match gemm_shape_check(&rhs, &lhs, &self) {
-            Ok(()) => {
-                gemm_unchecked(
-                    matrix_into_dim(rhs).to_view(),
-                    matrix_into_dim(lhs).to_view(),
-                    matrix_into_dim(self).to_view_mut(),
-                    T::one(),
-                    T::one(),
-                );
-                return;
-            }
-            Err(_) => (),
+        if let Ok(()) = gemm_shape_check(&rhs, &lhs, &self) {
+            gemm_unchecked(
+                matrix_into_dim(rhs).to_view(),
+                matrix_into_dim(lhs).to_view(),
+                matrix_into_dim(self).to_view_mut(),
+                T::one(),
+                T::one(),
+            );
+            return;
         }
         panic!("Dimension mismatch");
     }
