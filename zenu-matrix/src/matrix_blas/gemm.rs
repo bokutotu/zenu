@@ -1,6 +1,6 @@
 use crate::{
     blas::{Blas, BlasLayout, BlasTrans},
-    dim::Dim2,
+    dim::{Dim2, DimTrait},
     matrix::{MatrixBase, ViewMatrix, ViewMutMatix},
     num::Num,
 };
@@ -13,33 +13,50 @@ fn get_leading_dim(shape: Dim2, is_transpose: bool) -> usize {
     }
 }
 
-pub(crate) fn gemm_shape_check<T, A, B, C>(a: &A, b: &B, c: &C)
+pub(crate) fn gemm_shape_check<A, B, C>(a: &A, b: &B, c: &C) -> Result<(), String>
 where
-    T: Num,
-    A: ViewMatrix + MatrixBase<Dim = Dim2, Item = T>,
-    B: ViewMatrix + MatrixBase<Dim = Dim2, Item = T>,
-    C: ViewMutMatix + MatrixBase<Dim = Dim2, Item = T>,
+    A: MatrixBase,
+    B: MatrixBase,
+    C: MatrixBase,
 {
     let c_shape = c.shape();
     let a_shape = a.shape();
     let b_shape = b.shape();
 
+    if c_shape.len() != 2 {
+        return Err("The output matrix C must be 2-D.".to_string());
+    }
+    if a_shape.len() != 2 {
+        return Err("The input matrix A must be 2-D.".to_string());
+    }
+    if b_shape.len() != 2 {
+        return Err("The input matrix B must be 2-D.".to_string());
+    }
+
     let is_transposed_c = c.shape_stride().is_transposed();
 
     if is_transposed_c {
-        panic!("The output matrix C must not be transposed.");
+        return Err("The output matrix C must not be transposed.".to_string());
     }
 
     if a_shape[0] != c_shape[0] {
-        panic!("The number of rows of matrix A must match the number of rows of matrix C.");
+        return Err(
+            "The number of rows of matrix A must match the number of rows of matrix C.".to_string(),
+        );
     }
 
     if b_shape[1] != c_shape[1] {
-        panic!("The number of columns of matrix B must match the number of columns of matrix C.");
+        return Err(
+            "The number of columns of matrix B must match the number of columns of matrix C."
+                .to_string(),
+        );
     }
 
     if a_shape[1] != b_shape[0] {
-        panic!("The number of columns of matrix A must match the number of rows of matrix B.");
+        return Err(
+            "The number of columns of matrix A must match the number of rows of matrix B."
+                .to_string(),
+        );
     }
 
     if a_shape[0] == 0
@@ -49,8 +66,11 @@ where
         || c_shape[0] == 0
         || c_shape[1] == 0
     {
-        panic!("The dimensions of the input and output matrices must be greater than 0.");
+        return Err(
+            "The dimensions of the input and output matrices must be greater than 0.".to_string(),
+        );
     }
+    Ok(())
 }
 
 pub(crate) fn gemm_unchecked<T, A, B, C>(a: A, b: B, mut c: C, alpha: T, beta: T)
@@ -112,7 +132,7 @@ where
     B: ViewMatrix + MatrixBase<Dim = Dim2, Item = T>,
     C: ViewMutMatix + MatrixBase<Dim = Dim2, Item = T>,
 {
-    gemm_shape_check(&a, &b, &c);
+    gemm_shape_check(&a, &b, &c).unwrap();
     gemm_unchecked(a, b, c, alpha, beta);
 }
 #[cfg(test)]

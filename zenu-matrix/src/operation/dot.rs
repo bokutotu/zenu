@@ -1,21 +1,42 @@
 use crate::{
     dim::DimTrait,
-    matrix::{IndexItemAsign, MatrixBase, ToViewMatrix},
-    matrix_blas::dot::dot as dot_func,
+    matrix::{IndexItemAsign, MatrixBase, ToViewMatrix, ToViewMutMatrix},
+    matrix_blas::{
+        dot::{dot_batch_shape_check, dot_batch_unchecked, dot_shape_check, dot_unchecked},
+        gemm::{gemm_shape_check, gemm_unchecked},
+    },
     matrix_impl::{matrix_into_dim, Matrix},
     memory::{ToViewMemory, ViewMut},
     num::Num,
 };
 
+/// Trait for computing the dot product of two vectors or matrices.
+/// The behavior of the `dot` function depends on the dimensions of the input:
+/// - If both inputs are 1-D arrays, it computes the inner product of vectors (without complex conjugation).
+/// - If both inputs are 2-D arrays, it performs matrix multiplication. For this case, consider using `matmul`.
+/// - If either input is 0-D (scalar), it multiplies the scalar with the other input. For this case, consider using `multiply` or the `*` operator.
+/// - If the first input is an N-D array and the second input is a 1-D array, it computes a sum product over the last axis of the first input.
+/// - If the first input is an N-D array and the second input is an M-D array (where M>=2), it computes a sum product over the last axis of the first input and the second-to-last axis of the second input.
+///
+/// # Examples
+///
+/// ```
+/// use crate::{
+///     matrix::{IndexItem, OwnedMatrix, ToViewMutMatrix},
+///     matrix_impl::{OwnedMatrix1D, OwnedMatrix2D},
+/// };
+///
+/// use super::Dot;
+///
+/// let a = OwnedMatrix2D::from_vec(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], [2, 3]);
+/// let b = OwnedMatrix1D::from_vec(vec![7.0, 8.0, 9.0], [3]);
+/// let mut c = OwnedMatrix1D::from_vec(vec![0.0, 0.0], [2]);
+/// c.to_view_mut().dot(a, b);
+///
+/// assert_eq!(c.index_item([0]), 50.0);
+/// assert_eq!(c.index_item([1]), 122.0);
+/// ```
 pub trait Dot<RHS, LHS> {
-    /// Compute the dot product of two vectors.
-    /// - If both a and b are 1-D arrays, it is inner product of vectors (without complex conjugation).
-    /// - If both a and b are 2-D arrays, it is matrix multiplication, but using `matmul``.
-    /// - If either a or b is 0-D (scalar),
-    ///   it is equivalent to multiply and using numpy.multiply(a, b) or a * b is preferred.
-    /// - If a is an N-D array and b is a 1-D array, it is a sum product over t
-    /// - If a is an N-D array and b is an M-D array (where M>=2),
-    ///   it is a sum product over the last axis of a and the second-to-last axis of b:he last axis of a and b.
     fn dot(self, rhs: RHS, lhs: LHS);
 }
 
@@ -30,44 +51,53 @@ where
     DL: DimTrait,
 {
     fn dot(self, rhs: Matrix<RM, DR>, lhs: Matrix<LM, DL>) {
-        dot_shape_check(self.shape(), rhs.shape(), lhs.shape());
-        let result = dot_func(
-            matrix_into_dim(rhs).to_view(),
-            matrix_into_dim(lhs).to_view(),
-        );
-        let mut s = self.into_dyn_dim();
-        s.index_item_asign(&[], result);
+        // 1d 1d dot
+        match dot_shape_check(rhs.shape(), lhs.shape()) {
+            Ok(()) => {
+                let result = dot_unchecked(
+                    matrix_into_dim(rhs).to_view(),
+                    matrix_into_dim(lhs).to_view(),
+                );
+                self.into_dyn_dim().index_item_asign([], result);
+                return;
+            }
+            Err(_) => (),
+        }
+        // 2d 1d dot -> dot_batch
+        match dbg!(dot_batch_shape_check(
+            self.shape(),
+            rhs.shape(),
+            lhs.shape()
+        )) {
+            Ok(()) => {
+                dot_batch_unchecked(self, rhs, lhs);
+                return;
+            }
+            Err(_) => (),
+        }
+        // 2d 2d dot -> gemm
+        match gemm_shape_check(&rhs, &lhs, &self) {
+            Ok(()) => {
+                gemm_unchecked(
+                    matrix_into_dim(rhs).to_view(),
+                    matrix_into_dim(lhs).to_view(),
+                    matrix_into_dim(self).to_view_mut(),
+                    T::one(),
+                    T::one(),
+                );
+                return;
+            }
+            Err(_) => (),
+        }
+        panic!("Dimension mismatch");
     }
-}
-
-fn dot_shape_check<SD, RD, LD>(self_shape: SD, rhs_shape: RD, lhs_shape: LD)
-where
-    SD: DimTrait,
-    RD: DimTrait,
-    LD: DimTrait,
-{
-    if rhs_shape.len() == 1
-        && lhs_shape.len() == 1
-        && self_shape.len() == 0
-        && rhs_shape[0] == lhs_shape[0]
-    {
-        return;
-    }
-    if rhs_shape.len() < lhs_shape.len() {
-        dot_shape_check(self_shape, lhs_shape, rhs_shape);
-        return;
-    }
-    if rhs_shape.len() > 2 {
-        panic!("dot only supports 1-D and 2-D arrays");
-    }
-    // if rhs_shape and lhs_shape's length is all 2 gemm. so gemm_shape check
 }
 
 #[cfg(test)]
 mod dot {
     use crate::{
         matrix::{IndexItem, OwnedMatrix, ToViewMutMatrix},
-        matrix_impl::{OwnedMatrix0D, OwnedMatrix1D},
+        matrix_impl::{OwnedMatrix0D, OwnedMatrix1D, OwnedMatrix2D},
     };
 
     use super::Dot;
@@ -80,5 +110,41 @@ mod dot {
         c.to_view_mut().dot(a, b);
 
         assert_eq!(c.index_item([]), 32.0);
+    }
+
+    #[test]
+    fn dot_2d_1d() {
+        let a = OwnedMatrix2D::from_vec(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], [2, 3]);
+        let b = OwnedMatrix1D::from_vec(vec![7.0, 8.0, 9.0], [3]);
+        let mut c = OwnedMatrix1D::from_vec(vec![0.0, 0.0], [2]);
+        c.to_view_mut().dot(a, b);
+
+        assert_eq!(c.index_item([0]), 50.0);
+        assert_eq!(c.index_item([1]), 122.0);
+    }
+
+    #[test]
+    fn dot_1d_2d() {
+        let a = OwnedMatrix1D::from_vec(vec![1.0, 2.0, 3.0], [3]);
+        let b = OwnedMatrix2D::from_vec(vec![4.0, 5.0, 6.0, 7.0, 8.0, 9.0], [2, 3]);
+        let mut c = OwnedMatrix1D::from_vec(vec![0.0, 0.0], [2]);
+        c.to_view_mut().dot(a, b);
+
+        assert_eq!(c.index_item([0]), 32.0);
+        assert_eq!(c.index_item([1]), 50.0);
+    }
+
+    #[test]
+    fn dot_2d_2d() {
+        let a = OwnedMatrix2D::from_vec(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], [2, 3]);
+        let b = OwnedMatrix2D::from_vec(vec![7.0, 8.0, 9.0, 10.0, 11.0, 12.0], [3, 2]);
+        let mut c = OwnedMatrix2D::from_vec(vec![0.0, 0.0, 0.0, 0.0], [2, 2]);
+        c.to_view_mut().dot(a, b);
+        println!("{:?}", c);
+
+        assert_eq!(c.index_item([0, 0]), 58.0);
+        assert_eq!(c.index_item([0, 1]), 64.0);
+        assert_eq!(c.index_item([1, 0]), 139.0);
+        assert_eq!(c.index_item([1, 1]), 154.0);
     }
 }
