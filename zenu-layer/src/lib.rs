@@ -1,14 +1,8 @@
-pub fn add(left: usize, right: usize) -> usize {
-    left + right
-}
+use zenu_autograd::Variable;
+use zenu_matrix::num::Num;
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
+pub trait Layer<T: Num> {
+    fn forward(&self, input: Variable<T>) -> Variable<T>;
+    fn init_parameters(&self);
+    fn parameters(&self) -> Vec<Variable<T>>;
 }
