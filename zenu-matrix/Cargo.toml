@@ -10,6 +10,8 @@ license = "MIT"
 [dependencies]
 cblas = "0.4.0"
 openblas-src = { version = "0.10.8", features = ["system", "cblas"] }
+rand = "0.8.5"
+rand_distr = "0.4.3"
 
 [dev-dependencies]
 itertools = { version = "0.10.0", default-features = false, features = ["use_std"] }
