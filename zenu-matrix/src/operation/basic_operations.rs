@@ -341,9 +341,9 @@ impl_traits!(
 #[cfg(test)]
 mod add {
     use crate::{
+        constructor::zeros::Zeros,
         matrix::{IndexItem, MatrixSlice, OwnedMatrix, ToViewMatrix, ToViewMutMatrix},
         matrix_impl::{OwnedMatrix0D, OwnedMatrix1D, OwnedMatrix2D, OwnedMatrix3D, OwnedMatrixDyn},
-        operation::zeros::Zeros,
         slice,
     };
 
@@ -636,9 +636,10 @@ mod add {
 #[cfg(test)]
 mod sub {
     use crate::{
+        constructor::zeros::Zeros,
         matrix::{IndexItem, OwnedMatrix},
         matrix_impl::OwnedMatrix0D,
-        operation::{basic_operations::MatrixSub, zeros::Zeros},
+        operation::basic_operations::MatrixSub,
     };
 
     #[test]
@@ -654,12 +655,12 @@ mod sub {
 #[cfg(test)]
 mod div {
     use crate::{
+        constructor::zeros::Zeros,
         matrix::{OwnedMatrix, ToViewMatrix},
         matrix_impl::OwnedMatrixDyn,
         operation::{
             asum::Asum,
             basic_operations::{MatrixDiv, MatrixDivAssign},
-            zeros::Zeros,
         },
     };
 
@@ -818,9 +819,10 @@ mod div {
 #[cfg(test)]
 mod mul {
     use crate::{
+        constructor::{ones::Ones, zeros::Zeros},
         matrix::{IndexItem, MatrixSlice, OwnedMatrix, ToViewMatrix, ToViewMutMatrix},
         matrix_impl::{OwnedMatrix0D, OwnedMatrix1D, OwnedMatrix2D, OwnedMatrix4D, OwnedMatrixDyn},
-        operation::{basic_operations::MatrixMul, ones::Ones, zeros::Zeros},
+        operation::basic_operations::MatrixMul,
         slice,
     };
 

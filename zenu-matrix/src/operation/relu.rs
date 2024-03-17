@@ -125,9 +125,10 @@ fn relu_backward_mask_kernel_cpu<T: Num>(
 #[cfg(test)]
 mod relu {
     use crate::{
+        constructor::zeros::Zeros,
         matrix::{OwnedMatrix, ToViewMatrix, ToViewMutMatrix},
         matrix_impl::OwnedMatrixDyn,
-        operation::{asum::Asum, zeros::Zeros},
+        operation::asum::Asum,
     };
 
     use super::Relu;

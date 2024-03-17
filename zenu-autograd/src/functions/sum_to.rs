@@ -1,12 +1,13 @@
 use std::{cell::RefCell, rc::Rc};
 
 use zenu_matrix::{
+    constructor::zeros::Zeros,
     dim::{DimDyn, DimTrait},
     matrix::{MatrixBase, ToViewMatrix, ToViewMutMatrix},
     matrix_impl::Matrix,
     memory_impl::{ViewMem, ViewMutMem},
     num::Num,
-    operation::{copy_from::CopyFrom, sum::MatrixSum, zeros::Zeros},
+    operation::{copy_from::CopyFrom, sum::MatrixSum},
 };
 
 use crate::{Function, Variable, VariableWeak};
@@ -81,11 +82,12 @@ pub fn sum_to<T: Num>(x: Variable<T>, shape: DimDyn) -> Variable<T> {
 #[cfg(test)]
 mod sum_to {
     use zenu_matrix::{
+        constructor::ones::Ones,
         dim::DimDyn,
         matrix::{OwnedMatrix, ToViewMatrix},
         matrix_impl::Matrix,
         memory_impl::OwnedMem,
-        operation::{asum::Asum, ones::Ones},
+        operation::asum::Asum,
     };
 
     use crate::Variable;

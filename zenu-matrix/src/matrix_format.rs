@@ -224,9 +224,9 @@ where
 #[cfg(test)]
 mod matrix_format {
     use crate::{
+        constructor::ones::Ones,
         matrix::OwnedMatrix,
         matrix_impl::{OwnedMatrix1D, OwnedMatrix2D, OwnedMatrix3D, OwnedMatrix4D},
-        operation::ones::Ones,
     };
 
     fn assert_str_eq(expected: &str, actual: &str) {

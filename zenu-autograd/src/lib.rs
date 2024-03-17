@@ -10,12 +10,12 @@ use std::{
 };
 
 use zenu_matrix::{
+    constructor::ones::Ones,
     dim::DimDyn,
     matrix::{MatrixBase, OwnedMatrix},
     matrix_impl::Matrix,
     memory_impl::OwnedMem,
     num::Num,
-    operation::ones::Ones,
 };
 
 pub trait Function<T: Num> {

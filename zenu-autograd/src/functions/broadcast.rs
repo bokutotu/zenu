@@ -1,10 +1,11 @@
 use std::{cell::RefCell, rc::Rc};
 
 use zenu_matrix::{
+    constructor::zeros::Zeros,
     dim::DimDyn,
     matrix::{MatrixBase, ToViewMatrix, ToViewMutMatrix},
     num::Num,
-    operation::{broadcast::Broadcast as B, zeros::Zeros},
+    operation::broadcast::Broadcast as B,
 };
 
 use crate::{Function, Variable, VariableWeak};

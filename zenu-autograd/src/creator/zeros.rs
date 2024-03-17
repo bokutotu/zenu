@@ -1,4 +1,4 @@
-use zenu_matrix::{dim::DimDyn, num::Num, operation::zeros::Zeros};
+use zenu_matrix::{constructor::zeros::Zeros, dim::DimDyn, num::Num};
 
 use crate::Variable;
 

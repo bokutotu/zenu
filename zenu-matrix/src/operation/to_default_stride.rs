@@ -1,4 +1,5 @@
 use crate::{
+    constructor::zeros::Zeros,
     dim::{DimDyn, DimTrait},
     matrix::{MatrixBase, ToViewMutMatrix},
     matrix_impl::Matrix,
@@ -6,7 +7,7 @@ use crate::{
     num::Num,
 };
 
-use super::{copy_from::CopyFrom, zeros::Zeros};
+use super::copy_from::CopyFrom;
 
 pub trait ToDefaultStride<T: Num> {
     fn to_default_stride<SD: DimTrait>(source: Matrix<ViewMem<T>, SD>) -> Self;

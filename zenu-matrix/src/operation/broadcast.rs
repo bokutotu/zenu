@@ -51,11 +51,12 @@ impl<'a, T: Num> Broadcast<T> for Matrix<ViewMutMem<'a, T>, DimDyn> {
 #[cfg(test)]
 mod broadcast {
     use crate::{
+        constructor::zeros::Zeros,
         dim::DimDyn,
         matrix::{OwnedMatrix, ToViewMatrix, ToViewMutMatrix},
         matrix_impl::{Matrix, OwnedMatrixDyn},
         memory_impl::OwnedMem,
-        operation::{asum::Asum, zeros::Zeros},
+        operation::asum::Asum,
     };
 
     use super::Broadcast;

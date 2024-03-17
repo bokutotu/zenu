@@ -5,9 +5,10 @@ use std::{
 };
 
 use zenu_matrix::{
+    constructor::zeros::Zeros,
     matrix::{MatrixBase, ToViewMatrix},
     num::Num,
-    operation::{basic_operations::MatrixMul, zeros::Zeros},
+    operation::basic_operations::MatrixMul,
 };
 
 use crate::{Function, Variable, VariableWeak};

@@ -5,9 +5,10 @@ use std::{
 };
 
 use zenu_matrix::{
+    constructor::zeros::Zeros,
     matrix::{MatrixBase, ToViewMatrix},
     num::Num,
-    operation::{basic_operations::MatrixAdd, zeros::Zeros},
+    operation::basic_operations::MatrixAdd,
 };
 
 use crate::{Function, Variable, VariableWeak};
@@ -71,9 +72,8 @@ impl<T: Num> Add<Variable<T>> for Variable<T> {
 #[cfg(test)]
 mod add {
     use zenu_matrix::{
-        matrix::ToViewMatrix,
-        matrix_impl::OwnedMatrixDyn,
-        operation::{asum::Asum, ones::Ones},
+        constructor::ones::Ones, matrix::ToViewMatrix, matrix_impl::OwnedMatrixDyn,
+        operation::asum::Asum,
     };
 
     use crate::Variable;

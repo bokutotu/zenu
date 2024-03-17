@@ -41,9 +41,10 @@ fn softmax_kernel_cpu<T: Num>(result: Matrix<ViewMutMem<T>, DimDyn>) {
 #[cfg(test)]
 mod softmax {
     use crate::{
+        constructor::zeros::Zeros,
         matrix::{OwnedMatrix, ToViewMatrix},
         matrix_impl::OwnedMatrixDyn,
-        operation::{asum::Asum, zeros::Zeros},
+        operation::asum::Asum,
     };
 
     use super::SoftMax;

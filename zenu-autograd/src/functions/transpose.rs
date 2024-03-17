@@ -1,12 +1,13 @@
 use std::{cell::RefCell, rc::Rc};
 
 use zenu_matrix::{
+    constructor::zeros::Zeros,
     dim::{DimDyn, DimTrait},
     matrix::{MatrixBase, ToViewMatrix, ToViewMutMatrix},
     matrix_impl::Matrix,
     memory_impl::OwnedMem,
     num::Num,
-    operation::{copy_from::CopyFrom, transpose::Transpose as T, zeros::Zeros},
+    operation::{copy_from::CopyFrom, transpose::Transpose as T},
 };
 
 use crate::{Function, Variable, VariableWeak};

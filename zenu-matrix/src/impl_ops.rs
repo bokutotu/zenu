@@ -1,16 +1,14 @@
 use std::ops::{Add, Div, Mul, Sub};
 
 use crate::{
+    constructor::zeros::Zeros,
     dim::{larger_shape, DimDyn, DimTrait},
     matrix::{MatrixBase, ToOwnedMatrix},
     matrix_impl::Matrix,
     memory::{ToOwnedMemory, ToViewMemory},
     memory_impl::OwnedMem,
     num::Num,
-    operation::{
-        basic_operations::{MatrixAdd, MatrixDiv, MatrixMul, MatrixSub},
-        zeros::Zeros,
-    },
+    operation::basic_operations::{MatrixAdd, MatrixDiv, MatrixMul, MatrixSub},
 };
 
 macro_rules! impl_ops {

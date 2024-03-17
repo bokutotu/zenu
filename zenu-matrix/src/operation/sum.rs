@@ -1,11 +1,11 @@
 use crate::{
+    constructor::zeros::Zeros,
     dim::{DimDyn, DimTrait, LessDimTrait},
     index::index_dyn_impl::Index,
     matrix::{IndexAxisDyn, MatrixBase, OwnedMatrix, ToViewMutMatrix, ViewMatrix},
     matrix_impl::Matrix,
     memory_impl::{OwnedMem, ViewMem},
     num::Num,
-    operation::zeros::Zeros,
 };
 
 use super::{add_axis::MatrixAddAxis, basic_operations::MatrixAddAssign};

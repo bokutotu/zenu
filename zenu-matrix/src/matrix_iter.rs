@@ -1,11 +1,12 @@
 use crate::{
+    constructor::zeros::Zeros,
     dim::{cal_offset, DimDyn, DimTrait},
     matrix::{MatrixBase, ToViewMatrix, ToViewMutMatrix},
     matrix_impl::{Matrix, OwnedMatrixDyn},
     memory::{ToViewMemory, ToViewMutMemory},
     memory_impl::{OwnedMem, ViewMutMem},
     num::Num,
-    operation::{copy_from::CopyFrom, zeros::Zeros},
+    operation::copy_from::CopyFrom,
     shape_stride::ShapeStride,
 };
 

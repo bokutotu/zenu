@@ -1,12 +1,13 @@
 use std::{cell::RefCell, rc::Rc};
 
 use zenu_matrix::{
+    constructor::zeros::Zeros,
     dim::DimDyn,
     matrix::{MatrixBase, ToViewMatrix, ToViewMutMatrix},
     matrix_impl::{Matrix, OwnedMatrixDyn},
     memory_impl::OwnedMem,
     num::Num,
-    operation::{relu::Relu as R, zeros::Zeros},
+    operation::relu::Relu as R,
 };
 
 use crate::{Function, Variable, VariableWeak};

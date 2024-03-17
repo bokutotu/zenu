@@ -40,7 +40,7 @@ use crate::{
 /// use zenu_matrix::{
 ///     matrix::{IndexItem, OwnedMatrix, ToViewMatrix, ToViewMutMatrix},
 ///     matrix_impl::OwnedMatrix2D,
-///     operation::zeros::Zeros,
+///     constructor::zeros::Zeros,
 /// };
 ///
 /// use zenu_matrix::operation::mul::Gemm;
@@ -110,9 +110,10 @@ where
 #[cfg(test)]
 mod mat_mul {
     use crate::{
+        constructor::zeros::Zeros,
         matrix::{IndexItem, OwnedMatrix, ToViewMatrix, ToViewMutMatrix},
         matrix_impl::{OwnedMatrix2D, OwnedMatrix3D},
-        operation::{transpose::Transpose, zeros::Zeros},
+        operation::transpose::Transpose,
     };
 
     use super::*;

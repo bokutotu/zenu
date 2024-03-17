@@ -1,11 +1,12 @@
 use std::{cell::RefCell, rc::Rc};
 
 use zenu_matrix::{
+    constructor::zeros::Zeros,
     dim::LessDimTrait,
     matrix::{MatrixBase, ToViewMatrix, ToViewMutMatrix},
     matrix_impl::OwnedMatrixDyn,
     num::Num,
-    operation::{add_axis::MatrixAddAxis, copy_from::CopyFrom, sum::MatrixSum, zeros::Zeros},
+    operation::{add_axis::MatrixAddAxis, copy_from::CopyFrom, sum::MatrixSum},
 };
 
 use crate::{Function, Variable, VariableWeak};

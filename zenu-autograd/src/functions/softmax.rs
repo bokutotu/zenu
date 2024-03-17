@@ -1,9 +1,10 @@
 use std::{cell::RefCell, rc::Rc};
 
 use zenu_matrix::{
+    constructor::zeros::Zeros,
     matrix::{MatrixBase, ToViewMatrix, ToViewMutMatrix},
     num::Num,
-    operation::{softmax::SoftMax as S, zeros::Zeros},
+    operation::softmax::SoftMax as S,
 };
 
 use crate::{Function, Variable, VariableWeak};

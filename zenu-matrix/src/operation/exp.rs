@@ -1,4 +1,5 @@
 use crate::{
+    constructor::zeros::Zeros,
     dim::{DimDyn, DimTrait},
     index::Index0D,
     matrix::{IndexAxisDyn, IndexAxisMutDyn, MatrixBase, ToViewMatrix, ToViewMutMatrix},
@@ -7,8 +8,6 @@ use crate::{
     memory_impl::OwnedMem,
     num::Num,
 };
-
-use super::zeros::Zeros;
 
 pub trait Exp<T: Num> {
     fn exp(&self) -> Matrix<OwnedMem<T>, DimDyn>;
@@ -62,9 +61,10 @@ fn exp_kernel_cpu<T: Num>(x: &mut [T], y: &[T], len: usize, incx: usize, incy: u
 #[cfg(test)]
 mod exp {
     use crate::{
+        constructor::zeros::Zeros,
         matrix::{OwnedMatrix, ToViewMatrix, ToViewMutMatrix},
         matrix_impl::OwnedMatrixDyn,
-        operation::{asum::Asum, zeros::Zeros},
+        operation::asum::Asum,
     };
 
     use super::ExpAssign;
