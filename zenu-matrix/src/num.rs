@@ -3,6 +3,9 @@ use std::{
     ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign},
 };
 
+use rand::Rng;
+use rand_distr::{num_traits::Float, uniform::SampleUniform, Distribution, StandardNormal};
+
 pub trait Num:
     Default
     + Clone
@@ -18,13 +21,12 @@ pub trait Num:
     + DivAssign
     + AddAssign
     + MulAssign
+    + Float
+    + SampleUniform
     + 'static
 {
     fn is_f32() -> bool;
-    fn zero() -> Self;
-    fn one() -> Self;
     fn minus_one() -> Self;
-    fn exp(self) -> Self;
 }
 
 impl Num for f32 {
@@ -32,20 +34,8 @@ impl Num for f32 {
         true
     }
 
-    fn zero() -> f32 {
-        0.0
-    }
-
-    fn one() -> f32 {
-        1.0
-    }
-
     fn minus_one() -> f32 {
         -1.0
-    }
-
-    fn exp(self) -> f32 {
-        self.exp()
     }
 }
 impl Num for f64 {
@@ -53,19 +43,7 @@ impl Num for f64 {
         false
     }
 
-    fn zero() -> f64 {
-        0.0
-    }
-
-    fn one() -> f64 {
-        1.0
-    }
-
     fn minus_one() -> f64 {
         -1.0
-    }
-
-    fn exp(self) -> f64 {
-        self.exp()
     }
 }

@@ -21,7 +21,7 @@ use rand_distr::{num_traits::Float, uniform::SampleUniform, Normal, StandardNorm
 /// * `std_dev` - The standard deviation of the normal distribution.
 /// * `shape` - The shape of the matrix.
 /// * `seed` - An optional seed for the random number generator.
-pub fn normal<T: Num + Float, D: DimTrait>(
+pub fn normal<T: Num, D: DimTrait>(
     mean: T,
     std_dev: T,
     shape: D,
@@ -51,7 +51,7 @@ where
 /// * `std_dev` - The standard deviation of the normal distribution.
 /// * `a` - The matrix whose shape is used.
 /// * `seed` - An optional seed for the random number generator.
-pub fn normal_like<T: Num + Float, D: DimTrait>(
+pub fn normal_like<T: Num, D: DimTrait>(
     mean: T,
     std_dev: T,
     a: &Matrix<OwnedMem<T>, D>,
@@ -78,7 +78,7 @@ pub fn uniform<T, D: DimTrait>(
     seed: Option<u64>,
 ) -> Matrix<OwnedMem<T>, D>
 where
-    T: Num + Float + SampleUniform,
+    T: Num,
     Uniform<T>: Distribution<T>,
 {
     let mut rng: Box<dyn RngCore> = if let Some(seed) = seed {
@@ -109,7 +109,7 @@ pub fn uniform_like<T, D: DimTrait>(
     seed: Option<u64>,
 ) -> Matrix<OwnedMem<T>, D>
 where
-    T: Num + Float + SampleUniform,
+    T: Num,
     Uniform<T>: Distribution<T>,
 {
     uniform(low, high, a.shape(), seed)
@@ -126,7 +126,7 @@ pub struct NormalBuilder<T: Num + Float, D: DimTrait> {
 
 impl<T, D> NormalBuilder<T, D>
 where
-    T: Num + Float,
+    T: Num,
     D: DimTrait,
 {
     /// Creates a new `NormalBuilder`.
