@@ -1,8 +1,9 @@
-use zenu_autograd::Variable;
+use zenu_autograd::{Function, Variable};
 use zenu_matrix::num::Num;
 
-pub trait Layer<T: Num> {
-    fn forward(&self, input: Variable<T>) -> Variable<T>;
+pub mod layers;
+
+pub trait Layer<T: Num>: Function<T> {
     fn init_parameters(&self);
     fn parameters(&self) -> Vec<Variable<T>>;
 }
