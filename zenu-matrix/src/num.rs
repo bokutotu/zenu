@@ -3,8 +3,7 @@ use std::{
     ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign},
 };
 
-use rand::Rng;
-use rand_distr::{num_traits::Float, uniform::SampleUniform, Distribution, StandardNormal};
+use rand_distr::{num_traits::Float, uniform::SampleUniform};
 
 pub trait Num:
     Default

@@ -187,6 +187,7 @@ where
 }
 
 /// A builder for creating matrices filled with random values from a uniform distribution.
+#[derive(Debug, Clone, Default)]
 pub struct UniformBuilder<T, D> {
     low: Option<T>,
     high: Option<T>,
