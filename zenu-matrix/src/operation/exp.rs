@@ -35,7 +35,13 @@ impl<T: Num, M: ToViewMutMemory<Item = T>> ExpAssign<T> for Matrix<M, DimDyn> {
             let incs = if len == 0 { 1 } else { self.stride()[0] };
             let incx = if len == 0 { 1 } else { y.stride()[0] };
             let num_elm = if len == 0 { 1 } else { self.shape()[0] };
-            exp_kernel_cpu(self.as_mut_slice(), y.as_slice(), num_elm, incs, incx);
+            exp_kernel_cpu(
+                self.to_view_mut().as_mut_slice(),
+                y.as_slice(),
+                num_elm,
+                incs,
+                incx,
+            );
         } else {
             for i in 0..self.shape()[0] {
                 self.to_view_mut()

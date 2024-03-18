@@ -109,7 +109,9 @@ impl<T: Num, M: Memory<Item = T>, D: DimTrait> Matrix<M, D> {
             panic!("this is inner bug. please make issue `as_slice`");
         }
     }
+}
 
+impl<T: Num, M: ViewMut<Item = T>, D: DimTrait> Matrix<M, D> {
     /// Matrixが所有しているメモリの範囲を可変のスライスの参照にして返す
     /// Matrixのnumber of dims が1のときのみ有効
     pub(crate) fn as_mut_slice(&mut self) -> &mut [T] {

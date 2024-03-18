@@ -5,6 +5,7 @@ pub mod broadcast;
 pub mod copy_from;
 pub mod dot;
 pub mod exp;
+pub mod log;
 pub mod max;
 pub mod mul;
 pub mod norm2;

@@ -139,7 +139,8 @@ macro_rules! impl_traits {
                 }
 
                 if self.shape().is_empty() {
-                    let self_slice = self.as_mut_slice();
+        let mut view_mut = self.to_view_mut();
+                    let self_slice = view_mut.as_mut_slice();
                     let lhs_slice = lhs.as_slice();
                     self_slice[0] = lhs_slice[0].$method(rhs);
                 } else if self.shape().len() == 1 {
@@ -158,7 +159,8 @@ macro_rules! impl_traits {
         impl<T: Num, D: DimTrait, M: ToViewMutMemory<Item = T>> $assign_trait<T> for Matrix<M, D> {
             fn $assign_trait_method(&mut self, rhs: T) {
                 if self.shape().is_empty() {
-                    let self_slice = self.as_mut_slice();
+        let mut view_mut = self.to_view_mut();
+                    let self_slice = view_mut.as_mut_slice();
                     self_slice[0].$assign_method(rhs);
                 } else {
                     if self.shape().len() == 1 {
@@ -207,7 +209,8 @@ macro_rules! impl_traits {
 
 
                 if self.shape().is_empty() {
-                    let self_slice = self.as_mut_slice();
+        let mut view_mut = self.to_view_mut();
+                    let self_slice = view_mut.as_mut_slice();
                     let lhs_slice = lhs.as_slice();
                     let rhs_slice = rhs.as_slice();
                     self_slice[0] = lhs_slice[0] + rhs_slice[0];
@@ -267,7 +270,8 @@ macro_rules! impl_traits {
 
 
                 if self.shape().is_empty() {
-                    let self_slice = self.as_mut_slice();
+        let mut view_mut = self.to_view_mut();
+                    let self_slice = view_mut.as_mut_slice();
                     let rhs_slice = rhs.as_slice();
                     self_slice[0].$assign_method(rhs_slice[0]);
                 } else if rhs.shape().is_empty() {
