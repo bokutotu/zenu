@@ -1,7 +1,7 @@
 use rand_distr::{Distribution, StandardNormal};
 use zenu_matrix::{
     constructor::rand::{NormalBuilder, UniformBuilder},
-    dim::DimTrait,
+    dim::{DimDyn, DimTrait},
     matrix::MatrixBase,
     num::Num,
 };
@@ -27,16 +27,16 @@ pub fn uniform_like<T: Num, D: DimTrait>(
     uniform(low, high, seed, a.get_data().shape())
 }
 
-pub fn normal<T, D>(mean: T, std_dev: T, seed: Option<u64>, shape: D) -> Variable<T>
+pub fn normal<T, I>(mean: T, std_dev: T, seed: Option<u64>, shape: I) -> Variable<T>
 where
     T: Num,
-    D: DimTrait,
+    I: Into<DimDyn>,
     StandardNormal: Distribution<T>,
 {
     let mut builder = NormalBuilder::new()
         .std_dev(std_dev)
         .mean(mean)
-        .shape(shape);
+        .shape(shape.into());
     if let Some(seed) = seed {
         builder = builder.seed(seed);
     }

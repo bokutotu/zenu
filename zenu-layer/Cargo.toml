@@ -9,5 +9,8 @@ edition = "2021"
 zenu-matrix = { path = "../zenu-matrix", version = "0.1.0" }
 zenu-autograd = { path = "../zenu-autograd", version = "0.1.0" }
 
+rand = "0.8.5"
+rand_distr = "0.4.3"
+
 [lints]
 workspace = true

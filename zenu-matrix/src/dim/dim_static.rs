@@ -84,6 +84,12 @@ impl From<[usize; 0]> for Dim0 {
     }
 }
 
+impl From<&Dim0> for Dim0 {
+    fn from(dim: &Dim0) -> Self {
+        *dim
+    }
+}
+
 macro_rules! impl_dim {
     ($name:ident, $number_of_elm:expr) => {
         #[derive(Clone, Debug, Copy, Default)]
@@ -169,6 +175,12 @@ macro_rules! impl_dim {
         impl From<[usize; $number_of_elm]> for $name {
             fn from(array: [usize; $number_of_elm]) -> Self {
                 $name { dim: array }
+            }
+        }
+
+        impl From<&$name> for $name {
+            fn from(dim: &$name) -> Self {
+                *dim
             }
         }
     };

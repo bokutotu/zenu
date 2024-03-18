@@ -38,8 +38,8 @@ impl IndexAxisTrait for Index {
             }
         }
 
-        let new_shape = Dout::from(&shape_v);
-        let new_stride = Dout::from(&stride_v);
+        let new_shape = Dout::from(&shape_v as &[usize]);
+        let new_stride = Dout::from(&stride_v as &[usize]);
         ShapeStride::new(new_shape, new_stride)
     }
     fn offset<Din: DimTrait>(&self, stride: Din) -> usize {

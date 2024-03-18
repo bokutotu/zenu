@@ -35,8 +35,8 @@ macro_rules! impl_index_axis {
                     }
                 }
 
-                let new_shape = Dout::from(&shape_v);
-                let new_stride = Dout::from(&stride_v);
+                let new_shape = Dout::from(&shape_v as &[usize]);
+                let new_stride = Dout::from(&stride_v as &[usize]);
                 ShapeStride::new(new_shape, new_stride)
             }
 

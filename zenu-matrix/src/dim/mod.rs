@@ -21,6 +21,7 @@ pub trait DimTrait:
     + PartialEq
     + Debug
     + for<'a> From<&'a [usize]>
+    + for<'a> From<&'a Self>
     + 'static
 {
     fn len(&self) -> usize;

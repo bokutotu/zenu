@@ -211,6 +211,12 @@ impl From<&[usize]> for DimDyn {
     }
 }
 
+impl From<&DimDyn> for DimDyn {
+    fn from(dim: &DimDyn) -> Self {
+        *dim
+    }
+}
+
 macro_rules! impl_from_slice_dim {
     ($name:ident, $number_of_elm:expr) => {
         impl From<&[usize; $number_of_elm]> for $name {
