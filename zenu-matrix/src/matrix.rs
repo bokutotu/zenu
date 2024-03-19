@@ -20,9 +20,7 @@ pub trait MatrixBase: Sized {
     fn stride(&self) -> Self::Dim {
         self.shape_stride().stride()
     }
-    // fn memory(&self) -> &Self::Memory;
-    // fn memory_mut(&mut self) -> &mut Self::Memory;
-    // fn construct(data: Self::Memory, shape: Self::Dim, stride: Self::Dim) -> Self;
+
     fn is_default_stride(&self) -> bool {
         self.shape_stride().is_default_stride()
     }
@@ -37,10 +35,6 @@ pub trait ToViewMatrix: MatrixBase {
 }
 
 pub trait ToViewMutMatrix: MatrixBase {
-    // type ViewMut<'a>: ViewMutMatix
-    // where
-    //     Self: 'a;
-
     fn to_view_mut(&mut self) -> Matrix<ViewMutMem<Self::Item>, Self::Dim>;
 }
 
@@ -153,8 +147,6 @@ pub trait BlasMatrix: MatrixBase {
 pub trait ViewMatrix: MatrixBase + ToViewMatrix + ToOwnedMatrix + AsPtr + BlasMatrix {}
 pub trait ViewMutMatix:
     MatrixBase + ToViewMatrix + ToViewMutMatrix + AsMutPtr + BlasMatrix + AsPtr
-// + IndexItem
-// + IndexItemAsign
 {
 }
 
