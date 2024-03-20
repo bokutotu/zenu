@@ -2,12 +2,10 @@ use std::{cell::RefCell, rc::Rc};
 
 use zenu_matrix::{
     constructor::zeros::Zeros,
-    dim::{DimDyn, DimTrait},
+    dim::DimDyn,
     matrix::{MatrixBase, ToViewMatrix, ToViewMutMatrix},
-    matrix_impl::Matrix,
-    memory_impl::{ViewMem, ViewMutMem},
     num::Num,
-    operation::{copy_from::CopyFrom, sum::MatrixSum},
+    operation::sum::sum_to as sum_to_func,
 };
 
 use crate::{Function, Variable, VariableWeak};
@@ -26,34 +24,9 @@ impl<T: Num> SumTo<T> {
     }
 }
 
-fn inner<T: Num>(source: Matrix<ViewMem<T>, DimDyn>, target: Matrix<ViewMutMem<T>, DimDyn>) {
-    if source.shape().len() < target.shape().len() {
-        panic!("source.shape().len() < target.shape().len()");
-    }
-
-    let diff_len = source.shape().len() - target.shape().len();
-    if diff_len == 0 {
-        let mut target = target;
-        target.to_view_mut().copy_from(&source.to_view());
-        return;
-    }
-
-    if !source.shape().is_include(target.shape()) {
-        panic!("!source.shape().is_include(target.shape())");
-    }
-
-    if diff_len == 1 {
-        let mut target = target;
-        let ans = source.to_view().sum(0, false);
-        target.to_view_mut().copy_from(&ans.to_view());
-    } else {
-        inner(source.to_view().sum(0, false).to_view(), target);
-    }
-}
-
 impl<T: Num> Function<T> for SumTo<T> {
     fn forward(&self) {
-        inner(
+        sum_to_func(
             self.x.get_data().to_view(),
             self.output.upgrade().unwrap().get_data_mut().to_view_mut(),
         );

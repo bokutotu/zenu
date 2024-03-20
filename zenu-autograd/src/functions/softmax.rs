@@ -90,7 +90,6 @@ mod softmax {
             output * Variable::from(OwnedMatrixDyn::from_vec(vec![1.0, 2.0, 3.0, 4.0], [4]));
         output.backward();
         let grad = input.get_grad().unwrap();
-        println!("{:?}", grad.get_data().to_view());
         // [[-0.07991097 -0.13007621 -0.11670097  0.32668814]
         //[-0.07991097 -0.13007621 -0.11670097  0.32668814]]
 

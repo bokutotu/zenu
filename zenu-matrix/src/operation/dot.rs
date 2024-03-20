@@ -125,7 +125,6 @@ mod dot {
         let b = OwnedMatrix2D::from_vec(vec![7.0, 8.0, 9.0, 10.0, 11.0, 12.0], [3, 2]);
         let mut c = OwnedMatrix2D::from_vec(vec![0.0, 0.0, 0.0, 0.0], [2, 2]);
         c.to_view_mut().dot(a, b);
-        println!("{:?}", c);
 
         assert_eq!(c.index_item([0, 0]), 58.0);
         assert_eq!(c.index_item([0, 1]), 64.0);

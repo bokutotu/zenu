@@ -50,15 +50,17 @@
 //! let b = a.clip(2.0, 3.0);
 //! ```
 
-use super::copy_from::CopyFrom;
+use super::{basic_operations::MatrixMulAssign, copy_from::CopyFrom};
 use crate::{
     constructor::zeros::Zeros,
-    dim::DimTrait,
+    dim::{DimDyn, DimTrait},
     index::Index0D,
-    matrix::{IndexAxisMutDyn, MatrixBase, ToViewMatrix, ToViewMutMatrix},
-    matrix_impl::Matrix,
+    matrix::{
+        IndexAxisDyn, IndexAxisMutDyn, MatrixBase, OwnedMatrix, ToViewMatrix, ToViewMutMatrix,
+    },
+    matrix_impl::{Matrix, OwnedMatrixDyn},
     memory::{ToViewMemory, ToViewMutMemory, ViewMut},
-    memory_impl::OwnedMem,
+    memory_impl::{OwnedMem, ViewMem, ViewMutMem},
     num::Num,
 };
 
@@ -74,7 +76,9 @@ pub trait Clip<T: Num>: MatrixBase {
     fn clip(&self, min: T, max: T) -> Matrix<OwnedMem<T>, Self::Dim>;
 }
 
-impl<T: Num, SM: ToViewMutMemory<Item = T>, D: DimTrait> ClipAssign<T> for Matrix<SM, D> {
+impl<T: Num, SM: ToViewMemory + ToViewMutMemory<Item = T>, D: DimTrait> ClipAssign<T>
+    for Matrix<SM, D>
+{
     fn clip_assign(mut self, min: T, max: T) {
         if self.shape().len() == 1 {
             clip_assign_kernel_cpu(&mut self.to_view_mut(), min, max);
@@ -119,12 +123,53 @@ fn clip_assign_kernel_cpu<T: Num, M: ViewMut<Item = T>, D: DimTrait>(
     }
 }
 
+pub fn clip_filter<T: Num, M: ToViewMemory<Item = T>>(
+    input: Matrix<M, DimDyn>,
+    max: T,
+    min: T,
+) -> Matrix<OwnedMem<T>, DimDyn> {
+    let mut output = OwnedMatrixDyn::zeros(input.shape());
+    if input.shape().len() == 1 {
+        return inner(input.to_view(), max, min);
+    } else if input.shape().len() == 0 {
+        unimplemented!();
+    } else {
+        let s = input.to_view().into_dyn_dim();
+        let mut output = output.to_view_mut().into_dyn_dim();
+        for i in 0..s.shape()[0] {
+            let tmp = s.index_axis_dyn(Index0D::new(i));
+            let mut slice = output.index_axis_mut_dyn(Index0D::new(i));
+            slice.copy_from(&clip_filter(tmp, max, min).to_view());
+        }
+    }
+    output
+}
+
+fn inner<T: Num>(input: Matrix<ViewMem<T>, DimDyn>, max: T, min: T) -> OwnedMatrixDyn<T> {
+    let len = input.shape()[0];
+    let input_stride = input.stride()[0];
+    let input_slice = input.as_slice();
+    let mut output_vec = Vec::with_capacity(len);
+    for i in 0..len {
+        let tmp = input_slice[i * input_stride];
+        if min < tmp || tmp < max {
+            output_vec.push(T::zero());
+        } else {
+            output_vec.push(T::one());
+        }
+    }
+    OwnedMatrixDyn::from_vec(output_vec, input.shape())
+}
+
 #[cfg(test)]
 mod clip {
     use crate::{
-        matrix::OwnedMatrix,
+        matrix::{OwnedMatrix, ToViewMutMatrix},
         matrix_impl::OwnedMatrixDyn,
-        operation::{asum::Asum, clip::Clip},
+        operation::{
+            asum::Asum,
+            clip::{Clip, ClipAssign},
+        },
     };
 
     #[test]
@@ -163,6 +208,16 @@ mod clip {
             [3, 3, 3],
         );
         let diff = b - ans;
+        let diff_asum = diff.asum();
+        assert_eq!(diff_asum, 0.0);
+    }
+
+    #[test]
+    fn clip_assign_2d_2() {
+        let mut a = OwnedMatrixDyn::from_vec(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], [2, 3]);
+        a.to_view_mut().clip_assign(2.0, 4.0);
+        let ans = OwnedMatrixDyn::from_vec(vec![2.0, 2.0, 3.0, 4.0, 4.0, 4.0], [2, 3]);
+        let diff = a - ans;
         let diff_asum = diff.asum();
         assert_eq!(diff_asum, 0.0);
     }

@@ -329,8 +329,6 @@ mod gemm {
 
         gemm(x.to_view(), y.to_view(), output.to_view_mut(), 1.0, 0.0);
 
-        println!("{:?}", output);
-
         assert_eq!(output.index_item([0, 0]), 50.0);
         assert_eq!(output.index_item([0, 1]), 60.0);
         assert_eq!(output.index_item([1, 0]), 114.0);

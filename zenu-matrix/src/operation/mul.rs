@@ -211,8 +211,6 @@ mod mat_mul {
         a.transpose();
         c.to_view_mut().gemm(a.to_view(), b.to_view());
 
-        println!("{:?}", c);
-
         assert_eq!(c.index_item([0, 0]), 26.);
         assert_eq!(c.index_item([0, 1]), 30.);
         assert_eq!(c.index_item([1, 0]), 38.);

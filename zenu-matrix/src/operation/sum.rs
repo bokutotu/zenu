@@ -2,13 +2,13 @@ use crate::{
     constructor::zeros::Zeros,
     dim::{DimDyn, DimTrait, LessDimTrait},
     index::index_dyn_impl::Index,
-    matrix::{IndexAxisDyn, MatrixBase, OwnedMatrix, ToViewMutMatrix, ViewMatrix},
+    matrix::{IndexAxisDyn, MatrixBase, OwnedMatrix, ToViewMatrix, ToViewMutMatrix, ViewMatrix},
     matrix_impl::Matrix,
-    memory_impl::{OwnedMem, ViewMem},
+    memory_impl::{OwnedMem, ViewMem, ViewMutMem},
     num::Num,
 };
 
-use super::{add_axis::MatrixAddAxis, basic_operations::MatrixAddAssign};
+use super::{add_axis::MatrixAddAxis, basic_operations::MatrixAddAssign, copy_from::CopyFrom};
 
 pub trait MatrixSum: ViewMatrix {
     type Output: OwnedMatrix;
@@ -41,6 +41,30 @@ impl<'a, T: Num> MatrixSum for Matrix<ViewMem<'a, T>, DimDyn> {
     }
 }
 
+pub fn sum_to<T: Num>(source: Matrix<ViewMem<T>, DimDyn>, target: Matrix<ViewMutMem<T>, DimDyn>) {
+    if source.shape().len() < target.shape().len() {
+        panic!("source.shape().len() < target.shape().len()");
+    }
+
+    let diff_len = source.shape().len() - target.shape().len();
+    if diff_len == 0 {
+        let mut target = target;
+        target.to_view_mut().copy_from(&source.to_view());
+        return;
+    }
+
+    if !source.shape().is_include(target.shape()) {
+        panic!("!source.shape().is_include(target.shape())");
+    }
+
+    if diff_len == 1 {
+        let mut target = target;
+        let ans = source.to_view().sum(0, false);
+        target.to_view_mut().copy_from(&ans.to_view());
+    } else {
+        sum_to(source.to_view().sum(0, false).to_view(), target);
+    }
+}
 #[cfg(test)]
 mod sum {
     use crate::{
