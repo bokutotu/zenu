@@ -6,11 +6,17 @@ pub struct CrossEntropy<T: Num> {
     x: Variable<T>,
     y: Variable<T>,
     loss: VariableWeak<T>,
+    epsilon: Option<T>,
 }
 
 impl<T: Num> CrossEntropy<T> {
-    pub fn new(x: Variable<T>, y: Variable<T>, loss: VariableWeak<T>) -> Self {
-        CrossEntropy { x, y, loss }
+    pub fn new(x: Variable<T>, y: Variable<T>, loss: VariableWeak<T>, epsilon: Option<T>) -> Self {
+        CrossEntropy {
+            x,
+            y,
+            loss,
+            epsilon,
+        }
     }
 }
 
