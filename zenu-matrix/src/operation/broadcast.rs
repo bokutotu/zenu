@@ -1,9 +1,8 @@
 use crate::{
-    constructor::ones::Ones,
     dim::{DimDyn, DimTrait},
     index::Index0D,
-    matrix::{IndexAxisDyn, IndexAxisMutDyn, MatrixBase, ToViewMatrix},
-    matrix_impl::{Matrix, OwnedMatrixDyn},
+    matrix::{IndexAxisDyn, IndexAxisMutDyn, MatrixBase},
+    matrix_impl::Matrix,
     memory_impl::{ViewMem, ViewMutMem},
     num::Num,
 };
@@ -16,7 +15,11 @@ pub trait Broadcast<T: Num> {
 
 impl<'a, T: Num> Broadcast<T> for Matrix<ViewMutMem<'a, T>, DimDyn> {
     fn broadcast(&mut self, source: &Matrix<ViewMem<T>, DimDyn>) {
-        println!("broadcast source {:?}", source);
+        println!(
+            "self shape {:?} source shape {:?}",
+            self.shape(),
+            source.shape()
+        );
         if !(self.shape().is_include(source.shape())
             || self.shape().is_include_bradcast(source.shape()))
         {
@@ -28,27 +31,23 @@ impl<'a, T: Num> Broadcast<T> for Matrix<ViewMutMem<'a, T>, DimDyn> {
             return;
         }
 
-        let diff_len = self.shape().len() - source.shape().len();
-
-        if source.shape().len() == 0 {
-            let ones = OwnedMatrixDyn::ones(self.shape());
-            let result = ones * source.clone();
-            self.copy_from(&result.to_view());
-        } else if source.shape()[0] == 1 {
+        if source.shape().len() >= 1 && source.shape()[0] == 1 {
             let source = source.index_axis_dyn(Index0D::new(0));
             self.broadcast(&source);
             return;
         }
 
+        let diff_len = self.shape().len() - source.shape().len();
+
         if diff_len == 1 {
             for i in 0..self.shape()[0] {
                 let mut to = self.index_axis_mut_dyn(Index0D::new(i));
-                to.copy_from(source);
+                to.copy_from(&source);
             }
         } else {
             for i in 0..self.shape()[0] {
                 let mut to = self.index_axis_mut_dyn(Index0D::new(i));
-                to.broadcast(source);
+                to.broadcast(&source);
             }
         }
     }
@@ -73,6 +72,18 @@ mod broadcast {
         let mut res: Matrix<OwnedMem<f32>, DimDyn> = Zeros::zeros([3]);
         res.to_view_mut().broadcast(&source.to_view());
         let ans: Matrix<OwnedMem<f32>, DimDyn> = OwnedMatrix::from_vec(vec![1., 1., 1.], &[3]);
+        let diff = ans.to_view() - res.to_view();
+        let diff_sum = diff.to_view().asum();
+        assert_eq!(diff_sum, 0.);
+    }
+
+    #[test]
+    fn broadcast_2d_0d() {
+        let source: Matrix<OwnedMem<f32>, DimDyn> = OwnedMatrix::from_vec(vec![1.], &[]);
+        let mut res: Matrix<OwnedMem<f32>, DimDyn> = Zeros::zeros([2, 3]);
+        res.to_view_mut().broadcast(&source.to_view());
+        let ans: Matrix<OwnedMem<f32>, DimDyn> =
+            OwnedMatrix::from_vec(vec![1., 1., 1., 1., 1., 1.], &[2, 3]);
         let diff = ans.to_view() - res.to_view();
         let diff_sum = diff.to_view().asum();
         assert_eq!(diff_sum, 0.);

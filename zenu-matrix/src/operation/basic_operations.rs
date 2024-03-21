@@ -79,6 +79,21 @@ macro_rules! impl_basic_1d_functions {
                 }
             }
 
+            pub fn _scalar_1d_cpu<T: Num, D1: DimTrait, D2: DimTrait>(
+                to: &mut Matrix<ViewMutMem<T>, D1>,
+                b: T,
+                a: &Matrix<ViewMem<T>, D2>,
+            ) {
+                let num_elm = to.shape().num_elm();
+                let to_stride = to.stride()[0];
+                let a_stride = a.stride()[0];
+                let slice_to = to.as_mut_slice();
+                let slice_a = a.as_slice();
+                for i in 0..num_elm {
+                    slice_to[i * to_stride] = slice_a[i * a_stride].$method(b);
+                }
+            }
+
             pub fn assign_1d_1d_cpu<T: Num, D1: DimTrait, D2: DimTrait>(
                 to: &mut Matrix<ViewMutMem<T>, D1>,
                 b: &Matrix<ViewMem<T>, D2>,
@@ -125,6 +140,7 @@ macro_rules! impl_traits {
         pub trait $assign_trait<R> {
             fn $assign_trait_method(&mut self, rhs: R);
         }
+
         impl<T, D1, D2, M1, M2> $trait<Matrix<M1, D1>, T> for Matrix<M2, D2>
         where
             T: Num,
@@ -139,7 +155,7 @@ macro_rules! impl_traits {
                 }
 
                 if self.shape().is_empty() {
-        let mut view_mut = self.to_view_mut();
+                    let mut view_mut = self.to_view_mut();
                     let self_slice = view_mut.as_mut_slice();
                     let lhs_slice = lhs.as_slice();
                     self_slice[0] = lhs_slice[0].$method(rhs);
@@ -150,6 +166,38 @@ macro_rules! impl_traits {
                     for idx in 0..num_iter {
                         let mut s = self.index_axis_mut_dyn(Index0D::new(idx));
                         let lhs = lhs.index_axis_dyn(Index0D::new(idx));
+                        s.$trait_method(lhs, rhs);
+                    }
+                }
+            }
+        }
+
+
+        impl<T, D1, D2, M1, M2> $trait<T, Matrix<M1, D1>> for Matrix<M2, D2>
+        where
+            T: Num,
+            D1: DimTrait,
+            D2: DimTrait,
+            M1: ToViewMemory<Item = T>,
+            M2: ToViewMutMemory<Item = T>,
+        {
+            fn $trait_method(&mut self, lhs: T, rhs: Matrix<M1, D1>) {
+                if self.shape().slice() != rhs.shape().slice() {
+                    panic!("Matrix shape mismatch");
+                }
+
+                if self.shape().is_empty() {
+                    let mut view_mut = self.to_view_mut();
+                    let self_slice = view_mut.as_mut_slice();
+                    let rhs_slice = rhs.as_slice();
+                    self_slice[0] = rhs_slice[0].$method(lhs);
+                } else if self.shape().len() == 1 {
+                    $mod_name::_scalar_1d_cpu(&mut self.to_view_mut(), lhs, &rhs.to_view());
+                } else {
+                    let num_iter = self.shape()[0];
+                    for idx in 0..num_iter {
+                        let mut s = self.index_axis_mut_dyn(Index0D::new(idx));
+                        let rhs = rhs.index_axis_dyn(Index0D::new(idx));
                         s.$trait_method(lhs, rhs);
                     }
                 }
@@ -207,9 +255,13 @@ macro_rules! impl_traits {
                     return;
                 }
 
+                if lhs.shape().is_empty() {
+                    self.$trait_method(lhs.as_slice()[0], rhs);
+                    return;
+                }
 
                 if self.shape().is_empty() {
-        let mut view_mut = self.to_view_mut();
+                    let mut view_mut = self.to_view_mut();
                     let self_slice = view_mut.as_mut_slice();
                     let lhs_slice = lhs.as_slice();
                     let rhs_slice = rhs.as_slice();
@@ -270,7 +322,7 @@ macro_rules! impl_traits {
 
 
                 if self.shape().is_empty() {
-        let mut view_mut = self.to_view_mut();
+                    let mut view_mut = self.to_view_mut();
                     let self_slice = view_mut.as_mut_slice();
                     let rhs_slice = rhs.as_slice();
                     self_slice[0].$assign_method(rhs_slice[0]);
@@ -281,7 +333,6 @@ macro_rules! impl_traits {
                         self.$assign_trait_method(rhs.as_slice()[0]);
                         return ;
                     }
-
                     $mod_name::assign_1d_1d_cpu(&mut self.to_view_mut(), &rhs.to_view());
                 } else {
                     let num_iter = self.shape()[0];
