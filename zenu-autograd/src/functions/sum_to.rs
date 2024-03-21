@@ -44,7 +44,8 @@ impl<T: Num> Function<T> for SumTo<T> {
     }
 }
 
-pub fn sum_to<T: Num>(x: Variable<T>, shape: DimDyn) -> Variable<T> {
+pub fn sum_to<T: Num, I: Into<DimDyn>>(x: Variable<T>, shape: I) -> Variable<T> {
+    let shape = shape.into();
     let output = Variable::new(Zeros::zeros(shape));
     let sum_to = SumTo::new(x, output.clone());
     sum_to.forward();

@@ -1,8 +1,9 @@
 use crate::{
+    constructor::ones::Ones,
     dim::{DimDyn, DimTrait},
     index::Index0D,
-    matrix::{IndexAxisDyn, IndexAxisMutDyn, MatrixBase},
-    matrix_impl::Matrix,
+    matrix::{IndexAxisDyn, IndexAxisMutDyn, MatrixBase, ToViewMatrix},
+    matrix_impl::{Matrix, OwnedMatrixDyn},
     memory_impl::{ViewMem, ViewMutMem},
     num::Num,
 };
@@ -15,6 +16,7 @@ pub trait Broadcast<T: Num> {
 
 impl<'a, T: Num> Broadcast<T> for Matrix<ViewMutMem<'a, T>, DimDyn> {
     fn broadcast(&mut self, source: &Matrix<ViewMem<T>, DimDyn>) {
+        println!("broadcast source {:?}", source);
         if !(self.shape().is_include(source.shape())
             || self.shape().is_include_bradcast(source.shape()))
         {
@@ -28,7 +30,11 @@ impl<'a, T: Num> Broadcast<T> for Matrix<ViewMutMem<'a, T>, DimDyn> {
 
         let diff_len = self.shape().len() - source.shape().len();
 
-        if source.shape()[0] == 1 {
+        if source.shape().len() == 0 {
+            let ones = OwnedMatrixDyn::ones(self.shape());
+            let result = ones * source.clone();
+            self.copy_from(&result.to_view());
+        } else if source.shape()[0] == 1 {
             let source = source.index_axis_dyn(Index0D::new(0));
             self.broadcast(&source);
             return;
@@ -60,6 +66,17 @@ mod broadcast {
     };
 
     use super::Broadcast;
+
+    #[test]
+    fn broadcast_1d_0d() {
+        let source: Matrix<OwnedMem<f32>, DimDyn> = OwnedMatrix::from_vec(vec![1.], &[]);
+        let mut res: Matrix<OwnedMem<f32>, DimDyn> = Zeros::zeros([3]);
+        res.to_view_mut().broadcast(&source.to_view());
+        let ans: Matrix<OwnedMem<f32>, DimDyn> = OwnedMatrix::from_vec(vec![1., 1., 1.], &[3]);
+        let diff = ans.to_view() - res.to_view();
+        let diff_sum = diff.to_view().asum();
+        assert_eq!(diff_sum, 0.);
+    }
 
     #[test]
     fn broadcast_2d_1d() {

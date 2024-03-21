@@ -12,6 +12,7 @@ mod mul;
 pub mod broadcast;
 pub mod clip;
 pub mod div;
+pub mod log;
 pub mod loss;
 pub mod matmul;
 pub mod relu;
