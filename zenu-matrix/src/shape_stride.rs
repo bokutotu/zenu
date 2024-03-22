@@ -126,7 +126,7 @@ impl ShapeStride<DimDyn> {
     }
 
     pub fn add_axis(self, axis: usize) -> Self {
-        if self.shape().len() == 0 {
+        if self.shape().is_empty() {
             return ShapeStride::new(DimDyn::from([1]), DimDyn::from([1]));
         }
         let mut shape: DimDyn = Default::default();
