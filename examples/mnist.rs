@@ -9,7 +9,10 @@ use zenu_autograd::{
     Variable,
 };
 use zenu_layer::{layers::linear::Linear, Layer};
-use zenu_matrix::matrix::IndexItem;
+use zenu_matrix::{
+    matrix::{IndexItem, ToViewMatrix},
+    operation::max::MaxIdx,
+};
 use zenu_optimizer::sgd::SGD;
 
 struct SingleLayerModel {
@@ -63,7 +66,7 @@ fn main() {
     let (train, test) = minist_dataset().unwrap();
     let (train, val) = train_val_split(&train, 0.8, true);
 
-    let test_dataloader = DataLoader::new(MnistDataset { data: test }, 16);
+    let test_dataloader = DataLoader::new(MnistDataset { data: test }, 1);
 
     let sgd = SGD::new(0.01);
     let model = SingleLayerModel::new();
@@ -112,14 +115,26 @@ fn main() {
 
     let mut test_loss = 0.;
     let mut num_iter_test = 0;
+    let mut correct = 0;
+    let mut total = 0;
     for batch in test_dataloader {
         let input = batch[0].clone();
         let target = batch[1].clone();
         let y_pred = model.predict(&[input]);
-        let loss = cross_entropy(y_pred, target);
+        let loss = cross_entropy(y_pred.clone(), target.clone());
         test_loss += loss.get_data().index_item([]);
         num_iter_test += 1;
+        let y_pred = y_pred.get_data();
+        let max_idx = y_pred.to_view().max_idx()[0];
+        let target = target.get_data();
+        let target = target.to_view().max_idx()[0];
+        if max_idx == target {
+            correct += 1;
+        }
+        total += 1;
     }
+
+    println!("Accuracy: {}", correct as f32 / total as f32);
 
     println!("Test Loss: {}", test_loss / num_iter_test as f32);
 }
