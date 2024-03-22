@@ -26,7 +26,7 @@ impl<'a, T: Num> Broadcast<T> for Matrix<ViewMutMem<'a, T>, DimDyn> {
             return;
         }
 
-        if source.shape().len() >= 1 && source.shape()[0] == 1 {
+        if !source.shape().is_empty() && source.shape()[0] == 1 {
             let source = source.index_axis_dyn(Index0D::new(0));
             self.broadcast(&source);
             return;
@@ -37,12 +37,12 @@ impl<'a, T: Num> Broadcast<T> for Matrix<ViewMutMem<'a, T>, DimDyn> {
         if diff_len == 1 {
             for i in 0..self.shape()[0] {
                 let mut to = self.index_axis_mut_dyn(Index0D::new(i));
-                to.copy_from(&source);
+                to.copy_from(source);
             }
         } else {
             for i in 0..self.shape()[0] {
                 let mut to = self.index_axis_mut_dyn(Index0D::new(i));
-                to.broadcast(&source);
+                to.broadcast(source);
             }
         }
     }

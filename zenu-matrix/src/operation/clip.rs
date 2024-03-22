@@ -50,7 +50,7 @@
 //! let b = a.clip(2.0, 3.0);
 //! ```
 
-use super::{basic_operations::MatrixMulAssign, copy_from::CopyFrom};
+use super::copy_from::CopyFrom;
 use crate::{
     constructor::zeros::Zeros,
     dim::{DimDyn, DimTrait},
@@ -60,7 +60,7 @@ use crate::{
     },
     matrix_impl::{Matrix, OwnedMatrixDyn},
     memory::{ToViewMemory, ToViewMutMemory, ViewMut},
-    memory_impl::{OwnedMem, ViewMem, ViewMutMem},
+    memory_impl::{OwnedMem, ViewMem},
     num::Num,
 };
 
@@ -131,7 +131,7 @@ pub fn clip_filter<T: Num, M: ToViewMemory<Item = T>>(
     let mut output = OwnedMatrixDyn::zeros(input.shape());
     if input.shape().len() == 1 {
         return inner(input.to_view(), max, min);
-    } else if input.shape().len() == 0 {
+    } else if input.shape().is_empty() {
         unimplemented!();
     } else {
         let s = input.to_view().into_dyn_dim();

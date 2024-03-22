@@ -18,15 +18,15 @@ impl<T: Num> SGD<T> {
 impl<T: Num> Optimizer<T> for SGD<T> {
     fn update(&self, parameters: &[Variable<T>]) {
         let parameters = parameters
-            .into_iter()
+            .iter()
             .filter(|parameter| parameter.get_grad().is_some())
             .collect::<Vec<_>>();
-        parameters.into_iter().for_each(|parameter| {
+        for parameter in parameters {
             let grad = parameter.get_grad().unwrap().get_data();
             let mut data = parameter.get_data_mut();
             let update_data = grad * self.learning_rate;
             data.to_view_mut().sub_assign(update_data);
-        });
+        }
     }
 }
 
@@ -40,7 +40,7 @@ mod sgd {
     use super::SGD;
 
     #[test]
-    fn linear_1_layer() {
+    fn simple_test() {
         let variable = from_vec(vec![1., 2., 3., 4., 5., 6.], [3, 2]);
         variable.set_grad(from_vec(vec![1., 2., 3., 4., 5., 6.], [3, 2]));
         let sgd = SGD::new(1.);

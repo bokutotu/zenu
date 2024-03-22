@@ -5,16 +5,14 @@ use std::{
     cell::{Ref, RefCell, RefMut},
     collections::{BinaryHeap, HashSet},
     fmt::{Debug, Display},
-    hash::{Hash, Hasher},
     ops::Deref,
-    ptr,
     rc::{Rc, Weak},
 };
 
 use zenu_matrix::{
     constructor::ones::Ones,
     dim::DimDyn,
-    matrix::{AsPtr, MatrixBase, OwnedMatrix},
+    matrix::{MatrixBase, OwnedMatrix},
     matrix_impl::Matrix,
     memory_impl::OwnedMem,
     num::Num,
