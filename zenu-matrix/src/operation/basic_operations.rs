@@ -31,12 +31,112 @@ fn get_tmp_matrix<M: ToViewMemory, D: DimTrait>(
 fn is_1d_1(a: &[usize]) -> bool {
     a[0] == 1
 }
+macro_rules! impl_basic_1d_functions_no_input {
+    (
+        $mod_name:ident,
+        $method:ident
+    ) => {
+        mod $mod_name {
+            use crate::{
+                dim::DimTrait,
+                matrix::MatrixBase,
+                matrix_impl::Matrix,
+                memory_impl::{ViewMem, ViewMutMem},
+                num::Num,
+            };
+
+            pub fn _1d_1d_cpu<T: Num, D1: DimTrait, D2: DimTrait>(
+                to: &mut Matrix<ViewMutMem<T>, D1>,
+                a: &Matrix<ViewMem<T>, D2>,
+            ) {
+                let num_elm = to.shape().num_elm();
+                let to_stride = to.stride()[0];
+                let a_stride = a.stride()[0];
+                let slice_to = to.as_mut_slice();
+                let slice_a = a.as_slice();
+                for i in 0..num_elm {
+                    slice_to[i * to_stride] = slice_a[i * a_stride].$method();
+                }
+            }
+        }
+    };
+}
+macro_rules! impl_traits_no_input {
+    (
+        $trait:ident,
+        $trait_method:ident,
+        $mod_name:ident,
+        $method:ident
+    ) => {
+        pub trait $trait<L> {
+            fn $trait_method(&mut self, lhs: L);
+        }
+
+        impl<T, D1, D3, M1, M3> $trait<Matrix<M1, D1>> for Matrix<M3, D3>
+        where
+            T: Num,
+            D1: DimTrait,
+            D3: DimTrait,
+            M1: ToViewMemory<Item = T>,
+            M3: ToViewMutMemory<Item = T>,
+        {
+            fn $trait_method(&mut self, lhs: Matrix<M1, D1>) {
+                assert_eq!(
+                    self.shape().slice(),
+                    lhs.shape().slice(),
+                    "Matrix shape mismatch"
+                );
+                if self.shape().is_empty() {
+                    let mut view_mut = self.to_view_mut();
+                    let self_slice = view_mut.as_mut_slice();
+                    let lhs_slice = lhs.as_slice();
+                    self_slice[0] = lhs_slice[0].$method();
+                } else if self.shape().len() == 1 {
+                    $mod_name::_1d_1d_cpu(&mut self.to_view_mut(), &lhs.to_view());
+                } else {
+                    let num_iter = self.shape()[0];
+                    let self_dim_len = self.shape().len();
+                    let lhs_dim_len = lhs.shape().len();
+                    for idx in 0..num_iter {
+                        let mut s = self.index_axis_mut_dyn(Index0D::new(idx));
+                        let lhs = get_tmp_matrix(&lhs, lhs_dim_len, idx, self_dim_len);
+                        s.$trait_method(lhs);
+                    }
+                }
+            }
+        }
+    };
+}
+impl_basic_1d_functions_no_input!(sin_mod, sin);
+impl_traits_no_input!(MatrixSin, sin, sin_mod, sin);
+impl_basic_1d_functions_no_input!(cos_mod, cos);
+impl_traits_no_input!(MatrixCos, cos, cos_mod, cos);
+impl_basic_1d_functions_no_input!(tan_mod, tan);
+impl_traits_no_input!(MatrixTan, tan, tan_mod, tan);
+impl_basic_1d_functions_no_input!(asin_mod, asin);
+impl_traits_no_input!(MatrixAsin, asin, asin_mod, asin);
+impl_basic_1d_functions_no_input!(acos_mod, acos);
+impl_traits_no_input!(MatrixAcos, acos, acos_mod, acos);
+impl_basic_1d_functions_no_input!(atan_mod, atan);
+impl_traits_no_input!(MatrixAtan, atan, atan_mod, atan);
+impl_basic_1d_functions_no_input!(sinh_mod, sinh);
+impl_traits_no_input!(MatrixSinh, sinh, sinh_mod, sinh);
+impl_basic_1d_functions_no_input!(cosh_mod, cosh);
+impl_traits_no_input!(MatrixCosh, cosh, cosh_mod, cosh);
+impl_basic_1d_functions_no_input!(tanh_mod, tanh);
+impl_traits_no_input!(MatrixTanh, tanh, tanh_mod, tanh);
+impl_basic_1d_functions_no_input!(asinh_mod, asinh);
+impl_traits_no_input!(MatrixAsinh, asinh, asinh_mod, asinh);
+impl_basic_1d_functions_no_input!(acosh_mod, acosh);
+impl_traits_no_input!(MatrixAcosh, acosh, acosh_mod, acosh);
+impl_basic_1d_functions_no_input!(atanh_mod, atanh);
+impl_traits_no_input!(MatrixAtanh, atanh, atanh_mod, atanh);
 
 macro_rules! impl_basic_1d_functions {
     (
         $mod_name:ident,
         $method:ident,
-        $assign_method:ident
+        $($assign_method:ident)?
     ) => {
         mod $mod_name {
             use crate::{
@@ -93,7 +193,7 @@ macro_rules! impl_basic_1d_functions {
                     slice_to[i * to_stride] = slice_a[i * a_stride].$method(b);
                 }
             }
-
+$(
             pub fn assign_1d_1d_cpu<T: Num, D1: DimTrait, D2: DimTrait>(
                 to: &mut Matrix<ViewMutMem<T>, D1>,
                 b: &Matrix<ViewMem<T>, D2>,
@@ -119,6 +219,7 @@ macro_rules! impl_basic_1d_functions {
                     slice_to[i * to_stride].$assign_method(b);
                 }
             }
+        )?
         }
     };
 }
@@ -130,15 +231,10 @@ macro_rules! impl_traits {
         $assign_trait_method:ident,
         $mod_name:ident,
         $method:ident,
-        $assign_method:ident,
-        $is_check_shape:expr
+        $($assign_method:ident)?
     ) => {
         pub trait $trait<L, R> {
             fn $trait_method(&mut self, lhs: L, rhs: R);
-        }
-
-        pub trait $assign_trait<R> {
-            fn $assign_trait_method(&mut self, rhs: R);
         }
 
         impl<T, D1, D2, M1, M2> $trait<Matrix<M1, D1>, T> for Matrix<M2, D2>
@@ -172,7 +268,6 @@ macro_rules! impl_traits {
             }
         }
 
-
         impl<T, D1, D2, M1, M2> $trait<T, Matrix<M1, D1>> for Matrix<M2, D2>
         where
             T: Num,
@@ -199,26 +294,6 @@ macro_rules! impl_traits {
                         let mut s = self.index_axis_mut_dyn(Index0D::new(idx));
                         let rhs = rhs.index_axis_dyn(Index0D::new(idx));
                         s.$trait_method(lhs, rhs);
-                    }
-                }
-            }
-        }
-
-        impl<T: Num, D: DimTrait, M: ToViewMutMemory<Item = T>> $assign_trait<T> for Matrix<M, D> {
-            fn $assign_trait_method(&mut self, rhs: T) {
-                if self.shape().is_empty() {
-        let mut view_mut = self.to_view_mut();
-                    let self_slice = view_mut.as_mut_slice();
-                    self_slice[0].$assign_method(rhs);
-                } else {
-                    if self.shape().len() == 1 {
-                        $mod_name::assign_1d_scalar_cpu(&mut self.to_view_mut(), rhs);
-                    } else {
-                        let num_iter = self.shape()[0];
-                        for idx in 0..num_iter {
-                            let mut s = self.index_axis_mut_dyn(Index0D::new(idx));
-                            s.$assign_trait_method(rhs);
-                        }
                     }
                 }
             }
@@ -265,13 +340,13 @@ macro_rules! impl_traits {
                     let self_slice = view_mut.as_mut_slice();
                     let lhs_slice = lhs.as_slice();
                     let rhs_slice = rhs.as_slice();
-                    self_slice[0] = lhs_slice[0] + rhs_slice[0];
+                    self_slice[0] = lhs_slice[0].$method(rhs_slice[0]);
                 } else if self.shape().len() == 1 {
                     if is_1d_1(lhs.shape().slice()) {
-                        $mod_name::_1d_scalar_cpu(&mut self.to_view_mut(),&rhs.to_view(), lhs.as_slice()[0]);
+                        $mod_name::_1d_scalar_cpu(&mut self.to_view_mut(), &rhs.to_view(), lhs.as_slice()[0]);
                         return;
                     } else if is_1d_1(rhs.shape().slice()) {
-                        $mod_name::_1d_scalar_cpu(&mut self.to_view_mut(),&lhs.to_view(), rhs.as_slice()[0]);
+                        $mod_name::_1d_scalar_cpu(&mut self.to_view_mut(), &lhs.to_view(), rhs.as_slice()[0]);
                         return;
                     }
 
@@ -286,6 +361,30 @@ macro_rules! impl_traits {
                         let lhs = get_tmp_matrix(&lhs, lhs_dim_len, idx, self_dim_len);
                         let rhs = get_tmp_matrix(&rhs, rhs_dim_len, idx, self_dim_len);
                         s.$trait_method(lhs, rhs);
+                    }
+                }
+            }
+        }
+
+        $(
+        pub trait $assign_trait<R> {
+            fn $assign_trait_method(&mut self, rhs: R);
+        }
+        impl<T: Num, D: DimTrait, M: ToViewMutMemory<Item = T>> $assign_trait<T> for Matrix<M, D> {
+            fn $assign_trait_method(&mut self, rhs: T) {
+                if self.shape().is_empty() {
+                    let mut view_mut = self.to_view_mut();
+                    let self_slice = view_mut.as_mut_slice();
+                    self_slice[0].$assign_method(rhs);
+                } else {
+                    if self.shape().len() == 1 {
+                        $mod_name::assign_1d_scalar_cpu(&mut self.to_view_mut(), rhs);
+                    } else {
+                        let num_iter = self.shape()[0];
+                        for idx in 0..num_iter {
+                            let mut s = self.index_axis_mut_dyn(Index0D::new(idx));
+                            s.$assign_trait_method(rhs);
+                        }
                     }
                 }
             }
@@ -319,8 +418,6 @@ macro_rules! impl_traits {
                     panic!("rhs shape is not include self shape {:?} {:?}", self.shape(), rhs.shape());
                 }
 
-
-
                 if self.shape().is_empty() {
                     let mut view_mut = self.to_view_mut();
                     let self_slice = view_mut.as_mut_slice();
@@ -331,7 +428,7 @@ macro_rules! impl_traits {
                 } else if self.shape().len() == 1 {
                     if is_1d_1(rhs.shape().slice()) {
                         self.$assign_trait_method(rhs.as_slice()[0]);
-                        return ;
+                        return;
                     }
                     $mod_name::assign_1d_1d_cpu(&mut self.to_view_mut(), &rhs.to_view());
                 } else {
@@ -346,6 +443,7 @@ macro_rules! impl_traits {
                 }
             }
         }
+        )?
     };
 }
 impl_basic_1d_functions!(add_mod, add, add_assign);
@@ -356,8 +454,7 @@ impl_traits!(
     add_assign,
     add_mod,
     add,
-    add_assign,
-    true
+    add_assign
 );
 impl_basic_1d_functions!(sub_mod, sub, sub_assign);
 impl_traits!(
@@ -367,8 +464,7 @@ impl_traits!(
     sub_assign,
     sub_mod,
     sub,
-    sub_assign,
-    true
+    sub_assign
 );
 impl_basic_1d_functions!(mul_mod, mul, mul_assign);
 impl_traits!(
@@ -378,8 +474,7 @@ impl_traits!(
     mul_assign,
     mul_mod,
     mul,
-    mul_assign,
-    true
+    mul_assign
 );
 impl_basic_1d_functions!(div_mod, div, div_assign);
 impl_traits!(
@@ -389,8 +484,7 @@ impl_traits!(
     div_assign,
     div_mod,
     div,
-    div_assign,
-    false
+    div_assign
 );
 
 #[cfg(test)]
@@ -881,6 +975,8 @@ mod mul {
         slice,
     };
 
+    use super::MatrixSin;
+
     #[test]
     fn mul_1d_scalar() {
         let a = OwnedMatrix1D::from_vec(vec![1.0, 2.0, 3.0], [3]);
@@ -1012,5 +1108,48 @@ mod mul {
         let mut ans = OwnedMatrixDyn::<f32>::zeros(&[]);
         ans.to_view_mut().mul(a.to_view(), b.to_view());
         assert_eq!(ans.index_item(&[]), 200.);
+    }
+
+    #[test]
+    fn sin_0d() {
+        let a = OwnedMatrixDyn::from_vec(vec![1.0], &[]);
+        let mut ans = OwnedMatrixDyn::<f32>::zeros(&[]);
+        ans.sin(a.to_view());
+        let ans = ans.index_item(&[]);
+        assert!(ans - 1.0_f32.sin() < 1e-6);
+    }
+
+    #[test]
+    fn sin1d() {
+        let a = OwnedMatrixDyn::from_vec(vec![1.0, 2.0, 3.0], &[3]);
+        let mut ans = OwnedMatrixDyn::<f32>::zeros(&[3]);
+        ans.sin(a.to_view());
+        assert!(ans.index_item(&[0]) - 1.0_f32.sin() < 1e-6);
+        assert!(ans.index_item(&[1]) - 2.0_f32.sin() < 1e-6);
+        assert!(ans.index_item(&[2]) - 3.0_f32.sin() < 1e-6);
+    }
+
+    #[test]
+    fn sin_2d() {
+        let a = OwnedMatrixDyn::from_vec(vec![1.0, 2.0, 3.0, 4.0], &[2, 2]);
+        let mut ans = OwnedMatrixDyn::<f32>::zeros(&[2, 2]);
+        ans.sin(a.to_view());
+        assert!(ans.index_item(&[0, 0]) - 1.0_f32.sin() < 1e-6);
+        assert!(ans.index_item(&[0, 1]) - 2.0_f32.sin() < 1e-6);
+        assert!(ans.index_item(&[1, 0]) - 3.0_f32.sin() < 1e-6);
+        assert!(ans.index_item(&[1, 1]) - 4.0_f32.sin() < 1e-6);
+    }
+
+    #[test]
+    fn sin_3d() {
+        let a = OwnedMatrixDyn::from_vec(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], &[2, 1, 3]);
+        let mut ans = OwnedMatrixDyn::<f32>::zeros(&[2, 1, 3]);
+        ans.sin(a.to_view());
+        assert!(ans.index_item(&[0, 0, 0]) - 1.0_f32.sin() < 1e-6);
+        assert!(ans.index_item(&[0, 0, 1]) - 2.0_f32.sin() < 1e-6);
+        assert!(ans.index_item(&[0, 0, 2]) - 3.0_f32.sin() < 1e-6);
+        assert!(ans.index_item(&[1, 0, 0]) - 4.0_f32.sin() < 1e-6);
+        assert!(ans.index_item(&[1, 0, 1]) - 5.0_f32.sin() < 1e-6);
+        assert!(ans.index_item(&[1, 0, 2]) - 6.0_f32.sin() < 1e-6);
     }
 }

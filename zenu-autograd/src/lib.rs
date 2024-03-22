@@ -140,6 +140,7 @@ impl<T: Num> VariableInner<T> {
     fn clear_grad(&mut self) {
         if let Some(ref mut grad) = self.grad {
             grad.inner.borrow_mut().clear_grad();
+            self.grad = None;
         }
     }
 
