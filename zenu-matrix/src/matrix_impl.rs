@@ -15,7 +15,7 @@ use crate::{
     slice::Slice,
 };
 
-#[derive(Clone)]
+#[derive(Clone, Hash)]
 pub struct Matrix<M, S> {
     memory: M,
     shape: S,
