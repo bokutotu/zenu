@@ -79,7 +79,7 @@ mod clip {
         let input = from_vec(vec![1., 2., 3., 4., 5., 6.], [6]);
         let output = super::clip(input.clone(), 2.0, 4.0);
         output.backward();
-        let output = dbg!(output.get_data());
+        let output = output.get_data();
         let ans = OwnedMatrixDyn::from_vec(vec![2., 2., 3., 4., 4., 4.], [6]);
         let diff = output - ans;
         let diff_asum = diff.asum();

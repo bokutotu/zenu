@@ -7,6 +7,7 @@ use std::{
     fmt::{Debug, Display},
     hash::{Hash, Hasher},
     ops::Deref,
+    ptr,
     rc::{Rc, Weak},
 };
 
@@ -153,7 +154,7 @@ impl<T: Num> VariableInner<T> {
     }
 
     fn get_all_trainable_variables(&self) -> Vec<Variable<T>> {
-        let mut variables = HashSet::new();
+        let mut variables = Vec::new();
         let mut seen_rc = HashSet::new();
         let mut funcs: BinaryHeap<FunctionQueueItem<T>> = BinaryHeap::new();
 
@@ -172,11 +173,13 @@ impl<T: Num> VariableInner<T> {
             let inputs = func.borrow().get_inputs();
             for input in inputs {
                 if input.get_is_train() {
-                    variables.insert(input);
+                    variables.push(input);
                 }
             }
         }
-        variables.into_iter().collect()
+
+        variables.dedup_by(|a, b| Rc::ptr_eq(&a.inner, &b.inner));
+        variables
     }
 }
 
@@ -332,35 +335,3 @@ impl<T: Num> Display for Variable<T> {
         Ok(())
     }
 }
-
-impl<T: Num> Hash for VariableInner<T> {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        let ptr = self.data.as_ptr() as usize;
-        ptr.hash(state);
-    }
-}
-
-impl<T: Num> Hash for Variable<T> {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        let inner = self.inner.borrow();
-        inner.hash(state);
-    }
-}
-
-use std::ptr;
-
-impl<T: Num> PartialEq for VariableInner<T> {
-    fn eq(&self, other: &Self) -> bool {
-        ptr::eq(self.data.as_ptr(), other.data.as_ptr())
-    }
-}
-
-impl<T: Num> Eq for VariableInner<T> {}
-
-impl<T: Num> PartialEq for Variable<T> {
-    fn eq(&self, other: &Self) -> bool {
-        Rc::ptr_eq(&self.inner, &other.inner)
-    }
-}
-
-impl<T: Num> Eq for Variable<T> {}
