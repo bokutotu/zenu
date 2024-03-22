@@ -10,3 +10,8 @@ pub fn train_val_split<T: Clone>(data: &[T], split_ratio: f64, shuffle: bool) ->
     let (train, val) = data.split_at(split_idx);
     (train.to_vec(), val.to_vec())
 }
+
+pub struct Dataset<T> {
+    data: Vec<T>,
+    batch_size: usize,
+}
