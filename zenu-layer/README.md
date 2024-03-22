@@ -1,4 +1,3 @@
-```markdown
 # Zenu Layer
 
 Zenu Layer is a collection of neural network layers implemented in Rust. It provides building blocks for constructing neural networks and integrates with the Zenu deep learning library.
