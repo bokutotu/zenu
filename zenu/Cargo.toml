@@ -15,3 +15,4 @@ zenu-optimizer = { path = "../zenu-optimizer", version = "0.1.0" }
 
 reqwest = { version = "0.12", features = ["json", "blocking"] }
 flate2 = { version = "1.0", features = ["zlib"] }
+rand = { version = "0.8.5", features = ["small_rng"] }

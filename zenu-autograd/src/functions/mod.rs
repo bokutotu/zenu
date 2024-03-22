@@ -9,17 +9,21 @@ use crate::Variable;
 mod add;
 mod mul;
 
+pub mod activation;
 pub mod broadcast;
 pub mod clip;
+pub mod cosh;
 pub mod div;
+pub mod exp;
 pub mod log;
 pub mod loss;
 pub mod matmul;
-pub mod relu;
+pub mod sinh;
 pub mod softmax;
 pub mod sub;
 pub mod sum;
 pub mod sum_to;
+pub mod tanh;
 pub mod transpose;
 
 pub(crate) fn output_shape<T: Num>(x: &Variable<T>, y: &Variable<T>) -> DimDyn {
