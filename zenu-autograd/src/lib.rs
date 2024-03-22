@@ -1,3 +1,4 @@
+pub mod concat;
 pub mod creator;
 pub mod functions;
 
