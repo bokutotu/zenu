@@ -4,7 +4,8 @@ members = [
     "zenu",
     "zenu-autograd",
     "zenu-layer",
-    "zenu-matrix"
+    "zenu-matrix", 
+    "zenu-optimizer"
 ]
 
 [workspace.lints.clippy]
