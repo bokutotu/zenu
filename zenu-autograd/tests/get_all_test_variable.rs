@@ -46,3 +46,17 @@ fn copilicated() {
     assert_eq!(variables.len(), 1);
     assert_eq!(variables[0].get_name().unwrap(), "a");
 }
+
+#[test]
+fn ultra_large_copilicated() {
+    let a = Variable::from(1.0);
+    a.set_name("a");
+    a.set_is_train(true);
+
+    let mut c = more_complicated(a.clone(), a.clone(), a.clone());
+    for _ in 0..500 {
+        c = more_complicated(c.clone(), a.clone(), a.clone());
+    }
+    let variables = c.get_all_trainable_variables();
+    assert_eq!(variables.len(), 1);
+}

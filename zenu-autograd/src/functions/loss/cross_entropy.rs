@@ -32,14 +32,12 @@ mod cross_entropy {
         let pred = from_vec(vec![0.1, 0.9, 0.1, 0.1], [1, 4]);
         let ans = from_vec(vec![0.0, 1.0, 0.0, 0.0], [1, 4]);
         let loss = super::cross_entropy(pred.clone(), ans);
-        println!("{:?}", loss);
         loss.backward();
         let loss_data = loss.get_data();
         let ans = OwnedMatrixDyn::from_vec(vec![0.8536], &[]);
         let diff = loss_data.to_view() - ans.to_view();
         assert!(diff.asum() < 1e-4);
         let pred_grad = pred.get_grad().clone().unwrap();
-        println!("{:?}", pred_grad);
         let pred_ans = OwnedMatrixDyn::from_vec(vec![0.1914, -0.5741, 0.1914, 0.1914], [1, 4]);
         let diff = pred_grad.get_data().to_view() - pred_ans.to_view();
         assert!(diff.asum() < 1e-4);
@@ -62,7 +60,6 @@ mod cross_entropy {
             [2, 4],
         );
         let pred_grad = pred.get_grad().clone().unwrap().get_data();
-        println!("{:?}", pred_grad);
         let diff = pred_grad.to_view() - pred_grad_ans.to_view();
         assert!(diff.asum() < 5e-4);
         let ans_grad_ans = OwnedMatrixDyn::from_vec(
