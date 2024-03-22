@@ -1,4 +1,4 @@
-use zenu_layer::Layer;
+use zenu_autograd::Variable;
 use zenu_matrix::{
     matrix::ToViewMutMatrix, num::Num, operation::basic_operations::MatrixSubAssign,
 };
@@ -16,11 +16,7 @@ impl<T: Num> SGD<T> {
 }
 
 impl<T: Num> Optimizer<T> for SGD<T> {
-    fn update(&mut self, layers: &[Box<dyn Layer<T>>]) {
-        let parameters = layers
-            .into_iter()
-            .flat_map(|layer| layer.parameters())
-            .collect::<Vec<_>>();
+    fn update(&self, parameters: &[Variable<T>]) {
         let parameters = parameters
             .into_iter()
             .filter(|parameter| parameter.get_grad().is_some())
@@ -37,19 +33,22 @@ impl<T: Num> Optimizer<T> for SGD<T> {
 #[cfg(test)]
 mod sgd {
     use zenu_autograd::creator::from_vec::from_vec;
-    use zenu_layer::{layers::linear::Linear, Layer};
+    use zenu_matrix::{matrix::OwnedMatrix, matrix_impl::OwnedMatrixDyn, operation::asum::Asum};
+
+    use crate::Optimizer;
 
     use super::SGD;
 
     #[test]
     fn linear_1_layer() {
-        // let mut layer = Linear::<f32>::new(1, 1);
-        // let weight = from_vec(vec![1.], [1]);
-        // let bias = from_vec(vec![1.], [1]);
-        // layer.load_parameters(&[weight, bias]);
-        // let sgd = SGD::new(0.1);
-        // let input = from_vec(vec![1.], [1]);
-        // let ans = from_vec(vec![4.], [1]);
-        // let output = layer.call(input.clone());
+        let variable = from_vec(vec![1., 2., 3., 4., 5., 6.], [3, 2]);
+        variable.set_grad(from_vec(vec![1., 2., 3., 4., 5., 6.], [3, 2]));
+        let sgd = SGD::new(1.);
+        sgd.update(&[variable.clone()]);
+        let data = variable.get_data();
+        let ans = OwnedMatrixDyn::from_vec(vec![0., 0., 0., 0., 0., 0.], [3, 2]);
+        let diff = data - ans;
+        let diff_asum = diff.asum();
+        assert_eq!(diff_asum, 0.0);
     }
 }
