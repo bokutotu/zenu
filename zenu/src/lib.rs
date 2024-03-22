@@ -39,8 +39,8 @@ fn create_minist_dir() -> Result<PathBuf, std::io::Error> {
     Ok(target_dir)
 }
 
-pub fn download_mnist_dataset(dataset_dir: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
-    create_minist_dir()?;
+pub fn download_mnist_dataset() -> Result<(), Box<dyn std::error::Error>> {
+    let dataset_dir = create_minist_dir()?;
     let mnist_urls = [
         "http://yann.lecun.com/exdb/mnist/train-images-idx3-ubyte.gz",
         "http://yann.lecun.com/exdb/mnist/train-labels-idx1-ubyte.gz",
