@@ -108,13 +108,12 @@ impl<T: Num> Layer<T> for Linear<T> {
     where
         StandardNormal: Distribution<T>,
     {
-        self.bias = Some(zeros([self.out_dim]));
-        self.weight = Some(normal(
-            T::zero(),
-            T::one(),
-            seed,
-            [self.in_dim, self.out_dim],
-        ));
+        let bias = zeros([self.out_dim]);
+        bias.set_is_train(true);
+        self.bias = Some(bias);
+        let weight = normal(T::zero(), T::one(), seed, [self.in_dim, self.out_dim]);
+        weight.set_is_train(true);
+        self.weight = Some(weight);
     }
 
     /// Returns a vector of the layer parameters as `Variable`s.

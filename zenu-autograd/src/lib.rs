@@ -5,6 +5,7 @@ use std::{
     cell::{Ref, RefCell, RefMut},
     collections::{BinaryHeap, HashSet},
     fmt::{Debug, Display},
+    hash::{Hash, Hasher},
     ops::Deref,
     rc::{Rc, Weak},
 };
@@ -12,7 +13,7 @@ use std::{
 use zenu_matrix::{
     constructor::ones::Ones,
     dim::DimDyn,
-    matrix::{MatrixBase, OwnedMatrix},
+    matrix::{AsPtr, MatrixBase, OwnedMatrix},
     matrix_impl::Matrix,
     memory_impl::OwnedMem,
     num::Num,
@@ -80,6 +81,7 @@ pub struct VariableInner<T: Num> {
     grad: Option<Variable<T>>,
     gen: usize,
     name: Option<String>,
+    is_train: bool,
 }
 
 impl<T: Num> VariableInner<T> {
@@ -90,6 +92,7 @@ impl<T: Num> VariableInner<T> {
             grad: None,
             gen: 0,
             name: None,
+            is_train: false,
         }
     }
 
@@ -139,6 +142,41 @@ impl<T: Num> VariableInner<T> {
         if let Some(ref mut grad) = self.grad {
             grad.inner.borrow_mut().clear_grad();
         }
+    }
+
+    fn get_is_train(&self) -> bool {
+        self.is_train
+    }
+
+    fn set_is_train(&mut self, is_train: bool) {
+        self.is_train = is_train;
+    }
+
+    fn get_all_trainable_variables(&self) -> Vec<Variable<T>> {
+        let mut variables = HashSet::new();
+        let mut seen_rc = HashSet::new();
+        let mut funcs: BinaryHeap<FunctionQueueItem<T>> = BinaryHeap::new();
+
+        funcs.push(self.creator.clone().unwrap().into());
+
+        while let Some(FunctionQueueItem { func, .. }) = funcs.pop() {
+            let inputs = func.borrow().get_inputs();
+            for input in inputs {
+                if let Some(creator) = input.get_creator() {
+                    if !seen_rc.contains(&creator.as_ptr()) {
+                        funcs.push(creator.clone().into());
+                        seen_rc.insert(creator.as_ptr());
+                    }
+                }
+            }
+            let inputs = func.borrow().get_inputs();
+            for input in inputs {
+                if input.get_is_train() {
+                    variables.insert(input);
+                }
+            }
+        }
+        variables.into_iter().collect()
     }
 }
 
@@ -254,6 +292,18 @@ impl<T: Num> Variable<T> {
             }
         }
     }
+
+    pub fn get_is_train(&self) -> bool {
+        self.inner.borrow().get_is_train()
+    }
+
+    pub fn set_is_train(&self, is_train: bool) {
+        self.inner.borrow_mut().set_is_train(is_train);
+    }
+
+    pub fn get_all_trainable_variables(&self) -> Vec<Variable<T>> {
+        self.inner.borrow().get_all_trainable_variables()
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -282,3 +332,35 @@ impl<T: Num> Display for Variable<T> {
         Ok(())
     }
 }
+
+impl<T: Num> Hash for VariableInner<T> {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        let ptr = self.data.as_ptr() as usize;
+        ptr.hash(state);
+    }
+}
+
+impl<T: Num> Hash for Variable<T> {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        let inner = self.inner.borrow();
+        inner.hash(state);
+    }
+}
+
+use std::ptr;
+
+impl<T: Num> PartialEq for VariableInner<T> {
+    fn eq(&self, other: &Self) -> bool {
+        ptr::eq(self.data.as_ptr(), other.data.as_ptr())
+    }
+}
+
+impl<T: Num> Eq for VariableInner<T> {}
+
+impl<T: Num> PartialEq for Variable<T> {
+    fn eq(&self, other: &Self) -> bool {
+        Rc::ptr_eq(&self.inner, &other.inner)
+    }
+}
+
+impl<T: Num> Eq for Variable<T> {}
