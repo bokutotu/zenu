@@ -99,7 +99,12 @@ impl<T: Num, D: Dataset<T>> Iterator for DataLoader<T, D> {
 #[cfg(test)]
 mod dataset {
     use zenu_autograd::{creator::from_vec::from_vec, Variable};
-    use zenu_matrix::{matrix::OwnedMatrix, matrix_impl::OwnedMatrixDyn, operation::asum::Asum};
+    use zenu_matrix::{
+        dim::DimTrait,
+        matrix::{MatrixBase, OwnedMatrix},
+        matrix_impl::OwnedMatrixDyn,
+        operation::asum::Asum,
+    };
 
     use super::{DataLoader, Dataset};
 
@@ -125,6 +130,37 @@ mod dataset {
         }
 
         fn all_data(&mut self) -> &mut [Self::Item] {
+            &mut self.data
+        }
+    }
+
+    struct DummyDataset2 {
+        data: Vec<(Vec<f64>, u8)>,
+    }
+
+    impl DummyDataset2 {
+        fn new(data: Vec<(Vec<f64>, u8)>) -> Self {
+            DummyDataset2 { data }
+        }
+    }
+
+    impl Dataset<f64> for DummyDataset2 {
+        type Item = (Vec<f64>, u8);
+
+        fn item(&self, index: usize) -> Vec<Variable<f64>> {
+            let first_elm = from_vec(self.data[index].0.clone(), [self.data[index].0.len()]);
+            // onehot
+            let mut v = [0.; 10];
+            v[self.data[index].1 as usize] = 1.;
+            let second_elm = from_vec(v.to_vec(), [10]);
+            vec![first_elm, second_elm]
+        }
+
+        fn len(&self) -> usize {
+            self.data.len()
+        }
+
+        fn all_data(&mut self) -> &mut [(Vec<f64>, u8)] {
             &mut self.data
         }
     }
@@ -162,6 +198,36 @@ mod dataset {
         let batch = &dataloader.next().unwrap()[0];
         let expected_batch = OwnedMatrixDyn::from_vec(vec![19., 20., 21.], [1, 3]);
         let diff = batch.get_data() - expected_batch;
+        assert_eq!(diff.asum(), 0.);
+    }
+
+    #[test]
+    fn dummy_dataset_2() {
+        let data = vec![
+            (vec![1., 2., 3.], 0),
+            (vec![4., 5., 6.], 1),
+            (vec![7., 8., 9.], 2),
+            (vec![10., 11., 12.], 3),
+            (vec![13., 14., 15.], 4),
+            (vec![16., 17., 18.], 5),
+            (vec![19., 20., 21.], 6),
+        ];
+
+        let dataset = DummyDataset2::new(data);
+        let mut dataloader = DataLoader::new(dataset, 2);
+
+        let batch = &dataloader.next().unwrap();
+        let expected_batch = OwnedMatrixDyn::from_vec(vec![1., 2., 3., 4., 5., 6.], [2, 3]);
+        let diff = batch[0].get_data() - expected_batch;
+        assert_eq!(diff.asum(), 0.);
+        assert_eq!(batch[1].get_data().shape().slice(), [2, 3]);
+        let expected_batch = OwnedMatrixDyn::from_vec(
+            vec![
+                1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0.,
+            ],
+            [2, 10],
+        );
+        let diff = batch[1].get_data() - expected_batch;
         assert_eq!(diff.asum(), 0.);
     }
 }
