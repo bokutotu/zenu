@@ -1,6 +1,6 @@
 use crate::{
     dim::{default_stride, DimDyn, DimTrait},
-    matrix::{MatrixBase, ToViewMatrix},
+    matrix::{MatrixBase, OwnedMatrix, ToViewMatrix},
     matrix_impl::Matrix,
     memory::ToViewMemory,
     memory_impl::{OwnedMem, ViewMem},
@@ -13,6 +13,10 @@ use super::to_default_stride::ToDefaultStride;
 pub trait Reshape<T: Num>: ToViewMatrix {
     fn reshape<I: Into<DimDyn>>(&self, new_shape: I) -> Matrix<ViewMem<T>, DimDyn>;
     fn reshape_new_matrix<I: Into<DimDyn>>(&self, new_shape: I) -> Matrix<OwnedMem<T>, DimDyn>;
+}
+
+pub trait ReshapeNoAlloc<T: Num>: OwnedMatrix<Item = T> {
+    fn reshape_no_alloc_owned<I: Into<DimDyn>>(self, new_shape: I) -> Matrix<OwnedMem<T>, DimDyn>;
 }
 
 impl<T: Num, D: DimTrait, V: ToViewMemory<Item = T>> Reshape<T> for Matrix<V, D> {
@@ -49,6 +53,29 @@ Use `reshape_new_matrix` method instead.
         let mut default_stride_matrix = self.to_view().to_default_stride();
         default_stride_matrix.update_shape_stride(ShapeStride::new(new_shape, new_stride));
         default_stride_matrix
+    }
+}
+
+impl<T: Num, D: DimTrait> ReshapeNoAlloc<T> for Matrix<OwnedMem<T>, D> {
+    fn reshape_no_alloc_owned<I: Into<DimDyn>>(self, new_shape: I) -> Matrix<OwnedMem<T>, DimDyn> {
+        let new_shape = new_shape.into();
+        assert_eq!(
+            self.shape().num_elm(),
+            new_shape.num_elm(),
+            "Number of elements must be the same"
+        );
+        assert!(
+            self.shape_stride().is_default_stride(),
+            r#"""
+`reshape` method is not alloc new memory.
+So, This matrix is not default stride, it is not allowed to use `reshape` method.
+Use `reshape_new_matrix` method instead.
+            """#
+        );
+        let mut s = self.into_dyn_dim();
+        let new_shape_stride = ShapeStride::new(new_shape, default_stride(new_shape));
+        s.update_shape_stride(new_shape_stride);
+        s
     }
 }
 
@@ -101,7 +128,6 @@ mod reshape {
         );
         let a = a.transepose_by_index(&[2, 1, 0]);
         let b = a.reshape_new_matrix([18]);
-        println!("{:?}", b);
         let ans = OwnedMatrixDyn::from_vec(
             vec![
                 1., 10., 4., 13., 7., 16., 2., 11., 5., 14., 8., 17., 3., 12., 6., 15., 9., 18.,

@@ -1,10 +1,14 @@
+use serde_json::value::Index;
+
 use crate::{
-    dim::{Dim2, Dim3, Dim4, DimDyn},
-    matrix::{MatrixBase, ToViewMatrix},
-    matrix_impl::Matrix,
+    constructor::zeros::Zeros,
+    dim::{Dim2, Dim3, Dim4, DimDyn, DimTrait},
+    matrix::{IndexAxisDyn, MatrixBase, MatrixSliceMutDyn, ToViewMatrix},
+    matrix_impl::{Matrix, OwnedMatrixDyn},
     memory::{Memory, ToViewMemory},
     memory_impl::{OwnedMem, ViewMem},
     num::Num,
+    slice_dynamic,
 };
 
 use super::to_default_stride::ToDefaultStride;
@@ -44,6 +48,7 @@ impl<T: Num, M: Memory<Item = T>> Transpose for Matrix<M, DimDyn> {
 pub trait TransposeInplace<T: Num> {
     fn transepose_by_index(&self, index: &[usize]) -> Matrix<ViewMem<T>, DimDyn>;
     fn transpose_by_index_inplace(&self, index: &[usize]) -> Matrix<OwnedMem<T>, DimDyn>;
+    // fn transpose_swap_index_inplace(&self, a: usize, b: usize) -> Matrix<OwnedMem<T>, DimDyn>;
 }
 
 impl<T: Num, M: ToViewMemory<Item = T>> TransposeInplace<T> for Matrix<M, DimDyn> {
@@ -58,6 +63,23 @@ impl<T: Num, M: ToViewMemory<Item = T>> TransposeInplace<T> for Matrix<M, DimDyn
         let transposed_view = self.transepose_by_index(index);
         transposed_view.to_default_stride()
     }
+
+    // fn transpose_swap_index_inplace(&self, a: usize, b: usize) -> Matrix<OwnedMem<T>, DimDyn> {
+    //     assert!(a < self.shape().len(), "Index out of range");
+    //     assert!(b < self.shape().len(), "Index out of range");
+    //     let mut shape = self.shape();
+    //     shape[a] = self.shape()[b];
+    //     shape[b] = self.shape()[a];
+    //     let mut zeros = OwnedMatrixDyn::zeros(shape);
+    //
+    //     for i in 0..self.shape()[a] {
+    //         for j in 0..self.shape()[b] {
+    //             let mut slice_view_mut = self.(Index::new(b, j));
+    //         }
+    //     }
+    //
+    //     zeros
+    // }
 }
 
 #[cfg(test)]
