@@ -112,6 +112,20 @@ impl<D: DimTrait> ShapeStride<D> {
         let stride = into_dyn(self.stride);
         ShapeStride::new(shape, stride)
     }
+
+    pub(crate) fn transpose_by_index(&self, index: &[usize]) -> Self {
+        let mut shape = self.shape();
+        let mut stride = self.stride();
+
+        let num_dim = shape.len();
+
+        for i in 0..num_dim {
+            shape[i] = self.shape()[index[i]];
+            stride[i] = self.stride()[index[i]];
+        }
+
+        Self::new(shape, stride)
+    }
 }
 
 impl ShapeStride<DimDyn> {

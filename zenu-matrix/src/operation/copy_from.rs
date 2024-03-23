@@ -3,17 +3,18 @@ use crate::{
     dim::{DimDyn, DimTrait},
     index::index_dyn_impl::Index,
     matrix::{
-        AsMutPtr, AsPtr, IndexAxisDyn, IndexAxisMutDyn, MatrixBase, ViewMatrix, ViewMutMatix,
+        AsMutPtr, AsPtr, IndexAxisDyn, IndexAxisMutDyn, MatrixBase, ToViewMatrix, ToViewMutMatrix,
     },
     matrix_impl::Matrix,
-    memory::{Memory, View, ViewMut},
+    memory::{Memory, ToViewMemory, ToViewMutMemory},
+    memory_impl::{ViewMem, ViewMutMem},
     num::Num,
     shape_stride::ShapeStride,
 };
 
-pub trait CopyFrom<RHS>: ViewMutMatix
+pub trait CopyFrom<RHS>: ToViewMutMatrix
 where
-    RHS: ViewMatrix,
+    RHS: ToViewMatrix,
 {
     fn copy_from(&mut self, rhs: &RHS);
 }
@@ -21,17 +22,21 @@ where
 impl<T, V, VM> CopyFrom<Matrix<V, DimDyn>> for Matrix<VM, DimDyn>
 where
     T: Num,
-    VM: ViewMut<Item = T>,
-    V: View<Item = T>,
+    VM: ToViewMutMemory<Item = T>,
+    V: ToViewMemory<Item = T>,
 {
     fn copy_from(&mut self, rhs: &Matrix<V, DimDyn>) {
-        copy(self, rhs);
+        assert_eq!(self.shape().slice(), rhs.shape().slice(), "Shape mismatch");
+        copy(self.to_view_mut(), rhs.to_view());
     }
 }
 
 fn check_can_use_blas<D: DimTrait>(to: ShapeStride<D>, source: ShapeStride<D>) -> bool {
     if to.shape().len() == 1 {
         return true;
+    }
+    if !to.is_default_stride() || !source.is_default_stride() {
+        return false;
     }
     if to.is_transposed() != source.is_transposed() {
         return false;
@@ -42,57 +47,29 @@ fn check_can_use_blas<D: DimTrait>(to: ShapeStride<D>, source: ShapeStride<D>) -
     false
 }
 
-fn copy<T, VM, V>(to: &mut Matrix<VM, DimDyn>, source: &Matrix<V, DimDyn>)
-where
-    T: Num,
-    VM: ViewMut<Item = T>,
-    V: View<Item = T>,
-{
-    assert_eq!(to.shape(), source.shape());
-
+fn copy<T: Num>(mut to: Matrix<ViewMutMem<T>, DimDyn>, source: Matrix<ViewMem<T>, DimDyn>) {
     if to.shape().is_empty() {
         unsafe {
             to.as_mut_ptr().write(source.as_ptr().read());
         }
         return;
     }
-
     if check_can_use_blas(to.shape_stride(), source.shape_stride()) {
         let s_stride_max = source.shape_stride().min_stride();
         let t_stride_max = to.shape_stride().min_stride();
-        <VM as Memory>::Blas::copy(
+        <ViewMutMem<T> as Memory>::Blas::copy(
             to.shape().num_elm(),
             source.as_ptr(),
             s_stride_max,
             to.as_mut_ptr() as *mut _,
             t_stride_max,
         );
-        return;
-    }
-
-    match to.shape().len() {
-        2 => {
-            for i in 0..to.shape()[0] {
-                let mut to_ = to.index_axis_mut_dyn(Index::new(0, i));
-                let source_ = source.index_axis_dyn(Index::new(0, i));
-                copy(&mut to_, &source_);
-            }
+    } else {
+        for idx in 0..to.shape()[0] {
+            let to_ = to.index_axis_mut_dyn(Index::new(0, idx));
+            let source_ = source.index_axis_dyn(Index::new(0, idx));
+            copy(to_, source_);
         }
-        3 => {
-            for i in 0..to.shape()[0] {
-                let mut to_ = to.index_axis_mut_dyn(Index::new(0, i));
-                let source_ = source.index_axis_dyn(Index::new(0, i));
-                copy(&mut to_, &source_);
-            }
-        }
-        4 => {
-            for i in 0..to.shape()[0] {
-                let mut to_ = to.index_axis_mut_dyn(Index::new(0, i));
-                let source_ = source.index_axis_dyn(Index::new(0, i));
-                copy(&mut to_, &source_);
-            }
-        }
-        _ => panic!("Not implemented"),
     }
 }
 

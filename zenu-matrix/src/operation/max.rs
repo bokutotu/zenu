@@ -3,7 +3,7 @@ use crate::{
     dim::{DimDyn, DimTrait},
     matrix::{AsPtr, BlasMatrix, IndexItem, MatrixBase},
     matrix_impl::Matrix,
-    memory_impl::{OwnedMem, ViewMem},
+    memory_impl::ViewMem,
     num::Num,
 };
 
@@ -20,7 +20,7 @@ where
     D: DimTrait,
 {
     fn max_idx(self) -> DimDyn {
-        let default_stride: Matrix<OwnedMem<T>, DimDyn> = ToDefaultStride::to_default_stride(self);
+        let default_stride = self.into_dyn_dim().to_default_stride();
         let idx = <Self as BlasMatrix>::Blas::amax(
             default_stride.shape().num_elm(),
             default_stride.as_ptr(),
