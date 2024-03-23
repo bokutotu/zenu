@@ -5,11 +5,7 @@ use zenu_matrix::{
     matrix_impl::{Matrix, OwnedMatrixDyn},
     memory_impl::{OwnedMem, ViewMem},
     num::Num,
-    operation::{
-        mul::Gemm,
-        reshape::Reshape,
-        transpose::{Transpose, TransposeInplace},
-    },
+    operation::{mul::Gemm, reshape::Reshape, transpose::TransposeInplace},
 };
 
 use super::im2col::{im2col, Im2ColRes};
@@ -33,7 +29,7 @@ pub(crate) fn conv2d_inner<T: Num>(
     result.to_view_mut().gemm(kernel, col.to_view());
     result
         .reshape([kernel_shape[0], batch_size, out_size.0, out_size.1])
-        .transpose_by_index_inplace(&[1, 0, 2, 3])
+        .transpose_swap_index_inplace(0, 1)
 }
 
 #[cfg(test)]
