@@ -66,6 +66,14 @@ impl<M, S> Matrix<M, S> {
         self.shape = shape;
     }
 
+    pub(crate) fn update_shape_stride(&mut self, shape_stride: ShapeStride<S>)
+    where
+        S: DimTrait,
+    {
+        self.shape = shape_stride.shape();
+        self.stride = shape_stride.stride();
+    }
+
     pub(crate) fn update_stride(&mut self, stride: S) {
         self.stride = stride;
     }

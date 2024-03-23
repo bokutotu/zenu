@@ -220,7 +220,7 @@ mod dataset {
         let expected_batch = OwnedMatrixDyn::from_vec(vec![1., 2., 3., 4., 5., 6.], [2, 3]);
         let diff = batch[0].get_data() - expected_batch;
         assert_eq!(diff.asum(), 0.);
-        assert_eq!(batch[1].get_data().shape().slice(), [2, 3]);
+        assert_eq!(batch[1].get_data().shape().slice(), [2, 10]);
         let expected_batch = OwnedMatrixDyn::from_vec(
             vec![
                 1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0.,
