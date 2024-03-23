@@ -180,6 +180,16 @@ mod tests {
                         start: None,
                         end: None,
                         step: None
+                    },
+                    SliceDim {
+                        start: None,
+                        end: None,
+                        step: None
+                    },
+                    SliceDim {
+                        start: None,
+                        end: None,
+                        step: None
                     }
                 ],
                 len: 3

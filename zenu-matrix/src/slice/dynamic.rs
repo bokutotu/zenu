@@ -4,7 +4,7 @@ use crate::{dim::DimDyn, index::SliceTrait, shape_stride::ShapeStride};
 #[derive(Clone, Debug, Copy, PartialEq)]
 
 pub struct Slice {
-    pub index: [SliceDim; 4],
+    pub index: [SliceDim; 6],
     pub len: usize,
 }
 
@@ -42,7 +42,7 @@ impl SliceTrait for Slice {
 
 impl From<&[SliceDim]> for Slice {
     fn from(s: &[SliceDim]) -> Self {
-        if s.len() > 4 {
+        if s.len() > 6 {
             panic!("too many slice dimensions");
         } else if s.len() == 1 {
             Slice {
@@ -51,23 +51,56 @@ impl From<&[SliceDim]> for Slice {
                     SliceDim::default(),
                     SliceDim::default(),
                     SliceDim::default(),
+                    SliceDim::default(),
+                    SliceDim::default(),
                 ],
                 len: 1,
             }
         } else if s.len() == 2 {
             Slice {
-                index: [s[0], s[1], SliceDim::default(), SliceDim::default()],
+                index: [
+                    s[0],
+                    s[1],
+                    SliceDim::default(),
+                    SliceDim::default(),
+                    SliceDim::default(),
+                    SliceDim::default(),
+                ],
                 len: 2,
             }
         } else if s.len() == 3 {
             Slice {
-                index: [s[0], s[1], s[2], SliceDim::default()],
+                index: [
+                    s[0],
+                    s[1],
+                    s[2],
+                    SliceDim::default(),
+                    SliceDim::default(),
+                    SliceDim::default(),
+                ],
                 len: 3,
+            }
+        } else if s.len() == 4 {
+            Slice {
+                index: [
+                    s[0],
+                    s[1],
+                    s[2],
+                    s[3],
+                    SliceDim::default(),
+                    SliceDim::default(),
+                ],
+                len: 4,
+            }
+        } else if s.len() == 5 {
+            Slice {
+                index: [s[0], s[1], s[2], s[3], s[4], SliceDim::default()],
+                len: 5,
             }
         } else {
             Slice {
-                index: [s[0], s[1], s[2], s[3]],
-                len: 4,
+                index: [s[0], s[1], s[2], s[3], s[4], s[5]],
+                len: 6,
             }
         }
     }
