@@ -37,12 +37,17 @@ pub fn padding<T: Num>(
     output
 }
 
+pub(crate) struct Im2ColRes<T: Num> {
+    pub(crate) col: Matrix<OwnedMem<T>, DimDyn>,
+    pub(crate) out_size: (usize, usize),
+}
+
 pub(crate) fn im2col<T: Num>(
     img: Matrix<ViewMem<T>, DimDyn>,
     kernel_size: (usize, usize),
     stride: (usize, usize),
     pad: (usize, usize),
-) -> Matrix<OwnedMem<T>, DimDyn> {
+) -> Im2ColRes<T> {
     let n = img.shape()[0];
     let c = img.shape()[1];
     let h = img.shape()[2];
@@ -72,7 +77,10 @@ pub(crate) fn im2col<T: Num>(
     let num_elm = col.shape().num_elm();
     let col = col.transepose_by_index(&[0, 4, 5, 1, 2, 3]);
     let col = col.reshape_new_matrix(&[n * oh * ow, num_elm / (n * oh * ow)]);
-    col
+    Im2ColRes {
+        col,
+        out_size: (oh, ow),
+    }
 }
 
 #[cfg(test)]
@@ -101,7 +109,6 @@ mod im2col {
             ],
             [9, 4],
         );
-        println!("{:?}", result);
-        assert!((ans - result).to_view().asum() < 1e-6);
+        assert!((ans - result.col).to_view().asum() < 1e-6);
     }
 }

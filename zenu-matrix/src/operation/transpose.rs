@@ -102,7 +102,6 @@ mod transpose_inplace {
         }
         let input = OwnedMatrixDyn::from_vec(input, [3, 4, 5, 6]);
         let output = input.transpose_by_index_inplace(&[1, 0, 2, 3]);
-        println!("{:?}", output);
         let ans = vec![
             0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 20.0, 21.0, 22.0,
             23.0, 24.0, 25.0, 30.0, 31.0, 32.0, 33.0, 34.0, 35.0, 40.0, 41.0, 42.0, 43.0, 44.0,

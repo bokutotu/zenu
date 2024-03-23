@@ -19,7 +19,7 @@ macro_rules! impl_ops {
             type Output = Matrix<M::Owned, D>;
 
             fn $method(self, rhs: T) -> Self::Output {
-                let mut owned = ToOwnedMatrix::to_owned(&self);
+                let mut owned = ToOwnedMatrix::to_owned_matrix(&self);
                 $use_trait_method::$method(&mut owned, self, rhs);
                 owned
             }

@@ -43,7 +43,7 @@ pub trait ToOwnedMatrix: MatrixBase {
     where
         Self: Sized;
 
-    fn to_owned(&self) -> Self::Owned;
+    fn to_owned_matrix(&self) -> Self::Owned;
 }
 
 pub trait AsMutPtr: MatrixBase {
