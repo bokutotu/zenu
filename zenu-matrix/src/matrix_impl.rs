@@ -175,7 +175,7 @@ impl<M: ToViewMutMemory, S: DimTrait> ToViewMutMatrix for Matrix<M, S> {
 impl<M: ToOwnedMemory, S: DimTrait> ToOwnedMatrix for Matrix<M, S> {
     type Owned = Matrix<M::Owned, S>;
 
-    fn to_owned(&self) -> Self::Owned {
+    fn to_owned_matrix(&self) -> Self::Owned {
         Matrix {
             memory: self.memory.to_owned_memory(),
             shape: self.shape,
