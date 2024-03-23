@@ -12,6 +12,7 @@ mod mul;
 pub mod activation;
 pub mod broadcast;
 pub mod clip;
+pub mod conv2d;
 pub mod cosh;
 pub mod div;
 pub mod exp;
