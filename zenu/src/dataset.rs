@@ -18,6 +18,9 @@ pub trait Dataset<T: Num> {
     type Item;
     fn item(&self, index: usize) -> Vec<Variable<T>>;
     fn len(&self) -> usize;
+    fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
     fn all_data(&mut self) -> &mut [Self::Item];
     fn shuffle(&mut self) {
         let mut rng = rand::thread_rng();
@@ -44,6 +47,10 @@ impl<T: Num, D: Dataset<T>> DataLoader<T, D> {
 
     pub fn len(&self) -> usize {
         (self.dataset.len() as f64 / self.batch_size as f64).ceil() as usize
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.dataset.len() == 0
     }
 
     pub fn shuffle(&mut self) {
@@ -83,7 +90,7 @@ impl<T: Num, D: Dataset<T>> Iterator for DataLoader<T, D> {
         let result: Vec<Variable<T>> = result.iter().map(|v| concat(v)).collect();
 
         if result.len() == 1 {
-            return Some(result);
+            Some(result)
         } else {
             let first_batch_size = result[0].get_data().shape()[0];
             for v in result.iter().skip(1) {
@@ -91,7 +98,7 @@ impl<T: Num, D: Dataset<T>> Iterator for DataLoader<T, D> {
                     panic!("All batch size must be same");
                 }
             }
-            return Some(result);
+            Some(result)
         }
     }
 }

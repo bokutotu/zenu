@@ -5,11 +5,13 @@ use std::io::Read;
 use std::io::Seek;
 use std::io::SeekFrom;
 use std::io::Write;
+use std::path::Path;
 use std::path::PathBuf;
 
 use flate2::read::GzDecoder;
 use reqwest::blocking::get;
 
+#[allow(clippy::type_complexity)]
 pub fn minist_dataset(
 ) -> Result<(Vec<(Vec<u8>, u8)>, Vec<(Vec<u8>, u8)>), Box<dyn std::error::Error>> {
     let dataset_dir = create_minist_dir()?;
@@ -37,7 +39,7 @@ fn create_minist_dir() -> Result<PathBuf, std::io::Error> {
     Ok(target_dir)
 }
 
-fn download_mnist_dataset(dataset_dir: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
+fn download_mnist_dataset(dataset_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
     let mnist_urls = [
         "http://yann.lecun.com/exdb/mnist/train-images-idx3-ubyte.gz",
         "http://yann.lecun.com/exdb/mnist/train-labels-idx1-ubyte.gz",
@@ -73,8 +75,9 @@ fn download_mnist_dataset(dataset_dir: &PathBuf) -> Result<(), Box<dyn std::erro
     Ok(())
 }
 
+#[allow(clippy::type_complexity)]
 fn extract_image_label_pairs(
-    dataset_dir: &PathBuf,
+    dataset_dir: &Path,
 ) -> Result<(Vec<(Vec<u8>, u8)>, Vec<(Vec<u8>, u8)>), Box<dyn std::error::Error>> {
     let train_images_path = dataset_dir.join("train-images-idx3-ubyte");
     let train_labels_path = dataset_dir.join("train-labels-idx1-ubyte");

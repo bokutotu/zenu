@@ -1,7 +1,7 @@
 use crate::{
     dim::{default_stride, DimDyn, DimTrait},
-    matrix::{MatrixBase, OwnedMatrix, ToViewMatrix},
-    matrix_impl::{Matrix, OwnedMatrixDyn},
+    matrix::{MatrixBase, ToViewMatrix},
+    matrix_impl::Matrix,
     memory::ToViewMemory,
     memory_impl::{OwnedMem, ViewMem},
     num::Num,
