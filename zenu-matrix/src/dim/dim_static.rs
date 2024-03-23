@@ -190,6 +190,8 @@ impl_dim!(Dim1, 1);
 impl_dim!(Dim2, 2);
 impl_dim!(Dim3, 3);
 impl_dim!(Dim4, 4);
+impl_dim!(Dim5, 5);
+impl_dim!(Dim6, 6);
 
 macro_rules! impl_less_dim {
     ($impl_ty:ty, $less_dim:ty) => {
@@ -202,6 +204,8 @@ impl_less_dim!(Dim1, Dim0);
 impl_less_dim!(Dim2, Dim1);
 impl_less_dim!(Dim3, Dim2);
 impl_less_dim!(Dim4, Dim3);
+impl_less_dim!(Dim5, Dim4);
+impl_less_dim!(Dim6, Dim5);
 
 macro_rules! impl_grater_dim_trait {
     ($impl_ty:ty, $less_dim:ty) => {
@@ -214,3 +218,5 @@ impl_grater_dim_trait!(Dim0, Dim1);
 impl_grater_dim_trait!(Dim1, Dim2);
 impl_grater_dim_trait!(Dim2, Dim3);
 impl_grater_dim_trait!(Dim3, Dim4);
+impl_grater_dim_trait!(Dim4, Dim5);
+impl_grater_dim_trait!(Dim5, Dim6);

@@ -4,7 +4,7 @@ use super::{DimTrait, GreaterDimTrait, LessDimTrait};
 
 #[derive(Clone, Debug, Default, PartialEq, Copy)]
 pub struct DimDyn {
-    dim: [usize; 4],
+    dim: [usize; 6],
     len: usize,
 }
 /// larger_shapeは2つのshapeのうち大きい方のshapeを返す
@@ -59,7 +59,7 @@ pub(crate) fn smaller_shape<D1: DimTrait, D2: DimTrait>(x: D1, y: D2) -> DimDyn 
 
 impl DimDyn {
     pub fn new(dim: &[usize]) -> Self {
-        if dim.len() > 4 {
+        if dim.len() > 6 {
             panic!("Dim must be smaller than 4");
         }
         let mut dim_dyn = DimDyn::default();
@@ -69,7 +69,7 @@ impl DimDyn {
         dim_dyn
     }
 
-    pub fn dim(&self) -> [usize; 4] {
+    pub fn dim(&self) -> [usize; 6] {
         self.dim
     }
 
@@ -241,6 +241,8 @@ macro_rules! impl_from_slice_dim {
     };
     () => {};
 }
+impl_from_slice_dim!(DimDyn, 6);
+impl_from_slice_dim!(DimDyn, 5);
 impl_from_slice_dim!(DimDyn, 4);
 impl_from_slice_dim!(DimDyn, 3);
 impl_from_slice_dim!(DimDyn, 2);
