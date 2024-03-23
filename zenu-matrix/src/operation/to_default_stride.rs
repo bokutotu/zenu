@@ -11,7 +11,7 @@ use crate::{
 use super::copy_from::CopyFrom;
 
 pub trait ToDefaultStride<T: Num> {
-    fn to_default_stride(self: &Self) -> Matrix<OwnedMem<T>, DimDyn>;
+    fn to_default_stride(&self) -> Matrix<OwnedMem<T>, DimDyn>;
 }
 
 impl<T, M, D: DimTrait> ToDefaultStride<T> for Matrix<M, D>
@@ -19,7 +19,7 @@ where
     T: Num,
     M: ToViewMemory<Item = T>,
 {
-    fn to_default_stride(self: &Self) -> Matrix<OwnedMem<T>, DimDyn> {
+    fn to_default_stride(&self) -> Matrix<OwnedMem<T>, DimDyn> {
         let mut output: Matrix<OwnedMem<T>, DimDyn> = Zeros::zeros_like(self.to_view());
         {
             let mut output_view_mut = output.to_view_mut();
