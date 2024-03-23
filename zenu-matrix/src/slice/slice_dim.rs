@@ -29,10 +29,6 @@ impl SliceDim {
             return false;
         }
 
-        if end > dim {
-            return false;
-        }
-
         if step == 0 {
             return false;
         }
