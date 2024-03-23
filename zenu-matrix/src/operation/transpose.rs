@@ -1,14 +1,13 @@
-use serde_json::value::Index;
-
 use crate::{
     constructor::zeros::Zeros,
     dim::{Dim2, Dim3, Dim4, DimDyn, DimTrait},
-    matrix::{IndexAxisDyn, MatrixBase, MatrixSliceMutDyn, ToViewMatrix},
+    index::index_dyn_impl::Index,
+    matrix::{IndexAxisDyn, IndexAxisMutDyn, MatrixBase, ToViewMatrix},
     matrix_impl::{Matrix, OwnedMatrixDyn},
     memory::{Memory, ToViewMemory},
     memory_impl::{OwnedMem, ViewMem},
     num::Num,
-    slice_dynamic,
+    operation::copy_from::CopyFrom,
 };
 
 use super::to_default_stride::ToDefaultStride;
@@ -48,7 +47,7 @@ impl<T: Num, M: Memory<Item = T>> Transpose for Matrix<M, DimDyn> {
 pub trait TransposeInplace<T: Num> {
     fn transepose_by_index(&self, index: &[usize]) -> Matrix<ViewMem<T>, DimDyn>;
     fn transpose_by_index_inplace(&self, index: &[usize]) -> Matrix<OwnedMem<T>, DimDyn>;
-    // fn transpose_swap_index_inplace(&self, a: usize, b: usize) -> Matrix<OwnedMem<T>, DimDyn>;
+    fn transpose_swap_index_inplace(&self, a: usize, b: usize) -> Matrix<OwnedMem<T>, DimDyn>;
 }
 
 impl<T: Num, M: ToViewMemory<Item = T>> TransposeInplace<T> for Matrix<M, DimDyn> {
@@ -64,22 +63,42 @@ impl<T: Num, M: ToViewMemory<Item = T>> TransposeInplace<T> for Matrix<M, DimDyn
         transposed_view.to_default_stride()
     }
 
-    // fn transpose_swap_index_inplace(&self, a: usize, b: usize) -> Matrix<OwnedMem<T>, DimDyn> {
-    //     assert!(a < self.shape().len(), "Index out of range");
-    //     assert!(b < self.shape().len(), "Index out of range");
-    //     let mut shape = self.shape();
-    //     shape[a] = self.shape()[b];
-    //     shape[b] = self.shape()[a];
-    //     let mut zeros = OwnedMatrixDyn::zeros(shape);
-    //
-    //     for i in 0..self.shape()[a] {
-    //         for j in 0..self.shape()[b] {
-    //             let mut slice_view_mut = self.(Index::new(b, j));
-    //         }
-    //     }
-    //
-    //     zeros
-    // }
+    fn transpose_swap_index_inplace(&self, a: usize, b: usize) -> Matrix<OwnedMem<T>, DimDyn> {
+        if a == b {
+            panic!("Index must be different");
+        }
+        if a < b {
+            return self.transpose_swap_index_inplace(b, a);
+        }
+        assert!(a < self.shape().len(), "Index out of range");
+        assert!(b < self.shape().len(), "Index out of range");
+        let mut shape = self.shape();
+        shape[a] = self.shape()[b];
+        shape[b] = self.shape()[a];
+        let mut zeros = OwnedMatrixDyn::zeros(shape);
+
+        if self.shape().len() == 2 {
+            for i in 0..self.shape()[0] {
+                zeros
+                    .index_axis_mut_dyn(Index::new(1, i))
+                    .copy_from(&self.index_axis_dyn(Index::new(0, i)));
+            }
+            return zeros;
+        }
+
+        for i in 0..self.shape()[a] {
+            let i_self = self.index_axis_dyn(Index::new(a, i));
+            let mut i_zeros = zeros.index_axis_mut_dyn(Index::new(b, i));
+
+            for j in 0..self.shape()[b] {
+                let j_self = i_self.index_axis_dyn(Index::new(b, j));
+                let mut j_zeros = i_zeros.index_axis_mut_dyn(Index::new(a - 1, j));
+                j_zeros.copy_from(&j_self);
+            }
+        }
+
+        zeros
+    }
 }
 
 #[cfg(test)]
@@ -159,6 +178,37 @@ mod transpose_inplace {
             2340.0, 2341.0, 2342.0, 2343.0, 2344.0, 2345.0,
         ];
         let ans = OwnedMatrixDyn::from_vec(ans, [4, 3, 5, 6]);
+        assert!((output - ans).asum() < 1e-6);
+    }
+
+    #[test]
+    fn swap_axis() {
+        let input = OwnedMatrixDyn::from_vec(vec![1., 2., 3., 4., 5., 6.], [2, 3]);
+        let output = input.transpose_swap_index_inplace(0, 1);
+        println!("{:?}", output);
+        let ans = OwnedMatrixDyn::from_vec(vec![1., 4., 2., 5., 3., 6.], [3, 2]);
+        assert!((output - ans).asum() < 1e-6);
+    }
+
+    #[test]
+    fn swap_axis_3d() {
+        // 2, 3, 4
+        let input = OwnedMatrixDyn::from_vec(
+            vec![
+                1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12., 13., 14., 15., 16., 17., 18.,
+                19., 20., 21., 22., 23., 24.,
+            ],
+            [2, 3, 4],
+        );
+        let output = input.transpose_swap_index_inplace(0, 1);
+        println!("{:?}", output);
+        let ans = OwnedMatrixDyn::from_vec(
+            vec![
+                1., 2., 3., 4., 13., 14., 15., 16., 5., 6., 7., 8., 17., 18., 19., 20., 9., 10.,
+                11., 12., 21., 22., 23., 24.,
+            ],
+            [3, 2, 4],
+        );
         assert!((output - ans).asum() < 1e-6);
     }
 }
