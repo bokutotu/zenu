@@ -6,7 +6,8 @@ use crate::{
     matrix::{
         AsMutPtr, AsPtr, BlasMatrix, IndexAxis, IndexAxisDyn, IndexAxisMut, IndexAxisMutDyn,
         IndexItem, IndexItemAsign, MatrixBase, MatrixSlice, MatrixSliceDyn, MatrixSliceMut,
-        OwnedMatrix, ToOwnedMatrix, ToViewMatrix, ToViewMutMatrix, ViewMatrix, ViewMutMatix,
+        MatrixSliceMutDyn, OwnedMatrix, ToOwnedMatrix, ToViewMatrix, ToViewMutMatrix, ViewMatrix,
+        ViewMutMatix,
     },
     memory::{Memory, Owned, ToOwnedMemory, ToViewMemory, ToViewMutMemory, View, ViewMut},
     memory_impl::{OwnedMem, ViewMem, ViewMutMem},
@@ -387,6 +388,30 @@ where
         )
     }
 }
+
+impl<T, M, D> MatrixSliceMutDyn for Matrix<M, D>
+where
+    T: Num,
+    M: Memory<Item = T> + ToViewMutMemory,
+    D: DimTrait,
+{
+    type Output<'a> = Matrix<ViewMutMem<'a, Self::Item>, DimDyn>
+    where
+        Self: 'a;
+
+    fn slice_mut_dyn(&mut self, index: Slice) -> Self::Output<'_> {
+        let shape_stride = self.shape_stride().into_dyn();
+        let new_shape_stride =
+            index.sliced_shape_stride(shape_stride.shape(), shape_stride.stride());
+        let offset = index.sliced_offset(shape_stride.stride(), self.memory.get_offset());
+        Matrix::new(
+            self.memory.to_view_mut(offset),
+            new_shape_stride.shape(),
+            new_shape_stride.stride(),
+        )
+    }
+}
+
 impl<T: Num, M: Memory<Item = T>, D: DimTrait> BlasMatrix for Matrix<M, D> {
     type Blas = M::Blas;
 }
