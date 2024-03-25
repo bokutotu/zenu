@@ -1,7 +1,7 @@
 use zenu_matrix::{
     constructor::zeros::Zeros,
     dim::DimDyn,
-    matrix::{MatrixSliceDyn, MatrixSliceMutDyn, ToOwnedMatrix},
+    matrix::{MatrixBase, MatrixSliceDyn, MatrixSliceMutDyn, ToOwnedMatrix},
     matrix_impl::{Matrix, OwnedMatrixDyn},
     memory_impl::{OwnedMem, ViewMem},
     num::Num,
