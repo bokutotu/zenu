@@ -49,20 +49,20 @@ pub(crate) fn deconv2d_inner<T: Num>(
         get_deconv_outsize(w, kw, sw, pw),
     );
 
-    let img = img.transepose_by_index(&[1, 0, 2, 3]);
-    let img = img.reshape_new_matrix([c, batch_size * h * w]);
+    let img = img.transpose_by_index_inplace(&[1, 0, 2, 3]);
+    let img = img.reshape([c, batch_size * h * w]);
 
     let mut kernel = kernel.reshape([oc, ic * kh * kw]);
     kernel.transpose();
 
-    let mut result = OwnedMatrixDyn::zeros([ic * kh * kw, batch_size * out_h * out_w]);
-    result.to_view_mut().gemm(kernel.to_view(), img.to_view());
+    let mut col = OwnedMatrixDyn::zeros([ic * kh * kw, batch_size * out_h * out_w]);
+    col.to_view_mut().gemm(kernel.to_view(), img.to_view());
 
-    let result = result.reshape([ic, kh, kw, batch_size, h, w]);
-    let result = result.transpose_by_index_inplace(&[3, 0, 1, 2, 4, 5]);
+    let col = col.reshape([ic, kh, kw, batch_size, h, w]);
+    let col = col.transpose_by_index_inplace(&[3, 0, 1, 2, 4, 5]);
 
     col2im(
-        result.to_view(),
+        col.to_view(),
         [batch_size, ic, oh, ow],
         (kh, kw),
         stride,
