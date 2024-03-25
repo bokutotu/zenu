@@ -28,7 +28,7 @@ impl SliceTrait for Slice {
         ShapeStride::new(new_shape, new_stride)
     }
 
-    fn sliced_offset(&self, stride: Self::Dim, original_offset: usize) -> usize {
+    fn sliced_offset(&self, stride: Self::Dim) -> usize {
         let mut offset = 0;
 
         for i in 0..self.len {
@@ -36,7 +36,8 @@ impl SliceTrait for Slice {
             offset += start * stride[i];
         }
 
-        offset + original_offset
+        // offset + original_offset
+        offset
     }
 }
 

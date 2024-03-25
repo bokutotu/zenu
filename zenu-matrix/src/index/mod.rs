@@ -8,7 +8,7 @@ use crate::{dim::DimTrait, shape_stride::ShapeStride};
 pub trait SliceTrait {
     type Dim: DimTrait;
     fn sliced_shape_stride(&self, shape: Self::Dim, stride: Self::Dim) -> ShapeStride<Self::Dim>;
-    fn sliced_offset(&self, stride: Self::Dim, original_offset: usize) -> usize;
+    fn sliced_offset(&self, stride: Self::Dim) -> usize;
 }
 
 pub trait IndexAxisTrait {

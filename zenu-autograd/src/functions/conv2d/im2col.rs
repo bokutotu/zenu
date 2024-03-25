@@ -9,7 +9,7 @@ use zenu_matrix::{
     slice_dynamic,
 };
 
-pub fn padding<T: Num>(
+fn padding<T: Num>(
     input: Matrix<ViewMem<T>, DimDyn>,
     padding: (usize, usize),
 ) -> Matrix<OwnedMem<T>, DimDyn> {
@@ -74,8 +74,6 @@ pub(crate) fn im2col<T: Num>(
         }
     }
 
-    // let col = col.transepose_by_index(&[0, 4, 5, 1, 2, 3]);
-    // let col = col.reshape_new_matrix(&[batch_size * oh * ow, c * kh * kw]);
     let col = col.transepose_by_index(&[1, 2, 3, 0, 4, 5]);
     let col = col.reshape_new_matrix([c * kh * kw, batch_size * oh * ow]);
     Im2ColRes {
