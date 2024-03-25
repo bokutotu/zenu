@@ -16,7 +16,7 @@ impl SliceTrait for Slice0D {
         ShapeStride::new(shape, stride)
     }
 
-    fn sliced_offset(&self, _stride: Self::Dim, _original_offset: usize) -> usize {
+    fn sliced_offset(&self, _stride: Self::Dim) -> usize {
         0
     }
 }
@@ -57,7 +57,7 @@ macro_rules! impl_slice_ty {
                 ShapeStride::new(new_shape, new_stride)
             }
 
-            fn sliced_offset(&self, stride: Self::Dim, original_offset: usize) -> usize {
+            fn sliced_offset(&self, stride: Self::Dim) -> usize {
                 let mut offset = 0;
 
                 for i in 0..$num_item {
@@ -65,7 +65,7 @@ macro_rules! impl_slice_ty {
                     offset += start * stride[i];
                 }
 
-                offset + original_offset
+                offset
             }
         }
     };
@@ -119,7 +119,7 @@ mod static_dim_slice {
     fn test_sliced_offset_2d() {
         let stride = Dim2::new([10, 1]);
         let slice = crate::slice!(1..5;2, 3..10;1);
-        let offset = slice.sliced_offset(stride, 0);
+        let offset = slice.sliced_offset(stride);
 
         assert_eq!(offset, 13);
     }

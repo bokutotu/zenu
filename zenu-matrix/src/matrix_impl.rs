@@ -226,7 +226,7 @@ impl<M: ToViewMemory, D: DimTrait, S: SliceTrait<Dim = D>> MatrixSlice<S> for Ma
         let shape = shape_stride.shape();
         let stride = shape_stride.stride();
         let new_shape_stride = index.sliced_shape_stride(shape, stride);
-        let offset = index.sliced_offset(stride, self.memory.get_offset());
+        let offset = index.sliced_offset(stride);
         Self::Output::new(
             self.memory.to_view(offset),
             new_shape_stride.shape(),
@@ -245,7 +245,7 @@ impl<M: ToViewMutMemory, D: DimTrait, S: SliceTrait<Dim = D>> MatrixSliceMut<S> 
         let shape = shape_stride.shape();
         let stride = shape_stride.stride();
         let new_shape_stride = index.sliced_shape_stride(shape, stride);
-        let offset = index.sliced_offset(stride, self.memory.get_offset());
+        let offset = index.sliced_offset(stride);
         Self::Output::new(
             self.memory.to_view_mut(offset),
             new_shape_stride.shape(),
@@ -380,7 +380,7 @@ where
         let shape_stride = self.shape_stride().into_dyn();
         let new_shape_stride =
             index.sliced_shape_stride(shape_stride.shape(), shape_stride.stride());
-        let offset = index.sliced_offset(shape_stride.stride(), self.memory.get_offset());
+        let offset = index.sliced_offset(shape_stride.stride());
         Matrix::new(
             self.memory.to_view(offset),
             new_shape_stride.shape(),
@@ -403,7 +403,7 @@ where
         let shape_stride = self.shape_stride().into_dyn();
         let new_shape_stride =
             index.sliced_shape_stride(shape_stride.shape(), shape_stride.stride());
-        let offset = index.sliced_offset(shape_stride.stride(), self.memory.get_offset());
+        let offset = index.sliced_offset(shape_stride.stride());
         Matrix::new(
             self.memory.to_view_mut(offset),
             new_shape_stride.shape(),
