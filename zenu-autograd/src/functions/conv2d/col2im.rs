@@ -20,14 +20,16 @@ pub(crate) fn col2im<T: Num>(
     let (kh, kw) = kernel_size;
     let (sh, sw) = stride;
     let (ph, pw) = pad;
+    let (oh, ow) = ((h + 2 * ph - kh) / sh + 1, (w + 2 * pw - kw) / sw + 1);
 
     let mut img = OwnedMatrixDyn::zeros([batch_size, c, h + 2 * ph + sh - 1, w + 2 * pw + sw - 1]);
 
     for j in 0..kh {
-        let j_lim = j + sh * h;
+        let j_lim = j + sh * oh;
         for i in 0..kw {
-            let i_lim = i + sw * w;
+            let i_lim = i + sw * ow;
             let col = col.slice_dyn(slice_dynamic!(.., .., j, i, .., ..));
+
             let mut img_slice = img.slice_mut_dyn(slice_dynamic!(
                 ..,
                 ..,
