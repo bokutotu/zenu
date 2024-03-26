@@ -1,6 +1,6 @@
 use zenu_matrix::{
     constructor::zeros::Zeros,
-    dim::{DimDyn, DimTrait},
+    dim::DimDyn,
     matrix::{MatrixBase, ToViewMatrix, ToViewMutMatrix},
     matrix_impl::{Matrix, OwnedMatrixDyn},
     memory_impl::{OwnedMem, ViewMem},
@@ -14,8 +14,25 @@ use zenu_matrix::{
 
 use super::col2im::col2im;
 
-pub(super) fn get_deconv_outsize(size: usize, k: usize, s: usize, p: usize) -> usize {
+pub(super) fn get_deconv_outsize_(size: usize, k: usize, s: usize, p: usize) -> usize {
     s * (size - 1) + k - 2 * p
+}
+
+pub(super) fn deconv2d_out_size(
+    img_shape: &[usize],
+    kernel_shape: &[usize],
+    padding: (usize, usize),
+    stride: (usize, usize),
+) -> [usize; 4] {
+    let (b, h, w) = (img_shape[0], img_shape[2], img_shape[3]);
+    let (ic, kh, kw) = (kernel_shape[1], kernel_shape[2], kernel_shape[3]);
+    let (ph, pw) = padding;
+    let (sh, sw) = stride;
+    let (h, w) = (
+        get_deconv_outsize_(h, kh, sh, ph),
+        get_deconv_outsize_(w, kw, sw, pw),
+    );
+    [b, ic, h, w]
 }
 
 pub(crate) fn deconv2d_inner<T: Num>(
@@ -41,8 +58,8 @@ pub(crate) fn deconv2d_inner<T: Num>(
     let (sh, sw) = stride;
 
     let (out_h, out_w) = (
-        get_deconv_outsize(h, kh, sh, ph),
-        get_deconv_outsize(w, kw, sw, pw),
+        get_deconv_outsize_(h, kh, sh, ph),
+        get_deconv_outsize_(w, kw, sw, pw),
     );
 
     let img = img.transpose_by_index_inplace(&[1, 0, 2, 3]);
