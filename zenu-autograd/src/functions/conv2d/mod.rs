@@ -17,7 +17,7 @@ use crate::{creator::zeros::zeros, Function, Variable, VariableWeak};
 use self::{
     conv2d_impl::{conv2d_inner, conv2d_out_size},
     deconv2_impl::{deconv2d_inner, deconv2d_out_size},
-    im2col::im2col,
+    im2col::{im2col, Im2ColRes},
 };
 
 mod col2im;
@@ -130,30 +130,29 @@ impl<T: Num> Function<T> for Conv2dGrad<T> {
     fn forward(&self) {
         let input = self.input.get_data();
         let kernel_shape = self.kernel.get_data().shape();
-        let col = im2col(
+        let Im2ColRes { mut col, .. } = im2col(
             input.to_view(),
             (kernel_shape[2], kernel_shape[3]),
             self.stride,
             self.pad,
         );
+
+        col.transpose();
+
         let gradient_output = self.gradient_output.get_data();
-        let grad_output_shape = gradient_output.shape();
-        let grad_output_num_elm = grad_output_shape.num_elm();
-        let gradient_output_transpose = gradient_output.transpose_swap_index_inplace(0, 1);
-        let mut gradient_output_transose_reshape = gradient_output_transpose.reshape([
-            grad_output_shape[1],
-            grad_output_num_elm / grad_output_shape[1],
+        let gradient_output = gradient_output.transpose_swap_index_inplace(0, 1);
+        let gradient_output_shape = gradient_output.shape();
+        let gradient_output = gradient_output.reshape_new_matrix([
+            gradient_output_shape[0],
+            gradient_output_shape.num_elm() / gradient_output_shape[0],
         ]);
-        gradient_output_transose_reshape.transpose();
 
         let output = self.output.upgrade().unwrap();
-        let output_shape = output.get_data().shape();
-        let mut output = output.get_data_mut();
-        let mut output = output.reshape_mut([col.col.shape()[0], grad_output_shape[1]]);
         output
+            .get_data_mut()
             .to_view_mut()
-            .gemm(col.col.to_view(), gradient_output_transose_reshape);
-        output.reshape(output_shape.slice());
+            .reshape_mut([gradient_output.shape()[0], col.shape()[1]])
+            .gemm(gradient_output, col);
     }
 
     fn backward(&self) {
@@ -247,11 +246,7 @@ pub fn conv2d_grad<T: Num>(
 
 #[cfg(test)]
 mod conv2d {
-    use zenu_matrix::{
-        matrix::{MatrixBase, OwnedMatrix},
-        matrix_impl::OwnedMatrixDyn,
-        operation::asum::Asum,
-    };
+    use zenu_matrix::{matrix::OwnedMatrix, matrix_impl::OwnedMatrixDyn, operation::asum::Asum};
 
     use crate::creator::from_vec::from_vec;
 
@@ -266,7 +261,6 @@ mod conv2d {
             .collect::<Vec<f32>>();
         let image = from_vec(image, [2, 3, 5, 5]);
         let output = super::conv2d(image.clone(), kernel.clone(), (1, 1), (1, 1));
-        println!("{:?}", output.get_data().shape());
         output.backward();
 
         let output_ans = vec![

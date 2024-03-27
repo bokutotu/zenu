@@ -112,7 +112,6 @@ mod conv2d {
             .collect::<Vec<f32>>();
         let kernel = OwnedMatrixDyn::from_vec(kernel, [4, 3, 3, 3]);
         let out = conv2d_inner(input.to_view(), kernel.to_view(), (1, 1), (1, 1));
-        println!("{:?}", out);
         let ans = vec![
             7416., 11010., 11289., 11568., 7608., 11106., 16434., 16812., 17190., 11268., 12411.,
             18324., 18702., 19080., 12483., 13716., 20214., 20592., 20970., 13698., 8712., 12792.,
