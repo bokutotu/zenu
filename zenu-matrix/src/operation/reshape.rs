@@ -1,9 +1,9 @@
 use crate::{
     dim::{default_stride, DimDyn, DimTrait},
-    matrix::{MatrixBase, OwnedMatrix, ToViewMatrix},
+    matrix::{MatrixBase, OwnedMatrix, ToViewMatrix, ToViewMutMatrix},
     matrix_impl::Matrix,
-    memory::ToViewMemory,
-    memory_impl::{OwnedMem, ViewMem},
+    memory::{ToViewMemory, ToViewMutMemory},
+    memory_impl::{OwnedMem, ViewMem, ViewMutMem},
     num::Num,
     shape_stride::ShapeStride,
 };
@@ -13,6 +13,10 @@ use super::to_default_stride::ToDefaultStride;
 pub trait Reshape<T: Num>: ToViewMatrix {
     fn reshape<I: Into<DimDyn>>(&self, new_shape: I) -> Matrix<ViewMem<T>, DimDyn>;
     fn reshape_new_matrix<I: Into<DimDyn>>(&self, new_shape: I) -> Matrix<OwnedMem<T>, DimDyn>;
+}
+
+pub trait ReshapeMut<T: Num>: ToViewMutMatrix {
+    fn reshape_mut<I: Into<DimDyn>>(&mut self, new_shape: I) -> Matrix<ViewMutMem<T>, DimDyn>;
 }
 
 pub trait ReshapeNoAlloc<T: Num>: OwnedMatrix<Item = T> {
@@ -53,6 +57,29 @@ Use `reshape_new_matrix` method instead.
         let mut default_stride_matrix = self.to_view().to_default_stride();
         default_stride_matrix.update_shape_stride(ShapeStride::new(new_shape, new_stride));
         default_stride_matrix
+    }
+}
+
+impl<T: Num, D: DimTrait, V: ToViewMutMemory<Item = T>> ReshapeMut<T> for Matrix<V, D> {
+    fn reshape_mut<I: Into<DimDyn>>(&mut self, new_shape: I) -> Matrix<ViewMutMem<T>, DimDyn> {
+        let new_shape = new_shape.into();
+        assert_eq!(
+            self.shape().num_elm(),
+            new_shape.num_elm(),
+            "Number of elements must be the same"
+        );
+        assert!(
+            self.shape_stride().is_default_stride(),
+            r#"""
+`reshape` method is not alloc new memory.
+So, This matrix is not default stride, it is not allowed to use `reshape` method.
+Use `reshape_new_matrix` method instead.
+            """#
+        );
+        let new_stride = default_stride(new_shape);
+        let mut result = self.to_view_mut().into_dyn_dim();
+        result.update_shape_stride(ShapeStride::new(new_shape, new_stride));
+        result
     }
 }
 
