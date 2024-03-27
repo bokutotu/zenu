@@ -185,7 +185,6 @@ mod transpose_inplace {
     fn swap_axis() {
         let input = OwnedMatrixDyn::from_vec(vec![1., 2., 3., 4., 5., 6.], [2, 3]);
         let output = input.transpose_swap_index_inplace(0, 1);
-        println!("{:?}", output);
         let ans = OwnedMatrixDyn::from_vec(vec![1., 4., 2., 5., 3., 6.], [3, 2]);
         assert!((output - ans).asum() < 1e-6);
     }
@@ -201,7 +200,6 @@ mod transpose_inplace {
             [2, 3, 4],
         );
         let output = input.transpose_swap_index_inplace(0, 1);
-        println!("{:?}", output);
         let ans = OwnedMatrixDyn::from_vec(
             vec![
                 1., 2., 3., 4., 13., 14., 15., 16., 5., 6., 7., 8., 17., 18., 19., 20., 9., 10.,

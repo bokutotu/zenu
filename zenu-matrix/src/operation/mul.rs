@@ -1,11 +1,11 @@
 use crate::{
     dim::DimTrait,
-    matrix::ToViewMutMatrix,
+    matrix::{ToViewMatrix, ToViewMutMatrix},
     matrix_blas::gemm::{
         gemm_batch_shape_check, gemm_batch_unchecked, gemm_shape_check, gemm_unchecked,
     },
     matrix_impl::{matrix_into_dim, Matrix},
-    memory::{ToViewMemory, View, ViewMut},
+    memory::{ToViewMemory, ViewMut},
     num::Num,
 };
 
@@ -82,12 +82,14 @@ where
     D1: DimTrait,
     D2: DimTrait,
     D3: DimTrait,
-    M1: ToViewMemory<Item = T> + View,
-    M2: ToViewMemory<Item = T> + View,
+    M1: ToViewMemory<Item = T>,
+    M2: ToViewMemory<Item = T>,
     M3: ViewMut<Item = T>,
 {
     fn gemm(self, rhs: Matrix<M1, D1>, lhs: Matrix<M2, D2>) {
         // したのコードをif let Ok(())に続く形で書き直して
+        let rhs = rhs.to_view();
+        let lhs = lhs.to_view();
         if let Ok(()) = gemm_shape_check(&rhs, &lhs, &self) {
             gemm_unchecked(
                 matrix_into_dim(rhs),
