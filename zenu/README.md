@@ -1,6 +1,6 @@
-# Zenu
+# ZeNu
 
-Zenu is a simple and intuitive deep learning library written in Rust. It provides the building blocks for creating and training neural networks, with a focus on ease of use and flexibility.
+ZeNu is a simple and intuitive deep learning library written in Rust. It provides the building blocks for creating and training neural networks, with a focus on ease of use and flexibility.
 
 ## Features
 
@@ -11,14 +11,14 @@ Zenu is a simple and intuitive deep learning library written in Rust. It provide
 
 ## Getting Started
 
-To use Zenu in your Rust project, add the following to your `Cargo.toml` file:
+To use ZeNu in your Rust project, add the following to your `Cargo.toml` file:
 
 ```toml
 [dependencies]
 zenu = "0.1.0"
 ```
 
-Here's a simple example of defining and training a model using Zenu:
+Here's a simple example of defining and training a model using ZeNu:
 
 ```rust
 use zenu::{
@@ -114,4 +114,4 @@ For more details and examples, please refer to the [documentation](https://docs.
 
 ## License
 
-Zenu is licensed under the [MIT License](LICENSE).
+ZeNu is licensed under the [MIT License](LICENSE).

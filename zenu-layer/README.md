@@ -1,24 +1,24 @@
-# Zenu Layer
+# ZeNu Layer
 
-Zenu Layer is a collection of neural network layers implemented in Rust. It provides building blocks for constructing neural networks and integrates with the Zenu deep learning library.
+ZeNu Layer is a collection of neural network layers implemented in Rust. It provides building blocks for constructing neural networks and integrates with the ZeNu deep learning library.
 
 ## Features
 
 - Various layer types, including fully connected (linear) layers
 - Layer parameter initialization
 - Forward pass computation
-- Integration with Zenu Autograd for automatic differentiation
+- Integration with ZeNu Autograd for automatic differentiation
 
 ## Getting Started
 
-To use Zenu Layer in your Rust project, add the following to your `Cargo.toml` file:
+To use ZeNu Layer in your Rust project, add the following to your `Cargo.toml` file:
 
 ```toml
 [dependencies]
 zenu-layer = "0.1.0"
 ```
 
-Here's a simple example of using a linear layer from Zenu Layer:
+Here's a simple example of using a linear layer from ZeNu Layer:
 
 ```rust
 use zenu_autograd::creator::from_vec::from_vec;
@@ -47,4 +47,4 @@ For more details and examples, please refer to the [documentation](https://docs.
 
 ## License
 
-Zenu Layer is licensed under the [MIT License](LICENSE).
+ZeNu Layer is licensed under the [MIT License](LICENSE).

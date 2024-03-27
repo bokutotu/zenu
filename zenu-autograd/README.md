@@ -1,24 +1,24 @@
-# Zenu Autograd
+# ZeNu Autograd
 
-Zenu Autograd is an automatic differentiation library for Rust. It provides the foundation for building and training neural networks by automatically computing gradients of mathematical expressions.
+ZeNu Autograd is an automatic differentiation library for Rust. It provides the foundation for building and training neural networks by automatically computing gradients of mathematical expressions.
 
 ## Features
 
 - Define and manipulate mathematical expressions using Variables
 - Automatically compute gradients through reverse-mode automatic differentiation
 - Support for various mathematical operations and functions
-- Integration with Zenu deep learning library
+- Integration with ZeNu deep learning library
 
 ## Getting Started
 
-To use Zenu Autograd in your Rust project, add the following to your `Cargo.toml` file:
+To use ZeNu Autograd in your Rust project, add the following to your `Cargo.toml` file:
 
 ```toml
 [dependencies]
 zenu-autograd = "0.1.0"
 ```
 
-Here's a simple example of using Zenu Autograd:
+Here's a simple example of using ZeNu Autograd:
 
 ```rust
 use zenu_autograd::{Variable, creator::from_vec::from_vec};
@@ -41,4 +41,4 @@ For more details and examples, please refer to the [documentation](https://docs.
 
 ## License
 
-Zenu Autograd is licensed under the [MIT License](LICENSE).
+ZeNu Autograd is licensed under the [MIT License](LICENSE).

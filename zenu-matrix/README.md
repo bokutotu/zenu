@@ -1,6 +1,6 @@
-# Zenu Matrix
+# ZeNu Matrix
 
-Zenu Matrix is a linear algebra library for Rust, providing efficient matrix operations and various utilities for working with matrices.
+ZeNu Matrix is a linear algebra library for Rust, providing efficient matrix operations and various utilities for working with matrices.
 
 ## Features
 
@@ -14,14 +14,14 @@ Zenu Matrix is a linear algebra library for Rust, providing efficient matrix ope
 
 ## Getting Started
 
-To use Zenu Matrix in your Rust project, add the following to your `Cargo.toml` file:
+To use ZeNu Matrix in your Rust project, add the following to your `Cargo.toml` file:
 
 ```toml
 [dependencies]
 zenu-matrix = "0.1.0"
 ```
 
-Here's a simple example of using Zenu Matrix:
+Here's a simple example of using ZeNu Matrix:
 
 ```rust
 use zenu_matrix::{
@@ -46,4 +46,4 @@ For more details and examples, please refer to the [documentation](https://docs.
 
 ## License
 
-Zenu Matrix is licensed under the [MIT License](LICENSE).
+ZeNu Matrix is licensed under the [MIT License](LICENSE).
