@@ -7,7 +7,7 @@ use zenu_matrix::{
     operation::{
         copy_from::CopyFrom,
         mul::Gemm,
-        reshape::Reshape,
+        reshape::{Reshape, ReshapeMut},
         transpose::{Transpose, TransposeInplace},
     },
 };
@@ -145,12 +145,15 @@ impl<T: Num> Function<T> for Conv2dGrad<T> {
             grad_output_num_elm / grad_output_shape[1],
         ]);
         gradient_output_transose_reshape.transpose();
-        self.output
-            .upgrade()
-            .unwrap()
-            .get_data_mut()
+
+        let output = self.output.upgrade().unwrap();
+        let output_shape = output.get_data().shape();
+        let mut output = output.get_data_mut();
+        let mut output = output.reshape_mut([col.col.shape()[0], grad_output_shape[1]]);
+        output
             .to_view_mut()
-            .gemm(gradient_output_transose_reshape, col.col.to_view());
+            .gemm(col.col.to_view(), gradient_output_transose_reshape);
+        output.reshape(output_shape.slice());
     }
 
     fn backward(&self) {
@@ -240,4 +243,23 @@ pub fn conv2d_grad<T: Num>(
     conv2d_grad.forward();
     output.set_creator(Rc::new(RefCell::new(Box::new(conv2d_grad))));
     output
+}
+
+#[cfg(test)]
+mod conv2d {
+    use crate::creator::from_vec::from_vec;
+
+    #[test]
+    fn conv2d_2x3x5x5_image_4x3x3x3_kernel_1x1_stride_1x1_padding() {
+        let kernel = (1..(4 * 3 * 3 * 3 + 1))
+            .map(|x| x as f32)
+            .collect::<Vec<f32>>();
+        let kernel = from_vec(kernel, [4, 3, 3, 3]);
+        let image = (1..(2 * 3 * 5 * 5 + 1))
+            .map(|x| x as f32)
+            .collect::<Vec<f32>>();
+        let image = from_vec(image, [2, 3, 5, 5]);
+        let output = super::conv2d(image, kernel, (1, 1), (1, 1));
+        output.backward();
+    }
 }
