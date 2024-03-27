@@ -1,23 +1,23 @@
-# Zenu Optimizer
+# ZeNu Optimizer
 
-Zenu Optimizer is a collection of optimization algorithms for training neural networks. It provides various optimizers that can be used with the Zenu deep learning library.
+ZeNu Optimizer is a collection of optimization algorithms for training neural networks. It provides various optimizers that can be used with the ZeNu deep learning library.
 
 ## Features
 
 - Stochastic Gradient Descent (SGD) optimizer
-- Integration with Zenu Autograd for gradient computation
-- Easy integration with Zenu models and layers
+- Integration with ZeNu Autograd for gradient computation
+- Easy integration with ZeNu models and layers
 
 ## Getting Started
 
-To use Zenu Optimizer in your Rust project, add the following to your `Cargo.toml` file:
+To use ZeNu Optimizer in your Rust project, add the following to your `Cargo.toml` file:
 
 ```toml
 [dependencies]
 zenu-optimizer = "0.1.0"
 ```
 
-Here's a simple example of using the SGD optimizer from Zenu Optimizer:
+Here's a simple example of using the SGD optimizer from ZeNu Optimizer:
 
 ```rust
 use zenu_autograd::{creator::from_vec::from_vec, Variable};
@@ -39,4 +39,4 @@ For more details and examples, please refer to the [documentation](https://docs.
 
 ## License
 
-Zenu Optimizer is licensed under the [MIT License](LICENSE).
+ZeNu Optimizer is licensed under the [MIT License](LICENSE).

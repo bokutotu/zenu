@@ -1,8 +1,8 @@
-# Zenu - A Deep Learning Library for Rust
+# ZeNu - A Deep Learning Library for Rust
 
-Zenu is a simple and intuitive deep learning library written in Rust. It provides the building blocks for creating and training neural networks, with a focus on ease of use and flexibility.
+ZeNu is a simple and intuitive deep learning library written in Rust. It provides the building blocks for creating and training neural networks, with a focus on ease of use and flexibility.
 
-**Please note that Zenu is currently under active development and may undergo significant changes.**
+**Please note that ZeNu is currently under active development and may undergo significant changes.**
 
 ## Features
 
@@ -14,7 +14,7 @@ Zenu is a simple and intuitive deep learning library written in Rust. It provide
 
 ## Installation
 
-To use Zenu in your Rust project, add the following to your `Cargo.toml` file:
+To use ZeNu in your Rust project, add the following to your `Cargo.toml` file:
 
 ```toml
 [dependencies]
@@ -23,7 +23,7 @@ zenu = "0.1.0"
 
 ## Getting Started
 
-Here's a simple example of defining and training a model using Zenu:
+Here's a simple example of defining and training a model using ZeNu:
 
 ```rust
 use zenu::{
@@ -171,10 +171,10 @@ fn main() {
 
 ## Contributing
 
-Contributions to Zenu are welcome! If you find any issues or have suggestions for improvements, please open an issue or submit a pull request on the [GitHub repository](https://github.com/bokutotu/zenu).
+Contributions to ZeNu are welcome! If you find any issues or have suggestions for improvements, please open an issue or submit a pull request on the [GitHub repository](https://github.com/bokutotu/zenu).
 
 ## License
 
-Zenu is licensed under the [MIT License](LICENSE).
+ZeNu is licensed under the [MIT License](LICENSE).
 
-Please keep in mind that Zenu is currently in the early stages of development, and the API may change as the project evolves.
+Please keep in mind that ZeNu is currently in the early stages of development, and the API may change as the project evolves.
