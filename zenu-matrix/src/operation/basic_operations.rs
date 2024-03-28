@@ -493,6 +493,7 @@ mod add {
         constructor::zeros::Zeros,
         matrix::{IndexItem, MatrixSlice, OwnedMatrix, ToViewMatrix, ToViewMutMatrix},
         matrix_impl::{OwnedMatrix0D, OwnedMatrix1D, OwnedMatrix2D, OwnedMatrix3D, OwnedMatrixDyn},
+        operation::asum::Asum,
         slice,
     };
 
@@ -779,6 +780,26 @@ mod add {
         let ones_2d = OwnedMatrixDyn::from_vec(vec![1., 1., 1., 1.], [2, 2]);
         let mut ans = OwnedMatrixDyn::<f32>::zeros([2, 2, 2, 2]);
         ans.to_view_mut().add(zeros_4d.to_view(), ones_2d.to_view());
+    }
+
+    #[test]
+    fn broad_cast_4x1x1x1_4x3x3x3() {
+        let a = OwnedMatrixDyn::from_vec(vec![1., 2., 3., 4.], [4, 1, 1, 1]);
+        let b = OwnedMatrixDyn::zeros([4, 2, 3, 3]);
+        let mut ans = OwnedMatrixDyn::<f32>::zeros([4, 2, 3, 3]);
+        ans.to_view_mut().add(a.to_view(), b.to_view());
+        let one = vec![1; 2 * 3 * 3];
+        let two = vec![2; 2 * 3 * 3];
+        let three = vec![3; 2 * 3 * 3];
+        let four = vec![4; 2 * 3 * 3];
+        let mut result = Vec::new();
+        result.extend_from_slice(&one);
+        result.extend_from_slice(&two);
+        result.extend_from_slice(&three);
+        result.extend_from_slice(&four);
+        let result = result.into_iter().map(|x| x as f32).collect::<Vec<f32>>();
+        let result = OwnedMatrixDyn::from_vec(result, [4, 2, 3, 3]);
+        assert!((ans.to_view() - result.to_view()).asum() == 0.0);
     }
 }
 
