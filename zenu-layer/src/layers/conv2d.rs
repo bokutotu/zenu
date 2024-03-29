@@ -1,4 +1,8 @@
-use zenu_autograd::{creator::rand::normal, functions::conv2d::conv2d, Variable};
+use zenu_autograd::{
+    creator::{rand::normal, zeros::zeros},
+    functions::conv2d::conv2d,
+    Variable,
+};
 use zenu_matrix::{dim::DimTrait, matrix::MatrixBase, num::Num};
 
 use crate::Layer;
@@ -9,6 +13,7 @@ pub struct Conv2d<T: Num> {
     kernel_size: (usize, usize),
     stride: (usize, usize),
     padding: (usize, usize),
+    bias: Option<Variable<T>>,
     kernel: Option<Variable<T>>,
 }
 
@@ -19,7 +24,13 @@ impl<T: Num> Conv2d<T> {
         kernel_size: (usize, usize),
         stride: (usize, usize),
         padding: (usize, usize),
+        bias: bool,
     ) -> Self {
+        let bias = if bias {
+            Some(zeros([out_channels, 1, 1, 1]))
+        } else {
+            None
+        };
         Self {
             in_channels,
             out_channels,
@@ -27,6 +38,7 @@ impl<T: Num> Conv2d<T> {
             stride,
             padding,
             kernel: None,
+            bias,
         }
     }
 
@@ -56,7 +68,13 @@ impl<T: Num> Layer<T> for Conv2d<T> {
 
     fn call(&self, input: Variable<T>) -> Variable<T> {
         self.shape_check(&input);
-        conv2d(input, self.kernel().unwrap(), self.stride, self.padding)
+        conv2d(
+            input,
+            self.kernel().unwrap(),
+            self.bias.clone(),
+            self.stride,
+            self.padding,
+        )
     }
 
     fn parameters(&self) -> Vec<Variable<T>> {

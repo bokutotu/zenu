@@ -335,3 +335,17 @@ impl<T: Num> Display for Variable<T> {
         Ok(())
     }
 }
+
+impl<T: Num> Debug for VariableInner<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "VariableInner {{ data: {:?} }}", self.data)?;
+        Ok(())
+    }
+}
+
+impl<T: Num> Display for VariableInner<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "VariableInner {{ data: {:?} }}", self.data)?;
+        Ok(())
+    }
+}
