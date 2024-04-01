@@ -248,3 +248,13 @@ impl_from_slice_dim!(DimDyn, 3);
 impl_from_slice_dim!(DimDyn, 2);
 impl_from_slice_dim!(DimDyn, 1);
 impl_from_slice_dim!(DimDyn, 0);
+
+#[cfg(test)]
+mod dim_dyn {
+    #[test]
+    fn is_include_bradcast_2x4x5x5_1x4x1x1() {
+        let x = super::DimDyn::new(&[2, 4, 5, 5]);
+        let y = super::DimDyn::new(&[1, 4, 1, 1]);
+        assert_eq!(x.is_include_bradcast(y), true);
+    }
+}

@@ -20,7 +20,7 @@ use self::{
     im2col::{im2col, Im2ColRes},
 };
 
-use super::sum_to::sum_to;
+use super::sum::sum;
 
 mod col2im;
 mod conv2d_impl;
@@ -74,7 +74,7 @@ impl<T: Num> Function<T> for Conv2d<T> {
         let g_input = deconv2d(
             self.output.upgrade().unwrap().get_grad().unwrap(),
             self.kernel.clone(),
-            self.bias.clone(),
+            None,
             self.stride,
             self.pad,
         );
@@ -90,8 +90,10 @@ impl<T: Num> Function<T> for Conv2d<T> {
 
         if let Some(bias) = self.bias.clone() {
             let output_grad = self.output.upgrade().unwrap().get_grad().unwrap();
-            let bias_grad = sum_to(output_grad, bias.get_data().shape());
-            bias.set_grad(bias_grad);
+            let output_grad = sum(output_grad, 0, true);
+            let output_grad = sum(output_grad, 2, true);
+            let output_grad = sum(output_grad, 3, true);
+            bias.set_grad(output_grad);
         }
     }
 
@@ -136,8 +138,10 @@ impl<T: Num> Function<T> for Deconv2d<T> {
 
         if let Some(bias) = self.bias.clone() {
             let output_grad = self.output.upgrade().unwrap().get_grad().unwrap();
-            let bias_grad = sum_to(output_grad, bias.get_data().shape());
-            bias.set_grad(bias_grad);
+            let output_grad = sum(output_grad, 0, true);
+            let output_grad = sum(output_grad, 2, true);
+            let output_grad = sum(output_grad, 3, true);
+            bias.set_grad(output_grad);
         }
     }
 
@@ -457,5 +461,21 @@ mod conv2d {
         ];
         let kernel_grad = OwnedMatrixDyn::from_vec(kernel_grad, [3, 4, 3, 3]);
         assert!((kernel.get_grad().unwrap().get_data() - kernel_grad).asum() < 1e-6);
+    }
+
+    #[test]
+    fn conv2d_2x3x5x5_image_4x3x3x3_kernel_1x1_stride_1x1_padding_with_bias() {
+        let kernel = (1..(4 * 3 * 3 * 3 + 1))
+            .map(|x| x as f32)
+            .collect::<Vec<f32>>();
+        let kernel = from_vec(kernel, [4, 3, 3, 3]);
+        let image = (1..(2 * 3 * 5 * 5 + 1))
+            .map(|x| x as f32)
+            .collect::<Vec<f32>>();
+        let image = from_vec(image, [2, 3, 5, 5]);
+        let bias = (1..5).map(|x| x as f32).collect::<Vec<f32>>();
+        let bias = from_vec(bias, [1, 4, 1, 1]);
+        let output = super::conv2d(image.clone(), kernel.clone(), Some(bias), (1, 1), (1, 1));
+        output.backward();
     }
 }
