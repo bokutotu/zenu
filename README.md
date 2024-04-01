@@ -2,6 +2,8 @@
 
 ZeNu is a simple and intuitive deep learning library written in Rust. It provides the building blocks for creating and training neural networks, with a focus on ease of use and flexibility.
 
+ZeNu is comes from 冒頓単于(bokutotuzennu)
+
 **Please note that ZeNu is currently under active development and may undergo significant changes.**
 
 ## Features
