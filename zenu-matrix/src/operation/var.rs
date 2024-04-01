@@ -13,8 +13,7 @@ impl<T: Num> Variance<T> for Matrix<OwnedMem<T>, DimDyn> {
         let mean = self.mean(axis, true);
         let diff = self.to_view() - mean;
         let diff = diff.to_view() * diff.to_view();
-        let variance = diff.mean(axis, keep_dim);
-        variance
+        diff.mean(axis, keep_dim)
     }
 }
 
