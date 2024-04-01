@@ -2,6 +2,8 @@ use std::ops::{Index, IndexMut};
 
 use crate::dim::{DimTrait, GreaterDimTrait, LessDimTrait};
 
+use serde::{Deserialize, Serialize};
+
 #[derive(Clone, Debug, Copy, Default)]
 pub struct Dim0 {}
 
@@ -92,7 +94,7 @@ impl From<&Dim0> for Dim0 {
 
 macro_rules! impl_dim {
     ($name:ident, $number_of_elm:expr) => {
-        #[derive(Clone, Debug, Copy, Default)]
+        #[derive(Clone, Debug, Copy, Default, Serialize, Deserialize)]
         pub struct $name {
             dim: [usize; $number_of_elm],
         }

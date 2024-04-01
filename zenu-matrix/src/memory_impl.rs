@@ -1,3 +1,5 @@
+use serde::{Deserialize, Serialize};
+
 use crate::{
     cpu_blas::CpuBlas,
     cpu_element_wise::CpuElementWise,
@@ -119,10 +121,6 @@ impl<T> ToViewMemory for OwnedMem<T>
 where
     T: Num,
 {
-    // type View<'a> = ViewMem<'a, T>
-    // where
-    //     Self: 'a;
-
     fn to_view(&self, offset: usize) -> ViewMem<T> {
         ViewMem { ptr: self, offset }
     }
@@ -132,10 +130,6 @@ impl<T> ToViewMutMemory for OwnedMem<T>
 where
     T: Num,
 {
-    // type ViewMut<'a> = ViewMutMem<'a, T>
-    // where
-    //     Self: 'a;
-
     fn to_view_mut(&mut self, offset: usize) -> ViewMutMem<'_, T> {
         ViewMutMem { ptr: self, offset }
     }
@@ -145,10 +139,6 @@ impl<'a, T> ToViewMutMemory for ViewMutMem<'a, T>
 where
     T: Num,
 {
-    // type ViewMut<'b> = ViewMutMem<'b, T>
-    // where
-    //     Self: 'b;
-
     fn to_view_mut(&mut self, offset: usize) -> ViewMutMem<'_, T> {
         let offset = self.get_offset() + offset;
         ViewMutMem {
@@ -195,6 +185,150 @@ impl<T: Num> Clone for ViewMem<'_, T> {
     }
 }
 
+#[derive(Serialize, Deserialize)]
+struct OwnedMemSer<T> {
+    data: Vec<T>,
+    offset: usize,
+    length: usize,
+}
+
+impl<T: Num + Serialize> Serialize for OwnedMem<T> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let data: Vec<T> = unsafe {
+            std::slice::from_raw_parts(self.ptr.as_ptr().add(self.offset), self.length).to_vec()
+        };
+        let ser = OwnedMemSer {
+            data,
+            offset: self.offset,
+            length: self.length,
+        };
+        ser.serialize(serializer)
+    }
+}
+
+impl<'de, T: Num> Deserialize<'de> for OwnedMem<T>
+where
+    T: Deserialize<'de>,
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let ser = OwnedMemSer::<T>::deserialize(deserializer)?;
+        let mut data = ser.data;
+        let ptr = NonNull::new(data.as_mut_ptr()).ok_or_else(|| {
+            serde::de::Error::custom("Failed to create NonNull pointer from deserialized data")
+        })?;
+        let owned_mem = OwnedMem {
+            ptr,
+            offset: ser.offset,
+            length: ser.length,
+            accessor: CpuAccessor::new(),
+        };
+        std::mem::forget(data);
+        Ok(owned_mem)
+    }
+}
+#[derive(Serialize, Deserialize)]
+struct ViewMemSer<T> {
+    data: Vec<T>,
+    offset: usize,
+}
+
+impl<'a, T: Num + Serialize> Serialize for ViewMem<'a, T> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let data: Vec<T> = unsafe {
+            std::slice::from_raw_parts(
+                self.ptr.ptr.as_ptr().add(self.ptr.offset + self.offset),
+                self.ptr.length - self.offset,
+            )
+            .to_vec()
+        };
+        let ser = ViewMemSer {
+            data,
+            offset: self.offset,
+        };
+        ser.serialize(serializer)
+    }
+}
+
+impl<'de, 'a, T: Num> Deserialize<'de> for ViewMem<'a, T>
+where
+    T: Deserialize<'de>,
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let ser = ViewMemSer::<T>::deserialize(deserializer)?;
+        let owned_mem = OwnedMem {
+            ptr: NonNull::dangling(),
+            offset: 0,
+            length: ser.data.len(),
+            accessor: CpuAccessor::new(),
+        };
+        let view_mem = ViewMem {
+            ptr: unsafe { &*Box::into_raw(Box::new(owned_mem)) },
+            offset: ser.offset,
+        };
+        Ok(view_mem)
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+struct ViewMutMemSer<T> {
+    data: Vec<T>,
+    offset: usize,
+}
+
+impl<'a, T: Num + Serialize> Serialize for ViewMutMem<'a, T> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let data: Vec<T> = unsafe {
+            std::slice::from_raw_parts(
+                self.ptr.ptr.as_ptr().add(self.ptr.offset + self.offset),
+                self.ptr.length - self.offset,
+            )
+            .to_vec()
+        };
+        let ser = ViewMutMemSer {
+            data,
+            offset: self.offset,
+        };
+        ser.serialize(serializer)
+    }
+}
+
+impl<'de, 'a, T: Num> Deserialize<'de> for ViewMutMem<'a, T>
+where
+    T: Deserialize<'de>,
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let ser = ViewMutMemSer::<T>::deserialize(deserializer)?;
+        let owned_mem = OwnedMem {
+            ptr: NonNull::dangling(),
+            offset: 0,
+            length: ser.data.len(),
+            accessor: CpuAccessor::new(),
+        };
+        let view_mem = ViewMutMem {
+            ptr: unsafe { &mut *Box::into_raw(Box::new(owned_mem)) },
+            offset: ser.offset,
+        };
+        Ok(view_mem)
+    }
+}
 macro_rules! impl_cpu_memory_to_view {
     ($impl_ty: ty) => {
         impl<'a, T: Num> Memory for $impl_ty {
