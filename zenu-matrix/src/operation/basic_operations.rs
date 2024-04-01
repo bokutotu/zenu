@@ -131,6 +131,8 @@ impl_basic_1d_functions_no_input!(acosh_mod, acosh);
 impl_traits_no_input!(MatrixAcosh, acosh, acosh_mod, acosh);
 impl_basic_1d_functions_no_input!(atanh_mod, atanh);
 impl_traits_no_input!(MatrixAtanh, atanh, atanh_mod, atanh);
+impl_basic_1d_functions_no_input!(sqrt_mod, sqrt);
+impl_traits_no_input!(MatrixSqrt, sqrt, sqrt_mod, sqrt);
 
 macro_rules! impl_basic_1d_functions {
     (

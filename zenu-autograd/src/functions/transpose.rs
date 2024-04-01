@@ -7,7 +7,10 @@ use zenu_matrix::{
     matrix_impl::Matrix,
     memory_impl::OwnedMem,
     num::Num,
-    operation::{copy_from::CopyFrom, transpose::Transpose as T},
+    operation::{
+        copy_from::CopyFrom,
+        transpose::{Transpose as T, TransposeInplace},
+    },
 };
 
 use crate::{Function, Variable, VariableWeak};
@@ -58,6 +61,58 @@ pub fn transpose<T: Num>(x: Variable<T>) -> Variable<T> {
     let output = Zeros::zeros(output_shape);
     let output = Variable::new(output);
     let transpose = Transpose::new(x, output.clone());
+    transpose.forward();
+    output.set_creator(Rc::new(RefCell::new(Box::new(transpose))));
+    output
+}
+
+pub struct TransposeByIndex<T: Num> {
+    x: Variable<T>,
+    output: VariableWeak<T>,
+    index: Vec<usize>,
+}
+
+impl<T: Num> TransposeByIndex<T> {
+    pub fn new(x: Variable<T>, output: Variable<T>, index: Vec<usize>) -> Self {
+        let output = output.downgrade();
+        Self { x, output, index }
+    }
+}
+
+impl<T: Num> Function<T> for TransposeByIndex<T> {
+    fn forward(&self) {
+        let x = self.x.get_data();
+        let mut out: Matrix<OwnedMem<T>, DimDyn> = Zeros::zeros(x.shape());
+        out.to_view_mut().copy_from(&x.to_view());
+        let out = out.transpose_by_index_inplace(&self.index);
+        let output = self.output.upgrade().unwrap();
+        output
+            .get_data_mut()
+            .to_view_mut()
+            .copy_from(&out.to_view());
+    }
+
+    fn backward(&self) {
+        let output = self.output.upgrade().unwrap();
+        let grad = output.get_grad().clone().unwrap();
+        self.x
+            .set_grad(transpose_by_index(grad, self.index.clone()));
+    }
+
+    fn get_inputs(&self) -> Vec<Variable<T>> {
+        vec![self.x.clone()]
+    }
+}
+
+pub fn transpose_by_index<T: Num>(x: Variable<T>, index: Vec<usize>) -> Variable<T> {
+    let input_shape = x.get_data().shape();
+    let mut output_shape = input_shape;
+    for i in 0..index.len() {
+        output_shape[i] = input_shape[index[i]];
+    }
+    let output = Zeros::zeros(output_shape);
+    let output = Variable::new(output);
+    let transpose = TransposeByIndex::new(x, output.clone(), index);
     transpose.forward();
     output.set_creator(Rc::new(RefCell::new(Box::new(transpose))));
     output

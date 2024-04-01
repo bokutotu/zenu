@@ -10,6 +10,7 @@ mod add;
 mod mul;
 
 pub mod activation;
+pub mod batch_norm;
 pub mod broadcast;
 pub mod clip;
 pub mod conv2d;
