@@ -81,25 +81,31 @@ impl<T: Num> Function<T> for BatchNorm<T> {
             let var = input_mat.variance(Some(0), false);
             let var_eps = var.to_view() + self.epsilon.get_data();
             let mut zeros = OwnedMatrixDyn::zeros_like(var_eps.to_view());
+
             zeros.to_view_mut().sqrt(var_eps);
+
             let inv_std = OwnedMatrixDyn::ones(var.shape()) / zeros;
             xc = (input_mat.to_view() - mean.to_view()) * inv_std.to_view();
             let m = input_mat.shape().num_elm() / self.gamma.get_data().shape().num_elm();
             let s = if m - 1 > 1 { m - 1 } else { 1 };
             let adjust = m / s;
+
             self.mean.get_data_mut().mul_assign(self.decay.get_data());
             self.mean.get_data_mut().to_view_mut().add_assign(
                 mean.to_view()
                     * (OwnedMatrixDyn::ones(self.decay.get_data().shape()) - self.decay.get_data()),
             );
+
             self.variance
                 .get_data_mut()
                 .mul_assign(self.decay.get_data());
+
             self.variance.get_data_mut().to_view_mut().add_assign(
                 var.to_view()
                     * (OwnedMatrixDyn::ones(self.decay.get_data().shape()) - self.decay.get_data())
                     * T::from_usize(adjust),
             );
+
             self.inv_std
                 .get_data_mut()
                 .to_view_mut()
@@ -111,6 +117,7 @@ impl<T: Num> Function<T> for BatchNorm<T> {
             let inv_std = OwnedMatrixDyn::ones(self.variance.get_data().shape()) / zeros;
             xc = (input_mat.to_view() - self.mean.get_data().to_view()) * inv_std.to_view();
         }
+
         let output =
             self.gamma.get_data().to_view() * xc.to_view() + self.beta.get_data().to_view();
 
@@ -125,6 +132,7 @@ impl<T: Num> Function<T> for BatchNorm<T> {
         } else {
             output
         };
+
         self.output
             .upgrade()
             .unwrap()
@@ -163,10 +171,6 @@ impl<T: Num> Function<T> for BatchNorm<T> {
         let beta_grad = sum(output_grad.clone(), 0, false);
         let gamma_grad = sum(xc.clone() * output_grad.clone(), 0, false);
 
-        // let input_grad = output_grad.clone()
-        //     - beta_grad.clone() / Variable::from(T::from_usize(batch_size))
-        //     - xc.clone() * gamma_grad.clone() / Variable::from(T::from_usize(batch_size));
-        // gbeta / batch_size
         let beta_grad_batch_size = beta_grad.clone() / Variable::from(T::from_usize(batch_size));
         let xc_gamma_grad_batch_size =
             xc.clone() * gamma_grad.clone() / Variable::from(T::from_usize(batch_size));
