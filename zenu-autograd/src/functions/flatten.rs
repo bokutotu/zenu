@@ -50,7 +50,7 @@ pub fn flatten<T: Num>(input: Variable<T>) -> Variable<T> {
     let batch_size = input_shape[0];
     let num_elm = input_shape.num_elm();
     let output_shape = [batch_size, num_elm / batch_size];
-    let output = zeros(&output_shape);
+    let output = zeros(output_shape);
     let flatten = Flatten::new(input, output.clone());
     flatten.forward();
     output.set_creator(Rc::new(RefCell::new(Box::new(flatten))));

@@ -18,6 +18,7 @@ pub struct Conv2d<T: Num> {
 }
 
 impl<T: Num> Conv2d<T> {
+    #[must_use]
     pub fn new(
         in_channels: usize,
         out_channels: usize,
@@ -42,6 +43,7 @@ impl<T: Num> Conv2d<T> {
         }
     }
 
+    #[must_use]
     pub fn kernel(&self) -> Option<Variable<T>> {
         self.kernel.clone()
     }
