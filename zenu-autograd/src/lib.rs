@@ -8,8 +8,10 @@ use std::{
     fmt::{Debug, Display},
     ops::Deref,
     rc::{Rc, Weak},
+    sync::Mutex,
 };
 
+use lazy_static::lazy_static;
 use zenu_matrix::{
     constructor::ones::Ones,
     dim::DimDyn,
@@ -27,6 +29,25 @@ pub trait Function<T: Num> {
         let inputs = self.get_inputs();
         inputs.iter().map(|input| input.get_gen()).max().unwrap()
     }
+}
+
+lazy_static! {
+    static ref IS_TRAIN: Mutex<bool> = Mutex::new(true);
+}
+
+pub fn no_train() {
+    let mut is_train = IS_TRAIN.lock().unwrap();
+    *is_train = false;
+}
+
+pub fn is_train() -> bool {
+    let is_train = IS_TRAIN.lock().unwrap();
+    *is_train
+}
+
+pub fn set_train() -> bool {
+    let is_train = IS_TRAIN.lock().unwrap();
+    *is_train
 }
 
 #[derive(Clone)]

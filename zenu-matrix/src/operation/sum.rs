@@ -65,6 +65,7 @@ pub fn sum_to<T: Num>(source: Matrix<ViewMem<T>, DimDyn>, target: Matrix<ViewMut
         sum_to(source.to_view().sum(0, false).to_view(), target);
     }
 }
+
 #[cfg(test)]
 mod sum {
     use crate::{
