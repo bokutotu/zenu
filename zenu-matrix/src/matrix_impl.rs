@@ -1,3 +1,5 @@
+use serde::{Deserialize, Serialize};
+
 use crate::{
     dim::{
         cal_offset, default_stride, Dim0, Dim1, Dim2, Dim3, Dim4, DimDyn, DimTrait, LessDimTrait,
@@ -16,7 +18,7 @@ use crate::{
     slice::Slice,
 };
 
-#[derive(Clone, Hash)]
+#[derive(Clone, Hash, Serialize, Deserialize)]
 pub struct Matrix<M, S> {
     memory: M,
     shape: S,
@@ -444,6 +446,7 @@ pub type ViewMutMatrixDyn<'a, T> = Matrix<ViewMutMem<'a, T>, DimDyn>;
 mod matrix_slice {
     use crate::dim::Dim1;
     use crate::index::Index0D;
+    use crate::operation::asum::Asum;
     use crate::slice;
     use crate::slice_dynamic;
 
@@ -532,5 +535,14 @@ mod matrix_slice {
         assert_eq!(s.index_item([0]), 1.);
         assert_eq!(s.index_item([1]), 2.);
         assert_eq!(s.index_item([2]), 3.);
+    }
+
+    #[test]
+    fn to_json_from_json() {
+        let matrix = OwnedMatrixDyn::from_vec(vec![1., 2., 3., 4., 5., 6.], [2, 3]);
+        let matrix_json = serde_json::to_string(&matrix).unwrap();
+        let matrix_json_matrix = serde_json::from_str::<OwnedMatrixDyn<f32>>(&matrix_json).unwrap();
+        let diff = matrix - matrix_json_matrix;
+        assert!(diff.asum() < 1e-6);
     }
 }

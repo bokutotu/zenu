@@ -1,8 +1,10 @@
 use std::ops::{Index, IndexMut};
 
+use serde::{Deserialize, Serialize};
+
 use super::{DimTrait, GreaterDimTrait, LessDimTrait};
 
-#[derive(Clone, Debug, Default, PartialEq, Copy)]
+#[derive(Clone, Debug, Default, PartialEq, Copy, Serialize, Deserialize)]
 pub struct DimDyn {
     dim: [usize; 6],
     len: usize,
