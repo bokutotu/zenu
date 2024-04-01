@@ -45,9 +45,9 @@ pub fn is_train() -> bool {
     *is_train
 }
 
-pub fn set_train() -> bool {
-    let is_train = IS_TRAIN.lock().unwrap();
-    *is_train
+pub fn set_train() {
+    let mut is_train = IS_TRAIN.lock().unwrap();
+    *is_train = true;
 }
 
 #[derive(Clone)]
