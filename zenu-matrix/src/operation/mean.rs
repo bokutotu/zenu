@@ -26,7 +26,7 @@ impl<T: Num, M: Memory<Item = T> + ToViewMemory, D: DimTrait> Mean<T> for Matrix
                 let asum = self.to_view().asum();
                 let num_elm = self.shape().num_elm();
                 let mean = asum / T::from_usize(num_elm);
-                OwnedMatrixDyn::from_vec(vec![mean], &[])
+                OwnedMatrixDyn::from_vec(vec![mean], [])
             }
         }
     }

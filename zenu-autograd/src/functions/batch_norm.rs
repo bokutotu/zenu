@@ -33,6 +33,7 @@ struct BatchNorm<T: Num> {
 }
 
 impl<T: Num> BatchNorm<T> {
+    #[allow(clippy::too_many_arguments)]
     fn new(
         mean: Variable<T>,
         variance: Variable<T>,
@@ -102,8 +103,10 @@ impl<T: Num> Function<T> for BatchNorm<T> {
                 .to_view_mut()
                 .copy_from(&inv_std.to_view());
         } else {
-            let inv_std = OwnedMatrixDyn::ones(self.variance.get_data().shape())
-                / (self.variance.get_data() + self.epsilon.get_data());
+            let var_eps = self.variance.get_data().to_view() + self.epsilon.get_data();
+            let mut zeros = OwnedMatrixDyn::zeros_like(var_eps.to_view());
+            zeros.to_view_mut().sqrt(var_eps);
+            let inv_std = OwnedMatrixDyn::ones(self.variance.get_data().shape()) / zeros;
             xc = (input_mat.to_view() - self.mean.get_data().to_view()) * inv_std.to_view();
         }
         let output =
@@ -189,6 +192,7 @@ impl<T: Num> Function<T> for BatchNorm<T> {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn batch_norm<T: Num>(
     mean: Variable<T>,
     variance: Variable<T>,
@@ -328,5 +332,20 @@ mod batch_norm {
         assert!((input_grad_ans - input.get_grad().unwrap().get_data()).asum() < 1e-25);
         assert!((gamma_grad - gamma.get_grad().unwrap().get_data()).asum() < 1e-25);
         assert!((beta_grad - beta.get_grad().unwrap().get_data()).asum() < 1e-25);
+    }
+
+    #[test]
+    fn batch_norm_medium_no_train() {
+        todo!();
+    }
+
+    #[test]
+    fn batch_norom_meduium_4d() {
+        todo!();
+    }
+
+    #[test]
+    fn batch_norm_medium_no_train_4d() {
+        todo!();
     }
 }
