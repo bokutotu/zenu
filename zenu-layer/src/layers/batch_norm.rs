@@ -11,25 +11,25 @@ use crate::Layer;
 pub struct BatchNorm<T: Num> {
     mean: Option<Variable<T>>,
     variance: Option<Variable<T>>,
-    decay: Option<Variable<T>>,
+    decay: Variable<T>,
     epsilon: Variable<T>,
     inv_std: Option<Variable<T>>,
-    gamma: Variable<T>,
+    gamma: Option<Variable<T>>,
     beta: Option<Variable<T>>,
     shape: usize,
 }
 
 impl<T: Num> BatchNorm<T> {
-    pub fn new(channels: usize, gamma: T, epsilon: T) -> Self {
-        let gamma = Variable::from(gamma);
+    pub fn new(channels: usize, decay: T, epsilon: T) -> Self {
+        let decay = Variable::from(decay);
         let epsilon = Variable::from(epsilon);
         BatchNorm {
             mean: None,
             variance: None,
-            decay: None,
+            decay,
             epsilon,
             inv_std: None,
-            gamma,
+            gamma: None,
             beta: None,
             shape: channels,
         }
@@ -45,7 +45,7 @@ impl<T: Num> Layer<T> for BatchNorm<T> {
         let beta = zeros([d]);
         self.mean = Some(mean);
         self.variance = Some(variance);
-        self.gamma = gamma;
+        self.gamma = Some(gamma);
         self.beta = Some(beta);
     }
 
@@ -53,9 +53,9 @@ impl<T: Num> Layer<T> for BatchNorm<T> {
         self.shape_check(&input);
         let mean = self.mean.clone().unwrap();
         let variance = self.variance.clone().unwrap();
-        let decay = self.decay.clone().unwrap();
+        let decay = self.decay.clone();
         let epsilon = self.epsilon.clone();
-        let gamma = self.gamma.clone();
+        let gamma = self.gamma.clone().unwrap();
         let beta = self.beta.clone().unwrap();
         batch_norm(mean, variance, decay, epsilon, gamma, beta, input)
     }
@@ -80,18 +80,18 @@ impl<T: Num> Layer<T> for BatchNorm<T> {
         } else {
             panic!("Variance is not initialized");
         }
-        if let Some(decay) = &self.decay {
-            parameters.push(decay.clone());
-        } else {
-            panic!("Decay is not initialized");
-        }
+        parameters.push(self.decay.clone());
         parameters.push(self.epsilon.clone());
         if let Some(inv_std) = &self.inv_std {
             parameters.push(inv_std.clone());
         } else {
             panic!("Inv_std is not initialized");
         }
-        parameters.push(self.gamma.clone());
+        if let Some(gamma) = &self.gamma {
+            parameters.push(gamma.clone());
+        } else {
+            panic!("Gamma is not initialized");
+        }
         if let Some(beta) = &self.beta {
             parameters.push(beta.clone());
         } else {
@@ -104,10 +104,10 @@ impl<T: Num> Layer<T> for BatchNorm<T> {
         let mut parameters = parameters.into_iter();
         self.mean = Some(parameters.next().unwrap().clone());
         self.variance = Some(parameters.next().unwrap().clone());
-        self.decay = Some(parameters.next().unwrap().clone());
+        self.decay = parameters.next().unwrap().clone();
         self.epsilon = parameters.next().unwrap().clone();
         self.inv_std = Some(parameters.next().unwrap().clone());
-        self.gamma = parameters.next().unwrap().clone();
+        self.gamma = Some(parameters.next().unwrap().clone());
         self.beta = Some(parameters.next().unwrap().clone());
     }
 }

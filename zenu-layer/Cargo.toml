@@ -8,8 +8,8 @@ license = "MIT"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-zenu-matrix = { path = "../zenu-matrix", version = "0.1.0" }
-zenu-autograd = { path = "../zenu-autograd", version = "0.1.0" }
+zenu-matrix = { path = "../zenu-matrix", version = "0.1.1" }
+zenu-autograd = { path = "../zenu-autograd", version = "0.1.1" }
 
 rand = "0.8.5"
 rand_distr = "0.4.3"
