@@ -1,6 +1,6 @@
 use zenu::{
     dataset::{train_val_split, DataLoader, Dataset},
-    mnist::minist_dataset,
+    dataset_loader::mnist_dataset,
     update_parameters, Model,
 };
 use zenu_autograd::{
@@ -63,7 +63,7 @@ impl Dataset<f32> for MnistDataset {
 }
 
 fn main() {
-    let (train, test) = minist_dataset().unwrap();
+    let (train, test) = mnist_dataset().unwrap();
     let (train, val) = train_val_split(&train, 0.8, true);
 
     let test_dataloader = DataLoader::new(MnistDataset { data: test }, 1);

@@ -28,7 +28,7 @@ impl<T: Num> Conv2d<T> {
         bias: bool,
     ) -> Self {
         let bias = if bias {
-            Some(zeros([out_channels, 1, 1, 1]))
+            Some(zeros([1, out_channels, 1, 1]))
         } else {
             None
         };

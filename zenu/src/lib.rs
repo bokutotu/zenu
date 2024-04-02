@@ -1,5 +1,5 @@
 pub mod dataset;
-pub mod mnist;
+pub mod dataset_loader;
 
 use std::path::Path;
 
