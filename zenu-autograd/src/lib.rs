@@ -15,7 +15,7 @@ use lazy_static::lazy_static;
 use zenu_matrix::{
     constructor::ones::Ones,
     dim::DimDyn,
-    matrix::{MatrixBase, OwnedMatrix},
+    matrix::{AsPtr, MatrixBase, OwnedMatrix},
     matrix_impl::Matrix,
     memory_impl::OwnedMem,
     num::Num,
@@ -162,8 +162,8 @@ impl<T: Num> VariableInner<T> {
     fn clear_grad(&mut self) {
         if let Some(ref mut grad) = self.grad {
             grad.inner.borrow_mut().clear_grad();
-            self.grad = None;
         }
+        self.grad = None;
     }
 
     fn get_is_train(&self) -> bool {
@@ -172,6 +172,33 @@ impl<T: Num> VariableInner<T> {
 
     fn set_is_train(&mut self, is_train: bool) {
         self.is_train = is_train;
+    }
+
+    fn get_all_variable(&self) -> Vec<Variable<T>> {
+        let mut variables = Vec::new();
+        let mut seen_rc = HashSet::new();
+        let mut funcs: BinaryHeap<FunctionQueueItem<T>> = BinaryHeap::new();
+
+        funcs.push(self.creator.clone().unwrap().into());
+
+        while let Some(FunctionQueueItem { func, .. }) = funcs.pop() {
+            let inputs = func.borrow().get_inputs();
+            for input in inputs {
+                if let Some(creator) = input.get_creator() {
+                    if !seen_rc.contains(&creator.as_ptr()) {
+                        funcs.push(creator.clone().into());
+                        seen_rc.insert(creator.as_ptr());
+                    }
+                }
+            }
+            let inputs = func.borrow().get_inputs();
+            for input in inputs {
+                variables.push(input);
+            }
+        }
+
+        variables.dedup_by(|a, b| a.get_data().as_ptr() == b.get_data().as_ptr());
+        variables
     }
 
     fn get_all_trainable_variables(&self) -> Vec<Variable<T>> {
@@ -279,6 +306,10 @@ impl<T: Num> Variable<T> {
 
     pub fn clear_grad(&self) {
         self.inner.borrow_mut().clear_grad();
+        let all_val = self.inner.borrow().get_all_variable();
+        for val in all_val {
+            val.inner.borrow_mut().clear_grad();
+        }
     }
 
     pub fn set_name(&self, name: &str) {
