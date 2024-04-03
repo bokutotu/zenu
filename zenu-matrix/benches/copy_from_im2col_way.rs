@@ -2,7 +2,7 @@ use criterion::{criterion_group, criterion_main, Criterion};
 use zenu_matrix::{
     constructor::zeros::Zeros,
     dim::DimDyn,
-    matrix::{MatrixSliceDyn, MatrixSliceMutDyn, ToViewMatrix, ToViewMutMatrix},
+    matrix::{MatrixBase, MatrixSliceDyn, MatrixSliceMutDyn, ToViewMatrix, ToViewMutMatrix},
     matrix_impl::{Matrix, OwnedMatrixDyn},
     memory_impl::{ViewMem, ViewMutMem},
     operation::copy_from::CopyFrom,
