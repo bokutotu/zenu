@@ -34,3 +34,8 @@ harness = false
 [[bench]]
 name = "copy_from_logic"
 harness = false
+
+[[bench]]
+name = "im2col_bench"
+harness = false
+

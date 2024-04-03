@@ -21,10 +21,8 @@ where
 {
     fn to_default_stride(&self) -> Matrix<OwnedMem<T>, DimDyn> {
         let mut output: Matrix<OwnedMem<T>, DimDyn> = Zeros::zeros_like(self.to_view());
-        {
-            let mut output_view_mut = output.to_view_mut();
-            output_view_mut.copy_from(&self.to_view().into_dyn_dim());
-        }
+        let mut output_view_mut = output.to_view_mut();
+        output_view_mut.copy_from(&self.to_view().into_dyn_dim());
         output
     }
 }

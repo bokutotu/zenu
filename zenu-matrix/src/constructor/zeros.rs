@@ -17,10 +17,7 @@ where
     fn zeros<I: Into<Self::Dim>>(dim: I) -> Self {
         let dim = dim.into();
         let num_elm = dim.num_elm();
-        let mut data = Vec::with_capacity(num_elm);
-        for _ in 0..num_elm {
-            data.push(T::zero());
-        }
+        let data = vec![T::zero(); num_elm];
         <Self as OwnedMatrix>::from_vec(data, dim)
     }
 

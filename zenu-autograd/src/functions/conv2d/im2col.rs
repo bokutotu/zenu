@@ -5,7 +5,11 @@ use zenu_matrix::{
     matrix_impl::{Matrix, OwnedMatrixDyn},
     memory_impl::{OwnedMem, ViewMem},
     num::Num,
-    operation::{copy_from::CopyFrom, reshape::Reshape, transpose::TransposeInplace},
+    operation::{
+        copy_from::CopyFrom,
+        reshape::{Reshape, ReshapeMut},
+        transpose::TransposeInplace,
+    },
     slice_dynamic,
 };
 
@@ -74,7 +78,8 @@ pub(super) fn im2col<T: Num>(
         }
     }
 
-    let col = col.transepose_by_index(&[1, 2, 3, 0, 4, 5]);
+    let col = col.reshape_mut([batch_size, c * kh * kw, oh * ow]);
+    let col = col.transepose_by_index(&[1, 0, 2]);
     let col = col.reshape_new_matrix([c * kh * kw, batch_size * oh * ow]);
     Im2ColRes {
         col,
