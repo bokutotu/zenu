@@ -28,164 +28,127 @@ where
     }
 }
 
-fn generate_combinations(dimensions: &[usize]) -> Vec<Vec<usize>> {
-    let mut combinations = Vec::new();
-    let mut current_combination = vec![0; dimensions.len()];
-
-    fn backtrack(
-        dimensions: &[usize],
-        current_combination: &mut Vec<usize>,
-        current_index: usize,
-        combinations: &mut Vec<Vec<usize>>,
-    ) {
-        if current_index == dimensions.len() {
-            combinations.push(current_combination.clone());
-            return;
-        }
-
-        for i in 0..dimensions[current_index] {
-            current_combination[current_index] = i;
-            backtrack(
-                dimensions,
-                current_combination,
-                current_index + 1,
-                combinations,
-            );
-        }
-    }
-
-    backtrack(dimensions, &mut current_combination, 0, &mut combinations);
-    combinations
-}
-
-fn copy_apply_index(shape: DimDyn) -> Vec<DimDyn> {
-    let slice = shape.slice();
-    let combinations = generate_combinations(&slice);
-    combinations
-        .into_iter()
-        .map(|combination| DimDyn::from(&combination as &[usize]))
-        .collect()
-}
-
-/// blasをそのまま適応できる最大のshapeのindex(後ろから数えた場合)を返す
 fn get_max_shape_idx_of_apply_blas(a: ShapeStride<DimDyn>, b: ShapeStride<DimDyn>) -> usize {
-    let mut idx = 1;
     let min_len = std::cmp::min(a.shape().len(), b.shape().len());
     let a_len = a.shape().len();
     let b_len = b.shape().len();
 
-    if min_len == 1 {
-        return 1;
-    }
-    if min_len == 0 {
-        return 0;
-    }
-    if min_len == 2 {
-        let a_shape_part = DimDyn::from(&a.shape().slice()[a_len - 2..]);
-        let b_shape_part = DimDyn::from(&b.shape().slice()[b_len - 2..]);
-        let a_stride_part = DimDyn::from(&a.stride().slice()[a_len - 2..]);
-        let b_stride_part = DimDyn::from(&b.stride().slice()[b_len - 2..]);
-        let a_part_shape_stride = ShapeStride::new(a_shape_part, a_stride_part);
-        let b_part_shape_stride = ShapeStride::new(b_shape_part, b_stride_part);
-
-        if !(a_part_shape_stride.is_transposed() || b_part_shape_stride.is_transposed())
-            && a_part_shape_stride.is_contiguous()
-            && b_part_shape_stride.is_contiguous()
-        {
-            return 2;
-        } else {
-            return 1;
+    match min_len {
+        0 => 0,
+        1 => 1,
+        2 => {
+            let a_stride = a.stride();
+            let b_stride = b.stride();
+            let a_shape = a.shape();
+            let b_shape = b.shape();
+            let a_stride_part: DimDyn = a_stride.slice()[a_len - 2..].into();
+            let b_stride_part: DimDyn = b_stride.slice()[b_len - 2..].into();
+            let a_shape_part: DimDyn = a_shape.slice()[a_len - 2..].into();
+            let b_shape_part: DimDyn = b_shape.slice()[b_len - 2..].into();
+            let a_part = ShapeStride::new(a_shape_part, a_stride_part);
+            let b_part = ShapeStride::new(b_shape_part, b_stride_part);
+            if !(a_part.is_transposed() || b_part.is_transposed())
+                && a_part.is_contiguous()
+                && b_part.is_contiguous()
+            {
+                2
+            } else {
+                1
+            }
+        }
+        _ => {
+            let mut idx = 1;
+            for i in 2..=min_len {
+                let a_shape_part: DimDyn = a.shape().slice()[a_len - i..].into();
+                let b_shape_part: DimDyn = b.shape().slice()[b_len - i..].into();
+                let a_stride_part: DimDyn = a.stride().slice()[a_len - i..].into();
+                let b_stride_part: DimDyn = b.stride().slice()[b_len - i..].into();
+                let a_part = ShapeStride::new(a_shape_part, a_stride_part);
+                let b_part = ShapeStride::new(b_shape_part, b_stride_part);
+                if !a_part.is_transposed()
+                    && (a_part.is_transposed() == b_part.is_transposed())
+                    && a_part.is_contiguous()
+                    && b_part.is_contiguous()
+                {
+                    idx = i;
+                } else {
+                    break;
+                }
+            }
+            idx
         }
     }
+}
 
-    for i in 2..=min_len {
-        let a_shape_part = DimDyn::from(&a.shape().slice()[a_len - i..]);
-        let b_shape_part = DimDyn::from(&b.shape().slice()[b_len - i..]);
-        let a_stride_part = DimDyn::from(&a.stride().slice()[a_len - i..]);
-        let b_stride_part = DimDyn::from(&b.stride().slice()[b_len - i..]);
-        let a_part_shape_stride = ShapeStride::new(a_shape_part, a_stride_part);
-        let b_part_shape_stride = ShapeStride::new(b_shape_part, b_stride_part);
+struct PointerOffsetIter {
+    to_shape_stride: ShapeStride<DimDyn>,
+    source_shape_stride: ShapeStride<DimDyn>,
+    current_idx: usize,
+    num_iter: usize,
+}
 
-        if !a_part_shape_stride.is_transposed()
-            && (a_part_shape_stride.is_transposed() == b_part_shape_stride.is_transposed())
-            && a_part_shape_stride.is_contiguous()
-            && b_part_shape_stride.is_contiguous()
-        {
-            idx = i;
-        } else {
-            break;
+fn idx_to_dim(idx: usize, shape: &DimDyn) -> DimDyn {
+    let slice = shape.slice();
+    let mut dim = vec![0; slice.len()];
+    let mut idx = idx;
+    for i in (0..slice.len()).rev() {
+        let s = slice[i];
+        dim[i] = idx % s;
+        idx /= s;
+    }
+    DimDyn::from(&dim as &[usize])
+}
+
+fn cal_num_ber_of_iter(shape: DimDyn, max_idx: usize) -> usize {
+    shape.slice()[..shape.len() - max_idx].iter().product()
+}
+
+fn cal_offset(stride: DimDyn, idx: DimDyn) -> usize {
+    let stride_slice = stride.slice();
+    let idx_slice = idx.slice();
+    stride_slice
+        .iter()
+        .zip(idx_slice.iter())
+        .fold(0, |acc, (&s, &i)| acc + s * i)
+}
+
+impl PointerOffsetIter {
+    fn new(to_shape_stride: ShapeStride<DimDyn>, source_shape_stride: ShapeStride<DimDyn>) -> Self {
+        let max_idx = get_max_shape_idx_of_apply_blas(to_shape_stride, source_shape_stride);
+        let num_iter = cal_num_ber_of_iter(to_shape_stride.shape(), max_idx);
+        let to_len = to_shape_stride.shape().len();
+        let source_len = source_shape_stride.shape().len();
+        let to_shape_stride = ShapeStride::new(
+            DimDyn::from(&to_shape_stride.shape().slice()[..to_len - max_idx]),
+            DimDyn::from(&to_shape_stride.stride().slice()[..to_len - max_idx]),
+        );
+        let source_shape_stride = ShapeStride::new(
+            DimDyn::from(&source_shape_stride.shape().slice()[..source_len - max_idx]),
+            DimDyn::from(&source_shape_stride.stride().slice()[..source_len - max_idx]),
+        );
+        Self {
+            to_shape_stride,
+            source_shape_stride,
+            current_idx: 0,
+            num_iter,
         }
     }
-
-    idx
 }
 
-fn combine_vecs(vec1: &[usize], vec2: &[usize]) -> Vec<(usize, usize)> {
-    let len1 = vec1.len();
-    let len2 = vec2.len();
-    let max_len = len1.max(len2);
+impl Iterator for PointerOffsetIter {
+    type Item = (usize, usize);
 
-    let mut combined_vec = Vec::with_capacity(max_len);
-
-    let mut i = 0;
-    let mut j = 0;
-
-    for _ in 0..max_len {
-        let item1 = vec1[i];
-        let item2 = vec2[j];
-
-        combined_vec.push((item1, item2));
-
-        i = (i + 1) % len1;
-        j = (j + 1) % len2;
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.current_idx >= self.num_iter {
+            return None;
+        }
+        let dim_to = idx_to_dim(self.current_idx, &self.to_shape_stride.shape());
+        let to_offset = cal_offset(self.to_shape_stride.stride(), dim_to);
+        let dim_source = idx_to_dim(self.current_idx, &self.source_shape_stride.shape());
+        let source_offset = cal_offset(self.source_shape_stride.stride(), dim_source);
+        self.current_idx += 1;
+        Some((to_offset, source_offset))
     }
-
-    combined_vec
-}
-
-fn get_all_blas_opset_stride(
-    a: ShapeStride<DimDyn>,
-    b: ShapeStride<DimDyn>,
-) -> Vec<(usize, usize)> {
-    let max_idx = get_max_shape_idx_of_apply_blas(a, b);
-    let a_stride = a.stride();
-    let b_stride = b.stride();
-    let a_shape = a.shape();
-    let b_shape = b.shape();
-
-    let a_len = a.shape().len();
-    let b_len = b.shape().len();
-
-    let a_part_stride = DimDyn::from(&a_stride.slice()[..a_len - max_idx]);
-    let b_part_stride = DimDyn::from(&b_stride.slice()[..b_len - max_idx]);
-    let a_part_shape = DimDyn::from(&a_shape.slice()[..a_len - max_idx]);
-    let b_part_shape = DimDyn::from(&b_shape.slice()[..b_len - max_idx]);
-
-    let a_indexes = copy_apply_index(a_part_shape);
-    let b_indexes = copy_apply_index(b_part_shape);
-
-    let a_stride_offset = a_indexes.into_iter().map(|index| {
-        index
-            .slice()
-            .iter()
-            .zip(a_part_stride.slice().iter())
-            .map(|(i, s)| i * s)
-            .sum()
-    });
-
-    let b_stride_offset = b_indexes.into_iter().map(|index| {
-        index
-            .slice()
-            .iter()
-            .zip(b_part_stride.slice().iter())
-            .map(|(i, s)| i * s)
-            .sum()
-    });
-
-    combine_vecs(
-        &a_stride_offset.collect::<Vec<_>>(),
-        &b_stride_offset.collect::<Vec<_>>(),
-    )
 }
 
 fn copy<T: Num>(mut to: Matrix<ViewMutMem<T>, DimDyn>, source: Matrix<ViewMem<T>, DimDyn>) {
@@ -196,7 +159,7 @@ fn copy<T: Num>(mut to: Matrix<ViewMutMem<T>, DimDyn>, source: Matrix<ViewMem<T>
         return;
     }
 
-    let blas_opset_stride = get_all_blas_opset_stride(to.shape_stride(), source.shape_stride());
+    // let blas_opset_stride = get_all_blas_opset_stride(to.shape_stride(), source.shape_stride());
     let max_blas_apply_idx =
         get_max_shape_idx_of_apply_blas(to.shape_stride(), source.shape_stride());
 
@@ -215,11 +178,12 @@ fn copy<T: Num>(mut to: Matrix<ViewMutMem<T>, DimDyn>, source: Matrix<ViewMem<T>
 
     let to_blas_num_elm_ =
         DimDyn::from(&to_shape.slice()[to_shape.len() - max_blas_apply_idx..]).num_elm();
+    let iter = PointerOffsetIter::new(to.shape_stride(), source.shape_stride());
 
     let to_ptr = to.as_mut_ptr();
     let source_ptr = source.as_ptr();
 
-    for (to_offset, source_offset) in blas_opset_stride {
+    for (to_offset, source_offset) in iter {
         let to_ptr = unsafe { to_ptr.offset(to_offset as isize) };
         let source_ptr = unsafe { source_ptr.offset(source_offset as isize) };
         <ViewMutMem<T> as Memory>::Blas::copy(
@@ -251,8 +215,7 @@ mod deep_copy {
         let a_stride = DimDyn::from(&[3, 1]);
         let a_shape_stride = ShapeStride::new(a, a_stride);
         let b_shape_stride = ShapeStride::new(b, b_stride);
-
-        let result = get_all_blas_opset_stride(a_shape_stride, b_shape_stride);
+        let result = PointerOffsetIter::new(a_shape_stride, b_shape_stride).collect::<Vec<_>>();
         assert_eq!(result, vec![(0, 0)]);
     }
 
@@ -264,7 +227,7 @@ mod deep_copy {
         let a_stride = DimDyn::from(&[3, 1]);
         let a_shape_stride = ShapeStride::new(a, a_stride);
         let b_shape_stride = ShapeStride::new(b, b_stride);
-        let result = get_all_blas_opset_stride(a_shape_stride, b_shape_stride);
+        let result = PointerOffsetIter::new(a_shape_stride, b_shape_stride).collect::<Vec<_>>();
         assert_eq!(result, vec![(0, 0), (3, 0)]);
     }
 
@@ -276,7 +239,7 @@ mod deep_copy {
         let b_stride = DimDyn::from(&[15, 3]);
         let a_shape_stride = ShapeStride::new(a, a_stride);
         let b_shape_stride = ShapeStride::new(b, b_stride);
-        let result = get_all_blas_opset_stride(a_shape_stride, b_shape_stride);
+        let result = PointerOffsetIter::new(a_shape_stride, b_shape_stride).collect::<Vec<_>>();
         assert_eq!(result, vec![(0, 0), (9, 15)]);
     }
 
@@ -288,7 +251,7 @@ mod deep_copy {
         let b_stride = DimDyn::from(&[12, 4, 1]);
         let a_shape_stride = ShapeStride::new(a, a_stride);
         let b_shape_stride = ShapeStride::new(b, b_stride);
-        let result = get_all_blas_opset_stride(a_shape_stride, b_shape_stride);
+        let result = PointerOffsetIter::new(a_shape_stride, b_shape_stride).collect::<Vec<_>>();
         assert_eq!(result, vec![(0, 0)]);
     }
 
@@ -300,7 +263,7 @@ mod deep_copy {
         let b_stride = DimDyn::from(&[4, 1]);
         let a_shape_stride = ShapeStride::new(a, a_stride);
         let b_shape_stride = ShapeStride::new(b, b_stride);
-        let result = get_all_blas_opset_stride(a_shape_stride, b_shape_stride);
+        let result = PointerOffsetIter::new(a_shape_stride, b_shape_stride).collect::<Vec<_>>();
         assert_eq!(result, vec![(0, 0), (12, 0)]);
     }
 
@@ -312,7 +275,7 @@ mod deep_copy {
         let b_stride = DimDyn::from(&[9, 1]);
         let a_shape_stride = ShapeStride::new(a, a_stride);
         let b_shape_stride = ShapeStride::new(b, b_stride);
-        let result = get_all_blas_opset_stride(a_shape_stride, b_shape_stride);
+        let result = PointerOffsetIter::new(a_shape_stride, b_shape_stride).collect::<Vec<_>>();
         assert_eq!(
             result,
             vec![(0, 0), (8, 9), (16, 18), (36, 0), (44, 9), (52, 18),]
@@ -327,7 +290,7 @@ mod deep_copy {
         let b_stride = DimDyn::from(&[1, 3]);
         let a_shape_stride = ShapeStride::new(a, a_stride);
         let b_shape_stride = ShapeStride::new(b, b_stride);
-        let result = get_all_blas_opset_stride(a_shape_stride, b_shape_stride);
+        let result = PointerOffsetIter::new(a_shape_stride, b_shape_stride).collect::<Vec<_>>();
         assert_eq!(
             result,
             vec![(0, 0), (4, 1), (8, 2), (12, 0), (16, 1), (20, 2)]
@@ -342,7 +305,8 @@ mod deep_copy {
         let a_stride = DimDyn::from(&[15, 5, 30, 1]);
         let b_stride = DimDyn::from(&[60, 20, 5, 1]);
         let result =
-            get_all_blas_opset_stride(ShapeStride::new(a, a_stride), ShapeStride::new(b, b_stride));
+            PointerOffsetIter::new(ShapeStride::new(a, a_stride), ShapeStride::new(b, b_stride))
+                .collect::<Vec<_>>();
         assert_eq!(
             result,
             vec![

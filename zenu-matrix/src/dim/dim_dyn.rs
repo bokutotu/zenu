@@ -1,4 +1,6 @@
-use std::ops::{Index, IndexMut};
+use std::ops::{
+    Index, IndexMut, Range, RangeFrom, RangeFull, RangeInclusive, RangeTo, RangeToInclusive,
+};
 
 use serde::{Deserialize, Serialize};
 
@@ -171,6 +173,31 @@ impl IndexMut<usize> for DimDyn {
         &mut self.dim[index]
     }
 }
+
+macro_rules! impl_range_index {
+    ($trait:ident, $($ty:tt)*) => {
+        impl Index<$trait$($ty)*> for DimDyn {
+            type Output = [usize];
+
+            fn index(&self, index: $trait$($ty)*) -> &Self::Output {
+                &self.dim[index] as &[usize]
+            }
+        }
+
+        // impl IndexMut<$trait$($ty)*> for DimDyn {
+        //     fn index_mut(&mut self, index: $trait$($ty)*) -> &mut Self::Output {
+        //         &mut DimDyn::from(&self.dim[index] as &[usize])
+        //     }
+        // }
+    };
+}
+
+impl_range_index!(Range, <usize>);
+impl_range_index!(RangeFrom, <usize>);
+impl_range_index!(RangeFull,);
+impl_range_index!(RangeInclusive, <usize>);
+impl_range_index!(RangeTo, <usize>);
+impl_range_index!(RangeToInclusive, <usize>);
 
 impl IntoIterator for DimDyn {
     type Item = usize;

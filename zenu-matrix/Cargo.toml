@@ -26,3 +26,11 @@ harness = false
 [[bench]]
 name = "copy_from_all_matrix"
 harness = false
+
+[[bench]]
+name = "transpose_reshape_im2col"
+harness = false
+
+[[bench]]
+name = "copy_from_logic"
+harness = false
