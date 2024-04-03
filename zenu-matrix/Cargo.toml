@@ -18,3 +18,7 @@ serde = { version = "1.0.197", features = ["derive"] }
 itertools = { version = "0.10.0", default-features = false, features = ["use_std"] }
 criterion = "0.5.1"
 serde_json = "1.0.114"
+
+[[bench]]
+name = "copy_from_im2col_way"
+harness = false

@@ -15,9 +15,7 @@ pub fn update_parameters<T: Num, O: Optimizer<T>>(loss: Variable<T>, optimizer: 
     loss.backward();
     let parameters = loss.get_all_trainable_variables();
     optimizer.update(&parameters);
-    loss.get_all_trainable_variables()
-        .iter()
-        .for_each(|x| x.clear_grad());
+    loss.clear_grad();
 }
 
 pub fn save_model<T: Num, M: Model<T>, P: AsRef<Path>>(

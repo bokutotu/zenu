@@ -37,12 +37,12 @@ fn padding<T: Num>(
     output
 }
 
-pub(crate) struct Im2ColRes<T: Num> {
+pub(super) struct Im2ColRes<T: Num> {
     pub(crate) col: Matrix<OwnedMem<T>, DimDyn>,
     pub(crate) out_size: (usize, usize),
 }
 
-pub(crate) fn im2col<T: Num>(
+pub(super) fn im2col<T: Num>(
     img: Matrix<ViewMem<T>, DimDyn>,
     kernel_size: (usize, usize),
     stride: (usize, usize),
