@@ -16,10 +16,8 @@ where
 {
     fn ones<I: Into<D>>(dim: I) -> Self {
         let dim = dim.into();
-        let mut vec = vec![];
-        for _ in 0..dim.num_elm() {
-            vec.push(T::one());
-        }
+        let data = vec![T::one(); dim.num_elm()];
+        let vec = data.iter().map(|_| T::from_usize(1)).collect();
         Self::from_vec(vec, dim)
     }
 }
