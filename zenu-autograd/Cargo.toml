@@ -12,3 +12,10 @@ zenu-matrix = { path = "../zenu-matrix", version = "0.1.1" }
 rand = "0.8.5"
 rand_distr = "0.4.3"
 lazy_static = "1.4.0"
+
+[dev-dependencies]
+criterion = "0.5.1"
+
+[[bench]]
+name = "conv2d"
+harness = false

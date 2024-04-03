@@ -65,6 +65,7 @@ impl<T: Num> Layer<T> for Conv2d<T> {
                 self.kernel_size.1,
             ],
         );
+        kernel.set_name("conv2d_kernel");
         self.kernel = Some(kernel);
     }
 
@@ -80,7 +81,11 @@ impl<T: Num> Layer<T> for Conv2d<T> {
     }
 
     fn parameters(&self) -> Vec<Variable<T>> {
-        vec![self.kernel().unwrap()]
+        if self.bias.is_some() {
+            vec![self.kernel().unwrap(), self.bias.clone().unwrap()]
+        } else {
+            vec![self.kernel().unwrap()]
+        }
     }
 
     fn shape_check(&self, input: &Variable<T>) {
