@@ -14,3 +14,7 @@ zenu-layer = { path = "../zenu-layer", version = "0.1.0" }
 
 [lints]
 workspace = true
+
+[profile.bench]
+debug = true
+

@@ -10,3 +10,7 @@ members = [
 
 [workspace.lints.clippy]
 pedantic = "warn"
+
+[profile.bench]
+debug = true
+

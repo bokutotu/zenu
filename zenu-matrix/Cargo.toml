@@ -30,3 +30,7 @@ harness = false
 [[bench]]
 name = "transpose_reshape_im2col"
 harness = false
+
+[profile.bench]
+debug = true
+

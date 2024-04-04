@@ -85,18 +85,21 @@ struct PointerOffsetIter {
     source_shape_stride: ShapeStride<DimDyn>,
     current_idx: usize,
     num_iter: usize,
+    to_current_idx: DimDyn,
+    source_current_idx: DimDyn,
 }
 
-fn idx_to_dim(idx: usize, shape: &DimDyn) -> DimDyn {
+fn inc_idx(idx: &mut DimDyn, shape: &DimDyn) {
     let slice = shape.slice();
-    let mut dim = vec![0; slice.len()];
-    let mut idx = idx;
-    for i in (0..slice.len()).rev() {
-        let s = slice[i];
-        dim[i] = idx % s;
-        idx /= s;
+    let len = slice.len();
+
+    for i in (0..len).rev() {
+        idx[i] += 1;
+        if idx[i] < slice[i] {
+            return;
+        }
+        idx[i] = 0;
     }
-    DimDyn::from(&dim as &[usize])
 }
 
 fn cal_num_ber_of_iter(shape: DimDyn, max_idx: usize) -> usize {
@@ -126,11 +129,17 @@ impl PointerOffsetIter {
             DimDyn::from(&source_shape_stride.shape().slice()[..source_len - max_idx]),
             DimDyn::from(&source_shape_stride.stride().slice()[..source_len - max_idx]),
         );
+        let current_len = to_shape_stride.shape().len();
+        let source_current_len = source_shape_stride.shape().len();
+        let to_current_idx = DimDyn::from(&vec![0_usize; current_len] as &[usize]);
+        let source_current_idx = DimDyn::from(&vec![0_usize; source_current_len] as &[usize]);
         Self {
             to_shape_stride,
             source_shape_stride,
             current_idx: 0,
             num_iter,
+            to_current_idx,
+            source_current_idx,
         }
     }
 }
@@ -142,10 +151,13 @@ impl Iterator for PointerOffsetIter {
         if self.current_idx >= self.num_iter {
             return None;
         }
-        let dim_to = idx_to_dim(self.current_idx, &self.to_shape_stride.shape());
-        let to_offset = cal_offset(self.to_shape_stride.stride(), dim_to);
-        let dim_source = idx_to_dim(self.current_idx, &self.source_shape_stride.shape());
-        let source_offset = cal_offset(self.source_shape_stride.stride(), dim_source);
+        inc_idx(&mut self.to_current_idx, &self.to_shape_stride.shape());
+        let to_offset = cal_offset(self.to_shape_stride.stride(), self.to_current_idx);
+        inc_idx(
+            &mut self.source_current_idx,
+            &self.source_shape_stride.shape(),
+        );
+        let source_offset = cal_offset(self.source_shape_stride.stride(), self.source_current_idx);
         self.current_idx += 1;
         Some((to_offset, source_offset))
     }
@@ -227,7 +239,8 @@ mod deep_copy {
         let a_stride = DimDyn::from(&[3, 1]);
         let a_shape_stride = ShapeStride::new(a, a_stride);
         let b_shape_stride = ShapeStride::new(b, b_stride);
-        let result = PointerOffsetIter::new(a_shape_stride, b_shape_stride).collect::<Vec<_>>();
+        let mut result = PointerOffsetIter::new(a_shape_stride, b_shape_stride).collect::<Vec<_>>();
+        result.sort_by(|a, b| a.0.cmp(&b.0));
         assert_eq!(result, vec![(0, 0), (3, 0)]);
     }
 
