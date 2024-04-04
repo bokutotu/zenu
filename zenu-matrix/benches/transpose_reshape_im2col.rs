@@ -1,4 +1,4 @@
-use criterion::{criterion_group, criterion_main, Criterion};
+use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use zenu_matrix::{
     constructor::zeros::Zeros,
     dim::DimDyn,
@@ -17,7 +17,7 @@ fn transpose_reshape(a: Matrix<ViewMem<f32>, DimDyn>) {
 }
 
 fn bench(c: &mut Criterion) {
-    let a = OwnedMatrixDyn::zeros([32, 16, 3, 3, 126, 126]);
+    let a = black_box(OwnedMatrixDyn::zeros([32, 16, 3, 3, 126, 126]));
     // let a = OwnedMatrixDyn::zeros([32, 16 * 3 * 3, 126 * 126]);
     c.bench_function("transpose_reshape_im2col", |b| {
         b.iter(|| transpose_reshape(a.to_view()))

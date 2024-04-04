@@ -1,4 +1,4 @@
-use criterion::{criterion_group, criterion_main, Criterion};
+use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use zenu_matrix::{
     constructor::zeros::Zeros,
     dim::DimDyn,
@@ -31,8 +31,8 @@ fn copy_from_(
 }
 
 fn copy_from_im2col_way(c: &mut Criterion) {
-    let b = OwnedMatrixDyn::zeros([32, 16, 128, 128]);
-    let mut a = OwnedMatrixDyn::zeros([32, 16, 3, 3, 126, 126]);
+    let b = black_box(OwnedMatrixDyn::zeros([32, 16, 128, 128]));
+    let mut a = black_box(OwnedMatrixDyn::zeros([32, 16, 3, 3, 126, 126]));
 
     let kh = 3;
     let kw = 3;
