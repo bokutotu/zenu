@@ -337,7 +337,7 @@ impl<T: Num> Variable<T> {
         if self.get_data().shape() != grad.get_data().shape() {
             panic!("shape of grad and data must be same");
         }
-        let name = self.get_name().clone().unwrap_or_else(|| "".to_string());
+        let name = self.get_name().clone().unwrap_or_default();
         let mut grad_mut = self.get_grad_mut();
         match *grad_mut {
             Some(ref mut grad_variable) => {

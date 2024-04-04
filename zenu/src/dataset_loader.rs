@@ -13,8 +13,8 @@ use reqwest::blocking::get;
 use tar::Archive;
 
 enum Dataset {
-    MNIST,
-    CIFAR10,
+    Mnist,
+    Cifar10,
 }
 
 const MNIST_URLS: [&str; 4] = [
@@ -39,8 +39,8 @@ const CIFAR10_FILENAMES: [&str; 1] = ["cifar-10-binary.tar.gz"];
 pub fn mnist_dataset(
 ) -> Result<(Vec<(Vec<u8>, u8)>, Vec<(Vec<u8>, u8)>), Box<dyn std::error::Error>> {
     let dataset_dir = create_dataset_dir("mnist")?;
-    download_dataset(&Dataset::MNIST, &dataset_dir)?;
-    let (train_data, test_data) = extract_image_label_pairs(&Dataset::MNIST, &dataset_dir)?;
+    download_dataset(&Dataset::Mnist, &dataset_dir)?;
+    let (train_data, test_data) = extract_image_label_pairs(&Dataset::Mnist, &dataset_dir)?;
     Ok((train_data, test_data))
 }
 
@@ -48,8 +48,8 @@ pub fn mnist_dataset(
 pub fn cifar10_dataset(
 ) -> Result<(Vec<(Vec<u8>, u8)>, Vec<(Vec<u8>, u8)>), Box<dyn std::error::Error>> {
     let dataset_dir = create_dataset_dir("cifar10")?;
-    download_dataset(&Dataset::CIFAR10, &dataset_dir)?;
-    let (train_data, _) = extract_image_label_pairs(&Dataset::CIFAR10, &dataset_dir)?;
+    download_dataset(&Dataset::Cifar10, &dataset_dir)?;
+    let (train_data, _) = extract_image_label_pairs(&Dataset::Cifar10, &dataset_dir)?;
     Ok((train_data, Vec::new()))
 }
 
@@ -58,8 +58,8 @@ fn download_dataset(
     dataset_dir: &Path,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let (urls, filenames) = match dataset {
-        Dataset::MNIST => (MNIST_URLS.as_ref(), MNIST_FILENAMES.as_ref()),
-        Dataset::CIFAR10 => (CIFAR10_URLS.as_ref(), CIFAR10_FILENAMES.as_ref()),
+        Dataset::Mnist => (MNIST_URLS.as_ref(), MNIST_FILENAMES.as_ref()),
+        Dataset::Cifar10 => (CIFAR10_URLS.as_ref(), CIFAR10_FILENAMES.as_ref()),
     };
 
     for (url, filename) in urls.iter().zip(filenames.iter()) {
@@ -124,14 +124,15 @@ fn extract_image_label_pairs(
     dataset_dir: &Path,
 ) -> Result<(Vec<(Vec<u8>, u8)>, Vec<(Vec<u8>, u8)>), Box<dyn std::error::Error>> {
     match dataset {
-        Dataset::MNIST => extract_mnist_image_label_pairs(dataset_dir),
-        Dataset::CIFAR10 => {
+        Dataset::Mnist => extract_mnist_image_label_pairs(dataset_dir),
+        Dataset::Cifar10 => {
             let train_data = extract_cifar10_image_label_pairs(dataset_dir)?;
             Ok((train_data, Vec::new()))
         }
     }
 }
 
+#[allow(clippy::type_complexity)]
 fn extract_mnist_image_label_pairs(
     dataset_dir: &Path,
 ) -> Result<(Vec<(Vec<u8>, u8)>, Vec<(Vec<u8>, u8)>), Box<dyn std::error::Error>> {
@@ -190,6 +191,7 @@ fn extract_mnist_image_label_pairs(
     Ok((train_data, test_data))
 }
 
+#[allow(clippy::type_complexity)]
 fn extract_cifar10_image_label_pairs(
     dataset_dir: &Path,
 ) -> Result<Vec<(Vec<u8>, u8)>, Box<dyn std::error::Error>> {
@@ -200,7 +202,7 @@ fn extract_cifar10_image_label_pairs(
         let mut file = File::open(file_path)?;
         let mut buffer = [0; 3073];
 
-        while let Ok(_) = file.read_exact(&mut buffer) {
+        while file.read_exact(&mut buffer).is_ok() {
             let label = buffer[0];
             let image = buffer[1..].to_vec();
             data.push((image, label));

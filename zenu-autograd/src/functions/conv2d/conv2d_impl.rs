@@ -6,7 +6,10 @@ use zenu_matrix::{
     memory_impl::{OwnedMem, ViewMem},
     num::Num,
     operation::{
-        basic_operations::MatrixAddAssign, mul::Gemm, reshape::Reshape, transpose::TransposeInplace,
+        basic_operations::MatrixAddAssign,
+        mul::Gemm,
+        reshape::{Reshape, ReshapeNoAlloc},
+        transpose::TransposeInplace,
     },
 };
 
@@ -45,8 +48,9 @@ pub(super) fn conv2d_inner<T: Num>(
     let mut result = OwnedMatrixDyn::zeros([kernel_shape[0], col.shape()[1]]);
     result.to_view_mut().gemm(kernel, col.to_view());
     let mut result = result
-        .reshape([kernel_shape[0], batch_size, out_size.0, out_size.1])
-        .transpose_swap_index_inplace(0, 1);
+        .reshape([kernel_shape[0], batch_size, out_size.0 * out_size.1])
+        .transpose_swap_index_inplace(0, 1)
+        .reshape_no_alloc_owned([batch_size, kernel_shape[0], out_size.0, out_size.1]);
     if let Some(bias) = bias {
         result.add_assign(bias.to_view());
     }

@@ -31,6 +31,9 @@ harness = false
 name = "transpose_reshape_im2col"
 harness = false
 
+[[bench]]
+name = "im2col_function"
+harness = false
+
 [profile.bench]
 debug = true
-
