@@ -1,4 +1,4 @@
-use criterion::{criterion_group, criterion_main, Criterion};
+use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use zenu_matrix::{
     constructor::zeros::Zeros,
     dim::DimDyn,
@@ -13,8 +13,8 @@ fn copy_from_all_matrix(mut a: Matrix<ViewMutMem<f32>, DimDyn>, b: Matrix<ViewMe
 }
 
 fn copy_from_all_matrix_(c: &mut Criterion) {
-    let b = OwnedMatrixDyn::zeros([32, 16, 128, 128]);
-    let mut a = OwnedMatrixDyn::zeros([32, 16, 128, 128]);
+    let b = black_box(OwnedMatrixDyn::zeros([32, 16, 128, 128]));
+    let mut a = black_box(OwnedMatrixDyn::zeros([32, 16, 128, 128]));
 
     c.bench_function("copy_from_all_matrix", |b_| {
         b_.iter(|| copy_from_all_matrix(a.to_view_mut(), b.to_view()))
