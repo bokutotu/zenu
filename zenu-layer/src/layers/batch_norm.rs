@@ -101,7 +101,7 @@ impl<T: Num> Layer<T> for BatchNorm<T> {
     }
 
     fn load_parameters(&mut self, parameters: &[Variable<T>]) {
-        let mut parameters = parameters.into_iter();
+        let mut parameters = parameters.iter();
         self.mean = Some(parameters.next().unwrap().clone());
         self.variance = Some(parameters.next().unwrap().clone());
         self.decay = parameters.next().unwrap().clone();
