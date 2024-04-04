@@ -19,3 +19,7 @@ criterion = "0.5.1"
 [[bench]]
 name = "conv2d"
 harness = false
+
+[profile.bench]
+debug = true
+
