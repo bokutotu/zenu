@@ -21,6 +21,7 @@ pub mod flatten;
 pub mod log;
 pub mod loss;
 pub mod matmul;
+pub mod powf;
 pub mod reshape;
 pub mod sinh;
 pub mod softmax;
