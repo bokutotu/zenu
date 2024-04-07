@@ -12,7 +12,7 @@ use zenu_layer::{
     layers::{batch_norm::BatchNorm, conv2d::Conv2d, linear::Linear},
     Layer,
 };
-use zenu_matrix::matrix::IndexItem;
+use zenu_matrix::{matrix::IndexItem, matrix::ToViewMatrix, operation::max::MaxIdx};
 use zenu_optimizer::sgd::SGD;
 
 struct ConvNet {
@@ -147,26 +147,26 @@ fn main() {
         );
     }
 
-    // let mut test_loss = 0.;
-    // let mut num_iter_test = 0;
-    // let mut correct = 0;
-    // let mut total = 0;
-    // for batch in test_dataloader {
-    //     let x = batch[0].clone();
-    //     let y = batch[1].clone();
-    //     let output = model.predict(&[x]);
-    //     let loss = cross_entropy(output.clone(), y);
-    //     test_loss += loss.get_data().index_item([]);
-    //     num_iter_test += 1;
-    //     let y_pred = output.get_data().to_view().max_idx()[0];
-    //     let y_true = y.get_data().to_view().max_idx()[0];
-    //     correct += (y_pred == y_true) as usize;
-    //     total += 1;
-    // }
-    //
-    // println!(
-    //     "Test Loss: {}, Test Accuracy: {}",
-    //     test_loss / num_iter_test as f32,
-    //     correct as f32 / total as f32
-    // );
+    let mut test_loss = 0.;
+    let mut num_iter_test = 0;
+    let mut correct = 0;
+    let mut total = 0;
+    for batch in test_dataloader {
+        let x = batch[0].clone();
+        let y = batch[1].clone();
+        let output = model.predict(&[x]);
+        let loss = cross_entropy(output.clone(), y.clone());
+        test_loss += loss.get_data().index_item([]);
+        num_iter_test += 1;
+        let y_pred = output.get_data().to_view().max_idx()[0];
+        let y_true = y.get_data().to_view().max_idx()[0];
+        correct += (y_pred == y_true) as usize;
+        total += 1;
+    }
+
+    println!(
+        "Test Loss: {}, Test Accuracy: {}",
+        test_loss / num_iter_test as f32,
+        correct as f32 / total as f32
+    );
 }
