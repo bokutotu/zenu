@@ -133,6 +133,8 @@ impl_basic_1d_functions_no_input!(atanh_mod, atanh);
 impl_traits_no_input!(MatrixAtanh, atanh, atanh_mod, atanh);
 impl_basic_1d_functions_no_input!(sqrt_mod, sqrt);
 impl_traits_no_input!(MatrixSqrt, sqrt, sqrt_mod, sqrt);
+impl_basic_1d_functions_no_input!(abs_mod, abs);
+impl_traits_no_input!(MatrixAbs, abs, abs_mod, abs);
 
 macro_rules! impl_basic_1d_functions {
     (
@@ -195,7 +197,7 @@ macro_rules! impl_basic_1d_functions {
                     slice_to[i * to_stride] = slice_a[i * a_stride].$method(b);
                 }
             }
-$(
+        $(
             pub fn assign_1d_1d_cpu<T: Num, D1: DimTrait, D2: DimTrait>(
                 to: &mut Matrix<ViewMutMem<T>, D1>,
                 b: &Matrix<ViewMem<T>, D2>,
@@ -369,82 +371,82 @@ macro_rules! impl_traits {
         }
 
         $(
-        pub trait $assign_trait<R> {
-            fn $assign_trait_method(&mut self, rhs: R);
-        }
-        impl<T: Num, D: DimTrait, M: ToViewMutMemory<Item = T>> $assign_trait<T> for Matrix<M, D> {
-            fn $assign_trait_method(&mut self, rhs: T) {
-                if self.shape().is_empty() {
-                    let mut view_mut = self.to_view_mut();
-                    let self_slice = view_mut.as_mut_slice();
-                    self_slice[0].$assign_method(rhs);
-                } else {
-                    if self.shape().len() == 1 {
-                        $mod_name::assign_1d_scalar_cpu(&mut self.to_view_mut(), rhs);
+            pub trait $assign_trait<R> {
+                fn $assign_trait_method(&mut self, rhs: R);
+            }
+            impl<T: Num, D: DimTrait, M: ToViewMutMemory<Item = T>> $assign_trait<T> for Matrix<M, D> {
+                fn $assign_trait_method(&mut self, rhs: T) {
+                    if self.shape().is_empty() {
+                        let mut view_mut = self.to_view_mut();
+                        let self_slice = view_mut.as_mut_slice();
+                        self_slice[0].$assign_method(rhs);
+                    } else {
+                        if self.shape().len() == 1 {
+                            $mod_name::assign_1d_scalar_cpu(&mut self.to_view_mut(), rhs);
+                        } else {
+                            let num_iter = self.shape()[0];
+                            for idx in 0..num_iter {
+                                let mut s = self.index_axis_mut_dyn(Index0D::new(idx));
+                                s.$assign_trait_method(rhs);
+                            }
+                        }
+                    }
+                }
+            }
+
+            impl<
+                    T: Num,
+                    D1: DimTrait,
+                    D2: DimTrait,
+                    M1: ToViewMemory<Item = T>,
+                    M2: ToViewMutMemory<Item = T>,
+                > $assign_trait<Matrix<M1, D1>> for Matrix<M2, D2>
+            {
+                fn $assign_trait_method(&mut self, rhs: Matrix<M1, D1>) {
+                    if self.shape().len() < rhs.shape().len() {
+                        panic!("Self shape len is larger than rhs shape len {:?} {:?}", self.shape(), rhs.shape());
+                    }
+
+                    if !(DimDyn::from(self.shape().slice())
+                        .is_include(DimDyn::from(rhs.shape().slice()))
+                        || DimDyn::from(self.shape().slice())
+                        .is_include_bradcast(DimDyn::from(rhs.shape().slice()))
+                    )
+                    {
+                        panic!("rhs shape is not include self shape {:?} {:?}", self.shape(), rhs.shape());
+                    }
+
+                    if !DimDyn::from(self.shape().slice())
+                        .is_include_bradcast(DimDyn::from(rhs.shape().slice()))
+                    {
+                        panic!("rhs shape is not include self shape {:?} {:?}", self.shape(), rhs.shape());
+                    }
+
+                    if self.shape().is_empty() {
+                        let mut view_mut = self.to_view_mut();
+                        let self_slice = view_mut.as_mut_slice();
+                        let rhs_slice = rhs.as_slice();
+                        self_slice[0].$assign_method(rhs_slice[0]);
+                    } else if rhs.shape().is_empty() {
+                        self.$assign_trait_method(rhs.as_slice()[0]);
+                    } else if self.shape().len() == 1 {
+                        if is_1d_1(rhs.shape().slice()) {
+                            self.$assign_trait_method(rhs.as_slice()[0]);
+                            return;
+                        }
+                        $mod_name::assign_1d_1d_cpu(&mut self.to_view_mut(), &rhs.to_view());
                     } else {
                         let num_iter = self.shape()[0];
+                        let self_shape_len = self.shape().len();
+                        let rhs_shape_len = rhs.shape().len();
                         for idx in 0..num_iter {
                             let mut s = self.index_axis_mut_dyn(Index0D::new(idx));
+                            let rhs = get_tmp_matrix(&rhs, rhs_shape_len, idx, self_shape_len);
                             s.$assign_trait_method(rhs);
                         }
                     }
                 }
             }
-        }
-
-        impl<
-                T: Num,
-                D1: DimTrait,
-                D2: DimTrait,
-                M1: ToViewMemory<Item = T>,
-                M2: ToViewMutMemory<Item = T>,
-            > $assign_trait<Matrix<M1, D1>> for Matrix<M2, D2>
-        {
-            fn $assign_trait_method(&mut self, rhs: Matrix<M1, D1>) {
-                if self.shape().len() < rhs.shape().len() {
-                    panic!("Self shape len is larger than rhs shape len {:?} {:?}", self.shape(), rhs.shape());
-                }
-
-                if !(DimDyn::from(self.shape().slice())
-                    .is_include(DimDyn::from(rhs.shape().slice()))
-                    || DimDyn::from(self.shape().slice())
-                    .is_include_bradcast(DimDyn::from(rhs.shape().slice()))
-                )
-                {
-                    panic!("rhs shape is not include self shape {:?} {:?}", self.shape(), rhs.shape());
-                }
-
-                if !DimDyn::from(self.shape().slice())
-                    .is_include_bradcast(DimDyn::from(rhs.shape().slice()))
-                {
-                    panic!("rhs shape is not include self shape {:?} {:?}", self.shape(), rhs.shape());
-                }
-
-                if self.shape().is_empty() {
-                    let mut view_mut = self.to_view_mut();
-                    let self_slice = view_mut.as_mut_slice();
-                    let rhs_slice = rhs.as_slice();
-                    self_slice[0].$assign_method(rhs_slice[0]);
-                } else if rhs.shape().is_empty() {
-                    self.$assign_trait_method(rhs.as_slice()[0]);
-                } else if self.shape().len() == 1 {
-                    if is_1d_1(rhs.shape().slice()) {
-                        self.$assign_trait_method(rhs.as_slice()[0]);
-                        return;
-                    }
-                    $mod_name::assign_1d_1d_cpu(&mut self.to_view_mut(), &rhs.to_view());
-                } else {
-                    let num_iter = self.shape()[0];
-                    let self_shape_len = self.shape().len();
-                    let rhs_shape_len = rhs.shape().len();
-                    for idx in 0..num_iter {
-                        let mut s = self.index_axis_mut_dyn(Index0D::new(idx));
-                        let rhs = get_tmp_matrix(&rhs, rhs_shape_len, idx, self_shape_len);
-                        s.$assign_trait_method(rhs);
-                    }
-                }
-            }
-        }
         )?
     };
 }
@@ -488,6 +490,17 @@ impl_traits!(
     div,
     div_assign
 );
+impl_basic_1d_functions!(powf_mod, powf,);
+impl_traits!(
+    MatrixPowf,
+    powf,
+    MatrixPowfAssign,
+    powf_assign,
+    powf_mod,
+    powf,
+);
+impl_basic_1d_functions!(log_mod, log,);
+impl_traits!(MatrixLog, log, MatrixLogAssign, log_assign, log_mod, log,);
 
 #[cfg(test)]
 mod add {
