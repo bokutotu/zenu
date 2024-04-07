@@ -204,6 +204,9 @@ impl<T: Num> Function<T> for BatchNorm<T> {
             self.epsilon.clone(),
             self.inv_std.clone(),
             self.input.clone(),
+            self.gamma.clone(),
+            self.beta.clone(),
+            self.input.clone(),
         ]
     }
 }

@@ -289,6 +289,7 @@ impl<T: Num> Variable<T> {
         if self.inner.borrow().grad.is_none() {
             let ones = Ones::ones(self.get_data().shape());
             let ones = Variable::new(ones);
+            ones.set_name(&format!("{:?}_grad", self.get_name().unwrap_or_default()));
             self.inner.borrow_mut().grad = Some(ones);
         }
         self.inner.borrow().backward();

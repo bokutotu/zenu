@@ -95,8 +95,11 @@ impl<T: Num> Function<T> for TransposeByIndex<T> {
     fn backward(&self) {
         let output = self.output.upgrade().unwrap();
         let grad = output.get_grad().clone().unwrap();
-        self.x
-            .set_grad(transpose_by_index(grad, self.index.clone()));
+        // inv_axes = tuple(np.argsort([ax % axes_len for ax in self.axes]))
+        let inv_axis = (0..self.index.len())
+            .map(|ax| ax % self.index.len())
+            .collect::<Vec<_>>();
+        self.x.set_grad(transpose_by_index(grad, inv_axis));
     }
 
     fn get_inputs(&self) -> Vec<Variable<T>> {

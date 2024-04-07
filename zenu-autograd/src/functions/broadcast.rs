@@ -37,9 +37,8 @@ impl<T: Num> Function<T> for Broadcast<T> {
     fn backward(&self) {
         let x_shape = self.x.get_data().shape();
         let output = self.output.upgrade().unwrap();
-        let output_grad = output.get_grad();
-        let output_grad = output_grad.clone();
-        let x_grad = sum_to(output_grad.unwrap(), x_shape);
+        let output_grad = output.get_grad().unwrap();
+        let x_grad = sum_to(output_grad, x_shape);
         self.x.set_grad(x_grad);
     }
 

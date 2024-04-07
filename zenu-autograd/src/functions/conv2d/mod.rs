@@ -88,17 +88,23 @@ impl<T: Num> Function<T> for Conv2d<T> {
         self.input.set_grad(g_input);
         self.kernel.set_grad(gw);
 
-        if let Some(bias) = self.bias.clone() {
+        if let Some(bias) = &self.bias {
             let output_grad = self.output.upgrade().unwrap().get_grad().unwrap();
             let output_grad = sum(output_grad, 0, true);
+            output_grad.set_name("conv2d_bias_grad_intermidiate_1");
             let output_grad = sum(output_grad, 2, true);
+            output_grad.set_name("conv2d_bias_grad_intermidiate_2");
             let output_grad = sum(output_grad, 3, true);
+            output_grad.set_name("conv2d_bias_grad");
             bias.set_grad(output_grad);
         }
     }
 
     fn get_inputs(&self) -> Vec<Variable<T>> {
-        vec![self.kernel.clone(), self.input.clone()]
+        match self.bias.clone() {
+            Some(bias) => vec![self.kernel.clone(), self.input.clone(), bias],
+            None => vec![self.kernel.clone(), self.input.clone()],
+        }
     }
 }
 
@@ -146,7 +152,10 @@ impl<T: Num> Function<T> for Deconv2d<T> {
     }
 
     fn get_inputs(&self) -> Vec<Variable<T>> {
-        vec![self.kernel.clone(), self.input.clone()]
+        match self.bias.clone() {
+            Some(bias) => vec![self.kernel.clone(), self.input.clone(), bias],
+            None => vec![self.kernel.clone(), self.input.clone()],
+        }
     }
 }
 
@@ -199,7 +208,11 @@ impl<T: Num> Function<T> for Conv2dGrad<T> {
     }
 
     fn get_inputs(&self) -> Vec<Variable<T>> {
-        vec![self.kernel.clone(), self.input.clone()]
+        vec![
+            self.kernel.clone(),
+            self.input.clone(),
+            self.gradient_output.clone(),
+        ]
     }
 }
 
