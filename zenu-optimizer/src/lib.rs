@@ -1,3 +1,4 @@
+pub mod adam;
 pub mod sgd;
 
 use zenu_autograd::Variable;
