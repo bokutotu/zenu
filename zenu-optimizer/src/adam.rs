@@ -6,10 +6,7 @@ use zenu_matrix::{
     matrix::{MatrixBase, ToOwnedMatrix, ToViewMatrix, ToViewMutMatrix},
     matrix_impl::OwnedMatrixDyn,
     num::Num,
-    operation::{
-        basic_operations::{MatrixAddAssign, MatrixPowf, MatrixSqrt, MatrixSubAssign},
-        copy_from::CopyFrom,
-    },
+    operation::basic_operations::{MatrixAddAssign, MatrixSqrt, MatrixSubAssign},
 };
 
 use crate::Optimizer;
