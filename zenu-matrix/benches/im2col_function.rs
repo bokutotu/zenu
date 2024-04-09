@@ -42,17 +42,12 @@ fn padding<T: Num>(
     output
 }
 
-pub struct Im2ColRes<T: Num> {
-    pub(crate) col: Matrix<OwnedMem<T>, DimDyn>,
-    pub(crate) out_size: (usize, usize),
-}
-
 pub fn im2col<T: Num>(
     img: Matrix<ViewMem<T>, DimDyn>,
     kernel_size: (usize, usize),
     stride: (usize, usize),
     pad: (usize, usize),
-) -> Im2ColRes<T> {
+) -> Matrix<OwnedMem<T>, DimDyn> {
     let batch_size = img.shape()[0];
     let c = img.shape()[1];
     let h = img.shape()[2];
@@ -82,10 +77,7 @@ pub fn im2col<T: Num>(
     let col = col.reshape_mut([batch_size, c * kh * kw, oh * ow]);
     let col = col.transepose_by_index(&[1, 0, 2]);
     let col = col.reshape_new_matrix([c * kh * kw, batch_size * oh * ow]);
-    Im2ColRes {
-        col,
-        out_size: (oh, ow),
-    }
+    col
 }
 
 fn im2col_bench(c: &mut Criterion) {

@@ -24,6 +24,19 @@ impl<T: Num> CpuAccessor<T> {
     }
 }
 
+#[derive(Clone, Copy, Debug, Default)]
+pub struct NvidiaAccessor<T: Num> {
+    phantom: std::marker::PhantomData<T>,
+}
+
+impl<T: Num> NvidiaAccessor<T> {
+    pub fn new() -> Self {
+        Self {
+            phantom: std::marker::PhantomData,
+        }
+    }
+}
+
 impl<T: Num> MemoryAccessor for CpuAccessor<T> {
     type Item = T;
 
@@ -50,6 +63,30 @@ impl<T: Num> MemoryAccessor for CpuAccessor<T> {
 
     fn offset_ptr(&self, ptr: NonNull<Self::Item>, offset: usize) -> NonNull<Self::Item> {
         NonNull::new(unsafe { ptr.as_ptr().add(offset) }).unwrap()
+    }
+}
+
+impl<T: Num> MemoryAccessor for NvidiaAccessor<T> {
+    type Item = T;
+
+    fn value(&self, ptr: NonNull<Self::Item>, offset: usize) -> Self::Item {
+        todo!();
+    }
+
+    fn set_value(&mut self, ptr: NonNull<Self::Item>, offset: usize, value: Self::Item) {
+        todo!();
+    }
+
+    fn clone_ptr(&self, ptr: NonNull<Self::Item>, len: usize) -> NonNull<Self::Item> {
+        todo!();
+    }
+
+    fn drop(&self, ptr: *const Self::Item, len: usize) {
+        todo!();
+    }
+
+    fn offset_ptr(&self, ptr: NonNull<Self::Item>, offset: usize) -> NonNull<Self::Item> {
+        todo!();
     }
 }
 

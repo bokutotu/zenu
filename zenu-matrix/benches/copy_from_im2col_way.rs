@@ -2,7 +2,7 @@ use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use zenu_matrix::{
     constructor::zeros::Zeros,
     dim::DimDyn,
-    matrix::{MatrixSliceDyn, MatrixSliceMutDyn, ToViewMatrix, ToViewMutMatrix},
+    matrix::{AsPtr, MatrixSliceDyn, MatrixSliceMutDyn, ToViewMatrix, ToViewMutMatrix},
     matrix_impl::{Matrix, OwnedMatrixDyn},
     memory_impl::{ViewMem, ViewMutMem},
     operation::copy_from::CopyFrom,
@@ -18,7 +18,7 @@ fn copy_from_(
     ow: usize,
     sh: usize,
     sw: usize,
-) {
+) -> *const f32 {
     for j in 0..kh {
         let j_lim = j + sh * oh;
         for i in 0..kw {
@@ -28,6 +28,8 @@ fn copy_from_(
             a.copy_from(&b);
         }
     }
+
+    a.as_ptr()
 }
 
 fn copy_from_im2col_way(c: &mut Criterion) {
