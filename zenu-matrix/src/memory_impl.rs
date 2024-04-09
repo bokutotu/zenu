@@ -24,11 +24,13 @@ impl<T: Num> CpuAccessor<T> {
     }
 }
 
+#[cfg(feature = "nvidia")]
 #[derive(Clone, Copy, Debug, Default)]
 pub struct NvidiaAccessor<T: Num> {
     phantom: std::marker::PhantomData<T>,
 }
 
+#[cfg(feature = "nvidia")]
 impl<T: Num> NvidiaAccessor<T> {
     pub fn new() -> Self {
         Self {
@@ -66,6 +68,7 @@ impl<T: Num> MemoryAccessor for CpuAccessor<T> {
     }
 }
 
+#[cfg(feature = "nvidia")]
 impl<T: Num> MemoryAccessor for NvidiaAccessor<T> {
     type Item = T;
 
