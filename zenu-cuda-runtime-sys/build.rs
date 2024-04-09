@@ -1,8 +1,6 @@
 extern crate bindgen;
 use zenu_cuda_config::find_cuda;
 
-use std::{env, path::PathBuf};
-
 fn main() {
     for path in find_cuda() {
         println!("cargo:rustc-link-search=native={}", path.display());
@@ -33,8 +31,7 @@ fn main() {
         .generate()
         .expect("Unable to generate bindings");
 
-    let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
     bindings
-        .write_to_file(out_path.join("bindings.rs"))
+        .write_to_file("./src/bindings.rs")
         .expect("Unable to write");
 }

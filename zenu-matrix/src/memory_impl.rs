@@ -11,6 +11,9 @@ use std::ptr::NonNull;
 
 use crate::num::Num;
 
+// #[cfg(feature = "nvidia")]
+// use zenu_cuda_runtime_sys::{cudaFree, cudaMalloc, cudaMemcpyKind, cudaMemcpyKind::*, cudaMemset};
+
 #[derive(Clone, Copy, Debug, Default)]
 pub struct CpuAccessor<T: Num> {
     phantom: std::marker::PhantomData<T>,
@@ -81,11 +84,26 @@ impl<T: Num> MemoryAccessor for NvidiaAccessor<T> {
     }
 
     fn clone_ptr(&self, ptr: NonNull<Self::Item>, len: usize) -> NonNull<Self::Item> {
-        todo!();
+        let null_ptr = NonNull::dangling();
+        // unsafe {
+        //     cudaMalloc(
+        //         null_ptr.as_ptr() as *mut *mut std::ffi::c_void,
+        //         len * Self::Item::size(),
+        //     )
+        // };
+        // unsafe {
+        //     cudaMemcpyKind(
+        //         null_ptr.as_ptr() as *mut std::ffi::c_void,
+        //         ptr.as_ptr() as *const std::ffi::c_void,
+        //         len * Self::Item::size(),
+        //         cudaMemcpyKind::cudaMemcpyHostToDevice,
+        //     )
+        // }
+        null_ptr
     }
 
-    fn drop(&self, ptr: *const Self::Item, len: usize) {
-        todo!();
+    fn drop(&self, ptr: *const Self::Item, _len: usize) {
+        // unsafe { cudaFree(ptr as *mut std::ffi::c_void) };
     }
 
     fn offset_ptr(&self, ptr: NonNull<Self::Item>, offset: usize) -> NonNull<Self::Item> {
