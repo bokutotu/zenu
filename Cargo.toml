@@ -2,7 +2,7 @@
 resolver = "2"
 members = [
     "zenu",
-    "zenu-autograd",
+    "zenu-autograd", "zenu-cublas-sys", "zenu-cuda-config", "zenu-cuda-driver-sys", "zenu-cuda-runtime-sys", "zenu-cudnn-sys",
     "zenu-layer",
     "zenu-matrix", 
     "zenu-optimizer"
