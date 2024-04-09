@@ -29,6 +29,9 @@ pub trait Num:
     fn is_f32() -> bool;
     fn minus_one() -> Self;
     fn from_usize(n: usize) -> Self;
+    fn size() -> usize {
+        std::mem::size_of::<Self>()
+    }
 }
 
 impl Num for f32 {

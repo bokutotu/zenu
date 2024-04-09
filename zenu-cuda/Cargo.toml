@@ -1,0 +1,15 @@
+[package]
+name = "zenu-cuda"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+zenu-cuda-driver-sys = { path = "../zenu-cuda-driver-sys", version="0.1.0" }
+zenu-cuda-runtime-sys = { path = "../zenu-cuda-runtime-sys", version="0.1.0" }
+zenu-cudnn-sys = { path = "../zenu-cudnn-sys", version="0.1.0" }
+zenu-cublas-sys = { path = "../zenu-cublas-sys", version="0.1.0" }
+
+[lints]
+workspace = true

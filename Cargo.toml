@@ -4,6 +4,7 @@ members = [
     "zenu",
     "zenu-autograd", 
     "zenu-cublas-sys", 
+    "zenu-cuda", 
     "zenu-cuda-config", 
     "zenu-cuda-driver-sys", 
     "zenu-cuda-runtime-sys", 
@@ -18,4 +19,3 @@ pedantic = "warn"
 
 [profile.bench]
 debug = true
-

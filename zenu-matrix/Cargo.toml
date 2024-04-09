@@ -14,18 +14,10 @@ rand = "0.8.5"
 rand_distr = "0.4.3"
 serde = { version = "1.0.197", features = ["derive"] }
 
-zenu-cuda-driver-sys = { path = "../zenu-cuda-driver-sys", version="0.1.0", optional = true }
-zenu-cuda-runtime-sys = { path = "../zenu-cuda-runtime-sys", version="0.1.0", optional = true }
-zenu-cudnn-sys = { path = "../zenu-cudnn-sys", version="0.1.0", optional = true }
-zenu-cublas-sys = { path = "../zenu-cublas-sys", version="0.1.0", optional = true }
+zenu-cuda = { path = "../zenu-cuda", optional = true, version = "0.1.0" }
 
 [features]
-nvidia = [
-    "zenu-cuda-driver-sys", 
-    "zenu-cuda-runtime-sys", 
-    "zenu-cudnn-sys",
-    "zenu-cublas-sys", 
-]
+nvidia = ["zenu-cuda"]
 
 [dev-dependencies]
 itertools = { version = "0.10.0", default-features = false, features = ["use_std"] }
@@ -50,3 +42,6 @@ harness = false
 
 [profile.bench]
 debug = true
+
+[package.metadata.rust-analyzer]
+extraFeatures = ["nvidia"]
