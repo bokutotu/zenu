@@ -1,6 +1,7 @@
 use std::ptr::NonNull;
 
-use zenu_cudnn_sys::{cudaError, cudaFree, cudaMalloc, cudaMemcpy, cudaMemcpyKind};
+use zenu_cublas_sys::cublasContext;
+use zenu_cuda_runtime_sys::{cudaError, cudaFree, cudaMalloc, cudaMemcpy, cudaMemcpyKind};
 
 #[derive(Debug, Copy, Clone)]
 pub enum ZenuCudaError {
@@ -333,6 +334,31 @@ pub fn cuda_copy<T>(
         ZenuCudaError::CudaSuccess => Ok(()),
         _ => Err(err),
     }
+}
+
+pub enum ZenuCublasError {
+    cublasStatusSuccess,
+}
+
+pub struct ZenuCudaContext {
+    cublas: cublasContext,
+}
+
+impl ZenuCudaContext {
+    pub fn new() -> Result<Self, ZenuCudaError> {
+        let mut cublas = std::ptr::null_mut();
+        let err = unsafe { zenu_cublas_sys::cublasCreate_v2(&mut cublas) } as u32;
+    }
+}
+
+pub fn cublas_copy<T>(
+    n: usize,
+    x: NonNull<T>,
+    incx: usize,
+    y: NonNull<T>,
+    incy: usize,
+) -> Result<(), ZenuCudaError> {
+    todo!()
 }
 
 #[cfg(test)]

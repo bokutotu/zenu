@@ -27,8 +27,6 @@ fn main() {
         .derive_eq(true)
         .derive_hash(true)
         .derive_ord(true)
-        // .parse_callbacks(Box::new(bindgen::CargoCallbacks))
-        // .rustfmt_bindings(true)
         .generate()
         .expect("Unable to generate bindings");
 
