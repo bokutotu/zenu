@@ -15,7 +15,6 @@ pub fn cublas_copy<T: 'static>(
     y: NonNull<T>,
     incy: usize,
 ) -> Result<(), ZenuCublasError> {
-    let n = n * std::mem::size_of::<T>();
     let context = ZENU_CUDA_STATE.lock().unwrap();
     let cublas_context = context.get_cublas();
     let err = if TypeId::of::<T>() == TypeId::of::<f32>() {
@@ -59,8 +58,8 @@ mod cublas {
 
     #[test]
     fn cublas_copy_small() {
-        let x = vec![1.0, 2.0, 3.0, 4.0];
-        let y = vec![0.0, 0.0, 0.0, 0.0];
+        let x: Vec<f32> = vec![1.0, 2.0, 3.0, 4.0];
+        let y: Vec<f32> = vec![0.0, 0.0, 0.0, 0.0];
 
         let x_gpu = cuda_malloc(x.len()).unwrap();
         let y_gpu = cuda_malloc(y.len()).unwrap();
