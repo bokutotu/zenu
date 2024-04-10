@@ -1,4 +1,3 @@
-workspace = { members = ["hoge"] }
 [package]
 name = "zenu-cuda"
 version = "0.1.0"
