@@ -1,26 +1,24 @@
 use zenu_cuda_runtime_sys::{cudaError, cudaFree, cudaMalloc, cudaMemcpy, cudaMemcpyKind};
 
-use std::ptr::NonNull;
-
 use self::runtime_error::ZenuCudaRuntimeError;
 
 pub mod runtime_error;
 
-pub fn cuda_malloc<T>(size: usize) -> Result<NonNull<T>, ZenuCudaRuntimeError> {
+pub fn cuda_malloc<T>(size: usize) -> Result<*mut T, ZenuCudaRuntimeError> {
     let mut ptr = std::ptr::null_mut();
     let size = size * std::mem::size_of::<T>();
     let err = unsafe { cudaMalloc(&mut ptr as *mut *mut T as *mut *mut std::ffi::c_void, size) }
         as cudaError as u32;
     let err = ZenuCudaRuntimeError::from(err);
     match err {
-        ZenuCudaRuntimeError::CudaSuccess => Ok(unsafe { NonNull::new_unchecked(ptr) }),
+        ZenuCudaRuntimeError::CudaSuccess => Ok(ptr),
         _ => Err(err),
     }
 }
 
-pub fn cuda_free<T>(ptr: NonNull<T>) -> Result<(), ZenuCudaRuntimeError> {
+pub fn cuda_free<T>(ptr: *mut T) -> Result<(), ZenuCudaRuntimeError> {
     let err: ZenuCudaRuntimeError =
-        (unsafe { cudaFree(ptr.as_ptr() as *mut std::ffi::c_void) } as u32).into();
+        (unsafe { cudaFree(ptr as *mut std::ffi::c_void) } as u32).into();
     match err {
         ZenuCudaRuntimeError::CudaSuccess => Ok(()),
         _ => Err(err),
@@ -48,16 +46,16 @@ impl From<ZenuCudaMemCopyKind> for cudaMemcpyKind {
 }
 
 pub fn cuda_copy<T>(
-    dst: NonNull<T>,
-    src: NonNull<T>,
+    dst: *mut T,
+    src: *const T,
     size: usize,
     kind: ZenuCudaMemCopyKind,
 ) -> Result<(), ZenuCudaRuntimeError> {
     let size = size * std::mem::size_of::<T>();
     let err = unsafe {
         cudaMemcpy(
-            dst.as_ptr() as *mut std::ffi::c_void,
-            src.as_ptr() as *mut std::ffi::c_void,
+            dst as *mut std::ffi::c_void,
+            src as *const std::ffi::c_void,
             size,
             cudaMemcpyKind::from(kind),
         )
@@ -71,33 +69,19 @@ pub fn cuda_copy<T>(
 
 #[cfg(test)]
 mod cuda_runtime {
-    use std::ptr::NonNull;
-
     use crate::runtime::ZenuCudaMemCopyKind;
 
     use super::{cuda_copy, cuda_malloc};
 
     #[test]
     fn cpu_to_gpu_to_cpu() {
-        let mut a = vec![1.0f32, 2.0, 3.0, 4.0];
+        let a = vec![1.0f32, 2.0, 3.0, 4.0];
         let mut b = vec![0.0f32; 4];
 
         let a_ptr = cuda_malloc::<f32>(4).unwrap();
-        cuda_copy(
-            a_ptr,
-            unsafe { NonNull::new_unchecked(a.as_mut_ptr()) },
-            4,
-            ZenuCudaMemCopyKind::HostToDevice,
-        )
-        .unwrap();
+        cuda_copy(a_ptr, a.as_ptr(), 4, ZenuCudaMemCopyKind::HostToDevice).unwrap();
 
-        cuda_copy(
-            unsafe { NonNull::new_unchecked(b.as_mut_ptr()) },
-            a_ptr,
-            4,
-            ZenuCudaMemCopyKind::DeviceToHost,
-        )
-        .unwrap();
+        cuda_copy(b.as_mut_ptr(), a_ptr, 4, ZenuCudaMemCopyKind::DeviceToHost).unwrap();
 
         assert_eq!(a, b);
     }
