@@ -1,8 +1,9 @@
-use std::{any::TypeId, ptr::NonNull};
+use std::any::TypeId;
 
 use zenu_cublas_sys::{
-    cublasDasum_v2, cublasDasum_v2_64, cublasDcopy_v2, cublasDgemm_v2_64, cublasOperation_t,
-    cublasSasum_v2_64, cublasScopy_v2, cublasSgemm_v2, cublasSgemm_v2_64,
+    cublasDasum_v2_64, cublasDcopy_v2, cublasDdot_v2_64, cublasDgemm_v2_64, cublasIdamax_v2_64,
+    cublasIsamax_v2_64, cublasOperation_t, cublasSasum_v2_64, cublasScopy_v2, cublasSdot_v2_64,
+    cublasSgemm_v2_64,
 };
 
 use crate::ZENU_CUDA_STATE;
@@ -162,6 +163,88 @@ pub fn cublas_asum<T: Default + 'static>(
                 n as i64,
                 x as *const f64,
                 incx as i64,
+                &mut result as *mut T as *mut f64,
+            )
+        }
+    } else {
+        panic!("Unsupported type");
+    };
+
+    match ZenuCublasError::from(err as u32) {
+        ZenuCublasError::CublasStatusSuccess => Ok(result),
+        err => Err(err),
+    }
+}
+
+pub fn cublas_amax<T: Default + 'static>(
+    n: usize,
+    x: *const T,
+    incx: usize,
+) -> Result<i64, ZenuCublasError> {
+    let context = ZENU_CUDA_STATE.lock().unwrap();
+    let cublas_context = context.get_cublas();
+    let mut result: i64 = 0;
+    let err = if TypeId::of::<T>() == TypeId::of::<f32>() {
+        unsafe {
+            cublasIsamax_v2_64(
+                cublas_context.as_ptr(),
+                n as i64,
+                x as *const f32,
+                incx as i64,
+                &mut result as *mut i64,
+            ) as i32
+        }
+    } else if TypeId::of::<T>() == TypeId::of::<f64>() {
+        unsafe {
+            cublasIdamax_v2_64(
+                cublas_context.as_ptr(),
+                n as i64,
+                x as *const f64,
+                incx as i64,
+                &mut result as *mut i64,
+            ) as i32
+        }
+    } else {
+        panic!("Unsupported type");
+    };
+
+    match ZenuCublasError::from(err as u32) {
+        ZenuCublasError::CublasStatusSuccess => Ok(result - 1),
+        err => Err(err),
+    }
+}
+
+pub fn cublas_dot<T: 'static + Default>(
+    n: usize,
+    x: *const T,
+    incx: usize,
+    y: *const T,
+    incy: usize,
+) -> Result<T, ZenuCublasError> {
+    let context = ZENU_CUDA_STATE.lock().unwrap();
+    let cublas_context = context.get_cublas();
+    let mut result: T = Default::default();
+    let err = if TypeId::of::<T>() == TypeId::of::<f32>() {
+        unsafe {
+            cublasSdot_v2_64(
+                cublas_context.as_ptr(),
+                n as i64,
+                x as *const f32,
+                incx as i64,
+                y as *const f32,
+                incy as i64,
+                &mut result as *mut T as *mut f32,
+            )
+        }
+    } else if TypeId::of::<T>() == TypeId::of::<f64>() {
+        unsafe {
+            cublasDdot_v2_64(
+                cublas_context.as_ptr(),
+                n as i64,
+                x as *const f64,
+                incx as i64,
+                y as *const f64,
+                incy as i64,
                 &mut result as *mut T as *mut f64,
             )
         }
@@ -435,5 +518,93 @@ mod cublas {
 
         let result = super::cublas_asum(x.len(), x_gpu, 1).unwrap();
         assert_eq!(result, 10.0);
+    }
+
+    #[test]
+    fn amax_f32() {
+        let x: Vec<f32> = vec![1.0, 2.0, 3.0, 4.0];
+        let x_gpu = cuda_malloc(x.len()).unwrap();
+
+        cuda_copy(
+            x_gpu,
+            x.as_ptr(),
+            x.len(),
+            ZenuCudaMemCopyKind::HostToDevice,
+        )
+        .unwrap();
+
+        let result = super::cublas_amax(x.len(), x_gpu, 1).unwrap();
+        assert_eq!(result, 3);
+    }
+
+    #[test]
+    fn amax_f64() {
+        let x: Vec<f64> = vec![1.0, 2.0, 3.0, 4.0];
+        let x_gpu = cuda_malloc(x.len()).unwrap();
+
+        cuda_copy(
+            x_gpu,
+            x.as_ptr(),
+            x.len(),
+            ZenuCudaMemCopyKind::HostToDevice,
+        )
+        .unwrap();
+
+        let result = super::cublas_amax(x.len(), x_gpu, 1).unwrap();
+        assert_eq!(result, 3);
+    }
+
+    #[test]
+    fn dot_f32() {
+        let x: Vec<f32> = vec![1.0, 2.0, 3.0, 4.0];
+        let y: Vec<f32> = vec![1.0, 2.0, 3.0, 4.0];
+        let x_gpu = cuda_malloc(x.len()).unwrap();
+        let y_gpu = cuda_malloc(y.len()).unwrap();
+
+        cuda_copy(
+            x_gpu,
+            x.as_ptr(),
+            x.len(),
+            ZenuCudaMemCopyKind::HostToDevice,
+        )
+        .unwrap();
+
+        cuda_copy(
+            y_gpu,
+            y.as_ptr(),
+            y.len(),
+            ZenuCudaMemCopyKind::HostToDevice,
+        )
+        .unwrap();
+
+        let result = super::cublas_dot(x.len(), x_gpu, 1, y_gpu, 1).unwrap();
+        assert_eq!(result, 30.0);
+    }
+
+    #[test]
+    fn dot_f64() {
+        let x: Vec<f64> = vec![1.0, 2.0, 3.0, 4.0];
+        let y: Vec<f64> = vec![1.0, 2.0, 3.0, 4.0];
+        let x_gpu = cuda_malloc(x.len()).unwrap();
+        let y_gpu = cuda_malloc(y.len()).unwrap();
+
+        cuda_copy(
+            x_gpu,
+            x.as_ptr(),
+            x.len(),
+            ZenuCudaMemCopyKind::HostToDevice,
+        )
+        .unwrap();
+
+        cuda_copy(
+            y_gpu,
+            y.as_ptr(),
+            y.len(),
+            ZenuCudaMemCopyKind::HostToDevice,
+        )
+        .unwrap();
+
+        let result = super::cublas_dot(x.len(), x_gpu, 1, y_gpu, 1).unwrap();
+        assert_eq!(result, 30.0);
     }
 }
