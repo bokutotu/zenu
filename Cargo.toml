@@ -6,7 +6,7 @@ members = [
     "zenu-cublas-sys", 
     "zenu-cuda", 
     "zenu-cuda-config", 
-    "zenu-cuda-driver-sys", 
+    "zenu-cuda-driver-sys", "zenu-cuda-kernel-sys", 
     "zenu-cuda-runtime-sys", 
     "zenu-cudnn-sys",
     "zenu-layer",
