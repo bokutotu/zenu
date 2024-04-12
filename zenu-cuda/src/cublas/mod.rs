@@ -1,8 +1,8 @@
 use std::{any::TypeId, ptr::NonNull};
 
 use zenu_cublas_sys::{
-    cublasDcopy_v2, cublasDgemm_v2_64, cublasOperation_t, cublasScopy_v2, cublasSgemm_v2,
-    cublasSgemm_v2_64,
+    cublasDasum_v2, cublasDasum_v2_64, cublasDcopy_v2, cublasDgemm_v2_64, cublasOperation_t,
+    cublasSasum_v2_64, cublasScopy_v2, cublasSgemm_v2, cublasSgemm_v2_64,
 };
 
 use crate::ZENU_CUDA_STATE;
@@ -133,6 +133,44 @@ pub fn cublas_gemm<T: 'static>(
 
     match ZenuCublasError::from(err as u32) {
         ZenuCublasError::CublasStatusSuccess => Ok(()),
+        err => Err(err),
+    }
+}
+
+pub fn cublas_asum<T: Default + 'static>(
+    n: usize,
+    x: *const T,
+    incx: usize,
+) -> Result<T, ZenuCublasError> {
+    let context = ZENU_CUDA_STATE.lock().unwrap();
+    let cublas_context = context.get_cublas();
+    let mut result: T = Default::default();
+    let err = if TypeId::of::<T>() == TypeId::of::<f32>() {
+        unsafe {
+            cublasSasum_v2_64(
+                cublas_context.as_ptr(),
+                n as i64,
+                x as *const f32,
+                incx as i64,
+                &mut result as *mut T as *mut f32,
+            )
+        }
+    } else if TypeId::of::<T>() == TypeId::of::<f64>() {
+        unsafe {
+            cublasDasum_v2_64(
+                cublas_context.as_ptr(),
+                n as i64,
+                x as *const f64,
+                incx as i64,
+                &mut result as *mut T as *mut f64,
+            )
+        }
+    } else {
+        panic!("Unsupported type");
+    };
+
+    match ZenuCublasError::from(err as u32) {
+        ZenuCublasError::CublasStatusSuccess => Ok(result),
         err => Err(err),
     }
 }
@@ -364,5 +402,38 @@ mod cublas {
         .unwrap();
 
         assert_eq!(c, vec![50., 114., 178., 60., 140., 220.]);
+    }
+
+    #[test]
+    fn axum_f32() {
+        let x: Vec<f32> = vec![1.0, 2.0, 3.0, 4.0];
+        let x_gpu = cuda_malloc(x.len()).unwrap();
+        cuda_copy(
+            x_gpu,
+            x.as_ptr(),
+            x.len(),
+            ZenuCudaMemCopyKind::HostToDevice,
+        )
+        .unwrap();
+
+        let result = super::cublas_asum(x.len(), x_gpu, 1).unwrap();
+        assert_eq!(result, 10.0);
+    }
+
+    #[test]
+    fn axum_f64() {
+        let x: Vec<f64> = vec![1.0, 2.0, 3.0, 4.0];
+        let x_gpu = cuda_malloc(x.len()).unwrap();
+
+        cuda_copy(
+            x_gpu,
+            x.as_ptr(),
+            x.len(),
+            ZenuCudaMemCopyKind::HostToDevice,
+        )
+        .unwrap();
+
+        let result = super::cublas_asum(x.len(), x_gpu, 1).unwrap();
+        assert_eq!(result, 10.0);
     }
 }
