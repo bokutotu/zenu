@@ -139,7 +139,10 @@ pub fn cublas_gemm<T: 'static>(
 
 #[cfg(test)]
 mod cublas {
-    use crate::runtime::{cuda_copy, cuda_malloc, ZenuCudaMemCopyKind};
+    use crate::{
+        cublas::{cublas_gemm, ZenuCublasOperation},
+        runtime::{cuda_copy, cuda_malloc, ZenuCudaMemCopyKind},
+    };
 
     use super::cublas_copy;
 
@@ -170,5 +173,196 @@ mod cublas {
         .unwrap();
 
         assert_eq!(x, y);
+    }
+
+    #[test]
+    fn gemm_f32() {
+        let m = 2;
+        let n = 2;
+        let k = 2;
+
+        let a = vec![1.0, 2.0, 3.0, 4.0];
+        let b = vec![1.0, 2.0, 3.0, 4.0];
+        let mut c = vec![0.0; m * n];
+
+        let a_gpu = cuda_malloc(a.len()).unwrap();
+        let b_gpu = cuda_malloc(b.len()).unwrap();
+        let c_gpu = cuda_malloc(c.len()).unwrap();
+
+        cuda_copy(
+            a_gpu,
+            a.as_ptr(),
+            a.len(),
+            ZenuCudaMemCopyKind::HostToDevice,
+        )
+        .unwrap();
+
+        cuda_copy(
+            b_gpu,
+            b.as_ptr(),
+            b.len(),
+            ZenuCudaMemCopyKind::HostToDevice,
+        )
+        .unwrap();
+
+        cublas_gemm(
+            ZenuCublasOperation::N,
+            ZenuCublasOperation::N,
+            m as i32,
+            n as i32,
+            k as i32,
+            1.0,
+            a_gpu,
+            m as i32,
+            b_gpu,
+            k as i32,
+            0.0,
+            c_gpu,
+            m as i32,
+        )
+        .unwrap();
+
+        cuda_copy(
+            c.as_mut_ptr(),
+            c_gpu,
+            c.len(),
+            ZenuCudaMemCopyKind::DeviceToHost,
+        )
+        .unwrap();
+
+        assert_eq!(c, vec![7., 10., 15., 22.]);
+    }
+
+    #[test]
+    fn gemm_f64_both_column_major() {
+        // shape (3, 4)
+        // let a: Vec<f64> = vec![1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12.];
+        let a: Vec<f64> = vec![1., 5., 9., 2., 6., 10., 3., 7., 11., 4., 8., 12.];
+        // shape (4, 2)
+        // let b = vec![1., 2., 3., 4., 5., 6., 7., 8.];
+        let b = vec![1., 3., 5., 7., 2., 4., 6., 8.];
+        // shape (3, 2)
+        let mut c = vec![0.0; 6];
+
+        let a_gpu = cuda_malloc(a.len()).unwrap();
+        let b_gpu = cuda_malloc(b.len()).unwrap();
+        let c_gpu = cuda_malloc(c.len()).unwrap();
+
+        cuda_copy(
+            a_gpu,
+            a.as_ptr(),
+            a.len(),
+            ZenuCudaMemCopyKind::HostToDevice,
+        )
+        .unwrap();
+
+        cuda_copy(
+            b_gpu,
+            b.as_ptr(),
+            b.len(),
+            ZenuCudaMemCopyKind::HostToDevice,
+        )
+        .unwrap();
+
+        cuda_copy(
+            c_gpu,
+            c.as_ptr(),
+            c.len(),
+            ZenuCudaMemCopyKind::HostToDevice,
+        )
+        .unwrap();
+
+        cublas_gemm(
+            ZenuCublasOperation::N,
+            ZenuCublasOperation::N,
+            3,
+            2,
+            4,
+            1.0,
+            a_gpu,
+            3,
+            b_gpu,
+            4,
+            0.0,
+            c_gpu,
+            3,
+        )
+        .unwrap();
+
+        cuda_copy(
+            c.as_mut_ptr(),
+            c_gpu,
+            c.len(),
+            ZenuCudaMemCopyKind::DeviceToHost,
+        )
+        .unwrap();
+
+        // assert_eq!(c, vec![50., 60., 114., 140., 178., 220.]);
+        assert_eq!(c, vec![50., 114., 178., 60., 140., 220.]);
+    }
+
+    #[test]
+    fn gemm_f64_both_row_major_outpu_column_major() {
+        // shape (3, 4)
+        let a: Vec<f64> = vec![1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12.];
+        // shape (4, 2)
+        let b = vec![1., 2., 3., 4., 5., 6., 7., 8.];
+        // shape (3, 2)
+        let mut c = vec![0.0; 6];
+
+        let a_gpu = cuda_malloc(a.len()).unwrap();
+        let b_gpu = cuda_malloc(b.len()).unwrap();
+        let c_gpu = cuda_malloc(c.len()).unwrap();
+
+        cuda_copy(
+            a_gpu,
+            a.as_ptr(),
+            a.len(),
+            ZenuCudaMemCopyKind::HostToDevice,
+        )
+        .unwrap();
+
+        cuda_copy(
+            b_gpu,
+            b.as_ptr(),
+            b.len(),
+            ZenuCudaMemCopyKind::HostToDevice,
+        )
+        .unwrap();
+
+        cuda_copy(
+            c_gpu,
+            c.as_ptr(),
+            c.len(),
+            ZenuCudaMemCopyKind::HostToDevice,
+        )
+        .unwrap();
+
+        cublas_gemm(
+            ZenuCublasOperation::T,
+            ZenuCublasOperation::T,
+            3,
+            2,
+            4,
+            1.0,
+            a_gpu,
+            4,
+            b_gpu,
+            2,
+            0.0,
+            c_gpu,
+            3,
+        )
+        .unwrap();
+
+        cuda_copy(
+            c.as_mut_ptr(),
+            c_gpu,
+            c.len(),
+            ZenuCudaMemCopyKind::DeviceToHost,
+        )
+        .unwrap();
+
+        assert_eq!(c, vec![50., 114., 178., 60., 140., 220.]);
     }
 }
