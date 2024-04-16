@@ -6,6 +6,14 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+libc = "0.2.153"
+
+[build-dependencies]
+bindgen = "0.69.4"
+cc = "*"
 
 [lints]
 workspace = true
+
+[dev-dependencies]
+zenu-cuda-runtime-sys = { path = "../zenu-cuda-runtime-sys" }
