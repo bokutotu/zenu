@@ -72,6 +72,34 @@ impl_array_scalar_sin!(array_abs, array_abs_double, array_abs_float);
 impl_array_scalar_sin!(array_sqrt, array_sqrt_double, array_sqrt_float);
 impl_array_scalar_sin!(array_exp, array_exp_double, array_exp_float);
 
+pub fn get_memory<T: 'static + Default>(array: *mut T, offset: usize) -> T {
+    let mut out: T = Default::default();
+    if TypeId::of::<T>() == TypeId::of::<f32>() {
+        let array = array as *mut f32;
+        unsafe {
+            memory_access_float(array, offset as libc::c_int, &mut out as *mut T as *mut f32)
+        };
+    } else if TypeId::of::<T>() == TypeId::of::<f64>() {
+        let array = array as *mut f64;
+        unsafe {
+            memory_access_double(array, offset as libc::c_int, &mut out as *mut T as *mut f64)
+        };
+    }
+    out
+}
+
+pub fn set_memory<T: 'static>(array: *mut T, offset: usize, value: T) {
+    if TypeId::of::<T>() == TypeId::of::<f32>() {
+        let array = array as *mut f32;
+        let value = unsafe { *{ &value as *const T as *const f32 } };
+        unsafe { memory_set_float(array, offset as libc::c_int, value) };
+    } else if TypeId::of::<T>() == TypeId::of::<f64>() {
+        let array = array as *mut f64;
+        let value = unsafe { *{ &value as *const T as *const f64 } };
+        unsafe { memory_set_double(array, offset as libc::c_int, value) };
+    }
+}
+
 #[cfg(test)]
 mod array_scalar {
     use crate::runtime::{cuda_copy, cuda_malloc, ZenuCudaMemCopyKind};
@@ -423,4 +451,20 @@ mod array_scalar {
         f64,
         array_exp
     );
+
+    #[test]
+    fn set_value_f32() {
+        let a = vec![0.0, 0.0, 0.0, 0.0];
+        let a_gpu = cuda_malloc(a.len()).unwrap();
+        cuda_copy(
+            a_gpu,
+            a.as_ptr(),
+            a.len(),
+            ZenuCudaMemCopyKind::HostToDevice,
+        )
+        .unwrap();
+        set_memory(a_gpu, 1, 1.0);
+        let out = get_memory(a_gpu, 1);
+        assert_eq!(out, 1.0);
+    }
 }

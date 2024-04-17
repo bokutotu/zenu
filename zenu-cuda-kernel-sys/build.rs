@@ -2,7 +2,11 @@ extern crate bindgen;
 extern crate cc;
 
 fn main() {
-    let cuda_files = vec!["kernel/array_scalar.cu", "kernel/element_wise.cu"];
+    let cuda_files = vec![
+        "kernel/array_scalar.cu",
+        "kernel/element_wise.cu",
+        "kernel/memory_access.cu",
+    ];
 
     for cuda_file in cuda_files.iter() {
         println!("{}", format!("cargo:rerun-if-changed={}", cuda_file));
@@ -36,10 +40,6 @@ fn main() {
         "cargo:rustc-link-search=native={}",
         std::env::var("OUT_DIR").unwrap()
     );
-
-    // println!("cargo:rustc-link-lib=cudart");
-    // println!("cargo:rustc-link-search=native=/usr/local/cuda/lib64/stub");
-    // println!("cargo:rustc-link-lib=cuda");
 
     let bindings = bindgen::Builder::default()
         .ctypes_prefix("::libc")
