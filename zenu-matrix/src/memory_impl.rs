@@ -11,8 +11,8 @@ use std::ptr::NonNull;
 
 use crate::num::Num;
 
-// #[cfg(feature = "nvidia")]
-// use zenu_cuda_runtime_sys::{cudaFree, cudaMalloc, cudaMemcpyKind, cudaMemcpyKind::*, cudaMemset};
+#[cfg(feature = "nvidia")]
+use zenu_cuda::{kernel::*, runtime::*};
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct CpuAccessor<T: Num> {
@@ -76,62 +76,56 @@ impl<T: Num> MemoryAccessor for NvidiaAccessor<T> {
     type Item = T;
 
     fn value(&self, ptr: NonNull<Self::Item>, offset: usize) -> Self::Item {
-        todo!();
+        get_memory(ptr.as_ptr(), offset)
     }
 
     fn set_value(&mut self, ptr: NonNull<Self::Item>, offset: usize, value: Self::Item) {
-        todo!();
+        set_memory(ptr.as_ptr(), offset, value)
     }
 
     fn clone_ptr(&self, ptr: NonNull<Self::Item>, len: usize) -> NonNull<Self::Item> {
-        let null_ptr = NonNull::dangling();
-        // unsafe {
-        //     cudaMalloc(
-        //         null_ptr.as_ptr() as *mut *mut std::ffi::c_void,
-        //         len * Self::Item::size(),
-        //     )
-        // };
-        // unsafe {
-        //     cudaMemcpyKind(
-        //         null_ptr.as_ptr() as *mut std::ffi::c_void,
-        //         ptr.as_ptr() as *const std::ffi::c_void,
-        //         len * Self::Item::size(),
-        //         cudaMemcpyKind::cudaMemcpyHostToDevice,
-        //     )
-        // }
-        null_ptr
+        // malloc on device
+        let cloned_ptr = cuda_malloc(len).unwrap();
+        cuda_copy(
+            cloned_ptr,
+            ptr.as_ptr(),
+            len,
+            ZenuCudaMemCopyKind::HostToHost,
+        )
+        .unwrap();
+        NonNull::new(cloned_ptr).unwrap()
     }
 
     fn drop(&self, ptr: *const Self::Item, _len: usize) {
-        // unsafe { cudaFree(ptr as *mut std::ffi::c_void) };
+        cuda_free(ptr as *mut Self::Item).unwrap();
     }
 
     fn offset_ptr(&self, ptr: NonNull<Self::Item>, offset: usize) -> NonNull<Self::Item> {
-        todo!();
+        NonNull::new(unsafe { ptr.as_ptr().add(offset) }).unwrap()
     }
 }
 
 #[derive(Debug)]
-pub struct OwnedMem<T: Num> {
+pub struct OwnedMem<T: Num, A: MemoryAccessor<Item = T>> {
     ptr: NonNull<T>,
     offset: usize,
     length: usize,
-    accessor: CpuAccessor<T>,
+    accessor: A,
 }
 
 #[derive(Debug)]
-pub struct ViewMem<'a, T: Num> {
-    ptr: &'a OwnedMem<T>,
+pub struct ViewMem<'a, T: Num, A: MemoryAccessor<Item = T>> {
+    ptr: &'a OwnedMem<T, A>,
     offset: usize,
 }
 
 #[derive(Debug)]
-pub struct ViewMutMem<'a, T: Num> {
-    ptr: &'a mut OwnedMem<T>,
+pub struct ViewMutMem<'a, T: Num, A: MemoryAccessor<Item = T>> {
+    ptr: &'a mut OwnedMem<T, A>,
     offset: usize,
 }
 
-impl<T: Num> Memory for OwnedMem<T> {
+impl<T: Num, A: MemoryAccessor<Item = T>> Memory for OwnedMem<T, A> {
     type Item = T;
     type Blas = CpuBlas<T>;
     type ElmentWise = CpuElementWise<T>;
@@ -163,7 +157,7 @@ impl<T: Num> Memory for OwnedMem<T> {
     }
 }
 
-impl<T: Num> Clone for OwnedMem<T> {
+impl<T: Num, A: MemoryAccessor<Item = T>> Clone for OwnedMem<T, A> {
     fn clone(&self) -> Self {
         let ptr = self.accessor.clone_ptr(self.ptr, self.len());
         Self {
@@ -175,29 +169,32 @@ impl<T: Num> Clone for OwnedMem<T> {
     }
 }
 
-impl<T> ToViewMemory for OwnedMem<T>
+impl<T, A> ToViewMemory for OwnedMem<T, A>
 where
     T: Num,
+    A: MemoryAccessor<Item = T>,
 {
-    fn to_view(&self, offset: usize) -> ViewMem<T> {
+    fn to_view(&self, offset: usize) -> ViewMem<T, A> {
         ViewMem { ptr: self, offset }
     }
 }
 
-impl<T> ToViewMutMemory for OwnedMem<T>
+impl<T, A> ToViewMutMemory for OwnedMem<T, A>
 where
     T: Num,
+    A: MemoryAccessor<Item = T>,
 {
-    fn to_view_mut(&mut self, offset: usize) -> ViewMutMem<'_, T> {
+    fn to_view_mut(&mut self, offset: usize) -> ViewMutMem<'_, T, A> {
         ViewMutMem { ptr: self, offset }
     }
 }
 
-impl<'a, T> ToViewMutMemory for ViewMutMem<'a, T>
+impl<'a, T, A> ToViewMutMemory for ViewMutMem<'a, T, A>
 where
     T: Num,
+    A: MemoryAccessor<Item = T>,
 {
-    fn to_view_mut(&mut self, offset: usize) -> ViewMutMem<'_, T> {
+    fn to_view_mut(&mut self, offset: usize) -> ViewMutMem<'_, T, A> {
         let offset = self.get_offset() + offset;
         ViewMutMem {
             ptr: self.ptr,
@@ -206,15 +203,15 @@ where
     }
 }
 
-impl<T: Num> ToOwnedMemory for OwnedMem<T> {
-    type Owned = OwnedMem<T>;
+impl<T: Num, A: MemoryAccessor<Item = T>> ToOwnedMemory for OwnedMem<T, A> {
+    type Owned = OwnedMem<T, A>;
 
     fn to_owned_memory(&self) -> Self::Owned {
         self.clone()
     }
 }
 
-impl<T: Num> Owned for OwnedMem<T> {
+impl<T: Num, A: MemoryAccessor<Item = T>> Owned for OwnedMem<T, A> {
     fn from_vec(vec: Vec<Self::Item>) -> Self {
         let ptr = unsafe { NonNull::new_unchecked(vec.as_ptr() as *mut T) };
         let length = vec.len();
@@ -228,13 +225,13 @@ impl<T: Num> Owned for OwnedMem<T> {
     }
 }
 
-impl<T: Num> Drop for OwnedMem<T> {
+impl<T: Num, A: MemoryAccessor<Item = T>> Drop for OwnedMem<T, A> {
     fn drop(&mut self) {
         self.accessor.drop(self.ptr.as_ptr(), self.len());
     }
 }
 
-impl<T: Num> Clone for ViewMem<'_, T> {
+impl<T: Num, A: MemoryAccessor<Item = T>> Clone for ViewMem<'_, T, A> {
     fn clone(&self) -> Self {
         Self {
             ptr: self.ptr,
@@ -250,7 +247,7 @@ struct OwnedMemSer<T> {
     length: usize,
 }
 
-impl<T: Num + Serialize> Serialize for OwnedMem<T> {
+impl<T: Num + Serialize, A: MemoryAccessor<Item = T>> Serialize for OwnedMem<T, A> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
@@ -267,7 +264,7 @@ impl<T: Num + Serialize> Serialize for OwnedMem<T> {
     }
 }
 
-impl<'de, T: Num> Deserialize<'de> for OwnedMem<T>
+impl<'de, T: Num, A: MemoryAccessor<Item = T>> Deserialize<'de> for OwnedMem<T, A>
 where
     T: Deserialize<'de>,
 {
@@ -296,7 +293,7 @@ struct ViewMemSer<T> {
     offset: usize,
 }
 
-impl<'a, T: Num + Serialize> Serialize for ViewMem<'a, T> {
+impl<'a, T: Num + Serialize, A: MemoryAccessor<Item = A>> Serialize for ViewMem<'a, T, A> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
@@ -316,7 +313,7 @@ impl<'a, T: Num + Serialize> Serialize for ViewMem<'a, T> {
     }
 }
 
-impl<'de, 'a, T: Num> Deserialize<'de> for ViewMem<'a, T>
+impl<'de, 'a, T: Num, A: MemoryAccessor<Item = T>> Deserialize<'de> for ViewMem<'a, T, A>
 where
     T: Deserialize<'de>,
 {
@@ -345,7 +342,7 @@ struct ViewMutMemSer<T> {
     offset: usize,
 }
 
-impl<'a, T: Num + Serialize> Serialize for ViewMutMem<'a, T> {
+impl<'a, T: Num + Serialize, A: MemoryAccessor<Item = T>> Serialize for ViewMutMem<'a, T, A> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
@@ -365,7 +362,7 @@ impl<'a, T: Num + Serialize> Serialize for ViewMutMem<'a, T> {
     }
 }
 
-impl<'de, 'a, T: Num> Deserialize<'de> for ViewMutMem<'a, T>
+impl<'de, 'a, T: Num, A: MemoryAccessor<Item = T>> Deserialize<'de> for ViewMutMem<'a, T, A>
 where
     T: Deserialize<'de>,
 {
@@ -389,7 +386,7 @@ where
 }
 macro_rules! impl_cpu_memory_to_view {
     ($impl_ty: ty) => {
-        impl<'a, T: Num> Memory for $impl_ty {
+        impl<'a, T: Num, A: MemoryAccessor<Item = T>> Memory for $impl_ty {
             type Item = T;
             type Blas = CpuBlas<T>;
             type ElmentWise = CpuElementWise<T>;
@@ -419,13 +416,13 @@ macro_rules! impl_cpu_memory_to_view {
             }
         }
 
-        impl<'a, T> ToViewMemory for $impl_ty
+        impl<'a, T, A: MemoryAccessor<Item = T>> ToViewMemory for $impl_ty
         where
             T: Num,
         {
             // type View<'b> = ViewMem<'b, T> where Self: 'b;
 
-            fn to_view(&self, offset: usize) -> ViewMem<'_, T> {
+            fn to_view(&self, offset: usize) -> ViewMem<'_, T, A> {
                 ViewMem {
                     ptr: self.ptr,
                     offset: self.get_offset() + offset,
@@ -433,11 +430,11 @@ macro_rules! impl_cpu_memory_to_view {
             }
         }
 
-        impl<'a, T> ToOwnedMemory for $impl_ty
+        impl<'a, T, A: MemoryAccessor<Item = T>> ToOwnedMemory for $impl_ty
         where
             T: Num,
         {
-            type Owned = OwnedMem<T>;
+            type Owned = OwnedMem<T, A>;
 
             fn to_owned_memory(&self) -> Self::Owned {
                 let mut memory = self.ptr.clone();
@@ -447,11 +444,11 @@ macro_rules! impl_cpu_memory_to_view {
         }
     };
 }
-impl_cpu_memory_to_view!(ViewMem<'a, T>);
-impl_cpu_memory_to_view!(ViewMutMem<'a, T>);
+impl_cpu_memory_to_view!(ViewMem<'a, T, A>);
+impl_cpu_memory_to_view!(ViewMutMem<'a, T, A>);
 
-impl<'a, T: Num> View for ViewMem<'a, T> {}
-impl<'a, T: Num> ViewMut for ViewMutMem<'a, T> {
+impl<'a, T: Num, A: MemoryAccessor<Item = T>> View for ViewMem<'a, T, A> {}
+impl<'a, T: Num, A: MemoryAccessor<Item = T>> ViewMut for ViewMutMem<'a, T, A> {
     fn as_mut_ptr(&self) -> *mut Self::Item {
         self.ptr.as_ptr() as *mut Self::Item
     }
