@@ -15,11 +15,11 @@ use crate::num::Num;
 use zenu_cuda::{kernel::*, runtime::*};
 
 #[derive(Clone, Copy, Debug, Default)]
-pub struct CpuAccessor<T: Num> {
+pub struct Cpu<T: Num> {
     phantom: std::marker::PhantomData<T>,
 }
 
-impl<T: Num> CpuAccessor<T> {
+impl<T: Num> Cpu<T> {
     pub fn new() -> Self {
         Self {
             phantom: std::marker::PhantomData,
@@ -29,12 +29,12 @@ impl<T: Num> CpuAccessor<T> {
 
 #[cfg(feature = "nvidia")]
 #[derive(Clone, Copy, Debug, Default)]
-pub struct NvidiaAccessor<T: Num> {
+pub struct Nvidia<T: Num> {
     phantom: std::marker::PhantomData<T>,
 }
 
 #[cfg(feature = "nvidia")]
-impl<T: Num> NvidiaAccessor<T> {
+impl<T: Num> Nvidia<T> {
     pub fn new() -> Self {
         Self {
             phantom: std::marker::PhantomData,
@@ -42,7 +42,7 @@ impl<T: Num> NvidiaAccessor<T> {
     }
 }
 
-impl<T: Num> MemoryAccessor for CpuAccessor<T> {
+impl<T: Num> MemoryAccessor for Cpu<T> {
     type Item = T;
 
     fn value(&self, ptr: NonNull<Self::Item>, offset: usize) -> Self::Item {
@@ -72,7 +72,7 @@ impl<T: Num> MemoryAccessor for CpuAccessor<T> {
 }
 
 #[cfg(feature = "nvidia")]
-impl<T: Num> MemoryAccessor for NvidiaAccessor<T> {
+impl<T: Num> MemoryAccessor for Nvidia<T> {
     type Item = T;
 
     fn value(&self, ptr: NonNull<Self::Item>, offset: usize) -> Self::Item {
@@ -220,7 +220,7 @@ impl<T: Num, A: MemoryAccessor<Item = T>> Owned for OwnedMem<T, A> {
             ptr,
             offset: 0,
             length,
-            accessor: CpuAccessor::new(),
+            accessor: Cpu::new(),
         }
     }
 }
@@ -281,7 +281,7 @@ where
             ptr,
             offset: ser.offset,
             length: ser.length,
-            accessor: CpuAccessor::new(),
+            accessor: Cpu::new(),
         };
         std::mem::forget(data);
         Ok(owned_mem)
@@ -326,7 +326,7 @@ where
             ptr: NonNull::dangling(),
             offset: 0,
             length: ser.data.len(),
-            accessor: CpuAccessor::new(),
+            accessor: Cpu::new(),
         };
         let view_mem = ViewMem {
             ptr: unsafe { &*Box::into_raw(Box::new(owned_mem)) },
@@ -375,7 +375,7 @@ where
             ptr: NonNull::dangling(),
             offset: 0,
             length: ser.data.len(),
-            accessor: CpuAccessor::new(),
+            accessor: Cpu::new(),
         };
         let view_mem = ViewMutMem {
             ptr: unsafe { &mut *Box::into_raw(Box::new(owned_mem)) },
