@@ -42,6 +42,3 @@ harness = false
 
 [profile.bench]
 debug = true
-
-[package.metadata.rust-analyzer]
-extraFeatures = ["nvidia"]
