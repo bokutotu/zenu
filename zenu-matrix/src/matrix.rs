@@ -63,11 +63,71 @@ impl<T: Num> Repr for Owned<T> {
 impl<T: Num> OwnedRepr for Owned<T> {}
 
 pub trait Device: Copy + Default {
-    fn offset_ptr<T>(ptr: *const T, offset: isize) -> *const T;
     fn drop_ptr<T>(ptr: *mut T, len: usize);
     fn clone_ptr<T>(ptr: *const T, len: usize) -> *mut T;
-    fn assign_item<T>(ptr: *mut T, offset: usize, value: T);
-    fn get_item<T>(ptr: *const T, offset: usize) -> T;
+    fn assign_item<T: Num>(ptr: *mut T, offset: usize, value: T);
+    fn get_item<T: Num>(ptr: *const T, offset: usize) -> T;
+}
+
+#[derive(Copy, Clone, Default)]
+pub struct Cpu;
+
+impl Device for Cpu {
+    fn drop_ptr<T>(ptr: *mut T, len: usize) {
+        unsafe {
+            std::vec::Vec::from_raw_parts(ptr, 0, len);
+        }
+    }
+
+    fn clone_ptr<T>(ptr: *const T, len: usize) -> *mut T {
+        let mut vec = Vec::with_capacity(len);
+        unsafe {
+            vec.set_len(len);
+            std::ptr::copy_nonoverlapping(ptr, vec.as_mut_ptr(), len);
+        }
+        vec.as_mut_ptr()
+    }
+
+    fn assign_item<T>(ptr: *mut T, offset: usize, value: T) {
+        unsafe {
+            ptr.add(offset).write(value);
+        }
+    }
+
+    fn get_item<T>(ptr: *const T, offset: usize) -> T {
+        unsafe { ptr.add(offset).read() }
+    }
+}
+
+#[cfg(feature = "nvidia")]
+#[derive(Copy, Clone, Default)]
+pub struct Nvidia;
+
+#[cfg(feature = "nvidia")]
+impl Device for Nvidia {
+    fn drop_ptr<T>(ptr: *mut T, _: usize) {
+        zenu_cuda::runtime::cuda_free(ptr as *mut std::ffi::c_void).unwrap();
+    }
+
+    fn clone_ptr<T>(src: *const T, len: usize) -> *mut T {
+        let dst = zenu_cuda::runtime::cuda_malloc(len).unwrap() as *mut T;
+        zenu_cuda::runtime::cuda_copy(
+            dst,
+            src,
+            len,
+            zenu_cuda::runtime::ZenuCudaMemCopyKind::HostToHost,
+        )
+        .unwrap();
+        dst
+    }
+
+    fn assign_item<T: Num>(ptr: *mut T, offset: usize, value: T) {
+        zenu_cuda::kernel::set_memory(ptr, offset, value);
+    }
+
+    fn get_item<T: Num>(ptr: *const T, offset: usize) -> T {
+        zenu_cuda::kernel::get_memory(ptr, offset)
+    }
 }
 
 pub struct Ptr<R, D>
@@ -87,11 +147,11 @@ where
     R: Repr,
     D: Device,
 {
-    pub fn offset_ptr(&self, offset: isize) -> Ptr<Ref<&R::Item>, D> {
+    pub fn offset_ptr(&self, offset: usize) -> Ptr<Ref<&R::Item>, D> {
         Ptr {
-            ptr: D::offset_ptr(self.ptr, offset) as *mut R::Item,
+            ptr: self.ptr,
             len: self.len,
-            offset: self.offset,
+            offset: self.offset + offset,
             repr: PhantomData,
             device: PhantomData,
         }
@@ -116,11 +176,11 @@ where
 }
 
 impl<T: Num, D: Device> Ptr<Ref<&mut T>, D> {
-    pub fn offset_ptr_mut(&self, offset: isize) -> Ptr<Ref<&mut T>, D> {
+    pub fn offset_ptr_mut(&self, offset: usize) -> Ptr<Ref<&mut T>, D> {
         Ptr {
-            ptr: D::offset_ptr(self.ptr as *const T, offset) as *mut T,
+            ptr: self.ptr,
             len: self.len,
-            offset: self.offset,
+            offset: self.offset + offset,
             repr: PhantomData,
             device: PhantomData,
         }
@@ -296,7 +356,7 @@ where
         let new_shape_stride = index.sliced_shape_stride(shape, stride);
         let offset = index.sliced_offset(stride);
         Matrix {
-            ptr: self.ptr.offset_ptr(offset as isize),
+            ptr: self.ptr.offset_ptr(offset),
             shape: new_shape_stride.shape(),
             stride: new_shape_stride.stride(),
         }
@@ -308,7 +368,7 @@ where
             index.sliced_shape_stride(shape_stride.shape(), shape_stride.stride());
         let offset = index.sliced_offset(shape_stride.stride());
         Matrix {
-            ptr: self.ptr.offset_ptr(offset as isize),
+            ptr: self.ptr.offset_ptr(offset),
             shape: new_shape_stride.shape(),
             stride: new_shape_stride.stride(),
         }
@@ -325,7 +385,7 @@ where
         let new_shape_stride = index.get_shape_stride(shape, stride);
         let offset = index.offset(stride);
         Matrix {
-            ptr: self.ptr.offset_ptr(offset as isize),
+            ptr: self.ptr.offset_ptr(offset),
             shape: new_shape_stride.shape(),
             stride: new_shape_stride.stride(),
         }
@@ -339,7 +399,7 @@ where
         let new_shape_stride = index.get_shape_stride(shape_stride.shape(), shape_stride.stride());
         let offset = index.offset(shape_stride.stride());
         Matrix {
-            ptr: self.ptr.offset_ptr(offset as isize),
+            ptr: self.ptr.offset_ptr(offset),
             shape: new_shape_stride.shape(),
             stride: new_shape_stride.stride(),
         }
@@ -427,7 +487,7 @@ where
         let new_shape_stride = index.sliced_shape_stride(shape, stride);
         let offset = index.sliced_offset(stride);
         Matrix {
-            ptr: self.ptr.offset_ptr_mut(offset as isize),
+            ptr: self.ptr.offset_ptr_mut(offset),
             shape: new_shape_stride.shape(),
             stride: new_shape_stride.stride(),
         }
@@ -439,7 +499,7 @@ where
             index.sliced_shape_stride(shape_stride.shape(), shape_stride.stride());
         let offset = index.sliced_offset(shape_stride.stride());
         Matrix {
-            ptr: self.ptr.offset_ptr_mut(offset as isize),
+            ptr: self.ptr.offset_ptr_mut(offset),
             shape: new_shape_stride.shape(),
             stride: new_shape_stride.stride(),
         }
@@ -456,7 +516,7 @@ where
         let new_shape_stride = index.get_shape_stride(shape, stride);
         let offset = index.offset(stride);
         Matrix {
-            ptr: self.ptr.offset_ptr_mut(offset as isize),
+            ptr: self.ptr.offset_ptr_mut(offset),
             shape: new_shape_stride.shape(),
             stride: new_shape_stride.stride(),
         }
@@ -470,7 +530,7 @@ where
         let new_shape_stride = index.get_shape_stride(shape_stride.shape(), shape_stride.stride());
         let offset = index.offset(shape_stride.stride());
         Matrix {
-            ptr: self.ptr.offset_ptr_mut(offset as isize),
+            ptr: self.ptr.offset_ptr_mut(offset),
             shape: new_shape_stride.shape(),
             stride: new_shape_stride.stride(),
         }
