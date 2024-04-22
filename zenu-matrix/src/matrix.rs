@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
 use crate::{
-    dim::{default_stride, DimTrait},
+    dim::{default_stride, DimDyn, DimTrait},
     index::SliceTrait,
     num::Num,
     shape_stride::ShapeStride,
@@ -190,6 +190,59 @@ where
     pub fn is_transpose_default_stride(&self) -> bool {
         self.shape_stride().is_transposed_default_stride()
     }
+
+    pub fn as_ptr(&self) -> *const R::Item {
+        self.ptr.ptr
+    }
+
+    pub fn as_slice(&self) -> &[R::Item] {
+        if self.shape().len() <= 1 {
+            let num_elm = std::cmp::max(self.shape().num_elm(), 1);
+            unsafe { std::slice::from_raw_parts(self.as_ptr(), num_elm) }
+        } else {
+            panic!("Invalid shape");
+        }
+    }
+
+    pub fn into_dyn_dim(self) -> Matrix<R, DimDyn, D> {
+        let mut shape = DimDyn::default();
+        let mut stride = DimDyn::default();
+
+        for i in 0..self.shape.len() {
+            shape.push_dim(self.shape[i]);
+            stride.push_dim(self.stride[i]);
+        }
+        Matrix {
+            ptr: self.ptr,
+            shape,
+            stride,
+        }
+    }
+
+    pub fn update_shape_stride(&mut self, shape: S, stride: S) {
+        self.shape = shape;
+        self.stride = stride;
+    }
+
+    pub fn update_shape(&mut self, shape: S) {
+        self.shape = shape;
+        self.stride = default_stride(shape);
+    }
+
+    pub fn update_stride(&mut self, stride: S) {
+        self.stride = stride;
+    }
+
+    pub fn into_dim<S2>(self) -> Matrix<R, S2, D>
+    where
+        S2: DimTrait,
+    {
+        Matrix {
+            ptr: self.ptr,
+            shape: S2::from(self.shape.slice()),
+            stride: S2::from(self.stride.slice()),
+        }
+    }
 }
 
 impl<T, S, D> Matrix<Owned<T>, S, D>
@@ -236,129 +289,22 @@ where
     }
 }
 
-pub trait ToOwned<R, S, D>
-where
-    R: Repr,
-    S: DimTrait,
-    D: Device,
-{
-    fn to_owned(&self) -> Matrix<Owned<R::Item>, S, D>;
-}
-
-impl<T, S, D> ToOwned<Ref<&T>, S, D> for Matrix<Ref<&T>, S, D>
+impl<T, S, D> Matrix<Ref<&mut T>, S, D>
 where
     T: Num,
+    D: Device,
     S: DimTrait,
-    D: Device,
 {
-    fn to_owned(&self) -> Matrix<Owned<T>, S, D> {
-        let vec =
-            unsafe { Vec::from_raw_parts(self.ptr.ptr as *mut T, self.ptr.len, self.ptr.len) };
-
-        Matrix::from_vec(vec, self.shape)
-    }
-}
-
-impl<T, S, D> ToOwned<Ref<&mut T>, S, D> for Matrix<Ref<&mut T>, S, D>
-where
-    T: Num,
-    S: DimTrait,
-    D: Device,
-{
-    fn to_owned(&self) -> Matrix<Owned<T>, S, D> {
-        let vec =
-            unsafe { Vec::from_raw_parts(self.ptr.ptr as *mut T, self.ptr.len, self.ptr.len) };
-
-        Matrix::from_vec(vec, self.shape)
-    }
-}
-
-pub trait AsMutPtr<T, D>
-where
-    D: Device,
-{
-    fn as_mut_ptr(self) -> *mut T;
-}
-
-impl<T, S, D> AsMutPtr<T, D> for &mut Matrix<Owned<T>, S, D>
-where
-    T: Num,
-    S: DimTrait,
-    D: Device,
-{
-    fn as_mut_ptr(self) -> *mut T {
+    pub fn as_mut_ptr(&self) -> *mut T {
         self.ptr.ptr
     }
-}
 
-impl<T, S, D> AsMutPtr<T, D> for Matrix<Ref<&mut T>, S, D>
-where
-    T: Num,
-    S: DimTrait,
-    D: Device,
-{
-    fn as_mut_ptr(self) -> *mut T {
-        self.ptr.ptr
+    pub fn as_mut_slice(&self) -> &mut [T] {
+        if self.shape().len() <= 1 {
+            let num_elm = std::cmp::max(self.shape().num_elm(), 1);
+            unsafe { std::slice::from_raw_parts_mut(self.as_mut_ptr(), num_elm) }
+        } else {
+            panic!("Invalid shape");
+        }
     }
-}
-
-pub trait AsPtr<T, D>
-where
-    T: Num,
-    D: Device,
-{
-    fn as_ptr(self) -> *const T;
-}
-
-impl<T, S, D> AsPtr<T, D> for &Matrix<Owned<T>, S, D>
-where
-    T: Num,
-    S: DimTrait,
-    D: Device,
-{
-    fn as_ptr(self) -> *const T {
-        self.ptr.ptr
-    }
-}
-
-impl<T, S, D> AsPtr<T, D> for Matrix<Ref<&T>, S, D>
-where
-    T: Num,
-    S: DimTrait,
-    D: Device,
-{
-    fn as_ptr(self) -> *const T {
-        self.ptr.ptr
-    }
-}
-
-impl<T, S, D> AsPtr<T, D> for Matrix<Ref<&mut T>, S, D>
-where
-    T: Num,
-    S: DimTrait,
-    D: Device,
-{
-    fn as_ptr(self) -> *const T {
-        self.ptr.ptr
-    }
-}
-
-pub trait MatrixSlice<T, S, D, I>
-where
-    T: Num,
-    S: DimTrait,
-    D: Device,
-    I: SliceTrait<Dim = S>,
-{
-    fn slice(&self, index: I) -> Matrix<Ref<&T>, S, D>;
-}
-
-pub trait MatrixSliceMut<T, S, D, I>
-where
-    T: Num,
-    S: DimTrait,
-    D: Device,
-    I: SliceTrait<Dim = S>,
-{
-    fn slice_mut(&self, index: I) -> Matrix<Ref<&mut T>, S, D>;
 }
