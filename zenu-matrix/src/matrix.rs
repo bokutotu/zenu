@@ -1,10 +1,11 @@
 use std::marker::PhantomData;
 
 use crate::{
-    dim::{default_stride, DimDyn, DimTrait},
-    index::SliceTrait,
+    dim::{cal_offset, default_stride, DimDyn, DimTrait, LessDimTrait},
+    index::{IndexAxisTrait, SliceTrait},
     num::Num,
     shape_stride::ShapeStride,
+    slice::Slice,
 };
 
 pub trait Repr: Default {
@@ -81,6 +82,29 @@ where
     device: PhantomData<D>,
 }
 
+impl<R, D> Ptr<R, D>
+where
+    R: Repr,
+    D: Device,
+{
+    pub fn offset_ptr(&self, offset: isize) -> Ptr<Ref<&R::Item>, D> {
+        Ptr {
+            ptr: D::offset_ptr(self.ptr, offset) as *mut R::Item,
+            len: self.len,
+            offset: self.offset,
+            repr: PhantomData,
+            device: PhantomData,
+        }
+    }
+
+    pub fn get_item(&self, offset: usize) -> R::Item {
+        if offset >= self.len {
+            panic!("Index out of bounds");
+        }
+        D::get_item(self.ptr, offset + self.offset)
+    }
+}
+
 impl<R, D> Drop for Ptr<R, D>
 where
     R: Repr,
@@ -88,6 +112,25 @@ where
 {
     fn drop(&mut self) {
         R::drop_memory(self.ptr, self.len, D::default());
+    }
+}
+
+impl<T: Num, D: Device> Ptr<Ref<&mut T>, D> {
+    pub fn offset_ptr_mut(&self, offset: isize) -> Ptr<Ref<&mut T>, D> {
+        Ptr {
+            ptr: D::offset_ptr(self.ptr as *const T, offset) as *mut T,
+            len: self.len,
+            offset: self.offset,
+            repr: PhantomData,
+            device: PhantomData,
+        }
+    }
+
+    pub fn assign_item(&self, offset: usize, value: T) {
+        if offset >= self.len {
+            panic!("Index out of bounds");
+        }
+        D::assign_item(self.ptr, offset + self.offset, value);
     }
 }
 
@@ -179,7 +222,7 @@ where
         self.shape
     }
 
-    pub fn stdide(&self) -> S {
+    pub fn stride(&self) -> S {
         self.stride
     }
 
@@ -242,6 +285,73 @@ where
             shape: S2::from(self.shape.slice()),
             stride: S2::from(self.stride.slice()),
         }
+    }
+
+    pub fn slice<I>(&self, index: I) -> Matrix<Ref<&R::Item>, S, D>
+    where
+        I: SliceTrait<Dim = S>,
+    {
+        let shape = self.shape();
+        let stride = self.stride();
+        let new_shape_stride = index.sliced_shape_stride(shape, stride);
+        let offset = index.sliced_offset(stride);
+        Matrix {
+            ptr: self.ptr.offset_ptr(offset as isize),
+            shape: new_shape_stride.shape(),
+            stride: new_shape_stride.stride(),
+        }
+    }
+
+    pub fn slice_dyn(&self, index: Slice) -> Matrix<Ref<&R::Item>, DimDyn, D> {
+        let shape_stride = self.shape_stride().into_dyn();
+        let new_shape_stride =
+            index.sliced_shape_stride(shape_stride.shape(), shape_stride.stride());
+        let offset = index.sliced_offset(shape_stride.stride());
+        Matrix {
+            ptr: self.ptr.offset_ptr(offset as isize),
+            shape: new_shape_stride.shape(),
+            stride: new_shape_stride.stride(),
+        }
+    }
+
+    pub fn index_axis<I>(&self, index: I) -> Matrix<Ref<&R::Item>, S, D>
+    where
+        I: IndexAxisTrait,
+        S: LessDimTrait,
+        S::LessDim: DimTrait,
+    {
+        let shape = self.shape();
+        let stride = self.stride();
+        let new_shape_stride = index.get_shape_stride(shape, stride);
+        let offset = index.offset(stride);
+        Matrix {
+            ptr: self.ptr.offset_ptr(offset as isize),
+            shape: new_shape_stride.shape(),
+            stride: new_shape_stride.stride(),
+        }
+    }
+
+    pub fn index_axis_dyn<I>(&self, index: I) -> Matrix<Ref<&R::Item>, DimDyn, D>
+    where
+        I: IndexAxisTrait,
+    {
+        let shape_stride = self.shape_stride().into_dyn();
+        let new_shape_stride = index.get_shape_stride(shape_stride.shape(), shape_stride.stride());
+        let offset = index.offset(shape_stride.stride());
+        Matrix {
+            ptr: self.ptr.offset_ptr(offset as isize),
+            shape: new_shape_stride.shape(),
+            stride: new_shape_stride.stride(),
+        }
+    }
+
+    pub fn index_item<I: Into<S>>(&self, index: I) -> R::Item {
+        let index = index.into();
+        if self.shape().is_overflow(index) {
+            panic!("Index out of bounds");
+        }
+        let offset = cal_offset(index, self.stride());
+        self.ptr.get_item(offset)
     }
 }
 
@@ -306,5 +416,72 @@ where
         } else {
             panic!("Invalid shape");
         }
+    }
+
+    pub fn slice_mut<I>(&self, index: I) -> Matrix<Ref<&mut T>, S, D>
+    where
+        I: SliceTrait<Dim = S>,
+    {
+        let shape = self.shape();
+        let stride = self.stride();
+        let new_shape_stride = index.sliced_shape_stride(shape, stride);
+        let offset = index.sliced_offset(stride);
+        Matrix {
+            ptr: self.ptr.offset_ptr_mut(offset as isize),
+            shape: new_shape_stride.shape(),
+            stride: new_shape_stride.stride(),
+        }
+    }
+
+    pub fn slice_mut_dyn(&self, index: Slice) -> Matrix<Ref<&mut T>, DimDyn, D> {
+        let shape_stride = self.shape_stride().into_dyn();
+        let new_shape_stride =
+            index.sliced_shape_stride(shape_stride.shape(), shape_stride.stride());
+        let offset = index.sliced_offset(shape_stride.stride());
+        Matrix {
+            ptr: self.ptr.offset_ptr_mut(offset as isize),
+            shape: new_shape_stride.shape(),
+            stride: new_shape_stride.stride(),
+        }
+    }
+
+    pub fn index_axis_mut<I>(&self, index: I) -> Matrix<Ref<&mut T>, S, D>
+    where
+        I: IndexAxisTrait,
+        S: LessDimTrait,
+        S::LessDim: DimTrait,
+    {
+        let shape = self.shape();
+        let stride = self.stride();
+        let new_shape_stride = index.get_shape_stride(shape, stride);
+        let offset = index.offset(stride);
+        Matrix {
+            ptr: self.ptr.offset_ptr_mut(offset as isize),
+            shape: new_shape_stride.shape(),
+            stride: new_shape_stride.stride(),
+        }
+    }
+
+    pub fn index_axis_mut_dyn<I>(&self, index: I) -> Matrix<Ref<&mut T>, DimDyn, D>
+    where
+        I: IndexAxisTrait,
+    {
+        let shape_stride = self.shape_stride().into_dyn();
+        let new_shape_stride = index.get_shape_stride(shape_stride.shape(), shape_stride.stride());
+        let offset = index.offset(shape_stride.stride());
+        Matrix {
+            ptr: self.ptr.offset_ptr_mut(offset as isize),
+            shape: new_shape_stride.shape(),
+            stride: new_shape_stride.stride(),
+        }
+    }
+
+    pub fn index_item_assign<I: Into<S>>(&mut self, index: I, value: T) {
+        let index = index.into();
+        if self.shape().is_overflow(index) {
+            panic!("Index out of bounds");
+        }
+        let offset = cal_offset(index, self.stride());
+        self.ptr.assign_item(offset, value);
     }
 }
