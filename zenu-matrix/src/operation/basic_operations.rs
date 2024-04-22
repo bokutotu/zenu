@@ -8,7 +8,7 @@ use crate::{
     num::Num,
 };
 
-fn get_tmp_matrix<M: ToViewMemory, D: DimTrait>(
+fn get_tmp_matrix<M: ToViewMemory, D: DimTrait, A; MemAcc>(
     a: &Matrix<M, D>,
     len: usize,
     idx: usize,

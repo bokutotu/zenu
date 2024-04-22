@@ -1,155 +1,190 @@
-use crate::{
-    blas::Blas,
-    dim::{DimDyn, DimTrait, LessDimTrait},
-    index::{IndexAxisTrait, SliceTrait},
-    matrix_impl::Matrix,
-    memory_impl::{ViewMem, ViewMutMem},
-    num::Num,
-    shape_stride::ShapeStride,
-    slice::Slice,
-};
+use std::marker::PhantomData;
 
-pub trait MatrixBase: Sized {
-    type Dim: DimTrait;
+use crate::{dim::DimTrait, num::Num};
+
+pub trait Repr: Default {
     type Item: Num;
 
-    fn shape_stride(&self) -> ShapeStride<Self::Dim>;
-    fn shape(&self) -> Self::Dim {
-        self.shape_stride().shape()
+    fn drop_memory<D: Device>(ptr: *mut Self::Item, len: usize, _: D);
+}
+
+pub trait OwnedRepr: Repr {}
+
+pub struct Owned<T: Num> {
+    _maker: PhantomData<T>,
+}
+
+pub struct Ref<A> {
+    _maker: PhantomData<A>,
+}
+
+impl<T: Num> Default for Owned<T> {
+    fn default() -> Self {
+        Owned {
+            _maker: PhantomData,
+        }
     }
-    fn stride(&self) -> Self::Dim {
-        self.shape_stride().stride()
-    }
+}
 
-    fn is_default_stride(&self) -> bool {
-        self.shape_stride().is_default_stride()
-    }
-
-    fn is_transposed_default_stride(&self) -> bool {
-        self.shape_stride().is_transposed_default_stride()
+impl<A> Default for Ref<A> {
+    fn default() -> Self {
+        Ref {
+            _maker: PhantomData,
+        }
     }
 }
 
-pub trait ToViewMatrix: MatrixBase {
-    fn to_view(&self) -> Matrix<ViewMem<Self::Item>, Self::Dim>;
+impl<'a, T: Num> Repr for Ref<&'a T> {
+    type Item = T;
+
+    fn drop_memory<D: Device>(ptr: *mut Self::Item, len: usize, _: D) {
+        D::drop_ptr(ptr, len);
+    }
 }
 
-pub trait ToViewMutMatrix: MatrixBase {
-    fn to_view_mut(&mut self) -> Matrix<ViewMutMem<Self::Item>, Self::Dim>;
+impl<'a, T: Num> Repr for Ref<&'a mut T> {
+    type Item = T;
+
+    fn drop_memory<D: Device>(_ptr: *mut Self::Item, _len: usize, _: D) {}
 }
 
-pub trait ToOwnedMatrix: MatrixBase {
-    type Owned: OwnedMatrix
-    where
-        Self: Sized;
+impl<T: Num> Repr for Owned<T> {
+    type Item = T;
 
-    fn to_owned_matrix(&self) -> Self::Owned;
+    fn drop_memory<D: Device>(_ptr: *mut Self::Item, _len: usize, _: D) {}
 }
 
-pub trait AsMutPtr: MatrixBase {
-    fn as_mut_ptr(&mut self) -> *mut Self::Item;
+impl<T: Num> OwnedRepr for Owned<T> {}
+
+pub trait Device: Copy + Default {
+    fn offset_ptr<T>(ptr: *const T, offset: isize) -> *const T;
+    fn drop_ptr<T>(ptr: *mut T, len: usize);
+    fn clone_ptr<T>(ptr: *const T, len: usize) -> *mut T;
+    fn assign_item<T>(ptr: *mut T, offset: usize, value: T);
+    fn get_item<T>(ptr: *const T, offset: usize) -> T;
 }
 
-pub trait AsPtr: MatrixBase {
-    fn as_ptr(&self) -> *const Self::Item;
-}
-
-pub trait MatrixSlice<S>: ToViewMatrix
+pub struct Ptr<R, D>
 where
-    S: SliceTrait<Dim = Self::Dim>,
+    R: Repr,
+    D: Device,
 {
-    type Output<'a>: MatrixBase<Dim = Self::Dim> + ViewMatrix
-    where
-        Self: 'a;
-
-    fn slice(&self, index: S) -> Self::Output<'_>;
+    ptr: *mut R::Item,
+    len: usize,
+    offset: usize,
+    repr: PhantomData<R>,
+    device: PhantomData<D>,
 }
 
-pub trait MatrixSliceMut<S>: ToViewMutMatrix
+impl<R, D> Drop for Ptr<R, D>
 where
-    S: SliceTrait<Dim = Self::Dim>,
+    R: Repr,
+    D: Device,
 {
-    type Output<'a>: MatrixBase<Dim = Self::Dim> + ViewMutMatix
-    where
-        Self: 'a;
-
-    fn slice_mut(&mut self, index: S) -> Self::Output<'_>;
+    fn drop(&mut self) {
+        R::drop_memory(self.ptr, self.len, D::default());
+    }
 }
 
-pub trait IndexAxis<I: IndexAxisTrait>: ToViewMatrix
+impl<R: OwnedRepr, D: Device> Clone for Ptr<R, D> {
+    fn clone(&self) -> Self {
+        let ptr = D::clone_ptr(self.ptr, self.len);
+        Ptr {
+            ptr,
+            len: self.len,
+            offset: self.offset,
+            repr: PhantomData,
+            device: PhantomData,
+        }
+    }
+}
+
+impl<T: Num, D: Device> Clone for Ptr<Ref<&T>, D> {
+    fn clone(&self) -> Self {
+        Ptr {
+            ptr: self.ptr,
+            len: self.len,
+            offset: self.offset,
+            repr: PhantomData,
+            device: PhantomData,
+        }
+    }
+}
+
+impl<T: Num, D: Device> Clone for Ptr<Ref<&mut T>, D> {
+    fn clone(&self) -> Self {
+        Ptr {
+            ptr: self.ptr,
+            len: self.len,
+            offset: self.offset,
+            repr: PhantomData,
+            device: PhantomData,
+        }
+    }
+}
+
+impl<R, D> Ptr<R, D>
 where
-    Self::Dim: LessDimTrait,
+    R: OwnedRepr,
+    D: Device,
 {
-    type Output<'a>: MatrixBase<Dim = <Self::Dim as LessDimTrait>::LessDim, Item = Self::Item>
-        + ViewMatrix
-    where
-        Self: 'a;
+    fn to_ref(&self) -> Ptr<Ref<&R::Item>, D> {
+        Ptr {
+            ptr: self.ptr,
+            len: self.len,
+            offset: self.offset,
+            repr: PhantomData,
+            device: PhantomData,
+        }
+    }
 
-    fn index_axis(&self, index: I) -> Self::Output<'_>;
+    fn to_ref_mut(&mut self) -> Ptr<Ref<&mut R::Item>, D> {
+        Ptr {
+            ptr: self.ptr,
+            len: self.len,
+            offset: self.offset,
+            repr: PhantomData,
+            device: PhantomData,
+        }
+    }
 }
 
-pub trait IndexAxisMut<I: IndexAxisTrait>: ToViewMutMatrix
+pub struct Matrix<R, S, D>
 where
-    Self::Dim: LessDimTrait,
+    R: Repr,
+    S: DimTrait,
+    D: Device,
 {
-    type Output<'a>: MatrixBase<Dim = <Self::Dim as LessDimTrait>::LessDim, Item = Self::Item>
-        + ViewMutMatix
-    where
-        Self: 'a;
-
-    fn index_axis_mut(&mut self, index: I) -> Self::Output<'_>;
+    ptr: Ptr<R, D>,
+    shape: S,
+    stdide: S,
 }
 
-pub trait IndexAxisDyn<I: IndexAxisTrait>: ToViewMatrix {
-    type Output<'a>: MatrixBase<Dim = DimDyn, Item = Self::Item> + ViewMatrix
-    where
-        Self: 'a;
-
-    fn index_axis_dyn(&self, index: I) -> Self::Output<'_>;
-}
-
-pub trait IndexAxisMutDyn<I: IndexAxisTrait>: ToViewMutMatrix {
-    type Output<'a>: MatrixBase<Dim = DimDyn, Item = Self::Item> + ViewMutMatix
-    where
-        Self: 'a;
-
-    fn index_axis_mut_dyn(&mut self, index: I) -> Self::Output<'_>;
-}
-
-pub trait IndexItem: MatrixBase {
-    fn index_item<I: Into<Self::Dim>>(&self, index: I) -> Self::Item;
-}
-
-pub trait IndexItemAsign: MatrixBase {
-    fn index_item_asign<I: Into<Self::Dim>>(&mut self, index: I, value: <Self as MatrixBase>::Item);
-}
-
-pub trait MatrixSliceDyn: ToViewMatrix {
-    type Output<'a>: MatrixBase<Dim = DimDyn> + ViewMatrix
-    where
-        Self: 'a;
-
-    fn slice_dyn(&self, index: Slice) -> Self::Output<'_>;
-}
-
-pub trait MatrixSliceMutDyn: ToViewMutMatrix {
-    type Output<'a>: MatrixBase<Dim = DimDyn> + ViewMutMatix
-    where
-        Self: 'a;
-
-    fn slice_mut_dyn(&mut self, index: Slice) -> Self::Output<'_>;
-}
-
-pub trait BlasMatrix: MatrixBase {
-    type Blas: Blas<Self::Item>;
-}
-
-pub trait ViewMatrix: MatrixBase + ToViewMatrix + ToOwnedMatrix + AsPtr + BlasMatrix {}
-pub trait ViewMutMatix:
-    MatrixBase + ToViewMatrix + ToViewMutMatrix + AsMutPtr + BlasMatrix + AsPtr
+impl<R, S, D> Matrix<R, S, D>
+where
+    R: Repr,
+    S: DimTrait,
+    D: Device,
 {
-}
+    pub fn to_ref(&self) -> Matrix<Ref<&R::Item>, S, D>
+    where
+        R: OwnedRepr,
+    {
+        Matrix {
+            ptr: self.ptr.to_ref(),
+            shape: self.shape,
+            stdide: self.stdide,
+        }
+    }
 
-pub trait OwnedMatrix: MatrixBase + ToViewMatrix + ToViewMutMatrix + AsPtr + BlasMatrix {
-    fn from_vec<I: Into<Self::Dim>>(vec: Vec<Self::Item>, dim: I) -> Self;
+    pub fn to_ref_mut(&mut self) -> Matrix<Ref<&mut R::Item>, S, D>
+    where
+        R: OwnedRepr,
+    {
+        Matrix {
+            ptr: self.ptr.to_ref_mut(),
+            shape: self.shape,
+            stdide: self.stdide,
+        }
+    }
 }

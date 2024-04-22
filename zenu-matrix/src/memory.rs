@@ -2,12 +2,12 @@ use std::ptr::NonNull;
 
 use crate::{
     blas::Blas,
-    element_wise::ElementWise,
+    // element_wise::ElementWise,
     memory_impl::{ViewMem, ViewMutMem},
     num::Num,
 };
 
-pub trait MemoryAccessor: Copy {
+pub trait MemAcc: Copy {
     type Item: Num;
 
     fn value(&self, ptr: NonNull<Self::Item>, offset: usize) -> Self::Item;
@@ -22,7 +22,7 @@ pub trait MemoryAccessor: Copy {
 pub trait Memory {
     type Item: Num;
     type Blas: Blas<Self::Item>;
-    type ElmentWise: ElementWise<Self::Item>;
+    // type ElmentWise: ElementWise<Self::Item>;
 
     fn len(&self) -> usize;
     /// 確保しているメモリの先頭のポインタを返す
