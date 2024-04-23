@@ -23,6 +23,7 @@ nvidia = ["zenu-cuda"]
 itertools = { version = "0.10.0", default-features = false, features = ["use_std"] }
 criterion = "0.5.1"
 serde_json = "1.0.114"
+zenu-matrix-test = { path = "../zenu-matrix-test" }
 
 [[bench]]
 name = "copy_from_im2col_way"
