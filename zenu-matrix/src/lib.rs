@@ -14,8 +14,12 @@ pub mod matrix;
 // pub mod memory_impl;
 pub mod num;
 // pub mod operation;
+pub mod device;
 pub mod shape_stride;
 pub mod slice;
+
+#[cfg(feature = "nvidia")]
+mod gpu_method;
 
 // mod impl_ops;
 // mod matrix_format;
