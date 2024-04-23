@@ -1,11 +1,10 @@
 use std::fmt;
 
 use crate::{
+    device::Device,
     dim::{DimDyn, DimTrait},
     index::Index0D,
-    matrix::{IndexAxisDyn, IndexItem, MatrixBase, ToViewMatrix},
-    matrix_impl::Matrix,
-    memory::{Memory, ToViewMemory},
+    matrix::{Matrix, Repr},
     num::Num,
 };
 /// Default threshold, below this element count, we don't ellipsize
@@ -104,8 +103,8 @@ fn format_with_overflow(
     Ok(())
 }
 
-fn format_array<A, S, D, F>(
-    array: &Matrix<S, D>,
+fn format_array<A, R, S, D, F>(
+    array: &Matrix<R, S, D>,
     f: &mut fmt::Formatter<'_>,
     format: F,
     fmt_opt: &FormatOptions,
@@ -113,13 +112,14 @@ fn format_array<A, S, D, F>(
 where
     A: Num,
     F: FnMut(&A, &mut fmt::Formatter<'_>) -> fmt::Result + Clone,
-    D: DimTrait,
-    S: Memory<Item = A> + ToViewMemory,
+    S: DimTrait,
+    R: Repr<Item = A>,
+    D: Device,
 {
     // Cast into a dynamically dimensioned view
     // This is required to be able to use `index_axis` for the recursive case
     format_array_inner(
-        array.to_view().into_dyn_dim(),
+        array.to_ref().into_dyn_dim(),
         f,
         format,
         fmt_opt,
@@ -128,8 +128,8 @@ where
     )
 }
 
-fn format_array_inner<T, M, F>(
-    view: Matrix<M, DimDyn>,
+fn format_array_inner<T, M, F, D>(
+    view: Matrix<M, DimDyn, D>,
     f: &mut fmt::Formatter<'_>,
     mut format: F,
     fmt_opt: &FormatOptions,
@@ -138,8 +138,9 @@ fn format_array_inner<T, M, F>(
 ) -> fmt::Result
 where
     T: Num,
-    M: Memory<Item = T> + ToViewMemory,
+    M: Repr<Item = T>,
     F: FnMut(&T, &mut fmt::Formatter<'_>) -> fmt::Result + Clone,
+    D: Device,
 {
     match view.shape().slice() {
         // If it's 0 dimensional, we just print out the scalar
@@ -187,10 +188,12 @@ where
 /// to each element.
 ///
 /// The array is shown in multiline style.
-impl<A: fmt::Display, S, D: DimTrait> fmt::Display for Matrix<S, D>
+impl<A, R, S, D> fmt::Display for Matrix<R, S, D>
 where
-    A: Num,
-    S: Memory<Item = A> + ToViewMemory,
+    A: Num + fmt::Display,
+    R: Repr<Item = A>,
+    S: DimTrait,
+    D: Device,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let fmt_opt = FormatOptions::default_for_array(self.shape().num_elm(), f.alternate());
@@ -202,10 +205,12 @@ where
 /// to each element.
 ///
 /// The array is shown in multiline style.
-impl<A: fmt::Debug, S, D: DimTrait> fmt::Debug for Matrix<S, D>
+impl<A, R, S, D> fmt::Debug for Matrix<R, S, D>
 where
-    A: Num,
-    S: Memory<Item = A> + ToViewMemory,
+    A: Num + fmt::Debug,
+    R: Repr<Item = A>,
+    S: DimTrait,
+    D: Device,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let fmt_opt = FormatOptions::default_for_array(self.shape().num_elm(), f.alternate());
@@ -223,11 +228,6 @@ where
 
 #[cfg(test)]
 mod matrix_format {
-    use crate::{
-        constructor::ones::Ones,
-        matrix::OwnedMatrix,
-        matrix_impl::{OwnedMatrix1D, OwnedMatrix2D, OwnedMatrix3D, OwnedMatrix4D},
-    };
 
     fn assert_str_eq(expected: &str, actual: &str) {
         // use assert to avoid printing the strings twice on failure

@@ -106,6 +106,16 @@ where
         }
         D::get_item(self.ptr, offset + self.offset)
     }
+
+    fn to_ref(&self) -> Ptr<Ref<&R::Item>, D> {
+        Ptr {
+            ptr: self.ptr,
+            len: self.len,
+            offset: self.offset,
+            repr: PhantomData,
+            device: PhantomData,
+        }
+    }
 }
 
 impl<R, D> Drop for Ptr<R, D>
@@ -179,16 +189,6 @@ where
     R: OwnedRepr,
     D: Device,
 {
-    fn to_ref(&self) -> Ptr<Ref<&R::Item>, D> {
-        Ptr {
-            ptr: self.ptr,
-            len: self.len,
-            offset: self.offset,
-            repr: PhantomData,
-            device: PhantomData,
-        }
-    }
-
     fn to_ref_mut(&mut self) -> Ptr<Ref<&mut R::Item>, D> {
         Ptr {
             ptr: self.ptr,
@@ -364,6 +364,14 @@ where
         let offset = cal_offset(index, self.stride());
         self.ptr.get_item(offset)
     }
+
+    pub fn to_ref(&self) -> Matrix<Ref<&R::Item>, S, D> {
+        Matrix {
+            ptr: self.ptr.to_ref(),
+            shape: self.shape,
+            stride: self.stride,
+        }
+    }
 }
 
 impl<T, S, D> Matrix<Owned<T>, S, D>
@@ -392,14 +400,6 @@ where
 
         let stride = default_stride(shape);
         Matrix { ptr, shape, stride }
-    }
-
-    pub fn to_ref(&self) -> Matrix<Ref<&T>, S, D> {
-        Matrix {
-            ptr: self.ptr.to_ref(),
-            shape: self.shape,
-            stride: self.stride,
-        }
     }
 
     pub fn to_ref_mut(&mut self) -> Matrix<Ref<&mut T>, S, D> {
