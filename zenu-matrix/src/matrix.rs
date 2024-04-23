@@ -1,6 +1,7 @@
 use std::{any::TypeId, marker::PhantomData};
 
 use crate::{
+    device::Device,
     dim::{cal_offset, default_stride, DimDyn, DimTrait, LessDimTrait},
     index::{IndexAxisTrait, SliceTrait},
     num::Num,
@@ -62,74 +63,6 @@ impl<T: Num> Repr for Owned<T> {
 
 impl<T: Num> OwnedRepr for Owned<T> {}
 
-pub trait Device: Copy + Default {
-    fn drop_ptr<T>(ptr: *mut T, len: usize);
-    fn clone_ptr<T>(ptr: *const T, len: usize) -> *mut T;
-    fn assign_item<T: Num>(ptr: *mut T, offset: usize, value: T);
-    fn get_item<T: Num>(ptr: *const T, offset: usize) -> T;
-}
-
-#[derive(Copy, Clone, Default)]
-pub struct Cpu;
-
-impl Device for Cpu {
-    fn drop_ptr<T>(ptr: *mut T, len: usize) {
-        unsafe {
-            std::vec::Vec::from_raw_parts(ptr, 0, len);
-        }
-    }
-
-    fn clone_ptr<T>(ptr: *const T, len: usize) -> *mut T {
-        let mut vec = Vec::with_capacity(len);
-        unsafe {
-            vec.set_len(len);
-            std::ptr::copy_nonoverlapping(ptr, vec.as_mut_ptr(), len);
-        }
-        vec.as_mut_ptr()
-    }
-
-    fn assign_item<T>(ptr: *mut T, offset: usize, value: T) {
-        unsafe {
-            ptr.add(offset).write(value);
-        }
-    }
-
-    fn get_item<T>(ptr: *const T, offset: usize) -> T {
-        unsafe { ptr.add(offset).read() }
-    }
-}
-
-#[cfg(feature = "nvidia")]
-#[derive(Copy, Clone, Default)]
-pub struct Nvidia;
-
-#[cfg(feature = "nvidia")]
-impl Device for Nvidia {
-    fn drop_ptr<T>(ptr: *mut T, _: usize) {
-        zenu_cuda::runtime::cuda_free(ptr as *mut std::ffi::c_void).unwrap();
-    }
-
-    fn clone_ptr<T>(src: *const T, len: usize) -> *mut T {
-        let dst = zenu_cuda::runtime::cuda_malloc(len).unwrap() as *mut T;
-        zenu_cuda::runtime::cuda_copy(
-            dst,
-            src,
-            len,
-            zenu_cuda::runtime::ZenuCudaMemCopyKind::HostToHost,
-        )
-        .unwrap();
-        dst
-    }
-
-    fn assign_item<T: Num>(ptr: *mut T, offset: usize, value: T) {
-        zenu_cuda::kernel::set_memory(ptr, offset, value);
-    }
-
-    fn get_item<T: Num>(ptr: *const T, offset: usize) -> T {
-        zenu_cuda::kernel::get_memory(ptr, offset)
-    }
-}
-
 pub struct Ptr<R, D>
 where
     R: Repr,
@@ -147,6 +80,16 @@ where
     R: Repr,
     D: Device,
 {
+    pub fn new(ptr: *mut R::Item, len: usize, offset: usize) -> Self {
+        Ptr {
+            ptr,
+            len,
+            offset,
+            repr: PhantomData,
+            device: PhantomData,
+        }
+    }
+
     pub fn offset_ptr(&self, offset: usize) -> Ptr<Ref<&R::Item>, D> {
         Ptr {
             ptr: self.ptr,
@@ -274,6 +217,14 @@ where
     S: DimTrait,
     D: Device,
 {
+    pub fn new(ptr: Ptr<R, D>, shape: S, stride: S) -> Self {
+        Matrix { ptr, shape, stride }
+    }
+
+    pub fn offset(&self) -> usize {
+        self.ptr.offset
+    }
+
     pub fn shape_stride(&self) -> ShapeStride<S> {
         ShapeStride::new(self.shape, self.stride)
     }
@@ -458,42 +409,6 @@ where
             stride: self.stride,
         }
     }
-
-    pub fn move_device<D2>(&self) -> Matrix<Owned<T>, S, D2>
-    where
-        D: 'static,
-        D2: Device + 'static,
-    {
-        let self_raw_ptr = self.ptr.ptr;
-        let len = self.shape.num_elm();
-
-        let (ptr, device) = match (TypeId::of::<D>(), TypeId::of::<D2>()) {
-            (a, b) if a == b => (self_raw_ptr, PhantomData),
-            #[cfg(feature = "nvidia")]
-            (a, b) if a == TypeId::of::<Cpu>() && b == TypeId::of::<Nvidia>() => {
-                let ptr = zenu_cuda::runtime::copy_to_gpu(self_raw_ptr, len);
-                (ptr, PhantomData)
-            }
-            #[cfg(feature = "nvidia")]
-            (a, b) if a == TypeId::of::<Nvidia>() && b == TypeId::of::<Cpu>() => {
-                let ptr = zenu_cuda::runtime::copy_to_cpu(self_raw_ptr, len);
-                (ptr, PhantomData)
-            }
-            _ => unreachable!(),
-        };
-
-        Matrix {
-            ptr: Ptr {
-                ptr,
-                len,
-                offset: self.ptr.offset,
-                repr: PhantomData,
-                device,
-            },
-            shape: self.shape,
-            stride: self.stride,
-        }
-    }
 }
 
 impl<T, S, D> Matrix<Ref<&mut T>, S, D>
@@ -580,23 +495,5 @@ where
         }
         let offset = cal_offset(index, self.stride());
         self.ptr.assign_item(offset, value);
-    }
-}
-
-#[cfg(feature = "nvidia")]
-#[cfg(test)]
-mod nvidia {
-    use crate::dim::DimDyn;
-
-    use super::{Cpu, Matrix, Nvidia, Owned};
-
-    #[test]
-    fn move_cpu_gpu_cpu() {
-        let vec = vec![1.0, 2.0, 3.0, 4.0];
-        let cpu_mat: Matrix<Owned<f64>, DimDyn, Cpu> = Matrix::from_vec(vec, [4]);
-        let gpu_mat = cpu_mat.move_device::<Nvidia>();
-        let cpu_mat_2 = gpu_mat.move_device::<Cpu>();
-        let cpu_mat_2_slice = cpu_mat_2.as_slice();
-        assert_eq!(cpu_mat_2_slice, &[1.0, 2.0, 3.0, 4.0]);
     }
 }
