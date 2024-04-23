@@ -1,4 +1,4 @@
-use std::{any::TypeId, marker::PhantomData};
+use std::marker::PhantomData;
 
 use crate::{
     device::Device,
@@ -372,7 +372,7 @@ where
     D: Device,
     S: DimTrait,
 {
-    pub fn from_vec<I: Into<S>>(mut vec: Vec<T>, shape: I) -> Self {
+    pub fn from_vec<I: Into<S>>(vec: Vec<T>, shape: I) -> Self {
         let shape = shape.into();
         if vec.len() != shape.num_elm() {
             panic!("Invalid size");
@@ -381,7 +381,7 @@ where
         let len = vec.len();
 
         let ptr = Ptr {
-            ptr: vec.as_mut_ptr(),
+            ptr: D::from_vec(vec.clone()),
             len,
             offset: 0,
             repr: PhantomData,
@@ -495,5 +495,151 @@ where
         }
         let offset = cal_offset(index, self.stride());
         self.ptr.assign_item(offset, value);
+    }
+}
+
+#[cfg(test)]
+mod matrix {
+    use crate::{
+        device::Device,
+        dim::{Dim1, Dim2, DimDyn, DimTrait},
+        index::Index0D,
+        slice, slice_dynamic,
+    };
+
+    use super::{Matrix, Owned};
+
+    fn index_item_1d<D: Device>() {
+        let m: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(vec![1.0, 2.0, 3.0], [3]);
+        assert_eq!(m.index_item([0]), 1.0);
+        assert_eq!(m.index_item([1]), 2.0);
+        assert_eq!(m.index_item([2]), 3.0);
+    }
+    #[test]
+    fn index_item_1d_cpu() {
+        index_item_1d::<crate::device::cpu::Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn index_item_1d_nvidia() {
+        index_item_1d::<crate::device::nvidia::Nvidia>();
+    }
+
+    fn index_item_2d<D: Device>() {
+        let m: Matrix<Owned<f32>, Dim2, D> = Matrix::from_vec(vec![1.0, 2.0, 3.0, 4.0], [2, 2]);
+        assert_eq!(m.index_item([0, 0]), 1.0);
+        assert_eq!(m.index_item([0, 1]), 2.0);
+        assert_eq!(m.index_item([1, 0]), 3.0);
+        assert_eq!(m.index_item([1, 1]), 4.0);
+
+        let m: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(vec![1.0, 2.0, 3.0, 4.0], [2, 2]);
+        assert_eq!(m.index_item([0, 0]), 1.0);
+        assert_eq!(m.index_item([0, 1]), 2.0);
+        assert_eq!(m.index_item([1, 0]), 3.0);
+        assert_eq!(m.index_item([1, 1]), 4.0);
+    }
+    #[test]
+    fn index_item_2d_cpu() {
+        index_item_2d::<crate::device::cpu::Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn index_item_2d_nvidia() {
+        index_item_2d::<crate::device::nvidia::Nvidia>();
+    }
+
+    fn slice_1d<D: Device>() {
+        let v = (1..10).map(|x| x as f32).collect::<Vec<f32>>();
+        let m: Matrix<Owned<f32>, Dim1, D> = Matrix::from_vec(v.clone(), [9]);
+        let s = m.slice(slice!(1..4));
+        assert_eq!(s.shape().slice(), [3]);
+        assert_eq!(s.stride().slice(), [1]);
+        assert_eq!(s.index_item([0]), 2.0);
+        assert_eq!(s.index_item([1]), 3.0);
+        assert_eq!(s.index_item([2]), 4.0);
+    }
+    #[test]
+    fn slice_1d_cpu() {
+        slice_1d::<crate::device::cpu::Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn slice_1d_nvidia() {
+        slice_1d::<crate::device::nvidia::Nvidia>();
+    }
+
+    fn slice_2d<D: Device>() {
+        let v = (1..13).map(|x| x as f32).collect::<Vec<f32>>();
+        let m: Matrix<Owned<f32>, Dim2, D> = Matrix::from_vec(v.clone(), [3, 4]);
+        let s = m.slice(slice!(1..3, 1..4));
+        assert_eq!(s.shape().slice(), [2, 3]);
+        assert_eq!(s.stride().slice(), [4, 1]);
+
+        assert_eq!(s.index_item([0, 0]), 6.);
+        assert_eq!(s.index_item([0, 1]), 7.);
+        assert_eq!(s.index_item([0, 2]), 8.);
+        assert_eq!(s.index_item([1, 0]), 10.);
+        assert_eq!(s.index_item([1, 1]), 11.);
+        assert_eq!(s.index_item([1, 2]), 12.);
+    }
+    #[test]
+    fn slice_2d_cpu() {
+        slice_2d::<crate::device::cpu::Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn slice_2d_nvidia() {
+        slice_2d::<crate::device::nvidia::Nvidia>();
+    }
+
+    fn slice_dyn_4d<D: Device>() {
+        let v = (1..65).map(|x| x as f32).collect::<Vec<f32>>();
+        let m: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(v.clone(), [2, 2, 4, 4]);
+        let s = m.slice_dyn(slice_dynamic!(.., .., 2, ..));
+
+        assert_eq!(s.index_item([0, 0, 0]), 9.);
+        assert_eq!(s.index_item([0, 0, 1]), 10.);
+        assert_eq!(s.index_item([0, 0, 2]), 11.);
+        assert_eq!(s.index_item([0, 0, 3]), 12.);
+        assert_eq!(s.index_item([0, 1, 0]), 25.);
+        assert_eq!(s.index_item([0, 1, 1]), 26.);
+        assert_eq!(s.index_item([0, 1, 2]), 27.);
+        assert_eq!(s.index_item([0, 1, 3]), 28.);
+        assert_eq!(s.index_item([1, 0, 0]), 41.);
+        assert_eq!(s.index_item([1, 0, 1]), 42.);
+        assert_eq!(s.index_item([1, 0, 2]), 43.);
+        assert_eq!(s.index_item([1, 0, 3]), 44.);
+        assert_eq!(s.index_item([1, 1, 0]), 57.);
+        assert_eq!(s.index_item([1, 1, 1]), 58.);
+        assert_eq!(s.index_item([1, 1, 2]), 59.);
+        assert_eq!(s.index_item([1, 1, 3]), 60.);
+    }
+    #[test]
+    fn slice_dyn_4d_cpu() {
+        slice_dyn_4d::<crate::device::cpu::Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn slice_dyn_4d_nvidia() {
+        slice_dyn_4d::<crate::device::nvidia::Nvidia>();
+    }
+
+    fn index_axis_dyn_2d<D: Device>() {
+        let v = (1..13).map(|x| x as f32).collect::<Vec<f32>>();
+        let m: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(v.clone(), [3, 4]);
+        let s = m.index_axis_dyn(Index0D::new(0));
+
+        assert_eq!(s.index_item([0]), 1.);
+        assert_eq!(s.index_item([1]), 2.);
+        assert_eq!(s.index_item([2]), 3.);
+    }
+    #[test]
+    fn index_axis_dyn_2d_cpu() {
+        index_axis_dyn_2d::<crate::device::cpu::Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn index_axis_dyn_2d_nvidia() {
+        index_axis_dyn_2d::<crate::device::nvidia::Nvidia>();
     }
 }
