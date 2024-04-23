@@ -44,9 +44,7 @@ impl<A> Default for Ref<A> {
 impl<'a, T: Num> Repr for Ref<&'a T> {
     type Item = T;
 
-    fn drop_memory<D: Device>(ptr: *mut Self::Item, len: usize, _: D) {
-        D::drop_ptr(ptr, len);
-    }
+    fn drop_memory<D: Device>(_ptr: *mut Self::Item, _len: usize, _: D) {}
 }
 
 impl<'a, T: Num> Repr for Ref<&'a mut T> {
@@ -58,7 +56,9 @@ impl<'a, T: Num> Repr for Ref<&'a mut T> {
 impl<T: Num> Repr for Owned<T> {
     type Item = T;
 
-    fn drop_memory<D: Device>(_ptr: *mut Self::Item, _len: usize, _: D) {}
+    fn drop_memory<D: Device>(ptr: *mut Self::Item, len: usize, _: D) {
+        D::drop_ptr(ptr, len);
+    }
 }
 
 impl<T: Num> OwnedRepr for Owned<T> {}
