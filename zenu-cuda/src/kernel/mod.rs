@@ -72,7 +72,7 @@ impl_array_scalar_sin!(array_abs, array_abs_double, array_abs_float);
 impl_array_scalar_sin!(array_sqrt, array_sqrt_double, array_sqrt_float);
 impl_array_scalar_sin!(array_exp, array_exp_double, array_exp_float);
 
-pub fn get_memory<T: 'static + Default>(array: *mut T, offset: usize) -> T {
+pub fn get_memory<T: 'static + Default>(array: *const T, offset: usize) -> T {
     let mut out: T = Default::default();
     if TypeId::of::<T>() == TypeId::of::<f32>() {
         let array = array as *mut f32;

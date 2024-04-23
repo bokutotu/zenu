@@ -67,11 +67,25 @@ pub fn cuda_copy<T>(
     }
 }
 
+pub fn copy_to_gpu<T>(src: *mut T, len: usize) -> *mut T {
+    let gpu_ptr = cuda_malloc(len).unwrap();
+    cuda_copy(gpu_ptr, src, len, ZenuCudaMemCopyKind::HostToDevice).unwrap();
+    gpu_ptr
+}
+
+pub fn copy_to_cpu<T: 'static + Default + Clone>(src: *mut T, len: usize) -> *mut T {
+    let mut dst = vec![Default::default(); len];
+    let dst_ptr = dst.as_mut_ptr();
+    cuda_copy(dst_ptr, src, len, ZenuCudaMemCopyKind::DeviceToHost).unwrap();
+    std::mem::forget(dst);
+    dst_ptr
+}
+
 #[cfg(test)]
 mod cuda_runtime {
     use crate::runtime::ZenuCudaMemCopyKind;
 
-    use super::{cuda_copy, cuda_malloc};
+    use super::{copy_to_cpu, copy_to_gpu, cuda_copy, cuda_malloc};
 
     #[test]
     fn cpu_to_gpu_to_cpu() {
@@ -82,6 +96,18 @@ mod cuda_runtime {
         cuda_copy(a_ptr, a.as_ptr(), 4, ZenuCudaMemCopyKind::HostToDevice).unwrap();
 
         cuda_copy(b.as_mut_ptr(), a_ptr, 4, ZenuCudaMemCopyKind::DeviceToHost).unwrap();
+
+        assert_eq!(a, b);
+    }
+
+    #[test]
+    fn cpu_to_gou_to_cpu_2() {
+        let mut a = vec![1.0f32, 2.0, 3.0, 4.0];
+
+        let gpu_ptr = copy_to_gpu(a.as_mut_ptr(), 4);
+
+        let b_ptr = copy_to_cpu(gpu_ptr, 4);
+        let b = unsafe { std::slice::from_raw_parts(b_ptr, 4) };
 
         assert_eq!(a, b);
     }
