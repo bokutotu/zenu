@@ -28,4 +28,10 @@ impl Device for Cpu {
     fn get_item<T>(ptr: *const T, offset: usize) -> T {
         unsafe { ptr.add(offset).read() }
     }
+
+    fn from_vec<T>(vec: Vec<T>) -> *mut T {
+        let ptr = vec.as_ptr() as *mut T;
+        std::mem::forget(vec);
+        ptr
+    }
 }

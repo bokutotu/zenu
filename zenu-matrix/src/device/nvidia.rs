@@ -28,4 +28,8 @@ impl Device for Nvidia {
     fn get_item<T: Num>(ptr: *const T, offset: usize) -> T {
         zenu_cuda::kernel::get_memory(ptr, offset)
     }
+
+    fn from_vec<T: Num>(mut vec: Vec<T>) -> *mut T {
+        zenu_cuda::runtime::copy_to_gpu(vec.as_mut_ptr(), vec.len())
+    }
 }
