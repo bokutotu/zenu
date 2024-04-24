@@ -4,14 +4,14 @@
 extern "C" {
 #endif
 
-void array_scalar_add_float(float *a, int size, int stride, float scalar, float *out);
-void array_scalar_sub_float(float *a, int size, int stride, float scalar, float *out);
-void array_scalar_mul_float(float *a, int size, int stride, float scalar, float *out);
-void array_scalar_div_float(float *a, int size, int stride, float scalar, float *out);
-void array_scalar_add_double(double *a, int size, int stride, double scalar, double *out);
-void array_scalar_sub_double(double *a, int size, int stride, double scalar, double *out);
-void array_scalar_mul_double(double *a, int size, int stride, double scalar, double *out);
-void array_scalar_div_double(double *a, int size, int stride, double scalar, double *out);
+void array_scalar_add_float(float *a, int size, int stride_a, float scalar, float *out, int stride_out);
+void array_scalar_sub_float(float *a, int size, int stride_a, float scalar, float *out, int stride_out);
+void array_scalar_mul_float(float *a, int size, int stride_a, float scalar, float *out, int stride_out);
+void array_scalar_div_float(float *a, int size, int stride_a, float scalar, float *out, int stride_out);
+void array_scalar_add_double(double *a, int size, int stride_a, double scalar, double *out, int stride_out);
+void array_scalar_sub_double(double *a, int size, int stride_a, double scalar, double *out, int stride_out);
+void array_scalar_mul_double(double *a, int size, int stride_a, double scalar, double *out, int stride_out);
+void array_scalar_div_double(double *a, int size, int stride_a, double scalar, double *out, int stride_out);
 void array_scalar_add_assign_float(float *a, int size, int stride, float scalar);
 void array_scalar_sub_assign_float(float *a, int size, int stride, float scalar);
 void array_scalar_mul_assign_float(float *a, int size, int stride, float scalar);
