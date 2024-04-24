@@ -251,7 +251,7 @@ where
     }
 
     pub fn as_ptr(&self) -> *const R::Item {
-        self.ptr.ptr
+        unsafe { self.ptr.ptr.add(self.offset()) }
     }
 
     pub fn as_slice(&self) -> &[R::Item] {
@@ -431,7 +431,7 @@ where
     S: DimTrait,
 {
     pub fn as_mut_ptr(&self) -> *mut T {
-        self.ptr.ptr
+        unsafe { self.ptr.ptr.add(self.offset()) }
     }
 
     pub fn as_mut_slice(&self) -> &mut [T] {
