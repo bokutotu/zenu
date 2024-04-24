@@ -1,5 +1,5 @@
 use crate::{
-    device::Device,
+    device::DeviceBase,
     dim::DimTrait,
     matrix::{Matrix, Owned, Repr},
     num::Num,
@@ -9,7 +9,7 @@ impl<T, S, D> Matrix<Owned<T>, S, D>
 where
     T: Num,
     S: DimTrait,
-    D: Device,
+    D: DeviceBase,
 {
     pub fn zeros<I: Into<S>>(dim: I) -> Self {
         let dim = dim.into();

@@ -1,5 +1,5 @@
 use crate::{
-    device::{cpu::Cpu, Device},
+    device::{cpu::Cpu, DeviceBase},
     dim::DimTrait,
     matrix::{Matrix, Ref},
     num::Num,
@@ -8,7 +8,7 @@ use crate::{
 #[cfg(feature = "nvidia")]
 use crate::device::nvidia::Nvidia;
 
-pub trait CopyBlas: Device {
+pub trait CopyBlas: DeviceBase {
     fn copy_raw<T: Num>(n: usize, x: *const T, incx: usize, y: *mut T, incy: usize);
 }
 
