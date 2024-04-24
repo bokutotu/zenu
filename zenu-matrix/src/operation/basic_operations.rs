@@ -1,9 +1,135 @@
 use crate::{
+    device::{cpu::Cpu, DeviceBase},
     dim::{larger_shape, smaller_shape, DimDyn, DimTrait},
     index::Index0D,
     num::Num,
 };
 
+#[cfg(feature = "nvidia")]
+use crate::device::nvidia::Nvidia;
+
+pub trait Add: DeviceBase {
+    fn add_assign<T: Num>(
+        to: *mut T,
+        source: *const T,
+        len: usize,
+        to_stride: usize,
+        source_stride: usize,
+    );
+    fn add<T: Num>(
+        to: *mut T,
+        lhs: *const T,
+        rhs: *const T,
+        len: usize,
+        to_stride: usize,
+        lhs_stride: usize,
+        rhs_stride: usize,
+    );
+    fn add_assign_scalar<T: Num>(to: *mut T, scalar: T, len: usize, to_stride: usize);
+    fn add_scalar<T: Num>(
+        to: *mut T,
+        source: *const T,
+        scalar: T,
+        len: usize,
+        to_stride: usize,
+        source_stride: usize,
+    );
+}
+
+impl Add for Cpu {
+    fn add_assign<T: Num>(
+        to: *mut T,
+        source: *const T,
+        len: usize,
+        to_stride: usize,
+        source_stride: usize,
+    ) {
+        for i in 0..len {
+            unsafe {
+                *to.add(i * to_stride) += *source.add(i * source_stride);
+            }
+        }
+    }
+
+    fn add<T: Num>(
+        to: *mut T,
+        lhs: *const T,
+        rhs: *const T,
+        len: usize,
+        to_stride: usize,
+        lhs_stride: usize,
+        rhs_stride: usize,
+    ) {
+        for i in 0..len {
+            unsafe {
+                *to.add(i * to_stride) = *lhs.add(i * lhs_stride) + *rhs.add(i * rhs_stride);
+            }
+        }
+    }
+
+    fn add_assign_scalar<T: Num>(to: *mut T, scalar: T, len: usize, to_stride: usize) {
+        for i in 0..len {
+            unsafe {
+                *to.add(i * to_stride) += scalar;
+            }
+        }
+    }
+
+    fn add_scalar<T: Num>(
+        to: *mut T,
+        source: *const T,
+        scalar: T,
+        len: usize,
+        to_stride: usize,
+        source_stride: usize,
+    ) {
+        for i in 0..len {
+            unsafe {
+                *to.add(i * to_stride) = *source.add(i * source_stride) + scalar;
+            }
+        }
+    }
+}
+
+#[cfg(feature = "nvidia")]
+impl Add for Nvidia {
+    fn add_assign<T: Num>(
+        to: *mut T,
+        source: *const T,
+        len: usize,
+        to_stride: usize,
+        source_stride: usize,
+    ) {
+        todo!()
+    }
+
+    fn add<T: Num>(
+        to: *mut T,
+        lhs: *const T,
+        rhs: *const T,
+        len: usize,
+        to_stride: usize,
+        lhs_stride: usize,
+        rhs_stride: usize,
+    ) {
+        todo!()
+    }
+
+    fn add_assign_scalar<T: Num>(to: *mut T, scalar: T, len: usize, to_stride: usize) {
+        todo!()
+    }
+
+    fn add_scalar<T: Num>(
+        to: *mut T,
+        source: *const T,
+        scalar: T,
+        len: usize,
+        to_stride: usize,
+        source_stride: usize,
+    ) {
+        todo!()
+    }
+}
 // fn get_tmp_matrix<M: ToViewMemory, D: DimTrait, A; MemAcc>(
 //     a: &Matrix<M, D>,
 //     len: usize,
