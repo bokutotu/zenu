@@ -5,11 +5,14 @@ use crate::{
     num::Num,
 };
 
-pub trait Copy: Device {
+#[cfg(feature = "nvidia")]
+use crate::device::nvidia::Nvidia;
+
+pub trait CopyBlas: Device {
     fn copy_raw<T: Num>(n: usize, x: *const T, incx: usize, y: *mut T, incy: usize);
 }
 
-impl Copy for Cpu {
+impl CopyBlas for Cpu {
     fn copy_raw<T: Num>(n: usize, x: *const T, incx: usize, y: *mut T, incy: usize) {
         extern crate openblas_src;
         use cblas::*;
@@ -41,12 +44,19 @@ impl Copy for Cpu {
     }
 }
 
+#[cfg(feature = "nvidia")]
+impl CopyBlas for Nvidia {
+    fn copy_raw<T: Num>(n: usize, x: *const T, incx: usize, y: *mut T, incy: usize) {
+        zenu_cuda::cublas::cublas_copy(n, x, incx, y, incy).unwrap();
+    }
+}
+
 pub fn copy_unchecked<T, SA, SB, RB, D>(x: Matrix<Ref<&T>, SA, D>, y: Matrix<Ref<&mut T>, SB, D>)
 where
     T: Num,
     SA: DimTrait,
     SB: DimTrait,
-    D: Copy,
+    D: CopyBlas,
 {
     let n = x.shape()[0];
     let incx = x.stride()[0];

@@ -2,7 +2,7 @@ use crate::{
     device::Device,
     dim::{DimDyn, DimTrait},
     matrix::{Matrix, Ref},
-    matrix_blas::copy::Copy,
+    matrix_blas::copy::CopyBlas,
     num::Num,
     shape_stride::ShapeStride,
 };
@@ -144,7 +144,7 @@ impl Iterator for PointerOffsetIter {
     }
 }
 
-fn copy<T: Num, D: Device + Copy>(
+fn copy<T: Num, D: Device + CopyBlas>(
     to: Matrix<Ref<&mut T>, DimDyn, D>,
     source: Matrix<Ref<&T>, DimDyn, D>,
 ) {
@@ -194,7 +194,7 @@ impl<T, SA, D> Matrix<Ref<&mut T>, SA, D>
 where
     T: Num,
     SA: DimTrait,
-    D: Device + Copy,
+    D: Device + CopyBlas,
 {
     pub fn copy_from<SB: DimTrait>(&self, source: Matrix<Ref<&T>, SB, D>) {
         copy(self.clone().into_dyn_dim(), source.into_dyn_dim());
@@ -208,16 +208,20 @@ mod deep_copy {
         device::cpu::Cpu,
         dim::{Dim1, Dim2},
         matrix::Owned,
+        matrix_blas::copy::CopyBlas,
         slice,
     };
 
-    #[test]
-    fn default_stride_1d() {
+    #[cfg(feature = "nvidia")]
+    use crate::device::nvidia::Nvidia;
+
+    // #[test]
+    fn default_stride_1d<D: CopyBlas>() {
         let a = vec![0f32; 6];
         let b = vec![1f32, 2., 3., 4., 5., 6.];
 
-        let mut a: Matrix<Owned<f32>, Dim1, Cpu> = Matrix::from_vec(a, [6]);
-        let b: Matrix<Owned<f32>, Dim1, Cpu> = Matrix::from_vec(b, [6]);
+        let mut a: Matrix<Owned<f32>, Dim1, D> = Matrix::from_vec(a, [6]);
+        let b: Matrix<Owned<f32>, Dim1, D> = Matrix::from_vec(b, [6]);
 
         let a_view_mut = a.to_ref_mut();
 
@@ -232,14 +236,22 @@ mod deep_copy {
         assert_eq!(a.index_item([4]), 5.);
         assert_eq!(a.index_item([5]), 6.);
     }
-
     #[test]
-    fn sliced_1d() {
+    fn default_stride_1d_cpu() {
+        default_stride_1d::<Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn default_stride_1d_nvidia() {
+        default_stride_1d::<Nvidia>();
+    }
+
+    fn sliced_1d<D: CopyBlas>() {
         let a = vec![0f32; 6];
         let v = vec![0f32, 1., 2., 3., 4., 5.];
 
-        let mut a: Matrix<Owned<f32>, Dim1, Cpu> = Matrix::from_vec(a.clone(), [6]);
-        let v: Matrix<Owned<f32>, Dim1, Cpu> = Matrix::from_vec(v, [6]);
+        let mut a: Matrix<Owned<f32>, Dim1, D> = Matrix::from_vec(a.clone(), [6]);
+        let v: Matrix<Owned<f32>, Dim1, D> = Matrix::from_vec(v, [6]);
 
         let a_sliced = a.to_ref_mut().slice_mut(slice!(..;2));
         let v_sliced = v.slice(slice!(0..3));
@@ -252,14 +264,22 @@ mod deep_copy {
         assert_eq!(a.index_item([4]), 2.);
         assert_eq!(a.index_item([5]), 0.);
     }
-
     #[test]
-    fn defualt_stride_2d() {
+    fn sliced_1d_cpu() {
+        sliced_1d::<Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn sliced_1d_nvidia() {
+        sliced_1d::<Nvidia>();
+    }
+
+    fn defualt_stride_2d<D: CopyBlas>() {
         let a = vec![0f32; 6];
         let b = vec![1f32, 2., 3., 4., 5., 6.];
 
-        let mut a: Matrix<Owned<f32>, Dim2, Cpu> = Matrix::from_vec(a, [2, 3]);
-        let b: Matrix<Owned<f32>, Dim2, Cpu> = Matrix::from_vec(b, [2, 3]);
+        let mut a: Matrix<Owned<f32>, Dim2, D> = Matrix::from_vec(a, [2, 3]);
+        let b: Matrix<Owned<f32>, Dim2, D> = Matrix::from_vec(b, [2, 3]);
 
         let a_view_mut = a.to_ref_mut();
 
@@ -274,14 +294,22 @@ mod deep_copy {
         assert_eq!(a.index_item([1, 1]), 5.);
         assert_eq!(a.index_item([1, 2]), 6.);
     }
-
     #[test]
-    fn sliced_2d() {
+    fn defualt_stride_2d_cpu() {
+        defualt_stride_2d::<Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn defualt_stride_2d_nvidia() {
+        defualt_stride_2d::<Nvidia>();
+    }
+
+    fn sliced_2d<D: CopyBlas>() {
         let a = vec![0f32; 12];
         let v = vec![0f32, 1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11.];
 
-        let mut a: Matrix<Owned<f32>, Dim2, Cpu> = Matrix::from_vec(a.clone(), [3, 4]);
-        let v: Matrix<Owned<f32>, Dim2, Cpu> = Matrix::from_vec(v, [3, 4]);
+        let mut a: Matrix<Owned<f32>, Dim2, D> = Matrix::from_vec(a.clone(), [3, 4]);
+        let v: Matrix<Owned<f32>, Dim2, D> = Matrix::from_vec(v, [3, 4]);
 
         let a_sliced = a.to_ref_mut().slice_mut(slice!(0..2, 0..3));
         let v_sliced = v.slice(slice!(1..3, 1..4));
@@ -295,5 +323,14 @@ mod deep_copy {
         assert_eq!(a.index_item([1, 1]), 10.);
         assert_eq!(a.index_item([1, 2]), 11.);
         assert_eq!(a.index_item([2, 3]), 0.);
+    }
+    #[test]
+    fn sliced_2d_cpu() {
+        sliced_2d::<Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn sliced_2d_nvidia() {
+        sliced_2d::<Nvidia>();
     }
 }
