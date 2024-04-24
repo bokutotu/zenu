@@ -1,5 +1,5 @@
 use crate::{
-    device::{cpu::Cpu, Device},
+    device::{cpu::Cpu, DeviceBase},
     dim::{Dim2, DimTrait},
     index::Index0D,
     matrix::{Matrix, Ref, Repr},
@@ -9,7 +9,7 @@ use crate::{
 
 use super::{BlasLayout, BlasTrans};
 
-pub trait Gemm: Device {
+pub trait Gemm: DeviceBase {
     #[allow(clippy::too_many_arguments)]
     fn gemm_raw<T: Num>(
         layout: BlasLayout,

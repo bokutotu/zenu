@@ -1,9 +1,9 @@
-use super::Device;
+use super::DeviceBase;
 
 #[derive(Copy, Clone, Default)]
 pub struct Cpu;
 
-impl Device for Cpu {
+impl DeviceBase for Cpu {
     fn drop_ptr<T>(ptr: *mut T, len: usize) {
         unsafe {
             std::vec::Vec::from_raw_parts(ptr, 0, len);

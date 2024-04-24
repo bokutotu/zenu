@@ -6,7 +6,7 @@
 use std::marker::PhantomData;
 
 use crate::{
-    device::Device,
+    device::DeviceBase,
     dim::DimTrait,
     matrix::{Matrix, Owned, Repr},
     num::Num,
@@ -22,7 +22,7 @@ use rand_distr::{num_traits::Float, uniform::SampleUniform, Normal, StandardNorm
 /// * `std_dev` - The standard deviation of the normal distribution.
 /// * `shape` - The shape of the matrix.
 /// * `seed` - An optional seed for the random number generator.
-pub fn normal<T: Num, S: DimTrait, D: Device>(
+pub fn normal<T: Num, S: DimTrait, D: DeviceBase>(
     mean: T,
     std_dev: T,
     shape: S,
@@ -52,7 +52,7 @@ where
 /// * `std_dev` - The standard deviation of the normal distribution.
 /// * `a` - The matrix whose shape is used.
 /// * `seed` - An optional seed for the random number generator.
-pub fn normal_like<T: Num, S: DimTrait, D: Device>(
+pub fn normal_like<T: Num, S: DimTrait, D: DeviceBase>(
     mean: T,
     std_dev: T,
     a: &Matrix<Owned<T>, S, D>,
@@ -72,7 +72,7 @@ where
 /// * `high` - The upper bound of the uniform distribution.
 /// * `shape` - The shape of the matrix.
 /// * `seed` - An optional seed for the random number generator.
-pub fn uniform<T, S: DimTrait, D: Device>(
+pub fn uniform<T, S: DimTrait, D: DeviceBase>(
     low: T,
     high: T,
     shape: S,
@@ -103,7 +103,7 @@ where
 /// * `high` - The upper bound of the uniform distribution.
 /// * `a` - The matrix whose shape is used.
 /// * `seed` - An optional seed for the random number generator.
-pub fn uniform_like<T, S: DimTrait, D: Device>(
+pub fn uniform_like<T, S: DimTrait, D: DeviceBase>(
     low: T,
     high: T,
     a: &Matrix<Owned<T>, S, D>,
@@ -118,7 +118,7 @@ where
 
 /// A builder for creating matrices filled with random values from a normal distribution.
 #[derive(Debug, Clone, Default)]
-pub struct NormalBuilder<T: Num + Float, S: DimTrait, D: Device> {
+pub struct NormalBuilder<T: Num + Float, S: DimTrait, D: DeviceBase> {
     mean: Option<T>,
     std_dev: Option<T>,
     shape: Option<S>,
@@ -130,7 +130,7 @@ impl<T, S, D> NormalBuilder<T, S, D>
 where
     T: Num,
     S: DimTrait,
-    D: Device,
+    D: DeviceBase,
 {
     /// Creates a new `NormalBuilder`.
     pub fn new() -> Self {
@@ -205,7 +205,7 @@ where
     T: Num + Float + SampleUniform,
     Uniform<T>: Distribution<T>,
     S: DimTrait,
-    D: Device,
+    D: DeviceBase,
 {
     /// Creates a new `UniformBuilder`.
     pub fn new() -> Self {

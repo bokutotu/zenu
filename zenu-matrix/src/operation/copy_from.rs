@@ -1,5 +1,5 @@
 use crate::{
-    device::Device,
+    device::DeviceBase,
     dim::{DimDyn, DimTrait},
     matrix::{Matrix, Ref},
     matrix_blas::copy::CopyBlas,
@@ -144,7 +144,7 @@ impl Iterator for PointerOffsetIter {
     }
 }
 
-fn copy<T: Num, D: Device + CopyBlas>(
+fn copy<T: Num, D: DeviceBase + CopyBlas>(
     to: Matrix<Ref<&mut T>, DimDyn, D>,
     source: Matrix<Ref<&T>, DimDyn, D>,
 ) {
@@ -194,7 +194,7 @@ impl<T, SA, D> Matrix<Ref<&mut T>, SA, D>
 where
     T: Num,
     SA: DimTrait,
-    D: Device + CopyBlas,
+    D: DeviceBase + CopyBlas,
 {
     pub fn copy_from<SB: DimTrait>(&self, source: Matrix<Ref<&T>, SB, D>) {
         copy(self.clone().into_dyn_dim(), source.into_dyn_dim());

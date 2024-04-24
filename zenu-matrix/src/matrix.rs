@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
 use crate::{
-    device::Device,
+    device::DeviceBase,
     dim::{cal_offset, default_stride, DimDyn, DimTrait, LessDimTrait},
     index::{IndexAxisTrait, SliceTrait},
     num::Num,
@@ -12,8 +12,8 @@ use crate::{
 pub trait Repr: Default {
     type Item: Num;
 
-    fn drop_memory<D: Device>(ptr: *mut Self::Item, len: usize, _: D);
-    fn clone_memory<D: Device>(ptr: *mut Self::Item, len: usize, _: D) -> *mut Self::Item;
+    fn drop_memory<D: DeviceBase>(ptr: *mut Self::Item, len: usize, _: D);
+    fn clone_memory<D: DeviceBase>(ptr: *mut Self::Item, len: usize, _: D) -> *mut Self::Item;
 }
 
 pub trait OwnedRepr: Repr {}
@@ -45,8 +45,8 @@ impl<A> Default for Ref<A> {
 impl<'a, T: Num> Repr for Ref<&'a T> {
     type Item = T;
 
-    fn drop_memory<D: Device>(_ptr: *mut Self::Item, _len: usize, _: D) {}
-    fn clone_memory<D: Device>(ptr: *mut Self::Item, _len: usize, _: D) -> *mut Self::Item {
+    fn drop_memory<D: DeviceBase>(_ptr: *mut Self::Item, _len: usize, _: D) {}
+    fn clone_memory<D: DeviceBase>(ptr: *mut Self::Item, _len: usize, _: D) -> *mut Self::Item {
         ptr
     }
 }
@@ -54,8 +54,8 @@ impl<'a, T: Num> Repr for Ref<&'a T> {
 impl<'a, T: Num> Repr for Ref<&'a mut T> {
     type Item = T;
 
-    fn drop_memory<D: Device>(_ptr: *mut Self::Item, _len: usize, _: D) {}
-    fn clone_memory<D: Device>(ptr: *mut Self::Item, _len: usize, _: D) -> *mut Self::Item {
+    fn drop_memory<D: DeviceBase>(_ptr: *mut Self::Item, _len: usize, _: D) {}
+    fn clone_memory<D: DeviceBase>(ptr: *mut Self::Item, _len: usize, _: D) -> *mut Self::Item {
         ptr
     }
 }
@@ -63,11 +63,11 @@ impl<'a, T: Num> Repr for Ref<&'a mut T> {
 impl<T: Num> Repr for Owned<T> {
     type Item = T;
 
-    fn drop_memory<D: Device>(ptr: *mut Self::Item, len: usize, _: D) {
+    fn drop_memory<D: DeviceBase>(ptr: *mut Self::Item, len: usize, _: D) {
         D::drop_ptr(ptr, len);
     }
 
-    fn clone_memory<D: Device>(ptr: *mut Self::Item, len: usize, _: D) -> *mut Self::Item {
+    fn clone_memory<D: DeviceBase>(ptr: *mut Self::Item, len: usize, _: D) -> *mut Self::Item {
         D::clone_ptr(ptr, len)
     }
 }
@@ -77,7 +77,7 @@ impl<T: Num> OwnedRepr for Owned<T> {}
 pub struct Ptr<R, D>
 where
     R: Repr,
-    D: Device,
+    D: DeviceBase,
 {
     ptr: *mut R::Item,
     len: usize,
@@ -89,7 +89,7 @@ where
 impl<R, D> Ptr<R, D>
 where
     R: Repr,
-    D: Device,
+    D: DeviceBase,
 {
     pub fn new(ptr: *mut R::Item, len: usize, offset: usize) -> Self {
         Ptr {
@@ -132,14 +132,14 @@ where
 impl<R, D> Drop for Ptr<R, D>
 where
     R: Repr,
-    D: Device,
+    D: DeviceBase,
 {
     fn drop(&mut self) {
         R::drop_memory(self.ptr, self.len, D::default());
     }
 }
 
-impl<'a, T: Num, D: Device> Ptr<Ref<&'a mut T>, D> {
+impl<'a, T: Num, D: DeviceBase> Ptr<Ref<&'a mut T>, D> {
     pub fn offset_ptr_mut(self, offset: usize) -> Ptr<Ref<&'a mut T>, D> {
         Ptr {
             ptr: self.ptr,
@@ -161,7 +161,7 @@ impl<'a, T: Num, D: Device> Ptr<Ref<&'a mut T>, D> {
 impl<R, D> Clone for Ptr<R, D>
 where
     R: Repr,
-    D: Device,
+    D: DeviceBase,
 {
     fn clone(&self) -> Self {
         Ptr {
@@ -177,7 +177,7 @@ where
 impl<R, D> Ptr<R, D>
 where
     R: OwnedRepr,
-    D: Device,
+    D: DeviceBase,
 {
     fn to_ref_mut(&mut self) -> Ptr<Ref<&mut R::Item>, D> {
         Ptr {
@@ -194,7 +194,7 @@ pub struct Matrix<R, S, D>
 where
     R: Repr,
     S: DimTrait,
-    D: Device,
+    D: DeviceBase,
 {
     ptr: Ptr<R, D>,
     shape: S,
@@ -205,7 +205,7 @@ impl<R, S, D> Clone for Matrix<R, S, D>
 where
     R: Repr,
     S: DimTrait,
-    D: Device,
+    D: DeviceBase,
 {
     fn clone(&self) -> Self {
         Matrix {
@@ -220,7 +220,7 @@ impl<R, S, D> Matrix<R, S, D>
 where
     R: Repr,
     S: DimTrait,
-    D: Device,
+    D: DeviceBase,
 {
     pub fn new(ptr: Ptr<R, D>, shape: S, stride: S) -> Self {
         Matrix { ptr, shape, stride }
@@ -390,7 +390,7 @@ where
 impl<T, S, D> Matrix<Owned<T>, S, D>
 where
     T: Num,
-    D: Device,
+    D: DeviceBase,
     S: DimTrait,
 {
     pub fn from_vec<I: Into<S>>(vec: Vec<T>, shape: I) -> Self {
@@ -427,7 +427,7 @@ where
 impl<'a, T, S, D> Matrix<Ref<&'a mut T>, S, D>
 where
     T: Num,
-    D: Device,
+    D: DeviceBase,
     S: DimTrait,
 {
     pub fn as_mut_ptr(&self) -> *mut T {
@@ -514,7 +514,7 @@ where
 #[cfg(test)]
 mod matrix {
     use crate::{
-        device::Device,
+        device::DeviceBase,
         dim::{Dim1, Dim2, DimDyn, DimTrait},
         index::Index0D,
         slice, slice_dynamic,
@@ -522,7 +522,7 @@ mod matrix {
 
     use super::{Matrix, Owned};
 
-    fn index_item_1d<D: Device>() {
+    fn index_item_1d<D: DeviceBase>() {
         let m: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(vec![1.0, 2.0, 3.0], [3]);
         assert_eq!(m.index_item([0]), 1.0);
         assert_eq!(m.index_item([1]), 2.0);
@@ -538,7 +538,7 @@ mod matrix {
         index_item_1d::<crate::device::nvidia::Nvidia>();
     }
 
-    fn index_item_2d<D: Device>() {
+    fn index_item_2d<D: DeviceBase>() {
         let m: Matrix<Owned<f32>, Dim2, D> = Matrix::from_vec(vec![1.0, 2.0, 3.0, 4.0], [2, 2]);
         assert_eq!(m.index_item([0, 0]), 1.0);
         assert_eq!(m.index_item([0, 1]), 2.0);
@@ -561,7 +561,7 @@ mod matrix {
         index_item_2d::<crate::device::nvidia::Nvidia>();
     }
 
-    fn slice_1d<D: Device>() {
+    fn slice_1d<D: DeviceBase>() {
         let v = (1..10).map(|x| x as f32).collect::<Vec<f32>>();
         let m: Matrix<Owned<f32>, Dim1, D> = Matrix::from_vec(v.clone(), [9]);
         let s = m.slice(slice!(1..4));
@@ -581,7 +581,7 @@ mod matrix {
         slice_1d::<crate::device::nvidia::Nvidia>();
     }
 
-    fn slice_2d<D: Device>() {
+    fn slice_2d<D: DeviceBase>() {
         let v = (1..13).map(|x| x as f32).collect::<Vec<f32>>();
         let m: Matrix<Owned<f32>, Dim2, D> = Matrix::from_vec(v.clone(), [3, 4]);
         let s = m.slice(slice!(1..3, 1..4));
@@ -605,7 +605,7 @@ mod matrix {
         slice_2d::<crate::device::nvidia::Nvidia>();
     }
 
-    fn slice_dyn_4d<D: Device>() {
+    fn slice_dyn_4d<D: DeviceBase>() {
         let v = (1..65).map(|x| x as f32).collect::<Vec<f32>>();
         let m: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(v.clone(), [2, 2, 4, 4]);
         let s = m.slice_dyn(slice_dynamic!(.., .., 2, ..));
@@ -637,7 +637,7 @@ mod matrix {
         slice_dyn_4d::<crate::device::nvidia::Nvidia>();
     }
 
-    fn index_axis_dyn_2d<D: Device>() {
+    fn index_axis_dyn_2d<D: DeviceBase>() {
         let v = (1..13).map(|x| x as f32).collect::<Vec<f32>>();
         let m: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(v.clone(), [3, 4]);
         let s = m.index_axis_dyn(Index0D::new(0));
