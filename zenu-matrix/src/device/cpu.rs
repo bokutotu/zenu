@@ -1,3 +1,5 @@
+use crate::matrix_blas::copy::CopyBlas;
+
 use super::DeviceBase;
 
 #[derive(Copy, Clone, Default)]
