@@ -13,6 +13,7 @@ pub trait Repr: Default {
     type Item: Num;
 
     fn drop_memory<D: Device>(ptr: *mut Self::Item, len: usize, _: D);
+    fn clone_memory<D: Device>(ptr: *mut Self::Item, len: usize, _: D) -> *mut Self::Item;
 }
 
 pub trait OwnedRepr: Repr {}
@@ -45,12 +46,18 @@ impl<'a, T: Num> Repr for Ref<&'a T> {
     type Item = T;
 
     fn drop_memory<D: Device>(_ptr: *mut Self::Item, _len: usize, _: D) {}
+    fn clone_memory<D: Device>(ptr: *mut Self::Item, _len: usize, _: D) -> *mut Self::Item {
+        ptr
+    }
 }
 
 impl<'a, T: Num> Repr for Ref<&'a mut T> {
     type Item = T;
 
     fn drop_memory<D: Device>(_ptr: *mut Self::Item, _len: usize, _: D) {}
+    fn clone_memory<D: Device>(ptr: *mut Self::Item, _len: usize, _: D) -> *mut Self::Item {
+        ptr
+    }
 }
 
 impl<T: Num> Repr for Owned<T> {
@@ -58,6 +65,10 @@ impl<T: Num> Repr for Owned<T> {
 
     fn drop_memory<D: Device>(ptr: *mut Self::Item, len: usize, _: D) {
         D::drop_ptr(ptr, len);
+    }
+
+    fn clone_memory<D: Device>(ptr: *mut Self::Item, len: usize, _: D) -> *mut Self::Item {
+        D::clone_ptr(ptr, len)
     }
 }
 
@@ -128,8 +139,8 @@ where
     }
 }
 
-impl<T: Num, D: Device> Ptr<Ref<&mut T>, D> {
-    pub fn offset_ptr_mut(&self, offset: usize) -> Ptr<Ref<&mut T>, D> {
+impl<'a, T: Num, D: Device> Ptr<Ref<&'a mut T>, D> {
+    pub fn offset_ptr_mut(self, offset: usize) -> Ptr<Ref<&'a mut T>, D> {
         Ptr {
             ptr: self.ptr,
             len: self.len,
@@ -147,35 +158,14 @@ impl<T: Num, D: Device> Ptr<Ref<&mut T>, D> {
     }
 }
 
-impl<R: OwnedRepr, D: Device> Clone for Ptr<R, D> {
-    fn clone(&self) -> Self {
-        let ptr = D::clone_ptr(self.ptr, self.len);
-        Ptr {
-            ptr,
-            len: self.len,
-            offset: self.offset,
-            repr: PhantomData,
-            device: PhantomData,
-        }
-    }
-}
-
-impl<T: Num, D: Device> Clone for Ptr<Ref<&T>, D> {
+impl<R, D> Clone for Ptr<R, D>
+where
+    R: Repr,
+    D: Device,
+{
     fn clone(&self) -> Self {
         Ptr {
-            ptr: self.ptr,
-            len: self.len,
-            offset: self.offset,
-            repr: PhantomData,
-            device: PhantomData,
-        }
-    }
-}
-
-impl<T: Num, D: Device> Clone for Ptr<Ref<&mut T>, D> {
-    fn clone(&self) -> Self {
-        Ptr {
-            ptr: self.ptr,
+            ptr: R::clone_memory(self.ptr, self.len, D::default()),
             len: self.len,
             offset: self.offset,
             repr: PhantomData,
@@ -209,6 +199,21 @@ where
     ptr: Ptr<R, D>,
     shape: S,
     stride: S,
+}
+
+impl<R, S, D> Clone for Matrix<R, S, D>
+where
+    R: Repr,
+    S: DimTrait,
+    D: Device,
+{
+    fn clone(&self) -> Self {
+        Matrix {
+            ptr: self.ptr.clone(),
+            shape: self.shape,
+            stride: self.stride,
+        }
+    }
 }
 
 impl<R, S, D> Matrix<R, S, D>
@@ -372,6 +377,14 @@ where
             stride: self.stride,
         }
     }
+
+    pub fn convert_dim_type<Dout: DimTrait>(self) -> Matrix<R, Dout, D> {
+        Matrix {
+            ptr: self.ptr,
+            shape: Dout::from(self.shape.slice()),
+            stride: Dout::from(self.stride.slice()),
+        }
+    }
 }
 
 impl<T, S, D> Matrix<Owned<T>, S, D>
@@ -411,7 +424,7 @@ where
     }
 }
 
-impl<T, S, D> Matrix<Ref<&mut T>, S, D>
+impl<'a, T, S, D> Matrix<Ref<&'a mut T>, S, D>
 where
     T: Num,
     D: Device,
@@ -430,7 +443,7 @@ where
         }
     }
 
-    pub fn slice_mut<I>(&self, index: I) -> Matrix<Ref<&mut T>, S, D>
+    pub fn slice_mut<I>(&self, index: I) -> Matrix<Ref<&'a mut T>, S, D>
     where
         I: SliceTrait<Dim = S>,
     {
@@ -439,25 +452,25 @@ where
         let new_shape_stride = index.sliced_shape_stride(shape, stride);
         let offset = index.sliced_offset(stride);
         Matrix {
-            ptr: self.ptr.offset_ptr_mut(offset),
+            ptr: self.ptr.clone().offset_ptr_mut(offset),
             shape: new_shape_stride.shape(),
             stride: new_shape_stride.stride(),
         }
     }
 
-    pub fn slice_mut_dyn(&self, index: Slice) -> Matrix<Ref<&mut T>, DimDyn, D> {
+    pub fn slice_mut_dyn(&self, index: Slice) -> Matrix<Ref<&'a mut T>, DimDyn, D> {
         let shape_stride = self.shape_stride().into_dyn();
         let new_shape_stride =
             index.sliced_shape_stride(shape_stride.shape(), shape_stride.stride());
         let offset = index.sliced_offset(shape_stride.stride());
         Matrix {
-            ptr: self.ptr.offset_ptr_mut(offset),
+            ptr: self.ptr.clone().offset_ptr_mut(offset),
             shape: new_shape_stride.shape(),
             stride: new_shape_stride.stride(),
         }
     }
 
-    pub fn index_axis_mut<I>(&self, index: I) -> Matrix<Ref<&mut T>, S, D>
+    pub fn index_axis_mut<I>(&self, index: I) -> Matrix<Ref<&'a mut T>, S, D>
     where
         I: IndexAxisTrait,
         S: LessDimTrait,
@@ -468,13 +481,13 @@ where
         let new_shape_stride = index.get_shape_stride(shape, stride);
         let offset = index.offset(stride);
         Matrix {
-            ptr: self.ptr.offset_ptr_mut(offset),
+            ptr: self.ptr.clone().offset_ptr_mut(offset),
             shape: new_shape_stride.shape(),
             stride: new_shape_stride.stride(),
         }
     }
 
-    pub fn index_axis_mut_dyn<I>(&self, index: I) -> Matrix<Ref<&mut T>, DimDyn, D>
+    pub fn index_axis_mut_dyn<I>(&self, index: I) -> Matrix<Ref<&'a mut T>, DimDyn, D>
     where
         I: IndexAxisTrait,
     {
@@ -482,7 +495,7 @@ where
         let new_shape_stride = index.get_shape_stride(shape_stride.shape(), shape_stride.stride());
         let offset = index.offset(shape_stride.stride());
         Matrix {
-            ptr: self.ptr.offset_ptr_mut(offset),
+            ptr: self.ptr.clone().offset_ptr_mut(offset),
             shape: new_shape_stride.shape(),
             stride: new_shape_stride.stride(),
         }
