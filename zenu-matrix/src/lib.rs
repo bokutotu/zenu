@@ -7,9 +7,9 @@ pub mod index;
 pub mod matrix;
 pub mod matrix_blas;
 // pub mod matrix_iter;
-pub mod num;
-// pub mod operation;
 pub mod device;
+pub mod num;
+pub mod operation;
 pub mod shape_stride;
 pub mod slice;
 
