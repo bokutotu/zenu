@@ -1,6 +1,6 @@
 use std::any::TypeId;
 
-use crate::device::{cpu::Cpu, nvidia::Nvidia, Device};
+use crate::device::{cpu::Cpu, nvidia::Nvidia, DeviceBase};
 use crate::dim::DimTrait;
 use crate::matrix::{Matrix, Owned, Ptr};
 use crate::num::Num;
@@ -8,13 +8,13 @@ use crate::num::Num;
 impl<T, S, D> Matrix<Owned<T>, S, D>
 where
     T: Num,
-    D: Device,
+    D: DeviceBase,
     S: DimTrait,
 {
     pub fn move_device<D2>(&self) -> Matrix<Owned<T>, S, D2>
     where
         D: 'static,
-        D2: Device + 'static,
+        D2: DeviceBase + 'static,
     {
         let self_raw_ptr = self.as_ptr() as *mut T;
         let len = self.shape().num_elm();

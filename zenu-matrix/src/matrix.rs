@@ -102,13 +102,7 @@ where
     }
 
     pub fn offset_ptr(&self, offset: usize) -> Ptr<Ref<&R::Item>, D> {
-        Ptr {
-            ptr: self.ptr,
-            len: self.len,
-            offset: self.offset + offset,
-            repr: PhantomData,
-            device: PhantomData,
-        }
+        Ptr::new(self.ptr, self.len, self.offset + offset)
     }
 
     pub fn get_item(&self, offset: usize) -> R::Item {
@@ -119,13 +113,7 @@ where
     }
 
     fn to_ref(&self) -> Ptr<Ref<&R::Item>, D> {
-        Ptr {
-            ptr: self.ptr,
-            len: self.len,
-            offset: self.offset,
-            repr: PhantomData,
-            device: PhantomData,
-        }
+        Ptr::new(self.ptr, self.len, self.offset)
     }
 }
 
@@ -141,13 +129,7 @@ where
 
 impl<'a, T: Num, D: DeviceBase> Ptr<Ref<&'a mut T>, D> {
     pub fn offset_ptr_mut(self, offset: usize) -> Ptr<Ref<&'a mut T>, D> {
-        Ptr {
-            ptr: self.ptr,
-            len: self.len,
-            offset: self.offset + offset,
-            repr: PhantomData,
-            device: PhantomData,
-        }
+        Ptr::new(self.ptr, self.len, self.offset + offset)
     }
 
     pub fn assign_item(&self, offset: usize, value: T) {
@@ -164,13 +146,8 @@ where
     D: DeviceBase,
 {
     fn clone(&self) -> Self {
-        Ptr {
-            ptr: R::clone_memory(self.ptr, self.len, D::default()),
-            len: self.len,
-            offset: self.offset,
-            repr: PhantomData,
-            device: PhantomData,
-        }
+        let ptr = R::clone_memory(self.ptr, self.len, D::default());
+        Ptr::new(ptr, self.len, self.offset)
     }
 }
 
@@ -180,13 +157,7 @@ where
     D: DeviceBase,
 {
     fn to_ref_mut(&mut self) -> Ptr<Ref<&mut R::Item>, D> {
-        Ptr {
-            ptr: self.ptr,
-            len: self.len,
-            offset: self.offset,
-            repr: PhantomData,
-            device: PhantomData,
-        }
+        Ptr::new(self.ptr, self.len, self.offset)
     }
 }
 
@@ -354,8 +325,9 @@ where
         let shape_stride = self.shape_stride().into_dyn();
         let new_shape_stride = index.get_shape_stride(shape_stride.shape(), shape_stride.stride());
         let offset = index.offset(shape_stride.stride());
+        let ptr = Ptr::new(self.ptr.ptr, self.shape.num_elm(), offset);
         Matrix {
-            ptr: self.ptr.offset_ptr(offset),
+            ptr,
             shape: new_shape_stride.shape(),
             stride: new_shape_stride.stride(),
         }

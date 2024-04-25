@@ -1,10 +1,10 @@
-use super::Device;
+use super::DeviceBase;
 use crate::num::Num;
 
 #[derive(Copy, Clone, Default)]
 pub struct Nvidia;
 
-impl Device for Nvidia {
+impl DeviceBase for Nvidia {
     fn drop_ptr<T>(ptr: *mut T, _: usize) {
         zenu_cuda::runtime::cuda_free(ptr as *mut std::ffi::c_void).unwrap();
     }
