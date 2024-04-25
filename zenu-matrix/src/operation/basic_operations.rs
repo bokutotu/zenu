@@ -2,6 +2,7 @@ use crate::{
     device::{cpu::Cpu, DeviceBase},
     dim::{larger_shape, smaller_shape, DimDyn, DimTrait},
     index::Index0D,
+    matrix::{Matrix, Ref, Repr},
     num::Num,
 };
 
@@ -100,7 +101,7 @@ impl Add for Nvidia {
         to_stride: usize,
         source_stride: usize,
     ) {
-        todo!()
+        zenu_cuda::kernel::array_array_add_assign(to, to_stride, source, source_stride, len);
     }
 
     fn add<T: Num>(
@@ -112,11 +113,11 @@ impl Add for Nvidia {
         lhs_stride: usize,
         rhs_stride: usize,
     ) {
-        todo!()
+        zenu_cuda::kernel::array_add(lhs, lhs_stride, rhs, rhs_stride, to, to_stride, len);
     }
 
     fn add_assign_scalar<T: Num>(to: *mut T, scalar: T, len: usize, to_stride: usize) {
-        todo!()
+        zenu_cuda::kernel::array_scalar_add_assign(to, len, to_stride, scalar);
     }
 
     fn add_scalar<T: Num>(
@@ -127,32 +128,43 @@ impl Add for Nvidia {
         to_stride: usize,
         source_stride: usize,
     ) {
-        todo!()
+        zenu_cuda::kernel::array_scalar_add(
+            source as *mut T,
+            len,
+            source_stride,
+            scalar,
+            to,
+            to_stride,
+        );
     }
 }
-// fn get_tmp_matrix<M: ToViewMemory, D: DimTrait, A; MemAcc>(
-//     a: &Matrix<M, D>,
-//     len: usize,
-//     idx: usize,
-//     self_len: usize,
-// ) -> Matrix<ViewMem<M::Item>, DimDyn> {
-//     if self_len == len {
-//         if a.shape()[0] == 1 {
-//             a.index_axis_dyn(Index0D::new(0))
-//         } else {
-//             a.index_axis_dyn(Index0D::new(idx))
-//         }
-//     } else {
-//         a.to_view().into_dyn_dim()
-//     }
-// }
-//
-// /// 1dのMatrixを受け取る(これは入力側でチェック)
-// /// その配列の中身が1かどうかを確認
-// /// 1ならtrueを返す
-// fn is_1d_1(a: &[usize]) -> bool {
-//     a[0] == 1
-// }
+
+// fn get_tmp_matrix<'a, T: Num, R: Repr<Item = T>, S: DimTrait, D: Add>(
+// a: &'a Matrix<R, S, D>,
+fn get_tmp_matrix<T: Num, S: DimTrait, D: Add>(
+    a: &Matrix<Ref<&T>, S, D>,
+    len: usize,
+    idx: usize,
+    self_len: usize,
+) -> Matrix<Ref<&T>, S, D> {
+    // if self_len == len {
+    //     if a.shape()[0] == 1 {
+    //         a.index_axis_dyn(Index0D::new(0))
+    //     } else {
+    //         a.index_axis_dyn(Index0D::new(idx))
+    //     }
+    // } else {
+    //     a.clone().into_dyn_dim()
+    // }
+    a.clone()
+}
+
+/// 1dのMatrixを受け取る(これは入力側でチェック)
+/// その配列の中身が1かどうかを確認
+/// 1ならtrueを返す
+fn is_1d_1(a: &[usize]) -> bool {
+    a[0] == 1
+}
 // macro_rules! impl_basic_1d_functions_no_input {
 //     (
 //         $mod_name:ident,
@@ -183,6 +195,196 @@ impl Add for Nvidia {
 //         }
 //     };
 // }
+
+fn shape_check<SA: DimTrait, SB: DimTrait, SC: DimTrait>(a: SA, b: SB, c: SC) {
+    if a.slice() != b.slice() {
+        panic!("Matrix shape mismatch");
+    }
+    if a.slice() != c.slice() {
+        panic!("Matrix shape mismatch");
+    }
+}
+
+impl<T, S, D> Matrix<Ref<&mut T>, S, D>
+where
+    T: Num,
+    S: DimTrait,
+    D: Add,
+{
+    pub fn add<SL, SR, RL, RR>(&self, lhs: &Matrix<RL, SL, D>, rhs: &Matrix<RR, SR, D>)
+    where
+        SL: DimTrait,
+        SR: DimTrait,
+        RL: Repr<Item = T>,
+        RR: Repr<Item = T>,
+    {
+        let larger_dim = larger_shape(lhs.shape(), rhs.shape());
+        let smaller_dim = smaller_shape(lhs.shape(), rhs.shape());
+
+        if !(larger_dim.is_include(smaller_dim)
+            || DimDyn::from(self.shape().slice()).is_include_bradcast(smaller_dim))
+        {
+            panic!(
+                "self dim is not match other dims self dim {:?}, lhs dim {:?} rhs dim {:?}",
+                self.shape(),
+                lhs.shape(),
+                rhs.shape()
+            );
+        }
+
+        if self.shape().slice() != larger_dim.slice() && self.shape().slice() != smaller_dim.slice()
+        {
+            panic!(
+                "longer shape lhs or rhs is same shape to self\n self.shape = {:?}\n lhs.shape() = {:?} \n rhs.shape() = {:?}",
+                self.shape(),
+                lhs.shape(),
+                rhs.shape()
+            );
+        }
+
+        if rhs.shape().is_empty() {
+            self.add_scalar(lhs, rhs.as_slice()[0]);
+            return;
+        }
+
+        if lhs.shape().is_empty() {
+            self.add_scalar(rhs, lhs.as_slice()[0]);
+            return;
+        }
+
+        if self.shape().is_empty() {
+            let self_slice = self.as_mut_slice();
+            let lhs_slice = lhs.as_slice();
+            let rhs_slice = rhs.as_slice();
+            self_slice[0] = lhs_slice[0].add(rhs_slice[0]);
+        } else if self.shape().len() == 1 {
+            if is_1d_1(lhs.shape().slice()) {
+                D::add_scalar(
+                    self.as_mut_ptr(),
+                    rhs.as_ptr(),
+                    lhs.as_slice()[0],
+                    self.shape().num_elm(),
+                    self.stride()[0],
+                    rhs.stride()[0],
+                );
+                return;
+            } else if is_1d_1(rhs.shape().slice()) {
+                D::add_scalar(
+                    self.as_mut_ptr(),
+                    lhs.as_ptr(),
+                    rhs.as_slice()[0],
+                    self.shape().num_elm(),
+                    self.stride()[0],
+                    lhs.stride()[0],
+                );
+                return;
+            }
+
+            D::add(
+                self.as_mut_ptr(),
+                lhs.as_ptr(),
+                rhs.as_ptr(),
+                self.shape().num_elm(),
+                self.stride()[0],
+                lhs.stride()[0],
+                rhs.stride()[0],
+            );
+        } else {
+            let num_iter = self.shape()[0];
+            let self_dim_len = self.shape().len();
+            let rhs_dim_len = rhs.shape().len();
+            let lhs_dim_len = lhs.shape().len();
+            let rhs_ref = rhs.to_ref();
+            let lhs_ref = lhs.to_ref();
+            for idx in 0..num_iter {
+                let s = self.index_axis_mut_dyn(Index0D::new(idx));
+                let lhs = get_tmp_matrix(&lhs_ref, lhs_dim_len, idx, self_dim_len);
+                let rhs = get_tmp_matrix(&rhs_ref, rhs_dim_len, idx, self_dim_len);
+                s.add(&lhs, &rhs);
+            }
+        }
+    }
+
+    pub fn add_assign<SO, RO>(&self, other: &Matrix<RO, SO, D>)
+    where
+        SO: DimTrait,
+        RO: Repr<Item = T>,
+    {
+        shape_check(self.shape(), other.shape(), self.shape());
+        if self.shape().is_empty() {
+            let self_slice = self.as_mut_slice();
+            let other_slice = other.as_slice();
+            self_slice[0] = self_slice[0].add(other_slice[0]);
+        } else if self.shape().len() == 1 {
+            D::add_assign(
+                self.as_mut_ptr(),
+                other.as_ptr(),
+                self.shape().num_elm(),
+                self.stride()[0],
+                other.stride()[0],
+            );
+        } else {
+            let num_iter = self.shape()[0];
+            for idx in 0..num_iter {
+                let s = self.index_axis_mut_dyn(Index0D::new(idx));
+                let other = other.index_axis_dyn(Index0D::new(idx));
+                s.add_assign(&other);
+            }
+        }
+    }
+
+    pub fn add_scalar<SL, RL>(&self, lhs: &Matrix<RL, SL, D>, rhs: T)
+    where
+        SL: DimTrait,
+        RL: Repr<Item = T>,
+    {
+        if self.shape().slice() != lhs.shape().slice() {
+            panic!("Matrix shape mismatch");
+        }
+
+        if self.shape().is_empty() {
+            let self_slice = self.as_mut_slice();
+            let lhs_slice = lhs.as_slice();
+            self_slice[0] = lhs_slice[0].add(rhs);
+        } else if self.shape().len() == 1 {
+            D::add_scalar(
+                self.as_mut_ptr(),
+                lhs.as_ptr(),
+                rhs,
+                self.shape().num_elm(),
+                self.stride()[0],
+                lhs.stride()[0],
+            )
+        } else {
+            let num_iter = self.shape()[0];
+            for idx in 0..num_iter {
+                let s = self.index_axis_mut_dyn(Index0D::new(idx));
+                let lhs = lhs.index_axis_dyn(Index0D::new(idx));
+                s.add_scalar(&lhs, rhs);
+            }
+        }
+    }
+
+    pub fn add_assign_scalar(&self, scalar: T) {
+        if self.shape().is_empty() {
+            let self_slice = self.as_mut_slice();
+            self_slice[0] = self_slice[0].add(scalar);
+        } else if self.shape().len() == 1 {
+            D::add_assign_scalar(
+                self.as_mut_ptr(),
+                scalar,
+                self.shape().num_elm(),
+                self.stride()[0],
+            );
+        } else {
+            let num_iter = self.shape()[0];
+            for idx in 0..num_iter {
+                let s = self.index_axis_mut_dyn(Index0D::new(idx));
+                s.add_assign_scalar(scalar);
+            }
+        }
+    }
+}
 // macro_rules! impl_traits_no_input {
 //     (
 //         $trait:ident,
@@ -624,321 +826,320 @@ impl Add for Nvidia {
 // impl_basic_1d_functions!(log_mod, log,);
 // impl_traits!(MatrixLog, log, MatrixLogAssign, log_assign, log_mod, log,);
 //
-// #[cfg(test)]
-// mod add {
-//     use crate::{
-//         constructor::zeros::Zeros,
-//         matrix::{IndexItem, MatrixSlice, OwnedMatrix, ToViewMatrix, ToViewMutMatrix},
-//         matrix_impl::{OwnedMatrix0D, OwnedMatrix1D, OwnedMatrix2D, OwnedMatrix3D, OwnedMatrixDyn},
-//         operation::asum::Asum,
-//         slice,
-//     };
-//
-//     use super::*;
-//
-//     #[test]
-//     fn add_0d_0d() {
-//         let a = OwnedMatrix0D::from_vec(vec![1.0], []);
-//         let b = OwnedMatrix0D::from_vec(vec![1.0], []);
-//         let mut ans = OwnedMatrix0D::<f32>::zeros([]);
-//         ans.add(a.to_view(), b.to_view());
-//         assert_eq!(ans.index_item([]), 2.0);
-//     }
-//
-//     #[test]
-//     fn add_dyn_dyn() {
-//         let a = OwnedMatrix1D::from_vec(vec![1.0, 2.0, 3.0], [3]);
-//         let b = OwnedMatrix1D::from_vec(vec![1.0, 2.0, 3.0], [3]);
-//         let ans = OwnedMatrix1D::<f32>::zeros([3]);
-//
-//         let a = a.into_dyn_dim();
-//         let b = b.into_dyn_dim();
-//         let mut ans = ans.into_dyn_dim();
-//
-//         ans.to_view_mut().add(a.to_view(), b.to_view());
-//     }
-//
-//     #[test]
-//     fn add_1d_scalar() {
-//         let a = OwnedMatrix1D::from_vec(vec![1.0, 2.0, 3.0], [3]);
-//         let mut ans = OwnedMatrix1D::<f32>::zeros([3]);
-//         let b = OwnedMatrix0D::from_vec(vec![2.0], []);
-//         ans.to_view_mut().add(a.to_view(), b.to_view());
-//
-//         assert_eq!(ans.index_item([0]), 3.0);
-//         assert_eq!(ans.index_item([1]), 4.0);
-//         assert_eq!(ans.index_item([2]), 5.0);
-//     }
-//
-//     #[test]
-//     fn add_1d_scalar_default_stride() {
-//         let a = OwnedMatrix1D::from_vec(vec![1.0, 2.0, 3.0], [3]);
-//         let mut ans = OwnedMatrix1D::<f32>::zeros([3]);
-//         ans.to_view_mut().add(a.to_view(), 1.0);
-//
-//         assert_eq!(ans.index_item([0]), 2.0);
-//         assert_eq!(ans.index_item([1]), 3.0);
-//         assert_eq!(ans.index_item([2]), 4.0);
-//     }
-//
-//     #[test]
-//     fn add_1d_scalar_sliced() {
-//         let a = OwnedMatrix1D::from_vec(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], [6]);
-//         let mut ans = OwnedMatrix1D::<f32>::zeros([3]);
-//
-//         let sliced = a.slice(slice!(..;2));
-//
-//         ans.to_view_mut().add(sliced.to_view(), 1.0);
-//
-//         assert_eq!(ans.index_item([0]), 2.0);
-//         assert_eq!(ans.index_item([1]), 4.0);
-//         assert_eq!(ans.index_item([2]), 6.0);
-//     }
-//
-//     #[test]
-//     fn add_3d_scalar_sliced() {
-//         let a = OwnedMatrix3D::from_vec(
-//             vec![
-//                 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0,
-//                 16.0, 17.0, 18.0, 19.0, 20.0, 21.0, 22.0, 23.0, 24.0, 25.0, 26.0, 27.0, 28.0, 29.0,
-//                 30.0, 31.0, 32.0, 33.0, 34.0, 35.0, 36.0,
-//             ],
-//             [3, 3, 4],
-//         );
-//
-//         let mut ans = OwnedMatrix3D::<f32>::zeros([3, 3, 2]);
-//
-//         let sliced = a.slice(slice!(.., .., ..;2));
-//
-//         ans.to_view_mut().add(sliced.to_view(), 1.0);
-//
-//         assert_eq!(ans.index_item([0, 0, 0]), 2.0);
-//         assert_eq!(ans.index_item([0, 0, 1]), 4.0);
-//         assert_eq!(ans.index_item([0, 1, 0]), 6.0);
-//         assert_eq!(ans.index_item([0, 1, 1]), 8.0);
-//         assert_eq!(ans.index_item([0, 2, 0]), 10.0);
-//         assert_eq!(ans.index_item([0, 2, 1]), 12.0);
-//         assert_eq!(ans.index_item([1, 0, 0]), 14.0);
-//         assert_eq!(ans.index_item([1, 0, 1]), 16.0);
-//         assert_eq!(ans.index_item([1, 1, 0]), 18.0);
-//         assert_eq!(ans.index_item([1, 1, 1]), 20.0);
-//         assert_eq!(ans.index_item([1, 2, 0]), 22.0);
-//         assert_eq!(ans.index_item([1, 2, 1]), 24.0);
-//         assert_eq!(ans.index_item([2, 0, 0]), 26.0);
-//         assert_eq!(ans.index_item([2, 0, 1]), 28.0);
-//         assert_eq!(ans.index_item([2, 1, 0]), 30.0);
-//         assert_eq!(ans.index_item([2, 1, 1]), 32.0);
-//         assert_eq!(ans.index_item([2, 2, 0]), 34.0);
-//         assert_eq!(ans.index_item([2, 2, 1]), 36.0);
-//     }
-//
-//     #[test]
-//     fn add_1d_1d_default_stride() {
-//         let a = OwnedMatrix1D::from_vec(vec![1.0, 2.0, 3.0], [3]);
-//         let b = OwnedMatrix1D::from_vec(vec![1.0, 2.0, 3.0], [3]);
-//         let mut ans = OwnedMatrix1D::<f32>::zeros([3]);
-//         ans.to_view_mut().add(a.to_view(), b.to_view());
-//
-//         assert_eq!(ans.index_item([0]), 2.0);
-//         assert_eq!(ans.index_item([1]), 4.0);
-//         assert_eq!(ans.index_item([2]), 6.0);
-//     }
-//
-//     #[test]
-//     fn add_1d_1d_sliced() {
-//         let a = OwnedMatrix1D::from_vec(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], [6]);
-//         let b = OwnedMatrix1D::from_vec(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], [6]);
-//
-//         let mut ans = OwnedMatrix1D::<f32>::zeros([3]);
-//
-//         let sliced_a = a.slice(slice!(..;2));
-//         let sliced_b = b.slice(slice!(1..;2));
-//
-//         ans.to_view_mut()
-//             .add(sliced_a.to_view(), sliced_b.to_view());
-//
-//         assert_eq!(ans.index_item([0]), 3.0);
-//         assert_eq!(ans.index_item([1]), 7.0);
-//         assert_eq!(ans.index_item([2]), 11.0);
-//     }
-//
-//     #[test]
-//     fn add_2d_1d_default() {
-//         let a = OwnedMatrix2D::from_vec(
-//             vec![
-//                 1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12., 13., 14., 15., 16.,
-//             ],
-//             [4, 4],
-//         );
-//
-//         let b = OwnedMatrix1D::from_vec(vec![1., 2., 3., 4., 5., 6., 7., 8.], [8]);
-//
-//         let mut ans = OwnedMatrix2D::<f32>::zeros([2, 2]);
-//
-//         let sliced_a = a.slice(slice!(..2, ..2));
-//         let sliced_b = b.slice(slice!(..2));
-//
-//         ans.to_view_mut()
-//             .add(sliced_a.to_view(), sliced_b.to_view());
-//
-//         assert_eq!(ans.index_item([0, 0]), 2.0);
-//         assert_eq!(ans.index_item([0, 1]), 4.0);
-//         assert_eq!(ans.index_item([1, 0]), 6.0);
-//         assert_eq!(ans.index_item([1, 1]), 8.0);
-//     }
-//
-//     #[test]
-//     fn add_3d_1d_sliced() {
-//         let mut v = Vec::new();
-//         let num_elm = 4 * 4 * 4;
-//         for i in 0..num_elm {
-//             v.push(i as f32);
-//         }
-//         let a = OwnedMatrix3D::from_vec(v, [4, 4, 4]);
-//
-//         let b = OwnedMatrix1D::from_vec(vec![1., 2., 3., 4.], [4]);
-//
-//         let mut ans = OwnedMatrix3D::<f32>::zeros([2, 2, 2]);
-//
-//         let sliced_a = a.slice(slice!(..2, 1..;2, ..2));
-//         let sliced_b = b.slice(slice!(..2));
-//
-//         ans.to_view_mut()
-//             .add(sliced_a.to_view(), sliced_b.to_view());
-//
-//         assert_eq!(ans.index_item([0, 0, 0]), 5.);
-//         assert_eq!(ans.index_item([0, 0, 1]), 7.);
-//         assert_eq!(ans.index_item([0, 1, 0]), 13.);
-//         assert_eq!(ans.index_item([0, 1, 1]), 15.);
-//         assert_eq!(ans.index_item([1, 0, 0]), 21.);
-//         assert_eq!(ans.index_item([1, 0, 1]), 23.);
-//         assert_eq!(ans.index_item([1, 1, 0]), 29.);
-//         assert_eq!(ans.index_item([1, 1, 1]), 31.);
-//     }
-//
-//     #[test]
-//     fn add_2d_2d_default() {
-//         let a = OwnedMatrix2D::from_vec(
-//             vec![
-//                 1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12., 13., 14., 15., 16.,
-//             ],
-//             [4, 4],
-//         );
-//
-//         let b = OwnedMatrix2D::from_vec(
-//             vec![
-//                 1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12., 13., 14., 15., 16.,
-//             ],
-//             [4, 4],
-//         );
-//
-//         let mut ans = OwnedMatrix2D::<f32>::zeros([4, 4]);
-//         ans.to_view_mut().add(a.to_view(), b.to_view());
-//
-//         assert_eq!(ans.index_item([0, 0]), 2.0);
-//         assert_eq!(ans.index_item([0, 1]), 4.0);
-//         assert_eq!(ans.index_item([0, 2]), 6.0);
-//         assert_eq!(ans.index_item([0, 3]), 8.0);
-//         assert_eq!(ans.index_item([1, 0]), 10.0);
-//         assert_eq!(ans.index_item([1, 1]), 12.0);
-//         assert_eq!(ans.index_item([1, 2]), 14.0);
-//         assert_eq!(ans.index_item([1, 3]), 16.0);
-//         assert_eq!(ans.index_item([2, 0]), 18.0);
-//         assert_eq!(ans.index_item([2, 1]), 20.0);
-//         assert_eq!(ans.index_item([2, 2]), 22.0);
-//         assert_eq!(ans.index_item([2, 3]), 24.0);
-//         assert_eq!(ans.index_item([3, 0]), 26.0);
-//         assert_eq!(ans.index_item([3, 1]), 28.0);
-//         assert_eq!(ans.index_item([3, 2]), 30.0);
-//         assert_eq!(ans.index_item([3, 3]), 32.0);
-//     }
-//
-//     #[test]
-//     fn add_2d_0d() {
-//         let a = OwnedMatrix2D::from_vec(
-//             vec![
-//                 1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12., 13., 14., 15., 16.,
-//             ],
-//             [4, 4],
-//         );
-//         let b = OwnedMatrix0D::from_vec(vec![1.], []);
-//         let mut ans = OwnedMatrix2D::<f32>::zeros([4, 4]);
-//         ans.to_view_mut().add(a.to_view(), b.to_view());
-//         assert_eq!(ans.index_item([0, 0]), 2.0);
-//         assert_eq!(ans.index_item([0, 1]), 3.0);
-//         assert_eq!(ans.index_item([0, 2]), 4.0);
-//         assert_eq!(ans.index_item([0, 3]), 5.0);
-//         assert_eq!(ans.index_item([1, 0]), 6.0);
-//         assert_eq!(ans.index_item([1, 1]), 7.0);
-//         assert_eq!(ans.index_item([1, 2]), 8.0);
-//         assert_eq!(ans.index_item([1, 3]), 9.0);
-//         assert_eq!(ans.index_item([2, 0]), 10.0);
-//         assert_eq!(ans.index_item([2, 1]), 11.0);
-//         assert_eq!(ans.index_item([2, 2]), 12.0);
-//         assert_eq!(ans.index_item([2, 3]), 13.0);
-//         assert_eq!(ans.index_item([3, 0]), 14.0);
-//         assert_eq!(ans.index_item([3, 1]), 15.0);
-//         assert_eq!(ans.index_item([3, 2]), 16.0);
-//         assert_eq!(ans.index_item([3, 3]), 17.0);
-//     }
-//
-//     #[test]
-//     fn add_2d_0d_dyn() {
-//         let a = OwnedMatrixDyn::from_vec(
-//             vec![
-//                 1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12., 13., 14., 15., 16.,
-//             ],
-//             [4, 4],
-//         );
-//         let b = OwnedMatrixDyn::from_vec(vec![1.], []);
-//         let mut ans = OwnedMatrixDyn::<f32>::zeros([4, 4]);
-//         ans.to_view_mut().add(a.to_view(), b.to_view());
-//         assert_eq!(ans.index_item([0, 0]), 2.0);
-//         assert_eq!(ans.index_item([0, 1]), 3.0);
-//         assert_eq!(ans.index_item([0, 2]), 4.0);
-//         assert_eq!(ans.index_item([0, 3]), 5.0);
-//         assert_eq!(ans.index_item([1, 0]), 6.0);
-//         assert_eq!(ans.index_item([1, 1]), 7.0);
-//         assert_eq!(ans.index_item([1, 2]), 8.0);
-//         assert_eq!(ans.index_item([1, 3]), 9.0);
-//         assert_eq!(ans.index_item([2, 0]), 10.0);
-//         assert_eq!(ans.index_item([2, 1]), 11.0);
-//         assert_eq!(ans.index_item([2, 2]), 12.0);
-//         assert_eq!(ans.index_item([2, 3]), 13.0);
-//         assert_eq!(ans.index_item([3, 0]), 14.0);
-//         assert_eq!(ans.index_item([3, 1]), 15.0);
-//         assert_eq!(ans.index_item([3, 2]), 16.0);
-//         assert_eq!(ans.index_item([3, 3]), 17.0);
-//     }
-//
-//     #[test]
-//     fn add_4d_2d_dyn() {
-//         let zeros_4d = OwnedMatrixDyn::<f32>::zeros([2, 2, 2, 2]);
-//         let ones_2d = OwnedMatrixDyn::from_vec(vec![1., 1., 1., 1.], [2, 2]);
-//         let mut ans = OwnedMatrixDyn::<f32>::zeros([2, 2, 2, 2]);
-//         ans.to_view_mut().add(zeros_4d.to_view(), ones_2d.to_view());
-//     }
-//
-//     #[test]
-//     fn broad_cast_4x1x1x1_4x3x3x3() {
-//         let a = OwnedMatrixDyn::from_vec(vec![1., 2., 3., 4.], [4, 1, 1, 1]);
-//         let b = OwnedMatrixDyn::zeros([4, 2, 3, 3]);
-//         let mut ans = OwnedMatrixDyn::<f32>::zeros([4, 2, 3, 3]);
-//         ans.to_view_mut().add(a.to_view(), b.to_view());
-//         let one = vec![1; 2 * 3 * 3];
-//         let two = vec![2; 2 * 3 * 3];
-//         let three = vec![3; 2 * 3 * 3];
-//         let four = vec![4; 2 * 3 * 3];
-//         let mut result = Vec::new();
-//         result.extend_from_slice(&one);
-//         result.extend_from_slice(&two);
-//         result.extend_from_slice(&three);
-//         result.extend_from_slice(&four);
-//         let result = result.into_iter().map(|x| x as f32).collect::<Vec<f32>>();
-//         let result = OwnedMatrixDyn::from_vec(result, [4, 2, 3, 3]);
-//         assert!((ans.to_view() - result.to_view()).asum() == 0.0);
-//     }
-// }
+#[cfg(test)]
+mod add {
+
+    use crate::{
+        dim::{Dim0, Dim1, Dim2, Dim3},
+        matrix::Owned,
+        slice,
+    };
+
+    use super::*;
+
+    #[test]
+    fn add_0d_0d() {
+        let a: Matrix<Owned<f32>, Dim0, Cpu> = Matrix::from_vec(vec![1.0], []);
+        let b: Matrix<Owned<f32>, Dim0, Cpu> = Matrix::from_vec(vec![1.0], []);
+        let mut ans: Matrix<Owned<f32>, Dim0, Cpu> = Matrix::zeros([]);
+        ans.to_ref_mut().add(&a, &b);
+        assert_eq!(ans.index_item([]), 2.0);
+    }
+
+    #[test]
+    fn add_dyn_dyn() {
+        let a: Matrix<Owned<f32>, DimDyn, Cpu> = Matrix::from_vec(vec![1.0, 2.0, 3.0], [3]);
+        let b: Matrix<Owned<f32>, DimDyn, Cpu> = Matrix::from_vec(vec![1.0, 2.0, 3.0], [3]);
+        let ans: Matrix<Owned<f32>, DimDyn, Cpu> = Matrix::zeros([3]);
+
+        let a = a.into_dyn_dim();
+        let b = b.into_dyn_dim();
+        let mut ans = ans.into_dyn_dim();
+
+        ans.to_ref_mut().add(&a.to_ref(), &b.to_ref());
+    }
+
+    #[test]
+    fn add_1d_scalar() {
+        let a: Matrix<Owned<f32>, Dim1, Cpu> = Matrix::from_vec(vec![1.0, 2.0, 3.0], [3]);
+        let mut ans: Matrix<Owned<f32>, Dim1, Cpu> = Matrix::zeros([3]);
+        let b: Matrix<Owned<f32>, Dim0, Cpu> = Matrix::from_vec(vec![2.0], []);
+        ans.to_ref_mut().add(&a, &b);
+
+        assert_eq!(ans.index_item([0]), 3.0);
+        assert_eq!(ans.index_item([1]), 4.0);
+        assert_eq!(ans.index_item([2]), 5.0);
+    }
+
+    #[test]
+    fn add_1d_scalar_default_stride() {
+        let a: Matrix<Owned<f32>, Dim1, Cpu> = Matrix::from_vec(vec![1.0, 2.0, 3.0], [3]);
+        let mut ans: Matrix<Owned<f32>, Dim1, Cpu> = Matrix::zeros([3]);
+        ans.to_ref_mut().add_scalar(&a, 2.0);
+
+        assert_eq!(ans.index_item([0]), 2.0);
+        assert_eq!(ans.index_item([1]), 3.0);
+        assert_eq!(ans.index_item([2]), 4.0);
+    }
+
+    #[test]
+    fn add_1d_scalar_sliced() {
+        let a: Matrix<Owned<f32>, Dim1, Cpu> =
+            Matrix::from_vec(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], [6]);
+        let mut ans: Matrix<Owned<f32>, Dim1, Cpu> = Matrix::zeros([3]);
+        let sliced = a.slice(slice!(..;2));
+        ans.to_ref_mut().add(&sliced, &a);
+        assert_eq!(ans.index_item([0]), 2.0);
+        assert_eq!(ans.index_item([1]), 4.0);
+        assert_eq!(ans.index_item([2]), 6.0);
+    }
+
+    #[test]
+    fn add_3d_scalar_sliced() {
+        let a: Matrix<Owned<f32>, Dim3, Cpu> = Matrix::from_vec(
+            vec![
+                1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0,
+                16.0, 17.0, 18.0, 19.0, 20.0, 21.0, 22.0, 23.0, 24.0, 25.0, 26.0, 27.0, 28.0, 29.0,
+                30.0, 31.0, 32.0, 33.0, 34.0, 35.0, 36.0,
+            ],
+            [3, 3, 4],
+        );
+
+        let mut ans: Matrix<Owned<f32>, Dim3, Cpu> = Matrix::zeros([3, 3, 2]);
+
+        let sliced = a.slice(slice!(.., .., ..;2));
+
+        ans.to_ref_mut().add(&sliced, &a);
+
+        assert_eq!(ans.index_item([0, 0, 0]), 2.0);
+        assert_eq!(ans.index_item([0, 0, 1]), 4.0);
+        assert_eq!(ans.index_item([0, 1, 0]), 6.0);
+        assert_eq!(ans.index_item([0, 1, 1]), 8.0);
+        assert_eq!(ans.index_item([0, 2, 0]), 10.0);
+        assert_eq!(ans.index_item([0, 2, 1]), 12.0);
+        assert_eq!(ans.index_item([1, 0, 0]), 14.0);
+        assert_eq!(ans.index_item([1, 0, 1]), 16.0);
+        assert_eq!(ans.index_item([1, 1, 0]), 18.0);
+        assert_eq!(ans.index_item([1, 1, 1]), 20.0);
+        assert_eq!(ans.index_item([1, 2, 0]), 22.0);
+        assert_eq!(ans.index_item([1, 2, 1]), 24.0);
+        assert_eq!(ans.index_item([2, 0, 0]), 26.0);
+        assert_eq!(ans.index_item([2, 0, 1]), 28.0);
+        assert_eq!(ans.index_item([2, 1, 0]), 30.0);
+        assert_eq!(ans.index_item([2, 1, 1]), 32.0);
+        assert_eq!(ans.index_item([2, 2, 0]), 34.0);
+        assert_eq!(ans.index_item([2, 2, 1]), 36.0);
+    }
+
+    #[test]
+    fn add_1d_1d_default_stride() {
+        let a: Matrix<Owned<f32>, Dim1, Cpu> = Matrix::from_vec(vec![1.0, 2.0, 3.0], [3]);
+        let b: Matrix<Owned<f32>, Dim1, Cpu> = Matrix::from_vec(vec![1.0, 2.0, 3.0], [3]);
+        let mut ans: Matrix<Owned<f32>, Dim1, Cpu> = Matrix::zeros([3]);
+        ans.to_ref_mut().add(&a, &b);
+        assert_eq!(ans.index_item([0]), 2.0);
+        assert_eq!(ans.index_item([1]), 4.0);
+        assert_eq!(ans.index_item([2]), 6.0);
+    }
+
+    #[test]
+    fn add_1d_1d_sliced() {
+        let a: Matrix<Owned<f32>, Dim1, Cpu> =
+            Matrix::from_vec(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], [6]);
+        let b: Matrix<Owned<f32>, Dim1, Cpu> =
+            Matrix::from_vec(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], [6]);
+        let sliced_a = a.slice(slice!(..;2));
+        let sliced_b = b.slice(slice!(1..;2));
+        let mut ans: Matrix<Owned<f32>, Dim1, Cpu> = Matrix::zeros([3]);
+        ans.to_ref_mut().add(&sliced_a, &sliced_b);
+        assert_eq!(ans.index_item([0]), 3.0);
+        assert_eq!(ans.index_item([1]), 7.0);
+        assert_eq!(ans.index_item([2]), 11.0);
+    }
+
+    #[test]
+    fn add_2d_1d_default() {
+        let a: Matrix<Owned<f32>, Dim2, Cpu> = Matrix::from_vec(
+            vec![
+                1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12., 13., 14., 15., 16.,
+            ],
+            [4, 4],
+        );
+        let b: Matrix<Owned<f32>, Dim1, Cpu> =
+            Matrix::from_vec(vec![1., 2., 3., 4., 5., 6., 7., 8.], [8]);
+        let mut ans: Matrix<Owned<f32>, Dim2, Cpu> = Matrix::zeros([2, 2]);
+        let sliced_a = a.slice(slice!(..2, ..2));
+        let sliced_b = b.slice(slice!(..2));
+        ans.to_ref_mut().add(&sliced_a, &sliced_b);
+        assert_eq!(ans.index_item([0, 0]), 2.0);
+        assert_eq!(ans.index_item([0, 1]), 4.0);
+        assert_eq!(ans.index_item([1, 0]), 6.0);
+        assert_eq!(ans.index_item([1, 1]), 8.0);
+    }
+
+    #[test]
+    fn add_3d_1d_sliced() {
+        let mut v = Vec::new();
+        let num_elm = 4 * 4 * 4;
+        for i in 0..num_elm {
+            v.push(i as f32);
+        }
+        let a: Matrix<Owned<f32>, Dim3, Cpu> = Matrix::from_vec(v, [4, 4, 4]);
+        let b: Matrix<Owned<f32>, Dim1, Cpu> = Matrix::from_vec(vec![1., 2., 3., 4.], [4]);
+        let mut ans: Matrix<Owned<f32>, Dim3, Cpu> = Matrix::zeros([2, 2, 2]);
+        let sliced_a = a.slice(slice!(..2, 1..;2, ..2));
+        let sliced_b = b.slice(slice!(..2));
+
+        ans.to_ref_mut().add(&sliced_a, &sliced_b);
+
+        assert_eq!(ans.index_item([0, 0, 0]), 5.);
+        assert_eq!(ans.index_item([0, 0, 1]), 7.);
+        assert_eq!(ans.index_item([0, 1, 0]), 13.);
+        assert_eq!(ans.index_item([0, 1, 1]), 15.);
+        assert_eq!(ans.index_item([1, 0, 0]), 21.);
+        assert_eq!(ans.index_item([1, 0, 1]), 23.);
+        assert_eq!(ans.index_item([1, 1, 0]), 29.);
+        assert_eq!(ans.index_item([1, 1, 1]), 31.);
+    }
+
+    #[test]
+    fn add_2d_2d_default() {
+        let a: Matrix<Owned<f32>, Dim2, Cpu> = Matrix::from_vec(
+            vec![
+                1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12., 13., 14., 15., 16.,
+            ],
+            [4, 4],
+        );
+        let b: Matrix<Owned<f32>, Dim2, Cpu> = Matrix::from_vec(
+            vec![
+                1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12., 13., 14., 15., 16.,
+            ],
+            [4, 4],
+        );
+        let mut ans: Matrix<Owned<f32>, Dim2, Cpu> = Matrix::zeros([4, 4]);
+        ans.to_ref_mut().add(&a, &b);
+        assert_eq!(ans.index_item([0, 0]), 2.0);
+        assert_eq!(ans.index_item([0, 1]), 4.0);
+        assert_eq!(ans.index_item([0, 2]), 6.0);
+        assert_eq!(ans.index_item([0, 3]), 8.0);
+        assert_eq!(ans.index_item([1, 0]), 10.0);
+        assert_eq!(ans.index_item([1, 1]), 12.0);
+        assert_eq!(ans.index_item([1, 2]), 14.0);
+        assert_eq!(ans.index_item([1, 3]), 16.0);
+        assert_eq!(ans.index_item([2, 0]), 18.0);
+        assert_eq!(ans.index_item([2, 1]), 20.0);
+        assert_eq!(ans.index_item([2, 2]), 22.0);
+        assert_eq!(ans.index_item([2, 3]), 24.0);
+        assert_eq!(ans.index_item([3, 0]), 26.0);
+        assert_eq!(ans.index_item([3, 1]), 28.0);
+        assert_eq!(ans.index_item([3, 2]), 30.0);
+        assert_eq!(ans.index_item([3, 3]), 32.0);
+    }
+
+    #[test]
+    fn add_2d_0d() {
+        let a: Matrix<Owned<f32>, Dim2, Cpu> = Matrix::from_vec(
+            vec![
+                1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12., 13., 14., 15., 16.,
+            ],
+            [4, 4],
+        );
+        let b: Matrix<Owned<f32>, Dim0, Cpu> = Matrix::from_vec(vec![1.], []);
+        let mut ans: Matrix<Owned<f32>, Dim2, Cpu> = Matrix::zeros([4, 4]);
+        ans.to_ref_mut().add(&a, &b);
+        assert_eq!(ans.index_item([0, 0]), 2.0);
+        assert_eq!(ans.index_item([0, 1]), 3.0);
+        assert_eq!(ans.index_item([0, 2]), 4.0);
+        assert_eq!(ans.index_item([0, 3]), 5.0);
+        assert_eq!(ans.index_item([1, 0]), 6.0);
+        assert_eq!(ans.index_item([1, 1]), 7.0);
+        assert_eq!(ans.index_item([1, 2]), 8.0);
+        assert_eq!(ans.index_item([1, 3]), 9.0);
+        assert_eq!(ans.index_item([2, 0]), 10.0);
+        assert_eq!(ans.index_item([2, 1]), 11.0);
+        assert_eq!(ans.index_item([2, 2]), 12.0);
+        assert_eq!(ans.index_item([2, 3]), 13.0);
+        assert_eq!(ans.index_item([3, 0]), 14.0);
+        assert_eq!(ans.index_item([3, 1]), 15.0);
+        assert_eq!(ans.index_item([3, 2]), 16.0);
+        assert_eq!(ans.index_item([3, 3]), 17.0);
+    }
+
+    #[test]
+    fn add_2d_0d_dyn() {
+        let a: Matrix<Owned<f32>, DimDyn, Cpu> = Matrix::from_vec(
+            vec![
+                1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12., 13., 14., 15., 16.,
+            ],
+            [4, 4],
+        );
+        let b: Matrix<Owned<f32>, DimDyn, Cpu> = Matrix::from_vec(vec![1.], []);
+        let mut ans: Matrix<Owned<f32>, DimDyn, Cpu> = Matrix::zeros([4, 4]);
+        ans.to_ref_mut().add(&a, &b);
+        assert_eq!(ans.index_item([0, 0]), 2.0);
+        assert_eq!(ans.index_item([0, 1]), 3.0);
+        assert_eq!(ans.index_item([0, 2]), 4.0);
+        assert_eq!(ans.index_item([0, 3]), 5.0);
+        assert_eq!(ans.index_item([1, 0]), 6.0);
+        assert_eq!(ans.index_item([1, 1]), 7.0);
+        assert_eq!(ans.index_item([1, 2]), 8.0);
+        assert_eq!(ans.index_item([1, 3]), 9.0);
+        assert_eq!(ans.index_item([2, 0]), 10.0);
+        assert_eq!(ans.index_item([2, 1]), 11.0);
+        assert_eq!(ans.index_item([2, 2]), 12.0);
+        assert_eq!(ans.index_item([2, 3]), 13.0);
+        assert_eq!(ans.index_item([3, 0]), 14.0);
+        assert_eq!(ans.index_item([3, 1]), 15.0);
+        assert_eq!(ans.index_item([3, 2]), 16.0);
+        assert_eq!(ans.index_item([3, 3]), 17.0);
+    }
+
+    #[test]
+    fn add_4d_2d_dyn() {
+        let zeros_4d: Matrix<Owned<f32>, DimDyn, Cpu> = Matrix::zeros([2, 2, 2, 2]);
+        let ones_2d: Matrix<Owned<f32>, DimDyn, Cpu> =
+            Matrix::from_vec(vec![1., 1., 1., 1.], [2, 2]);
+        let mut ans: Matrix<Owned<f32>, DimDyn, Cpu> = Matrix::zeros([2, 2, 2, 2]);
+        ans.to_ref_mut().add(&zeros_4d, &ones_2d);
+        assert_eq!(ans.index_item([0, 0, 0, 0]), 1.0);
+        assert_eq!(ans.index_item([0, 0, 0, 1]), 1.0);
+        assert_eq!(ans.index_item([0, 0, 1, 0]), 1.0);
+        assert_eq!(ans.index_item([0, 0, 1, 1]), 1.0);
+        assert_eq!(ans.index_item([0, 1, 0, 0]), 1.0);
+        assert_eq!(ans.index_item([0, 1, 0, 1]), 1.0);
+        assert_eq!(ans.index_item([0, 1, 1, 0]), 1.0);
+        assert_eq!(ans.index_item([0, 1, 1, 1]), 1.0);
+        assert_eq!(ans.index_item([1, 0, 0, 0]), 1.0);
+        assert_eq!(ans.index_item([1, 0, 0, 1]), 1.0);
+        assert_eq!(ans.index_item([1, 0, 1, 0]), 1.0);
+        assert_eq!(ans.index_item([1, 0, 1, 1]), 1.0);
+        assert_eq!(ans.index_item([1, 1, 0, 0]), 1.0);
+        assert_eq!(ans.index_item([1, 1, 0, 1]), 1.0);
+        assert_eq!(ans.index_item([1, 1, 1, 0]), 1.0);
+        assert_eq!(ans.index_item([1, 1, 1, 1]), 1.0);
+    }
+
+    #[test]
+    fn broad_cast_4x1x1x1_4x3x3x3() {
+        let a: Matrix<Owned<f32>, DimDyn, Cpu> =
+            Matrix::from_vec(vec![1., 2., 3., 4.], [4, 1, 1, 1]);
+        let b: Matrix<Owned<f32>, DimDyn, Cpu> = Matrix::zeros([4, 2, 3, 3]);
+        let mut ans: Matrix<Owned<f32>, DimDyn, Cpu> = Matrix::zeros([4, 2, 3, 3]);
+        ans.to_ref_mut().add(&a, &b);
+        let one = vec![1; 2 * 3 * 3];
+        let two = vec![2; 2 * 3 * 3];
+        let three = vec![3; 2 * 3 * 3];
+        let four = vec![4; 2 * 3 * 3];
+        let mut result = Vec::new();
+        result.extend_from_slice(&one);
+        result.extend_from_slice(&two);
+        result.extend_from_slice(&three);
+        result.extend_from_slice(&four);
+        // let result = result.into_iter().map(|x| x as f32).collect::<Vec<f32>>();
+        // let result = OwnedMatrixDyn::from_vec(result, [4, 2, 3, 3]);
+        // assert!((ans.to_view() - result.to_view()).asum() == 0.0);
+    }
+}
 //
 // #[cfg(test)]
 // mod sub {
