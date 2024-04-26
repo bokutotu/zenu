@@ -9,7 +9,7 @@ use crate::{
     slice::Slice,
 };
 
-pub trait Repr: Default {
+pub trait Repr: Default + Clone {
     type Item: Num;
 
     fn drop_memory<D: DeviceBase>(ptr: *mut Self::Item, len: usize, _: D);
@@ -72,6 +72,30 @@ impl<T: Num> Repr for Owned<T> {
     }
 }
 
+impl<T: Num> Clone for Owned<T> {
+    fn clone(&self) -> Self {
+        Owned {
+            _maker: PhantomData,
+        }
+    }
+}
+
+impl<'a, T: Num> Clone for Ref<&'a T> {
+    fn clone(&self) -> Self {
+        Ref {
+            _maker: PhantomData,
+        }
+    }
+}
+
+impl<'a, T: Num> Clone for Ref<&'a mut T> {
+    fn clone(&self) -> Self {
+        Ref {
+            _maker: PhantomData,
+        }
+    }
+}
+
 impl<T: Num> OwnedRepr for Owned<T> {}
 
 pub struct Ptr<R, D>
@@ -82,8 +106,8 @@ where
     ptr: *mut R::Item,
     len: usize,
     offset: usize,
-    repr: PhantomData<R>,
-    device: PhantomData<D>,
+    _repr: R,
+    _device: D,
 }
 
 impl<R, D> Ptr<R, D>
@@ -96,8 +120,8 @@ where
             ptr,
             len,
             offset,
-            repr: PhantomData,
-            device: PhantomData,
+            _repr: R::default(),
+            _device: D::default(),
         }
     }
 
@@ -197,6 +221,11 @@ where
         Matrix { ptr, shape, stride }
     }
 
+    fn from_raw(ptr: *mut R::Item, len: usize, offset: usize, shape: S, stride: S) -> Self {
+        let ptr = Ptr::new(ptr, len, offset);
+        Matrix { ptr, shape, stride }
+    }
+
     pub fn offset(&self) -> usize {
         self.ptr.offset
     }
@@ -211,6 +240,10 @@ where
 
     pub fn stride(&self) -> S {
         self.stride
+    }
+
+    pub(crate) fn ptr(&self) -> &Ptr<R, D> {
+        &self.ptr
     }
 
     pub fn is_default_stride(&self) -> bool {
@@ -325,12 +358,14 @@ where
         let shape_stride = self.shape_stride().into_dyn();
         let new_shape_stride = index.get_shape_stride(shape_stride.shape(), shape_stride.stride());
         let offset = index.offset(shape_stride.stride());
-        let ptr = Ptr::new(self.ptr.ptr, self.shape.num_elm(), offset);
-        Matrix {
-            ptr,
-            shape: new_shape_stride.shape(),
-            stride: new_shape_stride.stride(),
-        }
+        let raw_ptr = self.as_ptr() as *mut R::Item;
+        Matrix::from_raw(
+            raw_ptr,
+            self.shape().num_elm(),
+            offset,
+            new_shape_stride.shape(),
+            new_shape_stride.stride(),
+        )
     }
 
     pub fn index_item<I: Into<S>>(&self, index: I) -> R::Item {
@@ -373,13 +408,7 @@ where
 
         let len = vec.len();
 
-        let ptr = Ptr {
-            ptr: D::from_vec(vec.clone()),
-            len,
-            offset: 0,
-            repr: PhantomData,
-            device: PhantomData,
-        };
+        let ptr = Ptr::new(D::from_vec(vec.clone()), len, 0);
 
         std::mem::forget(vec);
 
@@ -396,12 +425,41 @@ where
     }
 }
 
+impl<'a, T, S, D> Matrix<Ref<&'a T>, S, D>
+where
+    T: Num,
+    D: DeviceBase,
+    S: DimTrait,
+{
+    fn from_ptr_offset_shape_stride(
+        ptr: *mut T,
+        len: usize,
+        offset: usize,
+        shape: S,
+        stride: S,
+    ) -> Self {
+        let ptr = Ptr::new(ptr, len, offset);
+        Matrix { ptr, shape, stride }
+    }
+}
+
 impl<'a, T, S, D> Matrix<Ref<&'a mut T>, S, D>
 where
     T: Num,
     D: DeviceBase,
     S: DimTrait,
 {
+    fn from_ptr_offset_shape_stride(
+        ptr: *mut T,
+        len: usize,
+        offset: usize,
+        shape: S,
+        stride: S,
+    ) -> Self {
+        let ptr = Ptr::new(ptr, len, offset);
+        Matrix { ptr, shape, stride }
+    }
+
     pub fn as_mut_ptr(&self) -> *mut T {
         unsafe { self.ptr.ptr.add(self.offset()) }
     }
