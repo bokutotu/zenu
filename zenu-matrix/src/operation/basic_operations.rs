@@ -139,24 +139,32 @@ impl Add for Nvidia {
     }
 }
 
-// fn get_tmp_matrix<'a, T: Num, R: Repr<Item = T>, S: DimTrait, D: Add>(
-// a: &'a Matrix<R, S, D>,
-fn get_tmp_matrix<T: Num, S: DimTrait, D: Add>(
-    a: &Matrix<Ref<&T>, S, D>,
+fn get_tmp_matrix<'a, T: Num, S: DimTrait, D: Add>(
+    mat: Matrix<Ref<&'a T>, S, D>,
     len: usize,
     idx: usize,
     self_len: usize,
-) -> Matrix<Ref<&T>, S, D> {
+) -> Matrix<Ref<&'a T>, DimDyn, D> {
+    use crate::slice_dynamic;
+    mat.slice_dyn(slice_dynamic![0..1])
     // if self_len == len {
-    //     if a.shape()[0] == 1 {
-    //         a.index_axis_dyn(Index0D::new(0))
+    //     if mat.shape()[0] == 1 {
+    //         // let mat: Matrix<Ref<&'a T>, DimDyn, D> = mat.index_axis_dyn(Index0D::new(0));
+    //         let mat: Matrix<Ref<&'a T>, DimDyn, D> = mat.slice_dyn(slice_dynamic![0..1]);
+    //         mat
     //     } else {
-    //         a.index_axis_dyn(Index0D::new(idx))
+    //         let mat: Matrix<Ref<&'a T>, DimDyn, D> = mat.index_axis_dyn(Index0D::new(idx));
+    //         mat
     //     }
     // } else {
-    //     a.clone().into_dyn_dim()
+    //     mat.into_dyn_dim()
     // }
-    a.clone()
+}
+
+fn _a<'a, T: Num, D: DeviceBase>(
+    a: Matrix<Ref<&'a T>, DimDyn, D>,
+) -> Matrix<Ref<&'a T>, DimDyn, D> {
+    a.into_dyn_dim()
 }
 
 /// 1dのMatrixを受け取る(これは入力側でチェック)
@@ -298,9 +306,9 @@ where
             let lhs_ref = lhs.to_ref();
             for idx in 0..num_iter {
                 let s = self.index_axis_mut_dyn(Index0D::new(idx));
-                let lhs = get_tmp_matrix(&lhs_ref, lhs_dim_len, idx, self_dim_len);
-                let rhs = get_tmp_matrix(&rhs_ref, rhs_dim_len, idx, self_dim_len);
-                s.add(&lhs, &rhs);
+                let lhs_ref = get_tmp_matrix(lhs_ref.clone(), lhs_dim_len, idx, self_dim_len);
+                let rhs_ref = get_tmp_matrix(rhs_ref.clone(), rhs_dim_len, idx, self_dim_len);
+                s.add(&lhs_ref, &rhs_ref);
             }
         }
     }
