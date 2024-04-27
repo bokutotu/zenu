@@ -145,20 +145,16 @@ fn get_tmp_matrix<'a, T: Num, S: DimTrait, D: Add>(
     idx: usize,
     self_len: usize,
 ) -> Matrix<Ref<&'a T>, DimDyn, D> {
-    use crate::slice_dynamic;
-    mat.slice_dyn(slice_dynamic![0..1])
     // if self_len == len {
     //     if mat.shape()[0] == 1 {
-    //         // let mat: Matrix<Ref<&'a T>, DimDyn, D> = mat.index_axis_dyn(Index0D::new(0));
-    //         let mat: Matrix<Ref<&'a T>, DimDyn, D> = mat.slice_dyn(slice_dynamic![0..1]);
-    //         mat
+    //         mat.index_axis_dyn(Index0D::new(0))
     //     } else {
-    //         let mat: Matrix<Ref<&'a T>, DimDyn, D> = mat.index_axis_dyn(Index0D::new(idx));
-    //         mat
+    //         mat.index_axis_dyn(Index0D::new(idx))
     //     }
     // } else {
     //     mat.into_dyn_dim()
     // }
+    todo!();
 }
 
 fn _a<'a, T: Num, D: DeviceBase>(
