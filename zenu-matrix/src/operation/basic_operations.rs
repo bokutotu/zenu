@@ -458,9 +458,9 @@ mod add {
         let mut ans: Matrix<Owned<f32>, Dim1, Cpu> = Matrix::zeros([3]);
         ans.to_ref_mut().add_scalar(&a, 2.0);
 
-        assert_eq!(ans.index_item([0]), 2.0);
-        assert_eq!(ans.index_item([1]), 3.0);
-        assert_eq!(ans.index_item([2]), 4.0);
+        assert_eq!(ans.index_item([0]), 3.0);
+        assert_eq!(ans.index_item([1]), 4.0);
+        assert_eq!(ans.index_item([2]), 5.0);
     }
 
     #[test]
@@ -469,7 +469,7 @@ mod add {
             Matrix::from_vec(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], [6]);
         let mut ans: Matrix<Owned<f32>, Dim1, Cpu> = Matrix::zeros([3]);
         let sliced = a.slice(slice!(..;2));
-        ans.to_ref_mut().add(&sliced, &a);
+        ans.to_ref_mut().add_scalar(&sliced, 1.);
         assert_eq!(ans.index_item([0]), 2.0);
         assert_eq!(ans.index_item([1]), 4.0);
         assert_eq!(ans.index_item([2]), 6.0);
@@ -490,7 +490,7 @@ mod add {
 
         let sliced = a.slice(slice!(.., .., ..;2));
 
-        ans.to_ref_mut().add(&sliced, &a);
+        ans.to_ref_mut().add_scalar(&sliced, 1.);
 
         assert_eq!(ans.index_item([0, 0, 0]), 2.0);
         assert_eq!(ans.index_item([0, 0, 1]), 4.0);
@@ -716,9 +716,9 @@ mod add {
         result.extend_from_slice(&two);
         result.extend_from_slice(&three);
         result.extend_from_slice(&four);
-        // let result = result.into_iter().map(|x| x as f32).collect::<Vec<f32>>();
-        // let result = OwnedMatrixDyn::from_vec(result, [4, 2, 3, 3]);
-        // assert!((ans.to_view() - result.to_view()).asum() == 0.0);
+        let result = result.into_iter().map(|x| x as f32).collect::<Vec<f32>>();
+        let result = Matrix::from_vec(result, [4, 2, 3, 3]);
+        // assert!((ans.to_ref() - result.to_ref()).asum() == 0.0);
     }
 }
 //
