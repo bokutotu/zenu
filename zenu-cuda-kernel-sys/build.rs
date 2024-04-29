@@ -6,6 +6,7 @@ fn main() {
         "kernel/array_scalar.cu",
         "kernel/element_wise.cu",
         "kernel/memory_access.cu",
+        "kernel/array_array.cu",
     ];
 
     for cuda_file in cuda_files.iter() {
