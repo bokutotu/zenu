@@ -1,32 +1,114 @@
 use crate::{
+    device::{cpu::Cpu, DeviceBase},
     dim::{larger_shape, smaller_shape, DimDyn, DimTrait},
     index::Index0D,
+    matrix::{Matrix, Ref, Repr},
     num::Num,
 };
 
-// fn get_tmp_matrix<M: ToViewMemory, D: DimTrait, A; MemAcc>(
-//     a: &Matrix<M, D>,
-//     len: usize,
-//     idx: usize,
-//     self_len: usize,
-// ) -> Matrix<ViewMem<M::Item>, DimDyn> {
-//     if self_len == len {
-//         if a.shape()[0] == 1 {
-//             a.index_axis_dyn(Index0D::new(0))
-//         } else {
-//             a.index_axis_dyn(Index0D::new(idx))
-//         }
-//     } else {
-//         a.to_view().into_dyn_dim()
-//     }
-// }
-//
-// /// 1dのMatrixを受け取る(これは入力側でチェック)
-// /// その配列の中身が1かどうかを確認
-// /// 1ならtrueを返す
-// fn is_1d_1(a: &[usize]) -> bool {
-//     a[0] == 1
-// }
+fn get_tmp_matrix<R: Repr, S: DimTrait, D: DeviceBase>(
+    a: &Matrix<R, S, D>,
+    len: usize,
+    idx: usize,
+    self_len: usize,
+) -> Matrix<Ref<&R::Item>, DimDyn, D> {
+    if self_len == len {
+        if a.shape()[0] == 1 {
+            a.index_axis_dyn(Index0D::new(0))
+        } else {
+            a.index_axis_dyn(Index0D::new(idx))
+        }
+    } else {
+        a.to_ref().into_dyn_dim()
+    }
+}
+
+pub trait Add<T: Num>: DeviceBase {
+    fn array_array(
+        to: *mut T,
+        lhs: *const T,
+        rhs: *const T,
+        num_elm: usize,
+        to_stride: usize,
+        lhs_stride: usize,
+        rhs_stride: usize,
+    );
+
+    fn array_assign(to: *mut T, rhs: *const T, num_elm: usize, to_stride: usize, rhs_stride: usize);
+
+    fn scalar(
+        to: *mut T,
+        lhs: *const T,
+        rhs: T,
+        num_elm: usize,
+        to_stride: usize,
+        lhs_stride: usize,
+    );
+
+    fn scalar_assign(to: *mut T, rhs: T, num_elm: usize, to_stride: usize);
+}
+
+impl<T: Num> Add<T> for Cpu {
+    fn array_array(
+        to: *mut T,
+        lhs: *const T,
+        rhs: *const T,
+        num_elm: usize,
+        to_stride: usize,
+        lhs_stride: usize,
+        rhs_stride: usize,
+    ) {
+        unsafe {
+            for i in 0..num_elm {
+                *to.add(i * to_stride) = *lhs.add(i * lhs_stride) + *rhs.add(i * rhs_stride);
+            }
+        }
+    }
+
+    fn array_assign(
+        to: *mut T,
+        rhs: *const T,
+        num_elm: usize,
+        to_stride: usize,
+        rhs_stride: usize,
+    ) {
+        unsafe {
+            for i in 0..num_elm {
+                *to.add(i * to_stride) += *rhs.add(i * rhs_stride);
+            }
+        }
+    }
+
+    fn scalar(
+        to: *mut T,
+        lhs: *const T,
+        rhs: T,
+        num_elm: usize,
+        to_stride: usize,
+        lhs_stride: usize,
+    ) {
+        unsafe {
+            for i in 0..num_elm {
+                *to.add(i * to_stride) = *lhs.add(i * lhs_stride) + rhs;
+            }
+        }
+    }
+
+    fn scalar_assign(to: *mut T, rhs: T, num_elm: usize, to_stride: usize) {
+        unsafe {
+            for i in 0..num_elm {
+                *to.add(i * to_stride) += rhs;
+            }
+        }
+    }
+}
+
+/// 1dのMatrixを受け取る(これは入力側でチェック)
+/// その配列の中身が1かどうかを確認
+/// 1ならtrueを返す
+fn is_1d_1(a: &[usize]) -> bool {
+    a[0] == 1
+}
 // macro_rules! impl_basic_1d_functions_no_input {
 //     (
 //         $mod_name:ident,
@@ -223,239 +305,211 @@ use crate::{
 //         }
 //     };
 // }
-// macro_rules! impl_traits {
-//     (
-//         $trait:ident,
-//         $trait_method:ident,
-//         $assign_trait:ident,
-//         $assign_trait_method:ident,
-//         $mod_name:ident,
-//         $method:ident,
-//         $($assign_method:ident)?
-//     ) => {
-//         pub trait $trait<L, R> {
-//             fn $trait_method(&mut self, lhs: L, rhs: R);
-//         }
-//
-//         impl<T, D1, D2, M1, M2> $trait<Matrix<M1, D1>, T> for Matrix<M2, D2>
-//         where
-//             T: Num,
-//             D1: DimTrait,
-//             D2: DimTrait,
-//             M1: ToViewMemory<Item = T>,
-//             M2: ToViewMutMemory<Item = T>,
-//         {
-//             fn $trait_method(&mut self, lhs: Matrix<M1, D1>, rhs: T) {
-//                 if self.shape().slice() != lhs.shape().slice() {
-//                     panic!("Matrix shape mismatch");
-//                 }
-//
-//                 if self.shape().is_empty() {
-//                     let mut view_mut = self.to_view_mut();
-//                     let self_slice = view_mut.as_mut_slice();
-//                     let lhs_slice = lhs.as_slice();
-//                     self_slice[0] = lhs_slice[0].$method(rhs);
-//                 } else if self.shape().len() == 1 {
-//                     $mod_name::_1d_scalar_cpu(&mut self.to_view_mut(), &lhs.to_view(), rhs);
-//                 } else {
-//                     let num_iter = self.shape()[0];
-//                     for idx in 0..num_iter {
-//                         let mut s = self.index_axis_mut_dyn(Index0D::new(idx));
-//                         let lhs = lhs.index_axis_dyn(Index0D::new(idx));
-//                         s.$trait_method(lhs, rhs);
-//                     }
-//                 }
-//             }
-//         }
-//
-//         impl<T, D1, D2, M1, M2> $trait<T, Matrix<M1, D1>> for Matrix<M2, D2>
-//         where
-//             T: Num,
-//             D1: DimTrait,
-//             D2: DimTrait,
-//             M1: ToViewMemory<Item = T>,
-//             M2: ToViewMutMemory<Item = T>,
-//         {
-//             fn $trait_method(&mut self, lhs: T, rhs: Matrix<M1, D1>) {
-//                 if self.shape().slice() != rhs.shape().slice() {
-//                     panic!("Matrix shape mismatch");
-//                 }
-//
-//                 if self.shape().is_empty() {
-//                     let mut view_mut = self.to_view_mut();
-//                     let self_slice = view_mut.as_mut_slice();
-//                     let rhs_slice = rhs.as_slice();
-//                     self_slice[0] = rhs_slice[0].$method(lhs);
-//                 } else if self.shape().len() == 1 {
-//                     $mod_name::_scalar_1d_cpu(&mut self.to_view_mut(), lhs, &rhs.to_view());
-//                 } else {
-//                     let num_iter = self.shape()[0];
-//                     for idx in 0..num_iter {
-//                         let mut s = self.index_axis_mut_dyn(Index0D::new(idx));
-//                         let rhs = rhs.index_axis_dyn(Index0D::new(idx));
-//                         s.$trait_method(lhs, rhs);
-//                     }
-//                 }
-//             }
-//         }
-//
-//         impl<T, D1, D2, D3, M1, M2, M3> $trait<Matrix<M1, D1>, Matrix<M2, D2>> for Matrix<M3, D3>
-//         where
-//             T: Num,
-//             D1: DimTrait,
-//             D2: DimTrait,
-//             D3: DimTrait,
-//             M1: ToViewMemory<Item = T>,
-//             M2: ToViewMemory<Item = T>,
-//             M3: ToViewMutMemory<Item = T>,
-//         {
-//             fn $trait_method(&mut self, lhs: Matrix<M1, D1>, rhs: Matrix<M2, D2>) {
-//                 let larger_dim = larger_shape(lhs.shape(), rhs.shape());
-//                 let smaller_dim = smaller_shape(lhs.shape(), rhs.shape());
-//
-//                 if !(larger_dim.is_include(smaller_dim) || DimDyn::from(self.shape().slice()).is_include_bradcast(smaller_dim)) {
-//                     panic!(
-//                         "self dim is not match other dims self dim {:?}, lhs dim {:?} rhs dim {:?}",
-//                         self.shape(),
-//                         lhs.shape(),
-//                         rhs.shape()
-//                     );
-//                 }
-//                 if self.shape().slice() != larger_dim.slice() && self.shape().slice() != smaller_dim.slice() {
-//                     panic!("longer shape lhs or rhs is same shape to self\n self.shape = {:?}\n lhs.shape() = {:?} \n rhs.shape() = {:?}", self.shape(), lhs.shape(), rhs.shape());
-//                 }
-//
-//                 if rhs.shape().is_empty() {
-//                     self.$trait_method(lhs, rhs.as_slice()[0]);
-//                     return;
-//                 }
-//
-//                 if lhs.shape().is_empty() {
-//                     self.$trait_method(lhs.as_slice()[0], rhs);
-//                     return;
-//                 }
-//
-//                 if self.shape().is_empty() {
-//                     let mut view_mut = self.to_view_mut();
-//                     let self_slice = view_mut.as_mut_slice();
-//                     let lhs_slice = lhs.as_slice();
-//                     let rhs_slice = rhs.as_slice();
-//                     self_slice[0] = lhs_slice[0].$method(rhs_slice[0]);
-//                 } else if self.shape().len() == 1 {
-//                     if is_1d_1(lhs.shape().slice()) {
-//                         $mod_name::_1d_scalar_cpu(&mut self.to_view_mut(), &rhs.to_view(), lhs.as_slice()[0]);
-//                         return;
-//                     } else if is_1d_1(rhs.shape().slice()) {
-//                         $mod_name::_1d_scalar_cpu(&mut self.to_view_mut(), &lhs.to_view(), rhs.as_slice()[0]);
-//                         return;
-//                     }
-//
-//                     $mod_name::_1d_1d_cpu(&mut self.to_view_mut(), &lhs.to_view(), &rhs.to_view());
-//                 } else {
-//                     let num_iter = self.shape()[0];
-//                     let self_dim_len = self.shape().len();
-//                     let rhs_dim_len = rhs.shape().len();
-//                     let lhs_dim_len = lhs.shape().len();
-//                     for idx in 0..num_iter {
-//                         let mut s = self.index_axis_mut_dyn(Index0D::new(idx));
-//                         let lhs = get_tmp_matrix(&lhs, lhs_dim_len, idx, self_dim_len);
-//                         let rhs = get_tmp_matrix(&rhs, rhs_dim_len, idx, self_dim_len);
-//                         s.$trait_method(lhs, rhs);
-//                     }
-//                 }
-//             }
-//         }
-//
-//         $(
-//             pub trait $assign_trait<R> {
-//                 fn $assign_trait_method(&mut self, rhs: R);
-//             }
-//             impl<T: Num, D: DimTrait, M: ToViewMutMemory<Item = T>> $assign_trait<T> for Matrix<M, D> {
-//                 fn $assign_trait_method(&mut self, rhs: T) {
-//                     if self.shape().is_empty() {
-//                         let mut view_mut = self.to_view_mut();
-//                         let self_slice = view_mut.as_mut_slice();
-//                         self_slice[0].$assign_method(rhs);
-//                     } else {
-//                         if self.shape().len() == 1 {
-//                             $mod_name::assign_1d_scalar_cpu(&mut self.to_view_mut(), rhs);
-//                         } else {
-//                             let num_iter = self.shape()[0];
-//                             for idx in 0..num_iter {
-//                                 let mut s = self.index_axis_mut_dyn(Index0D::new(idx));
-//                                 s.$assign_trait_method(rhs);
-//                             }
-//                         }
-//                     }
-//                 }
-//             }
-//
-//             impl<
-//                     T: Num,
-//                     D1: DimTrait,
-//                     D2: DimTrait,
-//                     M1: ToViewMemory<Item = T>,
-//                     M2: ToViewMutMemory<Item = T>,
-//                 > $assign_trait<Matrix<M1, D1>> for Matrix<M2, D2>
-//             {
-//                 fn $assign_trait_method(&mut self, rhs: Matrix<M1, D1>) {
-//                     if self.shape().len() < rhs.shape().len() {
-//                         panic!("Self shape len is larger than rhs shape len {:?} {:?}", self.shape(), rhs.shape());
-//                     }
-//
-//                     if !(DimDyn::from(self.shape().slice())
-//                         .is_include(DimDyn::from(rhs.shape().slice()))
-//                         || DimDyn::from(self.shape().slice())
-//                         .is_include_bradcast(DimDyn::from(rhs.shape().slice()))
-//                     )
-//                     {
-//                         panic!("rhs shape is not include self shape {:?} {:?}", self.shape(), rhs.shape());
-//                     }
-//
-//                     if !DimDyn::from(self.shape().slice())
-//                         .is_include_bradcast(DimDyn::from(rhs.shape().slice()))
-//                     {
-//                         panic!("rhs shape is not include self shape {:?} {:?}", self.shape(), rhs.shape());
-//                     }
-//
-//                     if self.shape().is_empty() {
-//                         let mut view_mut = self.to_view_mut();
-//                         let self_slice = view_mut.as_mut_slice();
-//                         let rhs_slice = rhs.as_slice();
-//                         self_slice[0].$assign_method(rhs_slice[0]);
-//                     } else if rhs.shape().is_empty() {
-//                         self.$assign_trait_method(rhs.as_slice()[0]);
-//                     } else if self.shape().len() == 1 {
-//                         if is_1d_1(rhs.shape().slice()) {
-//                             self.$assign_trait_method(rhs.as_slice()[0]);
-//                             return;
-//                         }
-//                         $mod_name::assign_1d_1d_cpu(&mut self.to_view_mut(), &rhs.to_view());
-//                     } else {
-//                         let num_iter = self.shape()[0];
-//                         let self_shape_len = self.shape().len();
-//                         let rhs_shape_len = rhs.shape().len();
-//                         for idx in 0..num_iter {
-//                             let mut s = self.index_axis_mut_dyn(Index0D::new(idx));
-//                             let rhs = get_tmp_matrix(&rhs, rhs_shape_len, idx, self_shape_len);
-//                             s.$assign_trait_method(rhs);
-//                         }
-//                     }
-//                 }
-//             }
-//         )?
-//     };
-// }
+macro_rules! impl_basic_ops {
+    (
+        $method:ident,
+        $assign_method:ident,
+        $scalar_method:ident,
+        $scalar_assign_method:ident,
+        $device_trait:ident
+    ) => {
+        impl<'a, T, S, D> Matrix<Ref<&mut T>, S, D>
+        where
+            T: Num,
+            S: DimTrait,
+            D: DeviceBase + $device_trait<T>,
+        {
+            pub fn $scalar_method<RL: Repr<Item=T>, SL: DimTrait>(&mut self, lhs: Matrix<RL, SL, D>, rhs: T) {
+                if self.shape().slice() != lhs.shape().slice() {
+                    panic!("Matrix shape mismatch");
+                }
+
+                if self.shape().is_empty() {
+                    let self_slice = self.as_mut_slice();
+                    let lhs_slice = lhs.as_slice();
+                    self_slice[0] = lhs_slice[0].$method(rhs);
+                } else if self.shape().len() == 1 {
+                    D::scalar(
+                        self.as_mut_ptr(),
+                        lhs.as_ptr(),
+                        rhs,
+                        self.shape().num_elm(),
+                        self.stride()[0],
+                        lhs.stride()[0]
+                    );
+                } else {
+                    let num_iter = self.shape()[0];
+                    for idx in 0..num_iter {
+                        let mut s = self.index_axis_mut_dyn(Index0D::new(idx));
+                        let lhs = lhs.index_axis_dyn(Index0D::new(idx));
+                        s.$scalar_method(lhs, rhs);
+                    }
+                }
+            }
+
+            pub fn $scalar_assign_method(&mut self, rhs: T) {
+                if self.shape().is_empty() {
+                    D::scalar_assign(
+                        self.as_mut_ptr(),
+                        rhs,
+                        self.shape().num_elm(),
+                        self.stride()[0]
+                    );
+                } else if self.shape().len() == 1 {
+                    D::scalar_assign(self.as_mut_ptr(), rhs, self.shape().num_elm(), self.stride()[0]);
+                } else {
+                    let num_iter = self.shape()[0];
+                    for idx in 0..num_iter {
+                        let mut s = self.index_axis_mut_dyn(Index0D::new(idx));
+                        s.$scalar_assign_method(rhs);
+                    }
+                }
+            }
+
+            pub fn $method<RL, RR, SL, SR>(&mut self, lhs: Matrix<RL, SL, D>, rhs: Matrix<RR, SR, D>)
+            where
+                RL: Repr<Item=T>,
+                RR: Repr<Item=T>,
+                SL: DimTrait,
+                SR: DimTrait,
+            {
+                let larger_dim = larger_shape(lhs.shape(), rhs.shape());
+                let smaller_dim = smaller_shape(lhs.shape(), rhs.shape());
+
+                if !(larger_dim.is_include(smaller_dim) || DimDyn::from(self.shape().slice()).is_include_bradcast(smaller_dim)) {
+                    panic!(
+                        "self dim is not match other dims self dim {:?}, lhs dim {:?} rhs dim {:?}",
+                        self.shape(),
+                        lhs.shape(),
+                        rhs.shape()
+                    );
+                }
+                if self.shape().slice() != larger_dim.slice() && self.shape().slice() != smaller_dim.slice() {
+                    panic!("longer shape lhs or rhs is same shape to self\n self.shape = {:?}\n lhs.shape() = {:?} \n rhs.shape() = {:?}", self.shape(), lhs.shape(), rhs.shape());
+                }
+
+                if rhs.shape().is_empty() {
+                    self.$scalar_method(lhs, rhs.as_slice()[0]);
+                    return;
+                }
+
+                if lhs.shape().is_empty() {
+                    self.$scalar_method(rhs, lhs.index_item(&[] as &[usize]));
+                    return;
+                }
+
+                if self.shape().is_empty() {
+                    let self_slice = self.as_mut_slice();
+                    let lhs_slice = lhs.as_slice();
+                    let rhs_slice = rhs.as_slice();
+                    self_slice[0] = lhs_slice[0].$method(rhs_slice[0]);
+                } else if self.shape().len() == 1 {
+                    if is_1d_1(lhs.shape().slice()) {
+                        D::scalar(
+                            self.as_mut_ptr(),
+                            rhs.as_ptr(),
+                            lhs.index_item(&[] as &[usize]),
+                            self.shape().num_elm(),
+                            self.stride()[0],
+                            rhs.stride()[0]
+                        );
+                        return;
+                    } else if is_1d_1(rhs.shape().slice()) {
+                        D::scalar(
+                            self.as_mut_ptr(),
+                            lhs.as_ptr(),
+                            unsafe { *rhs.as_ptr() },
+                            self.shape().num_elm(),
+                            self.stride()[0],
+                            lhs.stride()[0]
+                        );
+                        return;
+                    }
+
+                    D::array_array(
+                        self.as_mut_ptr(),
+                        lhs.as_ptr(),
+                        rhs.as_ptr(),
+                        self.shape().num_elm(),
+                        self.stride()[0],
+                        lhs.stride()[0],
+                        rhs.stride()[0]
+                    );
+                } else {
+                    let num_iter = self.shape()[0];
+                    let self_dim_len = self.shape().len();
+                    let rhs_dim_len = rhs.shape().len();
+                    let lhs_dim_len = lhs.shape().len();
+                    for idx in 0..num_iter {
+                        let mut s = self.index_axis_mut_dyn(Index0D::new(idx));
+                        let lhs = get_tmp_matrix(&lhs, lhs_dim_len, idx, self_dim_len);
+                        let rhs = get_tmp_matrix(&rhs, rhs_dim_len, idx, self_dim_len);
+                        s.$method(lhs, rhs);
+                    }
+                }
+            }
+
+            pub fn $assign_method<RR, SR>(&mut self, rhs: Matrix<RR, SR, D>)
+            where
+                RR: Repr<Item=T>,
+                SR: DimTrait,
+            {
+                if self.shape().len() < rhs.shape().len() {
+                    panic!("Self shape len is larger than rhs shape len {:?} {:?}", self.shape(), rhs.shape());
+                }
+
+                if !(DimDyn::from(self.shape().slice())
+                    .is_include(DimDyn::from(rhs.shape().slice()))
+                    || DimDyn::from(self.shape().slice())
+                    .is_include_bradcast(DimDyn::from(rhs.shape().slice()))
+                )
+                {
+                    panic!("rhs shape is not include self shape {:?} {:?}", self.shape(), rhs.shape());
+                }
+
+                if !DimDyn::from(self.shape().slice())
+                    .is_include_bradcast(DimDyn::from(rhs.shape().slice()))
+                {
+                    panic!("rhs shape is not include self shape {:?} {:?}", self.shape(), rhs.shape());
+                }
+
+                if self.shape().is_empty() {
+                    let self_slice = self.as_mut_slice();
+                    let rhs_slice = rhs.as_slice();
+                    self_slice[0].$assign_method(rhs_slice[0]);
+                } else if rhs.shape().is_empty() {
+                    self.$scalar_assign_method(rhs.index_item(&[] as &[usize]));
+                } else if self.shape().len() == 1 {
+                    if is_1d_1(rhs.shape().slice()) {
+                        self.$scalar_assign_method(
+                            rhs.index_item(&[] as &[usize])
+                        );
+                        return;
+                    }
+                    D::array_assign(
+                        self.as_mut_ptr(),
+                        rhs.as_ptr(),
+                        self.shape().num_elm(),
+                        self.stride()[0],
+                        rhs.stride()[0]
+                    );
+                } else {
+                    let num_iter = self.shape()[0];
+                    let self_shape_len = self.shape().len();
+                    let rhs_shape_len = rhs.shape().len();
+                    for idx in 0..num_iter {
+                        let mut s = self.index_axis_mut_dyn(Index0D::new(idx));
+                        let rhs = get_tmp_matrix(&rhs, rhs_shape_len, idx, self_shape_len);
+                        s.$assign_method(rhs);
+                    }
+                }
+            }
+
+        }
+    };
+}
 // impl_basic_1d_functions!(add_mod, add, add_assign);
-// impl_traits!(
-//     MatrixAdd,
-//     add,
-//     MatrixAddAssign,
-//     add_assign,
-//     add_mod,
-//     add,
-//     add_assign
-// );
+impl_basic_ops!(add, add_assign, add_scalar, add_scalar_assign, Add);
 // impl_basic_1d_functions!(sub_mod, sub, sub_assign);
 // impl_traits!(
 //     MatrixSub,
