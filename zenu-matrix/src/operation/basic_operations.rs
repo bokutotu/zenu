@@ -9,6 +9,9 @@ use crate::{
 #[cfg(feature = "nvidia")]
 use crate::device::nvidia::Nvidia;
 
+#[cfg(feature = "nvidia")]
+use zenu_cuda::kernel::*;
+
 fn get_tmp_matrix<R: Repr, S: DimTrait, D: DeviceBase>(
     a: &Matrix<R, S, D>,
     len: usize,
@@ -26,132 +29,148 @@ fn get_tmp_matrix<R: Repr, S: DimTrait, D: DeviceBase>(
     }
 }
 
-pub trait Add<T: Num>: DeviceBase {
-    fn array_array(
-        to: *mut T,
-        lhs: *const T,
-        rhs: *const T,
-        num_elm: usize,
-        to_stride: usize,
-        lhs_stride: usize,
-        rhs_stride: usize,
-    );
+macro_rules! impl_basic_op_trait {
+    ($name:ident, $cpu_method:ident, $cpu_assign_method:ident, $gpu_array:ident, $gpu_array_assign:ident, $gpu_scalar:ident, $gpu_scalar_assign:ident) => {
+        pub trait $name<T: Num>: DeviceBase {
+            fn array_array(
+                to: *mut T,
+                lhs: *const T,
+                rhs: *const T,
+                num_elm: usize,
+                to_stride: usize,
+                lhs_stride: usize,
+                rhs_stride: usize,
+            );
 
-    fn array_assign(to: *mut T, rhs: *const T, num_elm: usize, to_stride: usize, rhs_stride: usize);
+            fn array_assign(
+                to: *mut T,
+                rhs: *const T,
+                num_elm: usize,
+                to_stride: usize,
+                rhs_stride: usize,
+            );
 
-    fn scalar(
-        to: *mut T,
-        lhs: *const T,
-        rhs: T,
-        num_elm: usize,
-        to_stride: usize,
-        lhs_stride: usize,
-    );
+            fn scalar(
+                to: *mut T,
+                lhs: *const T,
+                rhs: T,
+                num_elm: usize,
+                to_stride: usize,
+                lhs_stride: usize,
+            );
 
-    fn scalar_assign(to: *mut T, rhs: T, num_elm: usize, to_stride: usize);
+            fn scalar_assign(to: *mut T, rhs: T, num_elm: usize, to_stride: usize);
+        }
+
+        impl<T: Num> $name<T> for Cpu {
+            fn array_array(
+                to: *mut T,
+                lhs: *const T,
+                rhs: *const T,
+                num_elm: usize,
+                to_stride: usize,
+                lhs_stride: usize,
+                rhs_stride: usize,
+            ) {
+                for i in 0..num_elm {
+                    unsafe {
+                        *to.add(i * to_stride) =
+                            T::$cpu_method(*lhs.add(i * lhs_stride), *rhs.add(i * rhs_stride));
+                    }
+                }
+            }
+
+            fn array_assign(
+                to: *mut T,
+                rhs: *const T,
+                num_elm: usize,
+                to_stride: usize,
+                rhs_stride: usize,
+            ) {
+                for i in 0..num_elm {
+                    unsafe {
+                        T::$cpu_assign_method(
+                            &mut *to.add(i * to_stride),
+                            *rhs.add(i * rhs_stride),
+                        );
+                    }
+                }
+            }
+
+            fn scalar(
+                to: *mut T,
+                lhs: *const T,
+                rhs: T,
+                num_elm: usize,
+                to_stride: usize,
+                lhs_stride: usize,
+            ) {
+                for i in 0..num_elm {
+                    unsafe {
+                        *to.add(i * to_stride) = T::$cpu_method(*lhs.add(i * lhs_stride), rhs);
+                    }
+                }
+            }
+
+            fn scalar_assign(to: *mut T, rhs: T, num_elm: usize, to_stride: usize) {
+                for i in 0..num_elm {
+                    unsafe {
+                        T::$cpu_assign_method(&mut *to.add(i * to_stride), rhs);
+                    }
+                }
+            }
+        }
+
+        #[cfg(feature = "nvidia")]
+        impl<T: Num> $name<T> for Nvidia {
+            fn array_array(
+                to: *mut T,
+                lhs: *const T,
+                rhs: *const T,
+                num_elm: usize,
+                to_stride: usize,
+                lhs_stride: usize,
+                rhs_stride: usize,
+            ) {
+                $gpu_array(to, lhs, rhs, num_elm, to_stride, lhs_stride, rhs_stride);
+            }
+
+            fn array_assign(
+                to: *mut T,
+                rhs: *const T,
+                num_elm: usize,
+                to_stride: usize,
+                rhs_stride: usize,
+            ) {
+                $gpu_array_assign(to, rhs, num_elm, to_stride, rhs_stride);
+            }
+
+            fn scalar(
+                to: *mut T,
+                lhs: *const T,
+                rhs: T,
+                num_elm: usize,
+                to_stride: usize,
+                lhs_stride: usize,
+            ) {
+                $gpu_scalar(to, lhs, rhs, num_elm, to_stride, lhs_stride);
+            }
+
+            fn scalar_assign(to: *mut T, rhs: T, num_elm: usize, to_stride: usize) {
+                $gpu_scalar_assign(to, rhs, num_elm, to_stride);
+            }
+        }
+    };
 }
-
-impl<T: Num> Add<T> for Cpu {
-    fn array_array(
-        to: *mut T,
-        lhs: *const T,
-        rhs: *const T,
-        num_elm: usize,
-        to_stride: usize,
-        lhs_stride: usize,
-        rhs_stride: usize,
-    ) {
-        unsafe {
-            for i in 0..num_elm {
-                *to.add(i * to_stride) = *lhs.add(i * lhs_stride) + *rhs.add(i * rhs_stride);
-            }
-        }
-    }
-
-    fn array_assign(
-        to: *mut T,
-        rhs: *const T,
-        num_elm: usize,
-        to_stride: usize,
-        rhs_stride: usize,
-    ) {
-        unsafe {
-            for i in 0..num_elm {
-                *to.add(i * to_stride) += *rhs.add(i * rhs_stride);
-            }
-        }
-    }
-
-    fn scalar(
-        to: *mut T,
-        lhs: *const T,
-        rhs: T,
-        num_elm: usize,
-        to_stride: usize,
-        lhs_stride: usize,
-    ) {
-        unsafe {
-            for i in 0..num_elm {
-                *to.add(i * to_stride) = *lhs.add(i * lhs_stride) + rhs;
-            }
-        }
-    }
-
-    fn scalar_assign(to: *mut T, rhs: T, num_elm: usize, to_stride: usize) {
-        unsafe {
-            for i in 0..num_elm {
-                *to.add(i * to_stride) += rhs;
-            }
-        }
-    }
-}
-
-#[cfg(feature = "nvidia")]
-impl<T: Num> Add<T> for Nvidia {
-    fn array_assign(
-        to: *mut T,
-        source: *const T,
-        len: usize,
-        to_stride: usize,
-        source_stride: usize,
-    ) {
-        zenu_cuda::kernel::array_array_add_assign(to, to_stride, source, source_stride, len);
-    }
-
-    fn array_array(
-        to: *mut T,
-        lhs: *const T,
-        rhs: *const T,
-        len: usize,
-        to_stride: usize,
-        lhs_stride: usize,
-        rhs_stride: usize,
-    ) {
-        zenu_cuda::kernel::array_add(lhs, lhs_stride, rhs, rhs_stride, to, to_stride, len);
-    }
-
-    fn scalar_assign(to: *mut T, scalar: T, len: usize, to_stride: usize) {
-        zenu_cuda::kernel::array_scalar_add_assign(to, len, to_stride, scalar);
-    }
-
-    fn scalar(
-        to: *mut T,
-        source: *const T,
-        scalar: T,
-        len: usize,
-        to_stride: usize,
-        source_stride: usize,
-    ) {
-        zenu_cuda::kernel::array_scalar_add(
-            source as *mut T,
-            len,
-            source_stride,
-            scalar,
-            to,
-            to_stride,
-        );
-    }
-}
+impl_basic_op_trait!(
+    AddOps,
+    add,
+    add_assign,
+    array_add,
+    array_assign,
+    array_scalar_add,
+    array_scalar_add_assign
+);
 
 /// 1dのMatrixを受け取る(これは入力側でチェック)
 /// その配列の中身が1かどうかを確認
@@ -364,7 +383,7 @@ macro_rules! impl_basic_ops {
     };
 }
 // impl_basic_1d_functions!(add_mod, add, add_assign);
-impl_basic_ops!(add, add_assign, add_scalar, add_scalar_assign, Add);
+impl_basic_ops!(add, add_assign, add_scalar, add_scalar_assign, AddOps);
 // impl_basic_1d_functions!(sub_mod, sub, sub_assign);
 // impl_traits!(
 //     MatrixSub,
