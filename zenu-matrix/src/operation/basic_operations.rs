@@ -244,7 +244,7 @@ macro_rules! impl_basic_ops {
                 }
 
                 if rhs.shape().is_empty() {
-                    self.$scalar_method(lhs, rhs.as_slice()[0]);
+                    self.$scalar_method(lhs, rhs.index_item(&[] as &[usize]));
                     return;
                 }
 
@@ -263,7 +263,7 @@ macro_rules! impl_basic_ops {
                         D::scalar(
                             self.as_mut_ptr(),
                             rhs.as_ptr(),
-                            lhs.index_item(&[] as &[usize]),
+                            lhs.index_item(&[0 as usize] as &[usize]),
                             self.shape().num_elm(),
                             self.stride()[0],
                             rhs.stride()[0]
@@ -273,7 +273,7 @@ macro_rules! impl_basic_ops {
                         D::scalar(
                             self.as_mut_ptr(),
                             lhs.as_ptr(),
-                            unsafe { *rhs.as_ptr() },
+                            rhs.index_item(&[0 as usize] as &[usize]),
                             self.shape().num_elm(),
                             self.stride()[0],
                             lhs.stride()[0]
@@ -337,7 +337,7 @@ macro_rules! impl_basic_ops {
                 } else if self.shape().len() == 1 {
                     if is_1d_1(rhs.shape().slice()) {
                         self.$scalar_assign_method(
-                            rhs.index_item(&[] as &[usize])
+                            rhs.index_item(&[0 as usize] as &[usize])
                         );
                         return;
                     }
@@ -717,7 +717,7 @@ mod add {
         result.extend_from_slice(&three);
         result.extend_from_slice(&four);
         let result = result.into_iter().map(|x| x as f32).collect::<Vec<f32>>();
-        let result = Matrix::from_vec(result, [4, 2, 3, 3]);
+        let result: Matrix<Owned<f32>, DimDyn, Cpu> = Matrix::from_vec(result, [4, 2, 3, 3]);
         // assert!((ans.to_ref() - result.to_ref()).asum() == 0.0);
     }
 }
