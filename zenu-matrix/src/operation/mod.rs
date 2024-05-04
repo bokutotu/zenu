@@ -2,7 +2,7 @@
 pub mod asum;
 pub mod basic_operations;
 // pub mod broadcast;
-// pub mod clip;
+pub mod clip;
 pub mod copy_from;
 // pub mod dot;
 // pub mod exp;

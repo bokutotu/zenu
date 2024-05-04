@@ -301,6 +301,49 @@ pub fn set_memory<T: 'static>(array: *mut T, offset: usize, value: T) {
     }
 }
 
+pub fn clip<T: 'static>(
+    input: *const T,
+    output: *mut T,
+    size: usize,
+    stride_in: usize,
+    stride_out: usize,
+    min: T,
+    max: T,
+) {
+    let size = size as ::std::os::raw::c_int;
+    let stride_in = stride_in as ::std::os::raw::c_int;
+    let stride_out = stride_out as ::std::os::raw::c_int;
+    if TypeId::of::<T>() == TypeId::of::<f32>() {
+        let input = input as *mut f32;
+        let output = output as *mut f32;
+        let min = unsafe { *{ &min as *const T as *const f32 } };
+        let max = unsafe { *{ &max as *const T as *const f32 } };
+        unsafe { array_clip_float(input, output, size, stride_in, stride_out, min, max) };
+    } else if TypeId::of::<T>() == TypeId::of::<f64>() {
+        let input = input as *mut f64;
+        let output = output as *mut f64;
+        let min = unsafe { *{ &min as *const T as *const f64 } };
+        let max = unsafe { *{ &max as *const T as *const f64 } };
+        unsafe { array_clip_double(input, output, size, stride_in, stride_out, min, max) };
+    }
+}
+
+pub fn clip_assign<T: 'static>(input: *mut T, size: usize, stride: usize, min: T, max: T) {
+    let size = size as ::std::os::raw::c_int;
+    let stride = stride as ::std::os::raw::c_int;
+    if TypeId::of::<T>() == TypeId::of::<f32>() {
+        let input = input as *mut f32;
+        let min = unsafe { *{ &min as *const T as *const f32 } };
+        let max = unsafe { *{ &max as *const T as *const f32 } };
+        unsafe { array_clip_assign_float(input, size, stride, min, max) };
+    } else if TypeId::of::<T>() == TypeId::of::<f64>() {
+        let input = input as *mut f64;
+        let min = unsafe { *{ &min as *const T as *const f64 } };
+        let max = unsafe { *{ &max as *const T as *const f64 } };
+        unsafe { array_clip_assign_double(input, size, stride, min, max) };
+    }
+}
+
 #[cfg(test)]
 mod array_array {
     use super::*;
@@ -878,5 +921,50 @@ mod array_scalar {
         set_memory(a_gpu, 1, 1.0);
         let out = get_memory(a_gpu, 1);
         assert_eq!(out, 1.0);
+    }
+
+    // fn clip_test() {
+    macro_rules! clip_test {
+        ($ty:ty) => {
+            let a: Vec<$ty> = vec![0.0, 1.0, 2.0, 3.0];
+            let mut out = vec![0.0; a.len()];
+            let a_gpu = cuda_malloc(a.len()).unwrap();
+            cuda_copy(
+                a_gpu,
+                a.as_ptr(),
+                a.len(),
+                ZenuCudaMemCopyKind::HostToDevice,
+            )
+            .unwrap();
+            let out_gpu = cuda_malloc(out.len()).unwrap();
+            clip(a_gpu, out_gpu, a.len(), 1, 1, 1.0, 2.0);
+            cuda_copy(
+                out.as_mut_ptr(),
+                out_gpu,
+                out.len(),
+                ZenuCudaMemCopyKind::DeviceToHost,
+            )
+            .unwrap();
+            let ans: Vec<$ty> = vec![1.0, 1.0, 2.0, 2.0];
+            assert_eq!(out, ans);
+
+            clip_assign(a_gpu, a.len(), 1, 1.0, 2.0);
+            cuda_copy(
+                out.as_mut_ptr(),
+                a_gpu,
+                out.len(),
+                ZenuCudaMemCopyKind::DeviceToHost,
+            )
+            .unwrap();
+            assert_eq!(out, ans);
+        };
+    }
+    #[test]
+    fn clip_test_f32() {
+        clip_test!(f32);
+    }
+    #[test]
+    fn clip_test_f64() {
+        clip_test!(f64);
     }
 }

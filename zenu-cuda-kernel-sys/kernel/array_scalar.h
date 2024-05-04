@@ -73,6 +73,11 @@ void array_abs_assign_double(double *a, int size, int stride);
 void array_sqrt_assign_double(double *a, int size, int stride);
 void array_exp_assign_double(double *a, int size, int stride);
 
+void array_clip_float(float* input, float *output, int size, int stride_in, int stride_out, float min, float max);
+void array_clip_double(double* input, double *output, int size, int stride_in, int stride_out, double min, double max);
+void array_clip_assign_float(float* input, int size, int stride, float min, float max);
+void array_clip_assign_double(double* input, int size, int stride, double min, double max);
+
 #ifdef __cplusplus
 }
 #endif
