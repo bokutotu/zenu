@@ -26,6 +26,7 @@ pub trait ClipOps {
 }
 
 impl ClipOps for Cpu {
+    #[allow(clippy::not_unsafe_ptr_arg_deref)]
     fn clip<T: Num>(
         input: *const T,
         output: *mut T,
@@ -48,6 +49,7 @@ impl ClipOps for Cpu {
         }
     }
 
+    #[allow(clippy::not_unsafe_ptr_arg_deref)]
     fn clip_assign<T: Num>(input: *mut T, size: usize, stride: usize, min: T, max: T) {
         let input = unsafe { std::slice::from_raw_parts_mut(input, size * stride) };
         for i in 0..size {
@@ -112,7 +114,7 @@ fn clip_inner<T: Num, D: DeviceBase + ClipOps>(
     min: T,
     max: T,
 ) {
-    if input.shape().len() == 1 {
+    if input.shape().is_empty() {
         clip_1d(input, output, min, max);
     } else if input.shape().len() == 0 {
         unimplemented!();
@@ -133,7 +135,7 @@ fn clip_assign_inner<T: Num, D: DeviceBase + ClipOps>(
     min: T,
     max: T,
 ) {
-    if input.shape().len() == 1 {
+    if input.shape().is_empty() {
         clip_assign_1d(input, min, max);
     } else if input.shape().len() == 0 {
         unimplemented!();

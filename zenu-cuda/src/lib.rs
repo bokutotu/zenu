@@ -22,8 +22,7 @@ impl ZenuCudaState {
         let mut null_ptr = std::ptr::null_mut();
         let null_ptr_ptr = &mut null_ptr as *mut *mut cublasContext;
         let cublas_handel = NonNull::new(null_ptr_ptr).unwrap();
-        let err: u32 =
-            unsafe { cublasCreate_v2(cublas_handel.as_ptr() as *mut *mut cublasContext) as u32 };
+        let err: u32 = unsafe { cublasCreate_v2(cublas_handel.as_ptr()) as u32 };
         let err = ZenuCublasError::from(err);
         match err {
             ZenuCublasError::CublasStatusSuccess => {
