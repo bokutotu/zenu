@@ -694,6 +694,31 @@ mod basic_ops {
         transposed::<crate::device::nvidia::Nvidia>();
     }
 
+    fn broadcast_add<D: DeviceBase + AddOps>() {
+        let a = vec![1., 2., 3., 4., 5., 6., 7., 8.];
+        let a: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(a, [2, 2, 2]);
+        let b: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(vec![1., 1.], [1, 1, 2]);
+        let mut ans: Matrix<Owned<f32>, DimDyn, D> = Matrix::zeros([2, 2, 2]);
+        ans.to_ref_mut().add_array(&a, &b);
+        assert_eq!(ans.index_item([0, 0, 0]), 2.);
+        assert_eq!(ans.index_item([0, 0, 1]), 3.);
+        assert_eq!(ans.index_item([0, 1, 0]), 4.);
+        assert_eq!(ans.index_item([0, 1, 1]), 5.);
+        assert_eq!(ans.index_item([1, 0, 0]), 6.);
+        assert_eq!(ans.index_item([1, 0, 1]), 7.);
+        assert_eq!(ans.index_item([1, 1, 0]), 8.);
+        assert_eq!(ans.index_item([1, 1, 1]), 9.);
+    }
+    #[test]
+    fn broadcast_add_cpu() {
+        broadcast_add::<crate::device::cpu::Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn broadcast_add_gpu() {
+        broadcast_add::<crate::device::nvidia::Nvidia>();
+    }
+
     fn sub_3d_scalar<D: DeviceBase + SubOps>() {
         let a = vec![1., 2., 3., 4., 5., 6., 7., 8.];
         let a: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(a, [2, 2, 2]);
