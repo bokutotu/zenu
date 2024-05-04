@@ -5,12 +5,12 @@ use zenu_cuda_kernel_sys::*;
 macro_rules! impl_array_scalar {
     ($name:ident, $double_fn:ident, $float_fn:ident) => {
         pub fn $name<T: 'static>(
-            a: *mut T,
-            size: usize,
-            stride: usize,
-            scalar: T,
             out: *mut T,
+            a: *const T,
+            scalar: T,
+            size: usize,
             out_stride: usize,
+            stride: usize,
         ) {
             let size = size as ::std::os::raw::c_int;
             let stride = stride as ::std::os::raw::c_int;
@@ -52,7 +52,7 @@ impl_array_scalar!(
 
 macro_rules! impl_array_scalar_assign {
     ($name:ident, $double_fn:ident, $float_fn:ident) => {
-        pub fn $name<T: 'static>(a: *mut T, size: usize, stride: usize, scalar: T) {
+        pub fn $name<T: 'static>(a: *mut T, scalar: T, size: usize, stride: usize) {
             let size = size as ::std::os::raw::c_int;
             let stride = stride as ::std::os::raw::c_int;
             if TypeId::of::<T>() == TypeId::of::<f32>() {
@@ -91,13 +91,13 @@ impl_array_scalar_assign!(
 macro_rules! impl_arra_array {
     ($name:ident, $double_fn:ident, $float_fn:ident) => {
         pub fn $name<T: 'static>(
-            a: *const T,
-            stride_a: usize,
-            b: *const T,
-            stride_b: usize,
             c: *mut T,
-            stride_c: usize,
+            a: *const T,
+            b: *const T,
             size: usize,
+            stride_c: usize,
+            stride_a: usize,
+            stride_b: usize,
         ) {
             let size = size as ::std::os::raw::c_int;
             let stride_a = stride_a as ::std::os::raw::c_int;
@@ -126,10 +126,10 @@ macro_rules! impl_array_array_assign {
     ($name:ident, $double_fn:ident, $float_fn:ident) => {
         pub fn $name<T: 'static>(
             a: *mut T,
-            stride_a: usize,
             b: *const T,
-            stride_b: usize,
             size: usize,
+            stride_a: usize,
+            stride_b: usize,
         ) {
             let size = size as ::std::os::raw::c_int;
             let stride_a = stride_a as ::std::os::raw::c_int;
@@ -330,7 +330,8 @@ mod array_array {
                     ZenuCudaMemCopyKind::HostToDevice,
                 )
                 .unwrap();
-                $kernel_func(a_gpu, 1, b_gpu, 1, out_gpu, 1, a.len());
+                // $kernel_func(a_gpu, 1, b_gpu, 1, out_gpu, 1, a.len());
+                $kernel_func(out_gpu, a_gpu, b_gpu, a.len(), 1, 1, 1);
                 cuda_copy(
                     out.as_mut_ptr(),
                     out_gpu,
@@ -430,7 +431,8 @@ mod array_array {
                     ZenuCudaMemCopyKind::HostToDevice,
                 )
                 .unwrap();
-                $kernel_func(a_gpu, 1, b_gpu, 1, a.len());
+                // $kernel_func(a_gpu, 1, b_gpu, 1, a.len());
+                $kernel_func(a_gpu, b_gpu, a.len(), 1, 1);
                 cuda_copy(
                     out.as_mut_ptr(),
                     a_gpu,
@@ -531,7 +533,8 @@ mod array_scalar {
                 )
                 .unwrap();
                 let out_gpu = cuda_malloc(out.len()).unwrap();
-                $kernel_func(a_gpu, a.len(), 1, scalar, out_gpu, 1);
+                // $kernel_func(a_gpu, a.len(), 1, scalar, out_gpu, 1);
+                $kernel_func(out_gpu, a_gpu, scalar, a.len(), 1, 1);
                 cuda_copy(
                     out.as_mut_ptr(),
                     out_gpu,
