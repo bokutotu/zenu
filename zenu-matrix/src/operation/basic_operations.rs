@@ -971,4 +971,57 @@ mod basic_ops {
     fn div_scalar_assign_gpu() {
         div_scalar_assign::<crate::device::nvidia::Nvidia>();
     }
+
+    fn div_array<D: DeviceBase + DivOps>() {
+        let a = vec![1., 2., 3., 4., 5., 6., 7., 8.];
+        let a: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(a, [2, 2, 2]);
+        let b = vec![8., 7., 6., 5., 4., 3., 2., 1.];
+        let b: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(b, [2, 2, 2]);
+        let mut ans: Matrix<Owned<f32>, DimDyn, D> = Matrix::zeros([2, 2, 2]);
+        ans.to_ref_mut().div_array(&a, &b);
+
+        assert_eq!(ans.index_item([0, 0, 0]), 1. / 8.);
+        assert_eq!(ans.index_item([0, 0, 1]), 2. / 7.);
+        assert_eq!(ans.index_item([0, 1, 0]), 3. / 6.);
+        assert_eq!(ans.index_item([0, 1, 1]), 4. / 5.);
+        assert_eq!(ans.index_item([1, 0, 0]), 5. / 4.);
+        assert_eq!(ans.index_item([1, 0, 1]), 6. / 3.);
+        assert_eq!(ans.index_item([1, 1, 0]), 7. / 2.);
+        assert_eq!(ans.index_item([1, 1, 1]), 8. / 1.);
+    }
+    #[test]
+    fn div_array_cpu() {
+        div_array::<crate::device::cpu::Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn div_array_gpu() {
+        div_array::<crate::device::nvidia::Nvidia>();
+    }
+
+    fn div_assign_array<D: DeviceBase + DivOps>() {
+        let a = vec![1., 2., 3., 4., 5., 6., 7., 8.];
+        let mut a: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(a, [2, 2, 2]);
+        let b = vec![8., 7., 6., 5., 4., 3., 2., 1.];
+        let b: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(b, [2, 2, 2]);
+        a.to_ref_mut().div_assign(&b);
+
+        assert_eq!(a.index_item([0, 0, 0]), 1. / 8.);
+        assert_eq!(a.index_item([0, 0, 1]), 2. / 7.);
+        assert_eq!(a.index_item([0, 1, 0]), 3. / 6.);
+        assert_eq!(a.index_item([0, 1, 1]), 4. / 5.);
+        assert_eq!(a.index_item([1, 0, 0]), 5. / 4.);
+        assert_eq!(a.index_item([1, 0, 1]), 6. / 3.);
+        assert_eq!(a.index_item([1, 1, 0]), 7. / 2.);
+        assert_eq!(a.index_item([1, 1, 1]), 8. / 1.);
+    }
+    #[test]
+    fn div_assign_array_cpu() {
+        div_assign_array::<crate::device::cpu::Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn div_assign_array_gpu() {
+        div_assign_array::<crate::device::nvidia::Nvidia>();
+    }
 }
