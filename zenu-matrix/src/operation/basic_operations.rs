@@ -574,7 +574,7 @@ mod basic_ops {
         sliced_3d_assign::<crate::device::nvidia::Nvidia>();
     }
 
-    fn matrix_add_3d<D: DeviceBase + AddOps>() {
+    fn matrix_add_4d<D: DeviceBase + AddOps>() {
         let a: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(
             vec![
                 1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12., 13., 14., 15., 16.,
@@ -608,13 +608,46 @@ mod basic_ops {
         assert_eq!(ans.index_item([1, 1, 1, 1]), 17.);
     }
     #[test]
-    fn matrix_add_3d_cpu() {
-        matrix_add_3d::<crate::device::cpu::Cpu>();
+    fn matrix_add_4d_cpu() {
+        matrix_add_4d::<crate::device::cpu::Cpu>();
     }
     #[cfg(feature = "nvidia")]
     #[test]
-    fn matrix_add_3d_gpu() {
-        matrix_add_3d::<crate::device::nvidia::Nvidia>();
+    fn matrix_add_4d_gpu() {
+        matrix_add_4d::<crate::device::nvidia::Nvidia>();
+    }
+
+    fn matrix_add_sliced<D: DeviceBase + AddOps>() {
+        let a: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(
+            vec![
+                1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12., 13., 14., 15., 16.,
+            ],
+            [4, 4],
+        );
+        let b: Matrix<_, DimDyn, _> = Matrix::from_vec(
+            vec![
+                1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12., 13., 14., 15., 16.,
+            ],
+            [4, 4],
+        );
+
+        let a = a.slice(slice_dynamic!(1..;2, ..;2));
+        let b = b.slice(slice_dynamic!(..;2, 1..;2));
+        let mut ans: Matrix<Owned<f32>, DimDyn, D> = Matrix::zeros([2, 2]);
+        ans.to_ref_mut().add_array(&a, &b);
+        assert_eq!(ans.index_item([0, 0]), 7.);
+        assert_eq!(ans.index_item([0, 1]), 11.);
+        assert_eq!(ans.index_item([1, 0]), 23.);
+        assert_eq!(ans.index_item([1, 1]), 27.);
+    }
+    #[test]
+    fn matrix_add_sliced_cpu() {
+        matrix_add_sliced::<crate::device::cpu::Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn matrix_add_sliced_gpu() {
+        matrix_add_sliced::<crate::device::nvidia::Nvidia>();
     }
 }
 
