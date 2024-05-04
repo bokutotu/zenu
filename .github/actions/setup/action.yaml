@@ -1,0 +1,20 @@
+name: Setup
+description: Setup
+
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/checkout@v4
+
+    - uses: chetan/git-restore-mtime-action@v2 # for Rust incremental build
+
+    - name: Rust cache
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db
+          sql-extraction/rs/target/
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.toml') }}
