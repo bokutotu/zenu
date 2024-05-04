@@ -18,3 +18,6 @@ runs:
           ~/.cargo/git/db
           sql-extraction/rs/target/
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.toml') }}
+
+    - name: Install openblas
+      run: sudo apt-get install libopenblas-dev -y
