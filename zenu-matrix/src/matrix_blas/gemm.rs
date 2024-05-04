@@ -1,7 +1,6 @@
 use crate::{
     device::{cpu::Cpu, DeviceBase},
     dim::{Dim2, DimTrait},
-    index::Index0D,
     matrix::{Matrix, Ref, Repr},
     num::Num,
     shape_stride::ShapeStride,
