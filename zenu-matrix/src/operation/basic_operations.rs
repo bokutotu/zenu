@@ -63,6 +63,7 @@ macro_rules! impl_basic_op_trait {
         }
 
         impl$name for Cpu {
+            #[allow(clippy::not_unsafe_ptr_arg_deref)]
             fn array_array<T: Num>(
                 to: *mut T,
                 lhs: *const T,
@@ -80,6 +81,7 @@ macro_rules! impl_basic_op_trait {
                 }
             }
 
+            #[allow(clippy::not_unsafe_ptr_arg_deref)]
             fn array_assign<T: Num>(
                 to: *mut T,
                 rhs: *const T,
@@ -97,6 +99,7 @@ macro_rules! impl_basic_op_trait {
                 }
             }
 
+            #[allow(clippy::not_unsafe_ptr_arg_deref)]
             fn scalar<T: Num>(
                 to: *mut T,
                 lhs: *const T,
@@ -112,6 +115,7 @@ macro_rules! impl_basic_op_trait {
                 }
             }
 
+            #[allow(clippy::not_unsafe_ptr_arg_deref)]
             fn scalar_assign<T: Num>(to: *mut T, rhs: T, num_elm: usize, to_stride: usize) {
                 for i in 0..num_elm {
                     unsafe {

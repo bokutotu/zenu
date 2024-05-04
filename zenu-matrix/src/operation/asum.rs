@@ -21,11 +21,11 @@ impl Asum for Cpu {
         extern crate openblas_src;
 
         if TypeId::of::<T>() == TypeId::of::<f32>() {
-            let x = unsafe { std::slice::from_raw_parts(x as *const f32, n * incx as usize) };
+            let x = unsafe { std::slice::from_raw_parts(x as *const f32, n * incx) };
             let result = unsafe { sasum(n as i32, x, incx as i32) };
             unsafe { *(&result as *const f32 as *const T) }
         } else if TypeId::of::<T>() == TypeId::of::<f64>() {
-            let x = unsafe { std::slice::from_raw_parts(x as *const f64, n * incx as usize) };
+            let x = unsafe { std::slice::from_raw_parts(x as *const f64, n * incx) };
             let result = unsafe { dasum(n as i32, x, incx as i32) };
             unsafe { *(&result as *const f64 as *const T) }
         } else {

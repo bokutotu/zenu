@@ -434,6 +434,7 @@ where
         unsafe { self.ptr.ptr.add(self.offset()) }
     }
 
+    #[allow(clippy::mut_from_ref)]
     pub fn as_mut_slice(&self) -> &mut [T] {
         if self.shape().len() <= 1 {
             let num_elm = std::cmp::max(self.shape().num_elm(), 1);
