@@ -36,6 +36,6 @@ mod kernel {
             )
         };
 
-        unsafe { array_scalar_add_float(a_gpu as *mut f32, 3, 1, 1., b_gpu as *mut f32) };
+        unsafe { array_scalar_add_float(a_gpu as *mut f32, 3, 1, 1., b_gpu as *mut f32, 1) };
     }
 }
