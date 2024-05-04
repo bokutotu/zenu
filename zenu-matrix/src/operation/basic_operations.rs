@@ -167,7 +167,7 @@ impl_basic_op_trait!(
     add,
     add_assign,
     array_add,
-    array_assign,
+    array_array_add_assign,
     array_scalar_add,
     array_scalar_add_assign
 );
@@ -176,7 +176,7 @@ impl_basic_op_trait!(
     sub,
     sub_assign,
     array_sub,
-    array_assign,
+    array_array_sub_assign,
     array_scalar_sub,
     array_scalar_sub_assign
 );
@@ -185,7 +185,7 @@ impl_basic_op_trait!(
     mul,
     mul_assign,
     array_mul,
-    array_assign,
+    array_array_mul_assign,
     array_scalar_mul,
     array_scalar_mul_assign
 );
@@ -194,7 +194,7 @@ impl_basic_op_trait!(
     div,
     div_assign,
     array_div,
-    array_assign,
+    array_array_div_assign,
     array_scalar_div,
     array_scalar_div_assign
 );
