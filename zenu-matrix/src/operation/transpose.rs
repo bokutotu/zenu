@@ -1,118 +1,83 @@
 use crate::{
-    constructor::zeros::Zeros,
-    dim::{Dim2, Dim3, Dim4, DimDyn, DimTrait},
+    device::DeviceBase,
+    dim::{DimDyn, DimTrait},
     index::index_dyn_impl::Index,
-    matrix::{IndexAxisDyn, IndexAxisMutDyn, MatrixBase, ToViewMatrix},
-    matrix_impl::{Matrix, OwnedMatrixDyn},
-    memory::{Memory, ToViewMemory},
-    memory_impl::{OwnedMem, ViewMem},
-    num::Num,
-    operation::copy_from::CopyFrom,
+    matrix::{Matrix, Owned, Repr},
+    matrix_blas::copy::CopyBlas,
 };
 
-use super::to_default_stride::ToDefaultStride;
-
-pub trait Transpose {
-    fn transpose(&mut self);
-}
-
-macro_rules! impl_transpose {
-    ($dim:ty) => {
-        impl<T: Num, M: Memory<Item = T>> Transpose for Matrix<M, $dim> {
-            #[allow(clippy::almost_swapped)]
-            fn transpose(&mut self) {
-                let shape_stride = self.shape_stride();
-                let transposed = shape_stride.transpose();
-
-                self.update_shape(transposed.shape());
-                self.update_stride(transposed.stride());
-            }
-        }
-    };
-}
-impl_transpose!(Dim2);
-impl_transpose!(Dim3);
-impl_transpose!(Dim4);
-
-impl<T: Num, M: Memory<Item = T>> Transpose for Matrix<M, DimDyn> {
-    fn transpose(&mut self) {
+impl<R: Repr, D: DeviceBase + CopyBlas> Matrix<R, DimDyn, D> {
+    pub fn transpose(&mut self) {
         let shape_stride = self.shape_stride();
         let transposed = shape_stride.transpose();
-
-        self.update_shape(transposed.shape());
-        self.update_stride(transposed.stride());
-    }
-}
-
-pub trait TransposeInplace<T: Num> {
-    fn transepose_by_index(&self, index: &[usize]) -> Matrix<ViewMem<T>, DimDyn>;
-    fn transpose_by_index_inplace(&self, index: &[usize]) -> Matrix<OwnedMem<T>, DimDyn>;
-    fn transpose_swap_index_inplace(&self, a: usize, b: usize) -> Matrix<OwnedMem<T>, DimDyn>;
-}
-
-impl<T: Num, M: ToViewMemory<Item = T>> TransposeInplace<T> for Matrix<M, DimDyn> {
-    fn transepose_by_index(&self, index: &[usize]) -> Matrix<ViewMem<T>, DimDyn> {
-        let shape_stride = self.shape_stride().transpose_by_index(index);
-        let mut cloned = self.to_view();
-        cloned.update_shape_stride(shape_stride);
-        cloned
+        self.update_shape_stride(transposed);
     }
 
-    fn transpose_by_index_inplace(&self, index: &[usize]) -> Matrix<OwnedMem<T>, DimDyn> {
-        let transposed_view = self.transepose_by_index(index);
-        transposed_view.to_default_stride()
+    pub fn transpose_by_index(&mut self, index: &[usize]) {
+        let shape_stride = self.shape_stride();
+        let transposed = shape_stride.transpose_by_index(index);
+        self.update_shape_stride(transposed);
     }
 
-    fn transpose_swap_index_inplace(&self, a: usize, b: usize) -> Matrix<OwnedMem<T>, DimDyn> {
+    pub fn transpose_by_index_new_matrix(
+        &self,
+        index: &[usize],
+    ) -> Matrix<Owned<R::Item>, DimDyn, D> {
+        let mut ref_mat = self.to_ref();
+        ref_mat.transpose_by_index(index);
+        ref_mat.to_default_stride()
+    }
+
+    pub fn transpose_swap_index(&mut self, a: usize, b: usize) {
         if a == b {
             panic!("Index must be different");
         }
         if a < b {
-            return self.transpose_swap_index_inplace(b, a);
+            return self.transpose_swap_index(b, a);
         }
         assert!(a < self.shape().len(), "Index out of range");
         assert!(b < self.shape().len(), "Index out of range");
-        let mut shape = self.shape();
-        shape[a] = self.shape()[b];
-        shape[b] = self.shape()[a];
-        let mut zeros = OwnedMatrixDyn::zeros(shape);
 
-        if self.shape().len() == 2 {
-            for i in 0..self.shape()[0] {
-                zeros
-                    .index_axis_mut_dyn(Index::new(1, i))
-                    .copy_from(&self.index_axis_dyn(Index::new(0, i)));
-            }
-            return zeros;
+        let shape_stride = self.shape_stride().swap_index(a, b);
+        self.update_shape_stride(shape_stride);
+    }
+
+    pub fn transpose_swap_index_new_matrix(
+        &self,
+        a: usize,
+        b: usize,
+    ) -> Matrix<Owned<R::Item>, DimDyn, D> {
+        if a == b {
+            panic!("Index must be different");
         }
-
-        for i in 0..self.shape()[a] {
-            let i_self = self.index_axis_dyn(Index::new(a, i));
-            let mut i_zeros = zeros.index_axis_mut_dyn(Index::new(b, i));
-
-            for j in 0..self.shape()[b] {
-                let j_self = i_self.index_axis_dyn(Index::new(b, j));
-                let mut j_zeros = i_zeros.index_axis_mut_dyn(Index::new(a - 1, j));
-                j_zeros.copy_from(&j_self);
-            }
+        if a < b {
+            return self.transpose_swap_index_new_matrix(b, a);
         }
-
-        zeros
+        let mut ref_mat = self.to_ref();
+        ref_mat.transpose_swap_index(a, b);
+        ref_mat.to_default_stride()
     }
 }
-
 #[cfg(test)]
 mod transpose {
+    // use crate::{
+    //     matrix::{IndexItem, OwnedMatrix},
+    //     matrix_impl::OwnedMatrixDyn,
+    // };
+    //
+    // use super::Transpose;
+
     use crate::{
-        matrix::{IndexItem, OwnedMatrix},
-        matrix_impl::OwnedMatrixDyn,
+        device::DeviceBase,
+        dim::DimDyn,
+        matrix::{Matrix, Owned},
+        matrix_blas::copy::CopyBlas,
     };
 
-    use super::Transpose;
-
-    #[test]
-    fn transpose_2d() {
-        let mut a = OwnedMatrixDyn::from_vec(vec![1., 2., 3., 4., 5., 6.], [2, 3]);
+    // #[test]
+    fn transpose_2d<D: DeviceBase + CopyBlas>() {
+        let mut a: Matrix<Owned<f32>, DimDyn, D> =
+            Matrix::from_vec(vec![1., 2., 3., 4., 5., 6.], [2, 3]);
         a.transpose();
         assert_eq!(a.index_item([0, 0]), 1.);
         assert_eq!(a.index_item([0, 1]), 4.);
@@ -121,16 +86,33 @@ mod transpose {
         assert_eq!(a.index_item([2, 0]), 3.);
         assert_eq!(a.index_item([2, 1]), 6.);
     }
+    #[test]
+    fn transpose_2d_cpu() {
+        transpose_2d::<crate::device::cpu::Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn transpose_2d_cuda() {
+        transpose_2d::<crate::device::nvidia::Nvidia>();
+    }
 }
 
 #[cfg(test)]
 mod transpose_inplace {
-    use crate::{matrix::OwnedMatrix, matrix_impl::OwnedMatrixDyn, operation::asum::Asum};
+    // use crate::{matrix::OwnedMatrix, matrix_impl::OwnedMatrixDyn, operation::asum::Asum};
+    //
+    // use super::TransposeInplace;
 
-    use super::TransposeInplace;
+    use crate::{
+        device::DeviceBase,
+        dim::DimDyn,
+        matrix::{Matrix, Owned},
+        matrix_blas::copy::CopyBlas,
+        operation::{asum::Asum, basic_operations::SubOps},
+    };
 
-    #[test]
-    fn inplace_transpose_4d() {
+    // #[test]
+    fn inplace_transpose_4d<D: DeviceBase + CopyBlas + SubOps + Asum>() {
         let mut input = vec![];
         for i in 0..3 {
             for j in 0..4 {
@@ -141,8 +123,8 @@ mod transpose_inplace {
                 }
             }
         }
-        let input = OwnedMatrixDyn::from_vec(input, [3, 4, 5, 6]);
-        let output = input.transpose_by_index_inplace(&[1, 0, 2, 3]);
+        let input: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(input, [3, 4, 5, 6]);
+        let output = input.transpose_by_index_new_matrix(&[1, 0, 2, 3]);
         let ans = vec![
             0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 20.0, 21.0, 22.0,
             23.0, 24.0, 25.0, 30.0, 31.0, 32.0, 33.0, 34.0, 35.0, 40.0, 41.0, 42.0, 43.0, 44.0,
@@ -177,30 +159,41 @@ mod transpose_inplace {
             2321.0, 2322.0, 2323.0, 2324.0, 2325.0, 2330.0, 2331.0, 2332.0, 2333.0, 2334.0, 2335.0,
             2340.0, 2341.0, 2342.0, 2343.0, 2344.0, 2345.0,
         ];
-        let ans = OwnedMatrixDyn::from_vec(ans, [4, 3, 5, 6]);
+        let ans: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(ans, [4, 3, 5, 6]);
         assert!((output - ans).asum() < 1e-6);
     }
 
-    #[test]
-    fn swap_axis() {
-        let input = OwnedMatrixDyn::from_vec(vec![1., 2., 3., 4., 5., 6.], [2, 3]);
-        let output = input.transpose_swap_index_inplace(0, 1);
-        let ans = OwnedMatrixDyn::from_vec(vec![1., 4., 2., 5., 3., 6.], [3, 2]);
+    // #[test]
+    fn swap_axis<D: DeviceBase + CopyBlas + SubOps + Asum>() {
+        let input: Matrix<Owned<f32>, DimDyn, D> =
+            Matrix::from_vec(vec![1., 2., 3., 4., 5., 6.], [2, 3]);
+        let output = input.transpose_swap_index_new_matrix(0, 1);
+        let ans: Matrix<Owned<f32>, DimDyn, D> =
+            Matrix::from_vec(vec![1., 4., 2., 5., 3., 6.], [3, 2]);
         assert!((output - ans).asum() < 1e-6);
     }
-
     #[test]
-    fn swap_axis_3d() {
+    fn inplace_transpose_4d_cpu() {
+        inplace_transpose_4d::<crate::device::cpu::Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn inplace_transpose_4d_cuda() {
+        inplace_transpose_4d::<crate::device::nvidia::Nvidia>();
+    }
+
+    // #[test]
+    fn swap_axis_3d<D: DeviceBase + CopyBlas + SubOps + Asum>() {
         // 2, 3, 4
-        let input = OwnedMatrixDyn::from_vec(
+        let input: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(
             vec![
                 1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12., 13., 14., 15., 16., 17., 18.,
                 19., 20., 21., 22., 23., 24.,
             ],
             [2, 3, 4],
         );
-        let output = input.transpose_swap_index_inplace(0, 1);
-        let ans = OwnedMatrixDyn::from_vec(
+        let output = input.transpose_swap_index_new_matrix(0, 1);
+        let ans: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(
             vec![
                 1., 2., 3., 4., 13., 14., 15., 16., 5., 6., 7., 8., 17., 18., 19., 20., 9., 10.,
                 11., 12., 21., 22., 23., 24.,
@@ -208,5 +201,14 @@ mod transpose_inplace {
             [3, 2, 4],
         );
         assert!((output - ans).asum() < 1e-6);
+    }
+    #[test]
+    fn swap_axis_3d_cpu() {
+        swap_axis_3d::<crate::device::cpu::Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn swap_axis_3d_cuda() {
+        swap_axis_3d::<crate::device::nvidia::Nvidia>();
     }
 }

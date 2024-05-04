@@ -278,9 +278,9 @@ where
         }
     }
 
-    pub fn update_shape_stride(&mut self, shape: S, stride: S) {
-        self.shape = shape;
-        self.stride = stride;
+    pub fn update_shape_stride(&mut self, shape_stride: ShapeStride<S>) {
+        self.shape = shape_stride.shape();
+        self.stride = shape_stride.stride();
     }
 
     pub fn update_shape(&mut self, shape: S) {

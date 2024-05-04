@@ -31,8 +31,8 @@ fn get_tmp_matrix<R: Repr, S: DimTrait, D: DeviceBase>(
 
 macro_rules! impl_basic_op_trait {
     ($name:ident, $cpu_method:ident, $cpu_assign_method:ident, $gpu_array:ident, $gpu_array_assign:ident, $gpu_scalar:ident, $gpu_scalar_assign:ident) => {
-        pub trait $name<T: Num>: DeviceBase {
-            fn array_array(
+        pub trait $name: DeviceBase {
+            fn array_array<T: Num>(
                 to: *mut T,
                 lhs: *const T,
                 rhs: *const T,
@@ -42,7 +42,7 @@ macro_rules! impl_basic_op_trait {
                 rhs_stride: usize,
             );
 
-            fn array_assign(
+            fn array_assign<T: Num>(
                 to: *mut T,
                 rhs: *const T,
                 num_elm: usize,
@@ -50,7 +50,7 @@ macro_rules! impl_basic_op_trait {
                 rhs_stride: usize,
             );
 
-            fn scalar(
+            fn scalar<T: Num>(
                 to: *mut T,
                 lhs: *const T,
                 rhs: T,
@@ -59,11 +59,11 @@ macro_rules! impl_basic_op_trait {
                 lhs_stride: usize,
             );
 
-            fn scalar_assign(to: *mut T, rhs: T, num_elm: usize, to_stride: usize);
+            fn scalar_assign<T: Num>(to: *mut T, rhs: T, num_elm: usize, to_stride: usize);
         }
 
-        impl<T: Num> $name<T> for Cpu {
-            fn array_array(
+        impl$name for Cpu {
+            fn array_array<T: Num>(
                 to: *mut T,
                 lhs: *const T,
                 rhs: *const T,
@@ -80,7 +80,7 @@ macro_rules! impl_basic_op_trait {
                 }
             }
 
-            fn array_assign(
+            fn array_assign<T: Num>(
                 to: *mut T,
                 rhs: *const T,
                 num_elm: usize,
@@ -97,7 +97,7 @@ macro_rules! impl_basic_op_trait {
                 }
             }
 
-            fn scalar(
+            fn scalar<T: Num>(
                 to: *mut T,
                 lhs: *const T,
                 rhs: T,
@@ -112,7 +112,7 @@ macro_rules! impl_basic_op_trait {
                 }
             }
 
-            fn scalar_assign(to: *mut T, rhs: T, num_elm: usize, to_stride: usize) {
+            fn scalar_assign<T: Num>(to: *mut T, rhs: T, num_elm: usize, to_stride: usize) {
                 for i in 0..num_elm {
                     unsafe {
                         T::$cpu_assign_method(&mut *to.add(i * to_stride), rhs);
@@ -122,8 +122,8 @@ macro_rules! impl_basic_op_trait {
         }
 
         #[cfg(feature = "nvidia")]
-        impl<T: Num> $name<T> for Nvidia {
-            fn array_array(
+        impl $name for Nvidia {
+            fn array_array<T: Num>(
                 to: *mut T,
                 lhs: *const T,
                 rhs: *const T,
@@ -135,7 +135,7 @@ macro_rules! impl_basic_op_trait {
                 $gpu_array(to, lhs, rhs, num_elm, to_stride, lhs_stride, rhs_stride);
             }
 
-            fn array_assign(
+            fn array_assign<T: Num>(
                 to: *mut T,
                 rhs: *const T,
                 num_elm: usize,
@@ -145,7 +145,7 @@ macro_rules! impl_basic_op_trait {
                 $gpu_array_assign(to, rhs, num_elm, to_stride, rhs_stride);
             }
 
-            fn scalar(
+            fn scalar<T: Num>(
                 to: *mut T,
                 lhs: *const T,
                 rhs: T,
@@ -156,7 +156,7 @@ macro_rules! impl_basic_op_trait {
                 $gpu_scalar(to, lhs, rhs, num_elm, to_stride, lhs_stride);
             }
 
-            fn scalar_assign(to: *mut T, rhs: T, num_elm: usize, to_stride: usize) {
+            fn scalar_assign<T: Num>(to: *mut T, rhs: T, num_elm: usize, to_stride: usize) {
                 $gpu_scalar_assign(to, rhs, num_elm, to_stride);
             }
         }
@@ -218,7 +218,7 @@ macro_rules! impl_basic_ops {
         where
             T: Num,
             S: DimTrait,
-            D: DeviceBase + $device_trait<T>,
+            D: DeviceBase + $device_trait,
         {
             pub fn $scalar_method<RL: Repr<Item=T>, SL: DimTrait>(&mut self, lhs: &Matrix<RL, SL, D>, rhs: T) {
                 if self.shape().slice() != lhs.shape().slice() {
