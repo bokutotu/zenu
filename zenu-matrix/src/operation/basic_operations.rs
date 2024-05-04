@@ -434,7 +434,6 @@ mod basic_ops {
         dim::DimDyn,
         matrix::{Matrix, Owned},
         matrix_blas::copy::CopyBlas,
-        num::Num,
         operation::asum::Asum,
         slice_dynamic,
     };
