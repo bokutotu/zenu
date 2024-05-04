@@ -686,7 +686,6 @@ mod array_scalar {
                 )
                 .unwrap();
                 let ans: Vec<$ty> = $ans;
-                println!("{:?}", out);
                 for (a, b) in out.iter().zip(ans.iter()) {
                     assert!((a - b).abs() < 1e-6);
                 }

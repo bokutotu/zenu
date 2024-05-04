@@ -239,8 +239,6 @@ macro_rules! impl_basic_ops {
                         1
                     );
                 } else if self.shape().len() == 1 {
-                    println!("lhs shape {:?}", lhs.shape());
-                    println!("lhs stride {:?}", lhs.stride());
                     D::scalar(
                         self.as_mut_ptr(),
                         lhs.as_ptr(),
