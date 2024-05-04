@@ -114,9 +114,9 @@ fn clip_inner<T: Num, D: DeviceBase + ClipOps>(
     min: T,
     max: T,
 ) {
-    if input.shape().is_empty() {
+    if input.shape().len() == 1 {
         clip_1d(input, output, min, max);
-    } else if input.shape().len() == 0 {
+    } else if input.shape().is_empty() {
         unimplemented!();
     } else {
         for i in 0..(input.shape()[0]) {
@@ -135,9 +135,9 @@ fn clip_assign_inner<T: Num, D: DeviceBase + ClipOps>(
     min: T,
     max: T,
 ) {
-    if input.shape().is_empty() {
+    if input.shape().len() == 1 {
         clip_assign_1d(input, min, max);
-    } else if input.shape().len() == 0 {
+    } else if input.shape().is_empty() {
         unimplemented!();
     } else {
         for i in 0..(input.shape()[0]) {
