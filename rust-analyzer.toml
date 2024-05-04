@@ -1,2 +1,1 @@
 [rustc_args]
-extra_args = ["--cfg", "feature=\"nvidia\""]
