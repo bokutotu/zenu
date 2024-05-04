@@ -171,6 +171,33 @@ impl_basic_op_trait!(
     array_scalar_add,
     array_scalar_add_assign
 );
+impl_basic_op_trait!(
+    SubOps,
+    sub,
+    sub_assign,
+    array_sub,
+    array_assign,
+    array_scalar_sub,
+    array_scalar_sub_assign
+);
+impl_basic_op_trait!(
+    MulOps,
+    mul,
+    mul_assign,
+    array_mul,
+    array_assign,
+    array_scalar_mul,
+    array_scalar_mul_assign
+);
+impl_basic_op_trait!(
+    DivOps,
+    div,
+    div_assign,
+    array_div,
+    array_assign,
+    array_scalar_div,
+    array_scalar_div_assign
+);
 
 /// 1dのMatrixを受け取る(これは入力側でチェック)
 /// その配列の中身が1かどうかを確認
@@ -382,50 +409,11 @@ macro_rules! impl_basic_ops {
         }
     };
 }
-// impl_basic_1d_functions!(add_mod, add, add_assign);
 impl_basic_ops!(add, add_assign, add_scalar, add_scalar_assign, AddOps);
-// impl_basic_1d_functions!(sub_mod, sub, sub_assign);
-// impl_traits!(
-//     MatrixSub,
-//     sub,
-//     MatrixSubAssign,
-//     sub_assign,
-//     sub_mod,
-//     sub,
-//     sub_assign
-// );
-// impl_basic_1d_functions!(mul_mod, mul, mul_assign);
-// impl_traits!(
-//     MatrixMul,
-//     mul,
-//     MatrixMulAssign,
-//     mul_assign,
-//     mul_mod,
-//     mul,
-//     mul_assign
-// );
-// impl_basic_1d_functions!(div_mod, div, div_assign);
-// impl_traits!(
-//     MatrixDiv,
-//     div,
-//     MatrixDivAssign,
-//     div_assign,
-//     div_mod,
-//     div,
-//     div_assign
-// );
-// impl_basic_1d_functions!(powf_mod, powf,);
-// impl_traits!(
-//     MatrixPowf,
-//     powf,
-//     MatrixPowfAssign,
-//     powf_assign,
-//     powf_mod,
-//     powf,
-// );
-// impl_basic_1d_functions!(log_mod, log,);
-// impl_traits!(MatrixLog, log, MatrixLogAssign, log_assign, log_mod, log,);
-//
+impl_basic_ops!(sub, sub_assign, sub_scalar, sub_scalar_assign, SubOps);
+impl_basic_ops!(mul, mul_assign, mul_scalar, mul_scalar_assign, MulOps);
+impl_basic_ops!(div, div_assign, div_scalar, div_scalar_assign, DivOps);
+
 #[cfg(test)]
 mod add {
 
@@ -740,375 +728,385 @@ mod add {
         // assert!((ans.to_ref() - result.to_ref()).asum() == 0.0);
     }
 }
-//
-// #[cfg(test)]
-// mod sub {
-//     use crate::{
-//         constructor::zeros::Zeros,
-//         matrix::{IndexItem, OwnedMatrix},
-//         matrix_impl::OwnedMatrix0D,
-//         operation::basic_operations::MatrixSub,
-//     };
-//
-//     #[test]
-//     fn sub_0d_0d() {
-//         let a = OwnedMatrix0D::from_vec(vec![1.0], []);
-//         let b = OwnedMatrix0D::from_vec(vec![1.0], []);
-//         let mut ans = OwnedMatrix0D::<f32>::zeros([]);
-//         ans.sub(a, b);
-//         assert_eq!(ans.index_item([]), 0.0);
-//     }
-// }
-//
-// #[cfg(test)]
-// mod div {
-//     use crate::{
-//         constructor::zeros::Zeros,
-//         matrix::{OwnedMatrix, ToViewMatrix},
-//         matrix_impl::OwnedMatrixDyn,
-//         operation::{
-//             asum::Asum,
-//             basic_operations::{MatrixDiv, MatrixDivAssign},
-//         },
-//     };
-//
-//     #[test]
-//     fn div_0d_0d() {
-//         let mut a = OwnedMatrixDyn::from_vec(vec![2.0], &[]);
-//         let b = OwnedMatrixDyn::from_vec(vec![3.0], &[]);
-//         let mut c = OwnedMatrixDyn::zeros_like(a.to_view());
-//
-//         c.div(a.to_view(), b.to_view());
-//         assert_eq!(c.as_slice(), &[2.0 / 3.0]);
-//
-//         a.div_assign(b);
-//         assert_eq!(a.as_slice(), &[2.0 / 3.0]);
-//     }
-//
-//     #[test]
-//     fn div_1d_0d() {
-//         let mut a = OwnedMatrixDyn::from_vec(vec![2.0, 3.0], &[2]);
-//         let b = OwnedMatrixDyn::from_vec(vec![3.0], &[]);
-//         let mut c = OwnedMatrixDyn::zeros_like(a.to_view());
-//         c.div(a.to_view(), b.to_view());
-//         assert_eq!(c.as_slice(), &[2.0 / 3.0, 3.0 / 3.0]);
-//
-//         a.div_assign(b);
-//         assert_eq!(a.as_slice(), &[2.0 / 3.0, 3.0 / 3.0]);
-//     }
-//
-//     #[test]
-//     fn div_3d_3d() {
-//         let mut a =
-//             OwnedMatrixDyn::from_vec(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0], &[2, 2, 2]);
-//         let b = OwnedMatrixDyn::from_vec(vec![2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0], &[2, 2, 2]);
-//         let mut c = OwnedMatrixDyn::zeros_like(a.to_view());
-//         c.div(a.to_view(), b.to_view());
-//         let ans = vec![
-//             1.0 / 2.0,
-//             2.0 / 3.0,
-//             3.0 / 4.0,
-//             4.0 / 5.0,
-//             5.0 / 6.0,
-//             6.0 / 7.0,
-//             7.0 / 8.0,
-//             8.0 / 9.0,
-//         ];
-//         let ans = OwnedMatrixDyn::from_vec(ans, &[2, 2, 2]);
-//         let diff = c.to_view() - ans.to_view();
-//         let asum = diff.asum();
-//         assert_eq!(asum, 0.0);
-//
-//         a.div_assign(b);
-//         let diff = a.to_view() - ans.to_view();
-//         let asum = diff.asum();
-//         assert_eq!(asum, 0.0);
-//     }
-//
-//     #[test]
-//     fn div_4d_2d() {
-//         let mut a = OwnedMatrixDyn::from_vec(
-//             vec![
-//                 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0,
-//             ],
-//             &[2, 2, 2, 2],
-//         );
-//         let b = OwnedMatrixDyn::from_vec(vec![2.0, 3.0, 4.0, 5.0], &[2, 2]);
-//         let mut c = OwnedMatrixDyn::zeros_like(a.to_view());
-//         c.div(a.to_view(), b.to_view());
-//         let ans = vec![
-//             1.0 / 2.0,
-//             2.0 / 3.0,
-//             3.0 / 4.0,
-//             4.0 / 5.0,
-//             5.0 / 2.0,
-//             6.0 / 3.0,
-//             7.0 / 4.0,
-//             8.0 / 5.0,
-//             1.0 / 2.0,
-//             2.0 / 3.0,
-//             3.0 / 4.0,
-//             4.0 / 5.0,
-//             5.0 / 2.0,
-//             6.0 / 3.0,
-//             7.0 / 4.0,
-//             8.0 / 5.0,
-//         ];
-//         let ans = OwnedMatrixDyn::from_vec(ans, &[2, 2, 2, 2]);
-//         let diff = c.to_view() - ans.to_view();
-//         let asum = diff.asum();
-//         assert_eq!(asum, 0.0);
-//
-//         a.div_assign(b);
-//         let diff = a.to_view() - ans.to_view();
-//         let asum = diff.asum();
-//         assert_eq!(asum, 0.0);
-//     }
-//
-//     #[test]
-//     fn broadcast_4d_4d() {
-//         let a = OwnedMatrixDyn::from_vec(
-//             vec![
-//                 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0,
-//             ],
-//             &[2, 2, 2, 2],
-//         );
-//         let b = OwnedMatrixDyn::from_vec(vec![2.0, 3.0, 4.0, 5.0], &[1, 1, 2, 2]);
-//         let mut c = OwnedMatrixDyn::zeros_like(a.to_view());
-//         c.div(a.to_view(), b.to_view());
-//         let ans = vec![
-//             1.0 / 2.0,
-//             2.0 / 3.0,
-//             3.0 / 4.0,
-//             4.0 / 5.0,
-//             5.0 / 2.0,
-//             6.0 / 3.0,
-//             7.0 / 4.0,
-//             8.0 / 5.0,
-//             1.0 / 2.0,
-//             2.0 / 3.0,
-//             3.0 / 4.0,
-//             4.0 / 5.0,
-//             5.0 / 2.0,
-//             6.0 / 3.0,
-//             7.0 / 4.0,
-//             8.0 / 5.0,
-//         ];
-//         let ans = OwnedMatrixDyn::from_vec(ans, &[2, 2, 2, 2]);
-//         let diff = c.to_view() - ans.to_view();
-//         let asum = diff.asum();
-//         assert_eq!(asum, 0.0);
-//
-//         c.div(b.to_view(), a.to_view());
-//         let ans = vec![
-//             2.0 / 1.0,
-//             3.0 / 2.0,
-//             4.0 / 3.0,
-//             5.0 / 4.0,
-//             2.0 / 5.0,
-//             3.0 / 6.0,
-//             4.0 / 7.0,
-//             5.0 / 8.0,
-//             2.0 / 1.0,
-//             3.0 / 2.0,
-//             4.0 / 3.0,
-//             5.0 / 4.0,
-//             2.0 / 5.0,
-//             3.0 / 6.0,
-//             4.0 / 7.0,
-//             5.0 / 8.0,
-//         ];
-//         let ans = OwnedMatrixDyn::from_vec(ans, &[2, 2, 2, 2]);
-//         let diff = c.to_view() - ans.to_view();
-//         let asum = diff.asum();
-//         assert_eq!(asum, 0.0);
-//     }
-// }
-// #[cfg(test)]
-// mod mul {
-//     use crate::{
-//         constructor::{ones::Ones, zeros::Zeros},
-//         matrix::{IndexItem, MatrixSlice, OwnedMatrix, ToViewMatrix, ToViewMutMatrix},
-//         matrix_impl::{OwnedMatrix0D, OwnedMatrix1D, OwnedMatrix2D, OwnedMatrix4D, OwnedMatrixDyn},
-//         operation::basic_operations::MatrixMul,
-//         slice,
-//     };
-//
-//     use super::MatrixSin;
-//
-//     #[test]
-//     fn mul_1d_scalar() {
-//         let a = OwnedMatrix1D::from_vec(vec![1.0, 2.0, 3.0], [3]);
-//         let b = OwnedMatrix0D::from_vec(vec![2.0], []);
-//         let mut ans = OwnedMatrix1D::<f32>::zeros([3]);
-//         ans.to_view_mut().mul(a.to_view(), b.to_view());
-//
-//         assert_eq!(ans.index_item([0]), 2.0);
-//         assert_eq!(ans.index_item([1]), 4.0);
-//         assert_eq!(ans.index_item([2]), 6.0);
-//     }
-//
-//     #[test]
-//     fn scalar_1d() {
-//         let a = OwnedMatrix1D::from_vec(vec![1., 2., 3.], [3]);
-//         let mut ans = OwnedMatrix1D::<f32>::zeros([3]);
-//         ans.to_view_mut().mul(a.to_view(), 2.);
-//
-//         assert_eq!(ans.index_item([0]), 2.);
-//         assert_eq!(ans.index_item([1]), 4.);
-//         assert_eq!(ans.index_item([2]), 6.);
-//     }
-//
-//     #[test]
-//     fn sliced_scalar_1d() {
-//         let a = OwnedMatrix1D::from_vec(vec![1., 2., 3., 4.], [4]);
-//         let mut ans = OwnedMatrix1D::<f32>::zeros([2]);
-//         ans.to_view_mut().mul(a.to_view().slice(slice!(..;2)), 2.);
-//
-//         assert_eq!(ans.index_item([0]), 2.);
-//         assert_eq!(ans.index_item([1]), 6.);
-//     }
-//
-//     #[test]
-//     fn scalar_2d() {
-//         let a = OwnedMatrix2D::from_vec(vec![1., 2., 3., 4., 5., 6.], [2, 3]);
-//         let mut ans = OwnedMatrix2D::<f32>::zeros([2, 3]);
-//         ans.to_view_mut().mul(a.to_view(), 2.);
-//
-//         assert_eq!(ans.index_item([0, 0]), 2.);
-//         assert_eq!(ans.index_item([0, 1]), 4.);
-//         assert_eq!(ans.index_item([0, 2]), 6.);
-//         assert_eq!(ans.index_item([1, 0]), 8.);
-//         assert_eq!(ans.index_item([1, 1]), 10.);
-//         assert_eq!(ans.index_item([1, 2]), 12.);
-//     }
-//
-//     #[test]
-//     fn default_1d_1d() {
-//         let a = OwnedMatrix1D::from_vec(vec![1., 2., 3.], [3]);
-//         let b = OwnedMatrix1D::from_vec(vec![1., 2., 3.], [3]);
-//         let mut ans = OwnedMatrix1D::<f32>::zeros([3]);
-//         ans.to_view_mut().mul(a.to_view(), b.to_view());
-//
-//         assert_eq!(ans.index_item([0]), 1.);
-//         assert_eq!(ans.index_item([1]), 4.);
-//         assert_eq!(ans.index_item([2]), 9.);
-//     }
-//
-//     #[test]
-//     fn sliced_1d_1d() {
-//         let a = OwnedMatrix1D::from_vec(vec![1., 2., 3., 4.], [4]);
-//         let b = OwnedMatrix1D::from_vec(vec![1., 2., 3., 4.], [4]);
-//         let mut ans = OwnedMatrix1D::<f32>::zeros([2]);
-//         ans.to_view_mut().mul(
-//             a.to_view().slice(slice!(..;2)),
-//             b.to_view().slice(slice!(..;2)),
-//         );
-//
-//         assert_eq!(ans.index_item([0]), 1.);
-//         assert_eq!(ans.index_item([1]), 9.);
-//     }
-//
-//     #[test]
-//     fn default_2d_2d() {
-//         let a = OwnedMatrix2D::from_vec(vec![1., 2., 3., 4., 5., 6.], [2, 3]);
-//         let b = OwnedMatrix2D::from_vec(vec![1., 2., 3., 4., 5., 6.], [2, 3]);
-//         let mut ans = OwnedMatrix2D::<f32>::zeros([2, 3]);
-//         ans.to_view_mut().mul(a.to_view(), b.to_view());
-//
-//         assert_eq!(ans.index_item([0, 0]), 1.);
-//         assert_eq!(ans.index_item([0, 1]), 4.);
-//         assert_eq!(ans.index_item([0, 2]), 9.);
-//         assert_eq!(ans.index_item([1, 0]), 16.);
-//         assert_eq!(ans.index_item([1, 1]), 25.);
-//         assert_eq!(ans.index_item([1, 2]), 36.);
-//     }
-//
-//     #[test]
-//     fn sliced_4d_2d() {
-//         let mut a_vec = Vec::new();
-//         for i in 0..2 * 2 * 2 * 2 {
-//             a_vec.push(i as f32);
-//         }
-//
-//         let a = OwnedMatrix4D::from_vec(a_vec, [2, 2, 2, 2]);
-//         let b = OwnedMatrix1D::from_vec(vec![1., 2.], [2]);
-//
-//         let mut ans = OwnedMatrix4D::<f32>::zeros([2, 2, 2, 2]);
-//
-//         ans.to_view_mut().mul(a.to_view(), b.to_view());
-//
-//         for i in 0..2 {
-//             for j in 0..2 {
-//                 for k in 0..2 {
-//                     for l in 0..2 {
-//                         assert_eq!(
-//                             ans.index_item([i, j, k, l]),
-//                             a.index_item([i, j, k, l]) * b.index_item([l])
-//                         );
-//                     }
-//                 }
-//             }
-//         }
-//     }
-//
-//     #[test]
-//     fn mul_4d_2d_dyn() {
-//         let ones_4d = OwnedMatrixDyn::<f32>::ones([2, 2, 2, 2]);
-//         let ones_2d = OwnedMatrixDyn::ones([2, 2]);
-//         let mut ans = OwnedMatrixDyn::zeros([2, 2, 2, 2]);
-//         ans.to_view_mut().mul(ones_4d.to_view(), ones_2d.to_view());
-//     }
-//
-//     #[test]
-//     fn default_0d_0d() {
-//         let a = OwnedMatrixDyn::from_vec(vec![10.], &[]);
-//         let b = OwnedMatrixDyn::from_vec(vec![20.], &[]);
-//         let mut ans = OwnedMatrixDyn::<f32>::zeros(&[]);
-//         ans.to_view_mut().mul(a.to_view(), b.to_view());
-//         assert_eq!(ans.index_item(&[]), 200.);
-//     }
-//
-//     #[test]
-//     fn sin_0d() {
-//         let a = OwnedMatrixDyn::from_vec(vec![1.0], &[]);
-//         let mut ans = OwnedMatrixDyn::<f32>::zeros(&[]);
-//         ans.sin(a.to_view());
-//         let ans = ans.index_item(&[]);
-//         assert!(ans - 1.0_f32.sin() < 1e-6);
-//     }
-//
-//     #[test]
-//     fn sin1d() {
-//         let a = OwnedMatrixDyn::from_vec(vec![1.0, 2.0, 3.0], &[3]);
-//         let mut ans = OwnedMatrixDyn::<f32>::zeros(&[3]);
-//         ans.sin(a.to_view());
-//         assert!(ans.index_item(&[0]) - 1.0_f32.sin() < 1e-6);
-//         assert!(ans.index_item(&[1]) - 2.0_f32.sin() < 1e-6);
-//         assert!(ans.index_item(&[2]) - 3.0_f32.sin() < 1e-6);
-//     }
-//
-//     #[test]
-//     fn sin_2d() {
-//         let a = OwnedMatrixDyn::from_vec(vec![1.0, 2.0, 3.0, 4.0], &[2, 2]);
-//         let mut ans = OwnedMatrixDyn::<f32>::zeros(&[2, 2]);
-//         ans.sin(a.to_view());
-//         assert!(ans.index_item(&[0, 0]) - 1.0_f32.sin() < 1e-6);
-//         assert!(ans.index_item(&[0, 1]) - 2.0_f32.sin() < 1e-6);
-//         assert!(ans.index_item(&[1, 0]) - 3.0_f32.sin() < 1e-6);
-//         assert!(ans.index_item(&[1, 1]) - 4.0_f32.sin() < 1e-6);
-//     }
-//
-//     #[test]
-//     fn sin_3d() {
-//         let a = OwnedMatrixDyn::from_vec(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], &[2, 1, 3]);
-//         let mut ans = OwnedMatrixDyn::<f32>::zeros(&[2, 1, 3]);
-//         ans.sin(a.to_view());
-//         assert!(ans.index_item(&[0, 0, 0]) - 1.0_f32.sin() < 1e-6);
-//         assert!(ans.index_item(&[0, 0, 1]) - 2.0_f32.sin() < 1e-6);
-//         assert!(ans.index_item(&[0, 0, 2]) - 3.0_f32.sin() < 1e-6);
-//         assert!(ans.index_item(&[1, 0, 0]) - 4.0_f32.sin() < 1e-6);
-//         assert!(ans.index_item(&[1, 0, 1]) - 5.0_f32.sin() < 1e-6);
-//         assert!(ans.index_item(&[1, 0, 2]) - 6.0_f32.sin() < 1e-6);
-//     }
-// }
+
+#[cfg(test)]
+mod sub {
+    use crate::{dim::DimDyn, matrix::Owned};
+
+    use super::*;
+
+    #[test]
+    fn sub_0d_0d() {
+        let a: Matrix<Owned<f32>, DimDyn, Cpu> = Matrix::from_vec(vec![1.0], []);
+        let b: Matrix<Owned<f32>, DimDyn, Cpu> = Matrix::from_vec(vec![1.0], []);
+        let mut ans: Matrix<Owned<f32>, DimDyn, Cpu> = Matrix::zeros([]);
+        ans.to_ref_mut().sub(&a, &b);
+        assert_eq!(ans.index_item([]), 0.0);
+    }
+}
+
+#[cfg(test)]
+mod div {
+    use crate::{
+        device::cpu::Cpu,
+        dim::DimDyn,
+        matrix::{Matrix, Owned},
+    };
+
+    #[test]
+    fn div_0d_0d() {
+        let mut a = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(vec![2.0], &[]);
+        let b = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(vec![3.0], &[]);
+        let mut c = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros_like(&a);
+
+        c.to_ref_mut().div(&a, &b);
+        assert_eq!(c.as_slice(), &[2.0 / 3.0]);
+
+        a.to_ref_mut().div_assign(&b);
+        assert_eq!(a.as_slice(), &[2.0 / 3.0]);
+    }
+
+    #[test]
+    fn div_1d_0d() {
+        let mut a = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(vec![2.0, 3.0], &[2]);
+        let b = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(vec![3.0], &[]);
+        let mut c = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros_like(&a);
+        c.to_ref_mut().div(&a, &b);
+        assert_eq!(c.as_slice(), &[2.0 / 3.0, 3.0 / 3.0]);
+
+        a.to_ref_mut().div_assign(&b);
+        assert_eq!(a.as_slice(), &[2.0 / 3.0, 3.0 / 3.0]);
+    }
+
+    #[test]
+    fn div_3d_3d() {
+        let mut a = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(
+            vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0],
+            &[2, 2, 2],
+        );
+        let b = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(
+            vec![2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0],
+            &[2, 2, 2],
+        );
+        let mut c = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros_like(&a);
+        c.to_ref_mut().div(&a, &b);
+        let ans = vec![
+            1.0 / 2.0,
+            2.0 / 3.0,
+            3.0 / 4.0,
+            4.0 / 5.0,
+            5.0 / 6.0,
+            6.0 / 7.0,
+            7.0 / 8.0,
+            8.0 / 9.0,
+        ];
+        let ans = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(ans, &[2, 2, 2]);
+        // let diff = c.to_ref() - ans.to_ref();
+        // let asum = diff.asum();
+        // assert_eq!(asum, 0.0);
+        //
+        // a.div_assign(b);
+        // let diff = a.to_ref() - ans.to_view();
+        // let asum = diff.asum();
+        // assert_eq!(asum, 0.0);
+    }
+
+    #[test]
+    fn div_4d_2d() {
+        let mut a = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(
+            vec![
+                1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0,
+            ],
+            &[2, 2, 2, 2],
+        );
+        let b = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(vec![2.0, 3.0, 4.0, 5.0], &[2, 2]);
+        let mut c = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros_like(&a);
+        c.to_ref_mut().div(&a, &b);
+        let ans = vec![
+            1.0 / 2.0,
+            2.0 / 3.0,
+            3.0 / 4.0,
+            4.0 / 5.0,
+            5.0 / 2.0,
+            6.0 / 3.0,
+            7.0 / 4.0,
+            8.0 / 5.0,
+            1.0 / 2.0,
+            2.0 / 3.0,
+            3.0 / 4.0,
+            4.0 / 5.0,
+            5.0 / 2.0,
+            6.0 / 3.0,
+            7.0 / 4.0,
+            8.0 / 5.0,
+        ];
+        let ans = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(ans, &[2, 2, 2, 2]);
+        // let diff = c.to_ref() - ans.to_view();
+        // let asum = diff.asum();
+        // assert_eq!(asum, 0.0);
+
+        a.to_ref_mut().div_assign(&b);
+        // let diff = a.to_ref() - ans.to_view();
+        // let asum = diff.asum();
+        // assert_eq!(asum, 0.0);
+    }
+
+    #[test]
+    fn broadcast_4d_4d() {
+        let a = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(
+            vec![
+                1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0,
+            ],
+            &[2, 2, 2, 2],
+        );
+        let b =
+            Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(vec![2.0, 3.0, 4.0, 5.0], &[1, 1, 2, 2]);
+        let mut c = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros_like(&a);
+        c.to_ref_mut().div(&a, &b);
+        let ans = vec![
+            1.0 / 2.0,
+            2.0 / 3.0,
+            3.0 / 4.0,
+            4.0 / 5.0,
+            5.0 / 2.0,
+            6.0 / 3.0,
+            7.0 / 4.0,
+            8.0 / 5.0,
+            1.0 / 2.0,
+            2.0 / 3.0,
+            3.0 / 4.0,
+            4.0 / 5.0,
+            5.0 / 2.0,
+            6.0 / 3.0,
+            7.0 / 4.0,
+            8.0 / 5.0,
+        ];
+        let ans = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(ans, &[2, 2, 2, 2]);
+        // let diff = c - ans;
+        // let asum = diff.asum();
+        // assert_eq!(asum, 0.0);
+
+        c.to_ref_mut().div(&b, &a);
+        let ans = vec![
+            2.0 / 1.0,
+            3.0 / 2.0,
+            4.0 / 3.0,
+            5.0 / 4.0,
+            2.0 / 5.0,
+            3.0 / 6.0,
+            4.0 / 7.0,
+            5.0 / 8.0,
+            2.0 / 1.0,
+            3.0 / 2.0,
+            4.0 / 3.0,
+            5.0 / 4.0,
+            2.0 / 5.0,
+            3.0 / 6.0,
+            4.0 / 7.0,
+            5.0 / 8.0,
+        ];
+        let ans = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(ans, &[2, 2, 2, 2]);
+        // let diff = c.to_ref() - ans.to_view();
+        // let asum = diff.asum();
+        // assert_eq!(asum, 0.0);
+    }
+}
+#[cfg(test)]
+mod mul {
+    // use crate::{
+    //     constructor::{ones::Ones, zeros::Zeros},
+    //     matrix::{IndexItem, MatrixSlice, OwnedMatrix, ToViewMatrix, ToViewMutMatrix},
+    //     matrix_impl::{OwnedMatrix0D, OwnedMatrix1D, OwnedMatrix2D, OwnedMatrix4D, Matrix::<Owned<f32>, DimDyn, Cpu>},
+    //     operation::basic_operations::MatrixMul,
+    //     slice,
+    // };
+    //
+    // use super::MatrixSin;
+
+    use crate::{
+        device::cpu::Cpu,
+        dim::DimDyn,
+        matrix::{Matrix, Owned},
+        slice_dynamic,
+    };
+
+    #[test]
+    fn mul_1d_scalar() {
+        let a = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(vec![1.0, 2.0, 3.0], [3]);
+        let b = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(vec![2.0], []);
+        let mut ans = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros([3]);
+        ans.to_ref_mut().mul(&a, &b);
+
+        assert_eq!(ans.index_item([0]), 2.0);
+        assert_eq!(ans.index_item([1]), 4.0);
+        assert_eq!(ans.index_item([2]), 6.0);
+    }
+
+    #[test]
+    fn scalar_1d() {
+        let a = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(vec![1., 2., 3.], [3]);
+        let mut ans = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros([3]);
+        ans.to_ref_mut().mul_scalar(&a, 2.);
+
+        assert_eq!(ans.index_item([0]), 2.);
+        assert_eq!(ans.index_item([1]), 4.);
+        assert_eq!(ans.index_item([2]), 6.);
+    }
+
+    #[test]
+    fn sliced_scalar_1d() {
+        let a = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(vec![1., 2., 3., 4.], [4]);
+        let mut ans = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros([2]);
+        ans.to_ref_mut()
+            .mul_scalar(&a.to_ref().slice(slice_dynamic!(..;2)), 2.);
+
+        assert_eq!(ans.index_item([0]), 2.);
+        assert_eq!(ans.index_item([1]), 6.);
+    }
+
+    #[test]
+    fn scalar_2d() {
+        let a = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(vec![1., 2., 3., 4., 5., 6.], [2, 3]);
+        let mut ans = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros([2, 3]);
+        ans.to_ref_mut().mul_scalar(&a, 2.);
+
+        assert_eq!(ans.index_item([0, 0]), 2.);
+        assert_eq!(ans.index_item([0, 1]), 4.);
+        assert_eq!(ans.index_item([0, 2]), 6.);
+        assert_eq!(ans.index_item([1, 0]), 8.);
+        assert_eq!(ans.index_item([1, 1]), 10.);
+        assert_eq!(ans.index_item([1, 2]), 12.);
+    }
+
+    #[test]
+    fn default_1d_1d() {
+        let a = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(vec![1., 2., 3.], [3]);
+        let b = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(vec![1., 2., 3.], [3]);
+        let mut ans = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros([3]);
+        ans.to_ref_mut().mul(&a, &b);
+
+        assert_eq!(ans.index_item([0]), 1.);
+        assert_eq!(ans.index_item([1]), 4.);
+        assert_eq!(ans.index_item([2]), 9.);
+    }
+
+    #[test]
+    fn sliced_1d_1d() {
+        let a = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(vec![1., 2., 3., 4.], [4]);
+        let b = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(vec![1., 2., 3., 4.], [4]);
+        let mut ans = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros([2]);
+        ans.to_ref_mut().mul(
+            &a.to_ref().slice(slice_dynamic!(..;2)),
+            &b.to_ref().slice(slice_dynamic!(..;2)),
+        );
+
+        assert_eq!(ans.index_item([0]), 1.);
+        assert_eq!(ans.index_item([1]), 9.);
+    }
+
+    #[test]
+    fn default_2d_2d() {
+        let a = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(vec![1., 2., 3., 4., 5., 6.], [2, 3]);
+        let b = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(vec![1., 2., 3., 4., 5., 6.], [2, 3]);
+        let mut ans = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros([2, 3]);
+        ans.to_ref_mut().mul(&a, &b);
+
+        assert_eq!(ans.index_item([0, 0]), 1.);
+        assert_eq!(ans.index_item([0, 1]), 4.);
+        assert_eq!(ans.index_item([0, 2]), 9.);
+        assert_eq!(ans.index_item([1, 0]), 16.);
+        assert_eq!(ans.index_item([1, 1]), 25.);
+        assert_eq!(ans.index_item([1, 2]), 36.);
+    }
+
+    #[test]
+    fn sliced_4d_2d() {
+        let mut a_vec = Vec::new();
+        for i in 0..2 * 2 * 2 * 2 {
+            a_vec.push(i as f32);
+        }
+
+        let a = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(a_vec, [2, 2, 2, 2]);
+        let b = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(vec![1., 2.], [2]);
+
+        let mut ans = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros([2, 2, 2, 2]);
+
+        ans.to_ref_mut().mul(&a, &b);
+
+        for i in 0..2 {
+            for j in 0..2 {
+                for k in 0..2 {
+                    for l in 0..2 {
+                        assert_eq!(
+                            ans.index_item([i, j, k, l]),
+                            a.index_item([i, j, k, l]) * b.index_item([l])
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn mul_4d_2d_dyn() {
+        let ones_4d = Matrix::<Owned<f32>, DimDyn, Cpu>::ones([2, 2, 2, 2]);
+        let ones_2d = Matrix::<Owned<f32>, DimDyn, Cpu>::ones([2, 2]);
+        let mut ans = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros([2, 2, 2, 2]);
+        ans.to_ref_mut().mul(&ones_4d, &ones_2d);
+    }
+
+    #[test]
+    fn default_0d_0d() {
+        let a = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(vec![10.], &[]);
+        let b = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(vec![20.], &[]);
+        let mut ans = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros(&[]);
+        ans.to_ref_mut().mul(&a, &b);
+        assert_eq!(ans.index_item(&[]), 200.);
+    }
+
+    // #[test]
+    // fn sin_0d() {
+    //     let a = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(vec![1.0], &[]);
+    //     let mut ans = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros(&[]);
+    //     ans.sin(a.to_ref());
+    //     let ans = ans.index_item(&[]);
+    //     assert!(ans - 1.0_f32.sin() < 1e-6);
+    // }
+    //
+    // #[test]
+    // fn sin1d() {
+    //     let a = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(vec![1.0, 2.0, 3.0], &[3]);
+    //     let mut ans = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros(&[3]);
+    //     ans.sin(a.to_ref());
+    //     assert!(ans.index_item(&[0]) - 1.0_f32.sin() < 1e-6);
+    //     assert!(ans.index_item(&[1]) - 2.0_f32.sin() < 1e-6);
+    //     assert!(ans.index_item(&[2]) - 3.0_f32.sin() < 1e-6);
+    // }
+    //
+    // #[test]
+    // fn sin_2d() {
+    //     let a = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(vec![1.0, 2.0, 3.0, 4.0], &[2, 2]);
+    //     let mut ans = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros(&[2, 2]);
+    //     ans.sin(a.to_ref());
+    //     assert!(ans.index_item(&[0, 0]) - 1.0_f32.sin() < 1e-6);
+    //     assert!(ans.index_item(&[0, 1]) - 2.0_f32.sin() < 1e-6);
+    //     assert!(ans.index_item(&[1, 0]) - 3.0_f32.sin() < 1e-6);
+    //     assert!(ans.index_item(&[1, 1]) - 4.0_f32.sin() < 1e-6);
+    // }
+    //
+    // #[test]
+    // fn sin_3d() {
+    //     let a = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(
+    //         vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
+    //         &[2, 1, 3],
+    //     );
+    //     let mut ans = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros(&[2, 1, 3]);
+    //     ans.sin(a.to_ref());
+    //     assert!(ans.index_item(&[0, 0, 0]) - 1.0_f32.sin() < 1e-6);
+    //     assert!(ans.index_item(&[0, 0, 1]) - 2.0_f32.sin() < 1e-6);
+    //     assert!(ans.index_item(&[0, 0, 2]) - 3.0_f32.sin() < 1e-6);
+    //     assert!(ans.index_item(&[1, 0, 0]) - 4.0_f32.sin() < 1e-6);
+    //     assert!(ans.index_item(&[1, 0, 1]) - 5.0_f32.sin() < 1e-6);
+    //     assert!(ans.index_item(&[1, 0, 2]) - 6.0_f32.sin() < 1e-6);
+    // }
+}
