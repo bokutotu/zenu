@@ -1,10 +1,6 @@
 name: CI
 
 on:
-  push:
-    branches:
-      - new_matrix
-
   pull_request:
 
 jobs:
