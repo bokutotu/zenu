@@ -20,4 +20,5 @@ runs:
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.toml') }}
 
     - name: Install openblas
+      shell: bash
       run: sudo apt-get install libopenblas-dev -y
