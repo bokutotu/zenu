@@ -15,6 +15,6 @@ pub mod copy_from;
 // pub mod reshape;
 // pub mod softmax;
 // pub mod sum;
-// pub mod to_default_stride;
+pub mod to_default_stride;
 // pub mod transpose;
 // pub mod var;
