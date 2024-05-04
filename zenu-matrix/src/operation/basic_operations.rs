@@ -436,7 +436,7 @@ mod basic_ops {
         slice_dynamic,
     };
 
-    use super::{AddOps, SubOps};
+    use super::{AddOps, DivOps, MulOps, SubOps};
 
     // 必要なテスト群
     // default stride
@@ -766,5 +766,209 @@ mod basic_ops {
     #[test]
     fn sub_3d_scalar_assign_gpu() {
         sub_3d_scalar_assign::<crate::device::nvidia::Nvidia>();
+    }
+
+    fn sub_3d_array<D: DeviceBase + SubOps>() {
+        let a = vec![1., 2., 3., 4., 5., 6., 7., 8.];
+        let a: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(a, [2, 2, 2]);
+        let b = vec![1., 1., 1., 1., 1., 1., 1., 1.];
+        let b: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(b, [2, 2, 2]);
+        let mut ans: Matrix<Owned<f32>, DimDyn, D> = Matrix::zeros([2, 2, 2]);
+        ans.to_ref_mut().sub_array(&a, &b);
+
+        assert_eq!(ans.index_item([0, 0, 0]), 0.);
+        assert_eq!(ans.index_item([0, 0, 1]), 1.);
+        assert_eq!(ans.index_item([0, 1, 0]), 2.);
+        assert_eq!(ans.index_item([0, 1, 1]), 3.);
+        assert_eq!(ans.index_item([1, 0, 0]), 4.);
+        assert_eq!(ans.index_item([1, 0, 1]), 5.);
+        assert_eq!(ans.index_item([1, 1, 0]), 6.);
+        assert_eq!(ans.index_item([1, 1, 1]), 7.);
+    }
+    #[test]
+    fn sub_3d_array_cpu() {
+        sub_3d_array::<crate::device::cpu::Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn sub_3d_array_gpu() {
+        sub_3d_array::<crate::device::nvidia::Nvidia>();
+    }
+
+    fn sub_assign_array_3d<D: DeviceBase + SubOps>() {
+        let a = vec![1., 2., 3., 4., 5., 6., 7., 8.];
+        let mut a: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(a, [2, 2, 2]);
+        let b = vec![1., 1., 1., 1., 1., 1., 1., 1.];
+        let b: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(b, [2, 2, 2]);
+        a.to_ref_mut().sub_assign(&b);
+
+        assert_eq!(a.index_item([0, 0, 0]), 0.);
+        assert_eq!(a.index_item([0, 0, 1]), 1.);
+        assert_eq!(a.index_item([0, 1, 0]), 2.);
+        assert_eq!(a.index_item([0, 1, 1]), 3.);
+        assert_eq!(a.index_item([1, 0, 0]), 4.);
+        assert_eq!(a.index_item([1, 0, 1]), 5.);
+        assert_eq!(a.index_item([1, 1, 0]), 6.);
+        assert_eq!(a.index_item([1, 1, 1]), 7.);
+    }
+    #[test]
+    fn sub_assign_array_3d_cpu() {
+        sub_assign_array_3d::<crate::device::cpu::Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn sub_assign_array_3d_gpu() {
+        sub_assign_array_3d::<crate::device::nvidia::Nvidia>();
+    }
+
+    fn mul_scalar<D: DeviceBase + MulOps>() {
+        let a = vec![1., 2., 3., 4., 5., 6., 7., 8.];
+        let a: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(a, [2, 2, 2]);
+        let mut ans: Matrix<Owned<f32>, DimDyn, D> = Matrix::zeros([2, 2, 2]);
+        ans.to_ref_mut().mul_scalar(&a, 2.);
+
+        assert_eq!(ans.index_item([0, 0, 0]), 2.);
+        assert_eq!(ans.index_item([0, 0, 1]), 4.);
+        assert_eq!(ans.index_item([0, 1, 0]), 6.);
+        assert_eq!(ans.index_item([0, 1, 1]), 8.);
+        assert_eq!(ans.index_item([1, 0, 0]), 10.);
+        assert_eq!(ans.index_item([1, 0, 1]), 12.);
+        assert_eq!(ans.index_item([1, 1, 0]), 14.);
+        assert_eq!(ans.index_item([1, 1, 1]), 16.);
+    }
+    #[test]
+    fn mul_scalar_cpu() {
+        mul_scalar::<crate::device::cpu::Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn mul_scalar_gpu() {
+        mul_scalar::<crate::device::nvidia::Nvidia>();
+    }
+
+    fn mul_scalar_assign<D: DeviceBase + MulOps>() {
+        let a = vec![1., 2., 3., 4., 5., 6., 7., 8.];
+        let mut a: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(a, [2, 2, 2]);
+        a.to_ref_mut().mul_scalar_assign(2.);
+
+        assert_eq!(a.index_item([0, 0, 0]), 2.);
+        assert_eq!(a.index_item([0, 0, 1]), 4.);
+        assert_eq!(a.index_item([0, 1, 0]), 6.);
+        assert_eq!(a.index_item([0, 1, 1]), 8.);
+        assert_eq!(a.index_item([1, 0, 0]), 10.);
+        assert_eq!(a.index_item([1, 0, 1]), 12.);
+        assert_eq!(a.index_item([1, 1, 0]), 14.);
+        assert_eq!(a.index_item([1, 1, 1]), 16.);
+    }
+    #[test]
+    fn mul_scalar_assign_cpu() {
+        mul_scalar_assign::<crate::device::cpu::Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn mul_scalar_assign_gpu() {
+        mul_scalar_assign::<crate::device::nvidia::Nvidia>();
+    }
+
+    fn mul_array<D: DeviceBase + MulOps>() {
+        let a = vec![1., 2., 3., 4., 5., 6., 7., 8.];
+        let a: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(a, [2, 2, 2]);
+        let b = vec![8., 7., 6., 5., 4., 3., 2., 1.];
+        let b: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(b, [2, 2, 2]);
+        let mut ans: Matrix<Owned<f32>, DimDyn, D> = Matrix::zeros([2, 2, 2]);
+        ans.to_ref_mut().mul_array(&a, &b);
+
+        assert_eq!(ans.index_item([0, 0, 0]), 8.);
+        assert_eq!(ans.index_item([0, 0, 1]), 14.);
+        assert_eq!(ans.index_item([0, 1, 0]), 18.);
+        assert_eq!(ans.index_item([0, 1, 1]), 20.);
+        assert_eq!(ans.index_item([1, 0, 0]), 20.);
+        assert_eq!(ans.index_item([1, 0, 1]), 18.);
+        assert_eq!(ans.index_item([1, 1, 0]), 14.);
+        assert_eq!(ans.index_item([1, 1, 1]), 8.);
+    }
+    #[test]
+    fn mul_array_cpu() {
+        mul_array::<crate::device::cpu::Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn mul_array_gpu() {
+        mul_array::<crate::device::nvidia::Nvidia>();
+    }
+
+    fn mul_assign_array<D: DeviceBase + MulOps>() {
+        let a = vec![1., 2., 3., 4., 5., 6., 7., 8.];
+        let mut a: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(a, [2, 2, 2]);
+        let b = vec![8., 7., 6., 5., 4., 3., 2., 1.];
+        let b: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(b, [2, 2, 2]);
+        a.to_ref_mut().mul_assign(&b);
+
+        assert_eq!(a.index_item([0, 0, 0]), 8.);
+        assert_eq!(a.index_item([0, 0, 1]), 14.);
+        assert_eq!(a.index_item([0, 1, 0]), 18.);
+        assert_eq!(a.index_item([0, 1, 1]), 20.);
+        assert_eq!(a.index_item([1, 0, 0]), 20.);
+        assert_eq!(a.index_item([1, 0, 1]), 18.);
+        assert_eq!(a.index_item([1, 1, 0]), 14.);
+        assert_eq!(a.index_item([1, 1, 1]), 8.);
+    }
+    #[test]
+    fn mul_assign_array_cpu() {
+        mul_assign_array::<crate::device::cpu::Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn mul_assign_array_gpu() {
+        mul_assign_array::<crate::device::nvidia::Nvidia>();
+    }
+
+    fn div_scalar<D: DeviceBase + DivOps>() {
+        let a = vec![1., 2., 3., 4., 5., 6., 7., 8.];
+        let a: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(a, [2, 2, 2]);
+        let mut ans: Matrix<Owned<f32>, DimDyn, D> = Matrix::zeros([2, 2, 2]);
+        ans.to_ref_mut().div_scalar(&a, 2.);
+
+        assert_eq!(ans.index_item([0, 0, 0]), 0.5);
+        assert_eq!(ans.index_item([0, 0, 1]), 1.);
+        assert_eq!(ans.index_item([0, 1, 0]), 1.5);
+        assert_eq!(ans.index_item([0, 1, 1]), 2.);
+        assert_eq!(ans.index_item([1, 0, 0]), 2.5);
+        assert_eq!(ans.index_item([1, 0, 1]), 3.);
+        assert_eq!(ans.index_item([1, 1, 0]), 3.5);
+        assert_eq!(ans.index_item([1, 1, 1]), 4.);
+    }
+    #[test]
+    fn div_scalar_cpu() {
+        div_scalar::<crate::device::cpu::Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn div_scalar_gpu() {
+        div_scalar::<crate::device::nvidia::Nvidia>();
+    }
+
+    fn div_scalar_assign<D: DeviceBase + DivOps>() {
+        let a = vec![1., 2., 3., 4., 5., 6., 7., 8.];
+        let mut a: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(a, [2, 2, 2]);
+        a.to_ref_mut().div_scalar_assign(2.);
+
+        assert_eq!(a.index_item([0, 0, 0]), 0.5);
+        assert_eq!(a.index_item([0, 0, 1]), 1.);
+        assert_eq!(a.index_item([0, 1, 0]), 1.5);
+        assert_eq!(a.index_item([0, 1, 1]), 2.);
+        assert_eq!(a.index_item([1, 0, 0]), 2.5);
+        assert_eq!(a.index_item([1, 0, 1]), 3.);
+        assert_eq!(a.index_item([1, 1, 0]), 3.5);
+        assert_eq!(a.index_item([1, 1, 1]), 4.);
+    }
+    #[test]
+    fn div_scalar_assign_cpu() {
+        div_scalar_assign::<crate::device::cpu::Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn div_scalar_assign_gpu() {
+        div_scalar_assign::<crate::device::nvidia::Nvidia>();
     }
 }
