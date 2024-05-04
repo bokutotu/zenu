@@ -16,5 +16,5 @@ pub mod slice;
 #[cfg(feature = "nvidia")]
 mod gpu_method;
 
-// mod impl_ops;
+mod impl_ops;
 mod matrix_format;
