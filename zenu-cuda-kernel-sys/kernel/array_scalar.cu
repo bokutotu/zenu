@@ -1,6 +1,40 @@
 #include "array_scalar.h"
 #include "cuda_runtime.h"
 
+__global__ void clip_float(float* d_input, float* d_output, int size, int stride_in, int stride_out, float min_val, float max_val) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx < size) {
+        int idx_in = idx * stride_in;
+        int idx_out = idx * stride_out;
+        d_output[idx_in] = max(min(d_input[idx_out], max_val), min_val);
+    }
+}
+
+__global__ void clip_double(double* d_input, double* d_output, int size, int stride_in, int stride_out, double min_val, double max_val) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx < size) {
+        int idx_in = idx * stride_in;
+        int idx_out = idx * stride_out;
+        d_output[idx_in] = max(min(d_input[idx_out], max_val), min_val);
+    }
+}
+
+__global__ void clip_float_assign(float* d_input, int size, int stride_in, float min_val, float max_val) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx < size) {
+        int idx_in = idx * stride_in;
+        d_input[idx_in] = max(min(d_input[idx_in], max_val), min_val);
+    }
+}
+
+__global__ void clip_double_assign(double* d_input, int size, int stride_in, double min_val, double max_val) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx < size) {
+        int idx_in = idx * stride_in;
+        d_input[idx_in] = max(min(d_input[idx_in], max_val), min_val);
+    }
+}
+
 #define CUDA_VEC_SCALAR_OP(op, func, assign_func, type)                                                                     \
 __global__ void vector_scalar_##func##_##type(type* vec, int size, int stride_v, type scalar, type* result, int stride_r) { \
     int idx = blockIdx.x * blockDim.x + threadIdx.x;                                                                        \
@@ -44,6 +78,26 @@ DEFINE_ARRAY_SCALAR_WRAPPER(float, mul)
 DEFINE_ARRAY_SCALAR_WRAPPER(double, mul)
 DEFINE_ARRAY_SCALAR_WRAPPER(float, div)
 DEFINE_ARRAY_SCALAR_WRAPPER(double, div)
+
+void array_clip_float(float *input, float* output, int size, int stride_in, int stride_out, float min_val, float max_val) {
+    int gridSize = (size + BLOCK_SIZE - 1) / BLOCK_SIZE;
+    clip_float<<<gridSize, BLOCK_SIZE>>>(input, output, size, stride_in, stride_out, min_val, max_val);
+}
+
+void array_clip_double(double *input, double* output, int size, int stride_in, int stride_out, double min_val, double max_val) {
+    int gridSize = (size + BLOCK_SIZE - 1) / BLOCK_SIZE;
+    clip_double<<<gridSize, BLOCK_SIZE>>>(input, output, size, stride_in, stride_out, min_val, max_val);
+}
+
+void array_clip_assign_float(float *input, int size, int stride_in, float min_val, float max_val) {
+    int gridSize = (size + BLOCK_SIZE - 1) / BLOCK_SIZE;
+    clip_float_assign<<<gridSize, BLOCK_SIZE>>>(input, size, stride_in, min_val, max_val);
+}
+
+void array_clip_assign_double(double *input, int size, int stride_in, double min_val, double max_val) {
+    int gridSize = (size + BLOCK_SIZE - 1) / BLOCK_SIZE;
+    clip_double_assign<<<gridSize, BLOCK_SIZE>>>(input, size, stride_in, min_val, max_val);
+}
 
 #define CUDA_VEC_FUNC(func, type)                                                          \
 __global__ void vector_##func##_##type(type* vec, int size, int stride, type* result) {    \
