@@ -7,7 +7,7 @@ use crate::{
 
 impl<R: Repr, S: DimTrait, D: DeviceBase + CopyBlas> Matrix<R, S, D> {
     pub fn to_default_stride(&self) -> Matrix<Owned<R::Item>, S, D> {
-        let mut output: Matrix<Owned<R::Item>, S, D> = Matrix::zeros_like(&self);
+        let mut output: Matrix<Owned<R::Item>, S, D> = Matrix::zeros_like(self);
         {
             let output_view_mut = output.to_ref_mut();
             output_view_mut.copy_from(self.to_ref().into_dyn_dim());
