@@ -5,7 +5,7 @@
 __global__ void vector_scalar_##func##_##type(type* vec, int size, int stride_v, type scalar, type* result, int stride_r) { \
     int idx = blockIdx.x * blockDim.x + threadIdx.x;                                                                        \
     if (idx < size) {                                                                                                       \
-        result[idx * stride_v] = vec[idx * stride_r] op scalar;                                                             \
+        result[idx * stride_r] = vec[idx * stride_v] op scalar;                                                             \
     }                                                                                                                       \
 }                                                                                                                           \
 __global__ void vector_scalar_##assign_func##_##type(type* vec, int size, int stride, type scalar) {                        \
