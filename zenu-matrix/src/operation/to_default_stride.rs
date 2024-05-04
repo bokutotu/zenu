@@ -5,23 +5,6 @@ use crate::{
     matrix_blas::copy::CopyBlas,
 };
 
-// pub trait ToDefaultStride<T: Num> {
-//     fn to_default_stride(&self) -> Matrix<OwnedMem<T>, DimDyn>;
-// }
-//
-// impl<T, M, D: DimTrait> ToDefaultStride<T> for Matrix<M, D>
-// where
-//     T: Num,
-//     M: ToViewMemory<Item = T>,
-// {
-//     fn to_default_stride(&self) -> Matrix<OwnedMem<T>, DimDyn> {
-//         let mut output: Matrix<OwnedMem<T>, DimDyn> = Zeros::zeros_like(self.to_view());
-//         let mut output_view_mut = output.to_view_mut();
-//         output_view_mut.copy_from(&self.to_view().into_dyn_dim());
-//         output
-//     }
-// }
-
 impl<R: Repr, S: DimTrait, D: DeviceBase + CopyBlas> Matrix<R, S, D> {
     pub fn to_default_stride(&self) -> Matrix<Owned<R::Item>, S, D> {
         let mut output: Matrix<Owned<R::Item>, S, D> = Matrix::zeros_like(&self);
@@ -35,13 +18,6 @@ impl<R: Repr, S: DimTrait, D: DeviceBase + CopyBlas> Matrix<R, S, D> {
 
 #[cfg(test)]
 mod to_default_stride {
-    // use crate::{
-    //     dim::default_stride,
-    //     matrix::{IndexItem, MatrixBase, MatrixSlice, OwnedMatrix},
-    //     matrix_impl::{OwnedMatrix1D, OwnedMatrix2D, OwnedMatrixDyn},
-    //     slice,
-    // };
-
     use crate::{
         dim::{default_stride, DimDyn},
         slice_dynamic,

@@ -75,7 +75,7 @@ macro_rules! call_on_self {
 macro_rules! impl_arithmetic_ops {
     ($trait:ident, $trait_method:ident, $assign_trait:ident, $assign_trait_method:ident, $device_trait:ident, $scalr:ident, $scalar_assign:ident, $array:ident, $array_assign:ident) => {
         // Add<T> for Matrix<R, S, D>
-        impl<T: Num, R: Repr<Item = T>, S: DimTrait, D: DeviceBase + $device_trait<T>> $trait<T>
+        impl<T: Num, R: Repr<Item = T>, S: DimTrait, D: DeviceBase + $device_trait> $trait<T>
             for Matrix<R, S, D>
         {
             type Output = Matrix<Owned<T>, S, D>;
@@ -97,7 +97,7 @@ macro_rules! impl_arithmetic_ops {
                 SS: DimTrait,
                 RO: Repr<Item = T>,
                 SO: DimTrait,
-                D: DeviceBase + $device_trait<T>,
+                D: DeviceBase + $device_trait,
             > $trait<Matrix<RO, SO, D>> for Matrix<RS, SS, D>
         {
             type Output = Matrix<Owned<T>, DimDyn, D>;
@@ -120,7 +120,7 @@ macro_rules! impl_arithmetic_ops {
         }
 
         // AddAssign<T> for Matrix<Ref<&mut T>, S, D>
-        impl<T: Num, S: DimTrait, D: DeviceBase + $device_trait<T>> $assign_trait<T>
+        impl<T: Num, S: DimTrait, D: DeviceBase + $device_trait> $assign_trait<T>
             for Matrix<Ref<&mut T>, S, D>
         {
             fn $assign_trait_method(&mut self, rhs: T) {
@@ -129,7 +129,7 @@ macro_rules! impl_arithmetic_ops {
         }
 
         // AddAssign<T> for Matrix<Owned<T>, S, D>
-        impl<T: Num, S: DimTrait, D: DeviceBase + $device_trait<T>> $assign_trait<T>
+        impl<T: Num, S: DimTrait, D: DeviceBase + $device_trait> $assign_trait<T>
             for Matrix<Owned<T>, S, D>
         {
             fn $assign_trait_method(&mut self, rhs: T) {
@@ -144,7 +144,7 @@ macro_rules! impl_arithmetic_ops {
                 SS: DimTrait,
                 RO: Repr<Item = T>,
                 SO: DimTrait,
-                D: DeviceBase + $device_trait<T>,
+                D: DeviceBase + $device_trait,
             > $assign_trait<Matrix<RO, SO, D>> for Matrix<Owned<T>, SS, D>
         {
             fn $assign_trait_method(&mut self, rhs: Matrix<RO, SO, D>) {
@@ -159,7 +159,7 @@ macro_rules! impl_arithmetic_ops {
                 R: Repr<Item = T>,
                 SO: DimTrait,
                 SS: DimTrait,
-                D: DeviceBase + $device_trait<T>,
+                D: DeviceBase + $device_trait,
             > $assign_trait<Matrix<R, SO, D>> for Matrix<Ref<&mut T>, SS, D>
         {
             fn $assign_trait_method(&mut self, rhs: Matrix<R, SO, D>) {
