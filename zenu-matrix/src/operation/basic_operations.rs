@@ -433,6 +433,7 @@ mod basic_ops {
         matrix::{Matrix, Owned},
         matrix_blas::copy::CopyBlas,
         num::Num,
+        operation::asum::Asum,
         slice_dynamic,
     };
 
@@ -767,6 +768,36 @@ mod basic_ops {
     #[test]
     fn add_2d_0d_gpu() {
         add_2d_0d::<crate::device::nvidia::Nvidia>();
+    }
+
+    fn broad_cast_4x1x1x1_4x3x3x3<D: DeviceBase + AddOps + Asum + SubOps>() {
+        let a = Matrix::<Owned<f32>, DimDyn, D>::from_vec(vec![1., 2., 3., 4.], [4, 1, 1, 1]);
+        let b = Matrix::<Owned<f32>, DimDyn, D>::zeros([4, 2, 3, 3]);
+        let mut ans = Matrix::<Owned<f32>, DimDyn, D>::zeros([4, 2, 3, 3]);
+        ans.to_ref_mut().add_array(&a, &b);
+        let one = vec![1; 2 * 3 * 3];
+        let two = vec![2; 2 * 3 * 3];
+        let three = vec![3; 2 * 3 * 3];
+        let four = vec![4; 2 * 3 * 3];
+        let mut result = Vec::new();
+        result.extend_from_slice(&one);
+        result.extend_from_slice(&two);
+        result.extend_from_slice(&three);
+        result.extend_from_slice(&four);
+        let result = result.into_iter().map(|x| x as f32).collect::<Vec<f32>>();
+        let result = Matrix::<Owned<f32>, DimDyn, D>::from_vec(result, [4, 2, 3, 3]);
+        let diff = ans - result;
+        let diff = diff.asum();
+        assert!(diff == 0.0);
+    }
+    #[test]
+    fn broad_cast_4x1x1x1_4x3x3x3_cpu() {
+        broad_cast_4x1x1x1_4x3x3x3::<crate::device::cpu::Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn broad_cast_4x1x1x1_4x3x3x3_gpu() {
+        broad_cast_4x1x1x1_4x3x3x3::<crate::device::nvidia::Nvidia>();
     }
 
     fn sub_3d_scalar<D: DeviceBase + SubOps>() {
