@@ -649,6 +649,50 @@ mod basic_ops {
     fn matrix_add_sliced_gpu() {
         matrix_add_sliced::<crate::device::nvidia::Nvidia>();
     }
+
+    fn transposed<D: DeviceBase + AddOps + CopyBlas>() {
+        let mut a: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(
+            vec![
+                1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12., 13., 14., 15., 16.,
+            ],
+            [4, 4],
+        );
+        let b: Matrix<_, DimDyn, _> = Matrix::from_vec(
+            vec![
+                1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12., 13., 14., 15., 16.,
+            ],
+            [4, 4],
+        );
+
+        a.transpose();
+        let mut ans: Matrix<Owned<f32>, DimDyn, D> = Matrix::zeros([4, 4]);
+        ans.to_ref_mut().add_array(&a, &b);
+        assert_eq!(ans.index_item([0, 0]), 2.);
+        assert_eq!(ans.index_item([0, 1]), 7.);
+        assert_eq!(ans.index_item([0, 2]), 12.);
+        assert_eq!(ans.index_item([0, 3]), 17.);
+        assert_eq!(ans.index_item([1, 0]), 7.);
+        assert_eq!(ans.index_item([1, 1]), 12.);
+        assert_eq!(ans.index_item([1, 2]), 17.);
+        assert_eq!(ans.index_item([1, 3]), 22.);
+        assert_eq!(ans.index_item([2, 0]), 12.);
+        assert_eq!(ans.index_item([2, 1]), 17.);
+        assert_eq!(ans.index_item([2, 2]), 22.);
+        assert_eq!(ans.index_item([2, 3]), 27.);
+        assert_eq!(ans.index_item([3, 0]), 17.);
+        assert_eq!(ans.index_item([3, 1]), 22.);
+        assert_eq!(ans.index_item([3, 2]), 27.);
+        assert_eq!(ans.index_item([3, 3]), 32.);
+    }
+    #[test]
+    fn transposed_cpu() {
+        transposed::<crate::device::cpu::Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn transposed_gpu() {
+        transposed::<crate::device::nvidia::Nvidia>();
+    }
 }
 
 // #[cfg(test)]
