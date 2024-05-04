@@ -59,13 +59,6 @@ impl<R: Repr, D: DeviceBase + CopyBlas> Matrix<R, DimDyn, D> {
 }
 #[cfg(test)]
 mod transpose {
-    // use crate::{
-    //     matrix::{IndexItem, OwnedMatrix},
-    //     matrix_impl::OwnedMatrixDyn,
-    // };
-    //
-    // use super::Transpose;
-
     use crate::{
         device::DeviceBase,
         dim::DimDyn,

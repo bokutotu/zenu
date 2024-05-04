@@ -235,12 +235,12 @@ macro_rules! impl_basic_ops {
                         lhs.as_ptr(),
                         rhs,
                         self.shape().num_elm(),
-                        // self.stride()[0],
-                        // lhs.stride()[0]
                         1,
                         1
                     );
                 } else if self.shape().len() == 1 {
+                    println!("lhs shape {:?}", lhs.shape());
+                    println!("lhs stride {:?}", lhs.stride());
                     D::scalar(
                         self.as_mut_ptr(),
                         lhs.as_ptr(),
@@ -311,18 +311,11 @@ macro_rules! impl_basic_ops {
                 }
 
                 if self.shape().is_empty() {
-                    // let self_slice = self.as_mut_slice();
-                    // let lhs_slice = lhs.as_slice();
-                    // let rhs_slice = rhs.as_slice();
-                    // self_slice[0] = lhs_slice[0].$method(rhs_slice[0]);
                     D::scalar(
                         self.as_mut_ptr(),
                         lhs.as_ptr(),
                         unsafe { *rhs.as_ptr() },
-                        // self.shape().num_elm(),
                         1,
-                        // self.stride()[0],
-                        // lhs.stride()[0],
                         1,
                         1,
                     );
@@ -437,304 +430,354 @@ impl_basic_ops!(mul_array, mul_assign, mul_scalar, mul_scalar_assign, MulOps);
 impl_basic_ops!(div_array, div_assign, div_scalar, div_scalar_assign, DivOps);
 
 #[cfg(test)]
-mod add {
-
+mod basic_ops {
     use crate::{
-        dim::{Dim0, Dim1, Dim2, Dim3},
-        matrix::Owned,
-        slice,
+        device::DeviceBase,
+        dim::DimDyn,
+        matrix::{Matrix, Owned},
+        matrix_blas::copy::CopyBlas,
+        num::Num,
+        operation::asum::Asum,
+        slice_dynamic,
     };
 
-    use super::*;
+    use super::{AddOps, DivOps, MulOps, SubOps};
 
+    // 必要なテスト群
+    // default stride
+    // sliced
+    // transposed
+
+    fn scalar_add_1d<D: DeviceBase + AddOps>() {
+        let a: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(vec![1., 2., 3.], [3]);
+        let mut ans: Matrix<Owned<f32>, DimDyn, D> = Matrix::zeros([3]);
+        ans.to_ref_mut().add_scalar(&a, 1.);
+        assert_eq!(ans.index_item([0]), 2.);
+        assert_eq!(ans.index_item([1]), 3.);
+        assert_eq!(ans.index_item([2]), 4.);
+    }
     #[test]
-    fn add_0d_0d() {
-        let a: Matrix<Owned<f32>, Dim0, Cpu> = Matrix::from_vec(vec![1.0], []);
-        let b: Matrix<Owned<f32>, Dim0, Cpu> = Matrix::from_vec(vec![1.0], []);
-        let mut ans: Matrix<Owned<f32>, Dim0, Cpu> = Matrix::zeros([]);
-        ans.to_ref_mut().add_array(&a, &b);
-        assert_eq!(ans.index_item([]), 2.0);
+    fn scalar_add_1d_cpu() {
+        scalar_add_1d::<crate::device::cpu::Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn scalar_add_1d_gpu() {
+        scalar_add_1d::<crate::device::nvidia::Nvidia>();
     }
 
+    fn scalar_add_2d<D: DeviceBase + AddOps>() {
+        let a: Matrix<Owned<f32>, DimDyn, D> =
+            Matrix::from_vec(vec![1., 2., 3., 4., 5., 6.], [2, 3]);
+        let mut ans: Matrix<Owned<f32>, DimDyn, D> = Matrix::zeros([2, 3]);
+        ans.to_ref_mut().add_scalar(&a, 1.);
+        assert_eq!(ans.index_item([0, 0]), 2.);
+        assert_eq!(ans.index_item([0, 1]), 3.);
+        assert_eq!(ans.index_item([0, 2]), 4.);
+        assert_eq!(ans.index_item([1, 0]), 5.);
+        assert_eq!(ans.index_item([1, 1]), 6.);
+        assert_eq!(ans.index_item([1, 2]), 7.);
+    }
     #[test]
-    fn add_dyn_dyn() {
-        let a: Matrix<Owned<f32>, DimDyn, Cpu> = Matrix::from_vec(vec![1.0, 2.0, 3.0], [3]);
-        let b: Matrix<Owned<f32>, DimDyn, Cpu> = Matrix::from_vec(vec![1.0, 2.0, 3.0], [3]);
-        let ans: Matrix<Owned<f32>, DimDyn, Cpu> = Matrix::zeros([3]);
-
-        let a = a.into_dyn_dim();
-        let b = b.into_dyn_dim();
-        let mut ans = ans.into_dyn_dim();
-
-        ans.to_ref_mut().add_array(&a.to_ref(), &b.to_ref());
+    fn scalar_add_2d_cpu() {
+        scalar_add_2d::<crate::device::cpu::Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn scalar_add_2d_gpu() {
+        scalar_add_2d::<crate::device::nvidia::Nvidia>();
     }
 
-    #[test]
-    fn add_1d_scalar() {
-        let a: Matrix<Owned<f32>, Dim1, Cpu> = Matrix::from_vec(vec![1.0, 2.0, 3.0], [3]);
-        let mut ans: Matrix<Owned<f32>, Dim1, Cpu> = Matrix::zeros([3]);
-        let b: Matrix<Owned<f32>, Dim0, Cpu> = Matrix::from_vec(vec![2.0], []);
-        ans.to_ref_mut().add_array(&a, &b);
-
-        assert_eq!(ans.index_item([0]), 3.0);
-        assert_eq!(ans.index_item([1]), 4.0);
-        assert_eq!(ans.index_item([2]), 5.0);
-    }
-
-    #[test]
-    fn add_1d_scalar_default_stride() {
-        let a: Matrix<Owned<f32>, Dim1, Cpu> = Matrix::from_vec(vec![1.0, 2.0, 3.0], [3]);
-        let mut ans: Matrix<Owned<f32>, Dim1, Cpu> = Matrix::zeros([3]);
-        ans.to_ref_mut().add_scalar(&a, 2.0);
-
-        assert_eq!(ans.index_item([0]), 3.0);
-        assert_eq!(ans.index_item([1]), 4.0);
-        assert_eq!(ans.index_item([2]), 5.0);
-    }
-
-    #[test]
-    fn add_1d_scalar_sliced() {
-        let a: Matrix<Owned<f32>, Dim1, Cpu> =
-            Matrix::from_vec(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], [6]);
-        let mut ans: Matrix<Owned<f32>, Dim1, Cpu> = Matrix::zeros([3]);
-        let sliced = a.slice(slice!(..;2));
-        ans.to_ref_mut().add_scalar(&sliced, 1.);
-        assert_eq!(ans.index_item([0]), 2.0);
-        assert_eq!(ans.index_item([1]), 4.0);
-        assert_eq!(ans.index_item([2]), 6.0);
-    }
-
-    #[test]
-    fn add_3d_scalar_sliced() {
-        let a: Matrix<Owned<f32>, Dim3, Cpu> = Matrix::from_vec(
-            vec![
-                1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0,
-                16.0, 17.0, 18.0, 19.0, 20.0, 21.0, 22.0, 23.0, 24.0, 25.0, 26.0, 27.0, 28.0, 29.0,
-                30.0, 31.0, 32.0, 33.0, 34.0, 35.0, 36.0,
-            ],
-            [3, 3, 4],
-        );
-
-        let mut ans: Matrix<Owned<f32>, Dim3, Cpu> = Matrix::zeros([3, 3, 2]);
-
-        let sliced = a.slice(slice!(.., .., ..;2));
-
-        ans.to_ref_mut().add_scalar(&sliced, 1.);
-
-        assert_eq!(ans.index_item([0, 0, 0]), 2.0);
-        assert_eq!(ans.index_item([0, 0, 1]), 4.0);
-        assert_eq!(ans.index_item([0, 1, 0]), 6.0);
-        assert_eq!(ans.index_item([0, 1, 1]), 8.0);
-        assert_eq!(ans.index_item([0, 2, 0]), 10.0);
-        assert_eq!(ans.index_item([0, 2, 1]), 12.0);
-        assert_eq!(ans.index_item([1, 0, 0]), 14.0);
-        assert_eq!(ans.index_item([1, 0, 1]), 16.0);
-        assert_eq!(ans.index_item([1, 1, 0]), 18.0);
-        assert_eq!(ans.index_item([1, 1, 1]), 20.0);
-        assert_eq!(ans.index_item([1, 2, 0]), 22.0);
-        assert_eq!(ans.index_item([1, 2, 1]), 24.0);
-        assert_eq!(ans.index_item([2, 0, 0]), 26.0);
-        assert_eq!(ans.index_item([2, 0, 1]), 28.0);
-        assert_eq!(ans.index_item([2, 1, 0]), 30.0);
-        assert_eq!(ans.index_item([2, 1, 1]), 32.0);
-        assert_eq!(ans.index_item([2, 2, 0]), 34.0);
-        assert_eq!(ans.index_item([2, 2, 1]), 36.0);
-    }
-
-    #[test]
-    fn add_1d_1d_default_stride() {
-        let a: Matrix<Owned<f32>, Dim1, Cpu> = Matrix::from_vec(vec![1.0, 2.0, 3.0], [3]);
-        let b: Matrix<Owned<f32>, Dim1, Cpu> = Matrix::from_vec(vec![1.0, 2.0, 3.0], [3]);
-        let mut ans: Matrix<Owned<f32>, Dim1, Cpu> = Matrix::zeros([3]);
-        ans.to_ref_mut().add_array(&a, &b);
-        assert_eq!(ans.index_item([0]), 2.0);
-        assert_eq!(ans.index_item([1]), 4.0);
-        assert_eq!(ans.index_item([2]), 6.0);
-    }
-
-    #[test]
-    fn add_1d_1d_sliced() {
-        let a: Matrix<Owned<f32>, Dim1, Cpu> =
-            Matrix::from_vec(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], [6]);
-        let b: Matrix<Owned<f32>, Dim1, Cpu> =
-            Matrix::from_vec(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], [6]);
-        let sliced_a = a.slice(slice!(..;2));
-        let sliced_b = b.slice(slice!(1..;2));
-        let mut ans: Matrix<Owned<f32>, Dim1, Cpu> = Matrix::zeros([3]);
-        ans.to_ref_mut().add_array(&sliced_a, &sliced_b);
-        assert_eq!(ans.index_item([0]), 3.0);
-        assert_eq!(ans.index_item([1]), 7.0);
-        assert_eq!(ans.index_item([2]), 11.0);
-    }
-
-    #[test]
-    fn add_2d_1d_default() {
-        let a: Matrix<Owned<f32>, Dim2, Cpu> = Matrix::from_vec(
+    fn sliced_3d<D: DeviceBase + AddOps>() {
+        let a: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(
             vec![
                 1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12., 13., 14., 15., 16.,
             ],
-            [4, 4],
+            [2, 2, 4],
         );
-        let b: Matrix<Owned<f32>, Dim1, Cpu> =
-            Matrix::from_vec(vec![1., 2., 3., 4., 5., 6., 7., 8.], [8]);
-        let mut ans: Matrix<Owned<f32>, Dim2, Cpu> = Matrix::zeros([2, 2]);
-        let sliced_a = a.slice(slice!(..2, ..2));
-        let sliced_b = b.slice(slice!(..2));
-        ans.to_ref_mut().add_array(&sliced_a, &sliced_b);
-        assert_eq!(ans.index_item([0, 0]), 2.0);
-        assert_eq!(ans.index_item([0, 1]), 4.0);
-        assert_eq!(ans.index_item([1, 0]), 6.0);
-        assert_eq!(ans.index_item([1, 1]), 8.0);
+        let mut ans: Matrix<Owned<f32>, DimDyn, D> = Matrix::zeros([1, 2, 2]);
+        let sliced = a.slice(slice_dynamic!(1.., .., ..;2));
+        ans.to_ref_mut().add_scalar(&sliced, 1.);
+        assert_eq!(ans.index_item([0, 0, 0]), 10.);
+        assert_eq!(ans.index_item([0, 0, 1]), 12.);
+        assert_eq!(ans.index_item([0, 1, 0]), 14.);
+        assert_eq!(ans.index_item([0, 1, 1]), 16.);
+    }
+    #[test]
+    fn sliced_3d_cpu() {
+        sliced_3d::<crate::device::cpu::Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn sliced_3d_gpu() {
+        sliced_3d::<crate::device::nvidia::Nvidia>();
     }
 
+    fn scalar_assign_4d<D: DeviceBase + AddOps>() {
+        let mut a: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(
+            vec![
+                1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12., 13., 14., 15., 16.,
+            ],
+            [2, 2, 2, 2],
+        );
+        a.to_ref_mut().add_scalar_assign(1.);
+        assert_eq!(a.index_item([0, 0, 0, 0]), 2.);
+        assert_eq!(a.index_item([0, 0, 0, 1]), 3.);
+        assert_eq!(a.index_item([0, 0, 1, 0]), 4.);
+        assert_eq!(a.index_item([0, 0, 1, 1]), 5.);
+        assert_eq!(a.index_item([0, 1, 0, 0]), 6.);
+        assert_eq!(a.index_item([0, 1, 0, 1]), 7.);
+        assert_eq!(a.index_item([0, 1, 1, 0]), 8.);
+        assert_eq!(a.index_item([0, 1, 1, 1]), 9.);
+        assert_eq!(a.index_item([1, 0, 0, 0]), 10.);
+        assert_eq!(a.index_item([1, 0, 0, 1]), 11.);
+        assert_eq!(a.index_item([1, 0, 1, 0]), 12.);
+        assert_eq!(a.index_item([1, 0, 1, 1]), 13.);
+        assert_eq!(a.index_item([1, 1, 0, 0]), 14.);
+        assert_eq!(a.index_item([1, 1, 0, 1]), 15.);
+        assert_eq!(a.index_item([1, 1, 1, 0]), 16.);
+        assert_eq!(a.index_item([1, 1, 1, 1]), 17.);
+    }
     #[test]
-    fn add_3d_1d_sliced() {
-        let mut v = Vec::new();
-        let num_elm = 4 * 4 * 4;
-        for i in 0..num_elm {
-            v.push(i as f32);
+    fn scalar_assign_4d_cpu() {
+        scalar_assign_4d::<crate::device::cpu::Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn scalar_assign_4d_gpu() {
+        scalar_assign_4d::<crate::device::nvidia::Nvidia>();
+    }
+
+    fn sliced_3d_assign<D: DeviceBase + AddOps>() {
+        let mut a = Vec::new();
+        for i in 0..3 {
+            for j in 0..4 {
+                for k in 0..5 {
+                    a.push((i * 100 + j * 10 + k) as f32);
+                }
+            }
         }
-        let a: Matrix<Owned<f32>, Dim3, Cpu> = Matrix::from_vec(v, [4, 4, 4]);
-        let b: Matrix<Owned<f32>, Dim1, Cpu> = Matrix::from_vec(vec![1., 2., 3., 4.], [4]);
-        let mut ans: Matrix<Owned<f32>, Dim3, Cpu> = Matrix::zeros([2, 2, 2]);
-        let sliced_a = a.slice(slice!(..2, 1..;2, ..2));
-        let sliced_b = b.slice(slice!(..2));
-
-        ans.to_ref_mut().add_array(&sliced_a, &sliced_b);
-
-        assert_eq!(ans.index_item([0, 0, 0]), 5.);
-        assert_eq!(ans.index_item([0, 0, 1]), 7.);
-        assert_eq!(ans.index_item([0, 1, 0]), 13.);
-        assert_eq!(ans.index_item([0, 1, 1]), 15.);
-        assert_eq!(ans.index_item([1, 0, 0]), 21.);
-        assert_eq!(ans.index_item([1, 0, 1]), 23.);
-        assert_eq!(ans.index_item([1, 1, 0]), 29.);
-        assert_eq!(ans.index_item([1, 1, 1]), 31.);
+        let a: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(a, [3, 4, 5]);
+        // shape [1, 2, 3]
+        let a = a.slice(slice_dynamic!(2, 1..3, ..;2));
+        let mut ans: Matrix<Owned<f32>, DimDyn, D> = Matrix::zeros([2, 3]);
+        ans.to_ref_mut().add_scalar(&a, 1.);
+        assert_eq!(ans.index_item([0, 0]), 211.);
+        assert_eq!(ans.index_item([0, 1]), 213.);
+        assert_eq!(ans.index_item([0, 2]), 215.);
+        assert_eq!(ans.index_item([1, 0]), 221.);
+        assert_eq!(ans.index_item([1, 1]), 223.);
+        assert_eq!(ans.index_item([1, 2]), 225.);
+    }
+    #[test]
+    fn sliced_3d_assign_cpu() {
+        sliced_3d_assign::<crate::device::cpu::Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn sliced_3d_assign_gpu() {
+        sliced_3d_assign::<crate::device::nvidia::Nvidia>();
     }
 
-    #[test]
-    fn add_2d_2d_default() {
-        let a: Matrix<Owned<f32>, Dim2, Cpu> = Matrix::from_vec(
+    fn matrix_add_4d<D: DeviceBase + AddOps>() {
+        let a: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(
             vec![
                 1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12., 13., 14., 15., 16.,
             ],
-            [4, 4],
+            [2, 2, 2, 2],
         );
-        let b: Matrix<Owned<f32>, Dim2, Cpu> = Matrix::from_vec(
+        let b: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(
             vec![
-                1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12., 13., 14., 15., 16.,
+                16., 15., 14., 13., 12., 11., 10., 9., 8., 7., 6., 5., 4., 3., 2., 1.,
             ],
-            [4, 4],
+            [2, 2, 2, 2],
         );
-        let mut ans: Matrix<Owned<f32>, Dim2, Cpu> = Matrix::zeros([4, 4]);
+
+        let mut ans: Matrix<Owned<f32>, DimDyn, D> = Matrix::zeros([2, 2, 2, 2]);
         ans.to_ref_mut().add_array(&a, &b);
-        assert_eq!(ans.index_item([0, 0]), 2.0);
-        assert_eq!(ans.index_item([0, 1]), 4.0);
-        assert_eq!(ans.index_item([0, 2]), 6.0);
-        assert_eq!(ans.index_item([0, 3]), 8.0);
-        assert_eq!(ans.index_item([1, 0]), 10.0);
-        assert_eq!(ans.index_item([1, 1]), 12.0);
-        assert_eq!(ans.index_item([1, 2]), 14.0);
-        assert_eq!(ans.index_item([1, 3]), 16.0);
-        assert_eq!(ans.index_item([2, 0]), 18.0);
-        assert_eq!(ans.index_item([2, 1]), 20.0);
-        assert_eq!(ans.index_item([2, 2]), 22.0);
-        assert_eq!(ans.index_item([2, 3]), 24.0);
-        assert_eq!(ans.index_item([3, 0]), 26.0);
-        assert_eq!(ans.index_item([3, 1]), 28.0);
-        assert_eq!(ans.index_item([3, 2]), 30.0);
-        assert_eq!(ans.index_item([3, 3]), 32.0);
+        assert_eq!(ans.index_item([0, 0, 0, 0]), 17.);
+        assert_eq!(ans.index_item([0, 0, 0, 1]), 17.);
+        assert_eq!(ans.index_item([0, 0, 1, 0]), 17.);
+        assert_eq!(ans.index_item([0, 0, 1, 1]), 17.);
+        assert_eq!(ans.index_item([0, 1, 0, 0]), 17.);
+        assert_eq!(ans.index_item([0, 1, 0, 1]), 17.);
+        assert_eq!(ans.index_item([0, 1, 1, 0]), 17.);
+        assert_eq!(ans.index_item([0, 1, 1, 1]), 17.);
+        assert_eq!(ans.index_item([1, 0, 0, 0]), 17.);
+        assert_eq!(ans.index_item([1, 0, 0, 1]), 17.);
+        assert_eq!(ans.index_item([1, 0, 1, 0]), 17.);
+        assert_eq!(ans.index_item([1, 0, 1, 1]), 17.);
+        assert_eq!(ans.index_item([1, 1, 0, 0]), 17.);
+        assert_eq!(ans.index_item([1, 1, 0, 1]), 17.);
+        assert_eq!(ans.index_item([1, 1, 1, 0]), 17.);
+        assert_eq!(ans.index_item([1, 1, 1, 1]), 17.);
+    }
+    #[test]
+    fn matrix_add_4d_cpu() {
+        matrix_add_4d::<crate::device::cpu::Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn matrix_add_4d_gpu() {
+        matrix_add_4d::<crate::device::nvidia::Nvidia>();
     }
 
-    #[test]
-    fn add_2d_0d() {
-        let a: Matrix<Owned<f32>, Dim2, Cpu> = Matrix::from_vec(
+    fn matrix_add_sliced<D: DeviceBase + AddOps>() {
+        let a: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(
             vec![
                 1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12., 13., 14., 15., 16.,
             ],
             [4, 4],
         );
-        let b: Matrix<Owned<f32>, Dim0, Cpu> = Matrix::from_vec(vec![1.], []);
-        let mut ans: Matrix<Owned<f32>, Dim2, Cpu> = Matrix::zeros([4, 4]);
-        ans.to_ref_mut().add_array(&a, &b);
-        assert_eq!(ans.index_item([0, 0]), 2.0);
-        assert_eq!(ans.index_item([0, 1]), 3.0);
-        assert_eq!(ans.index_item([0, 2]), 4.0);
-        assert_eq!(ans.index_item([0, 3]), 5.0);
-        assert_eq!(ans.index_item([1, 0]), 6.0);
-        assert_eq!(ans.index_item([1, 1]), 7.0);
-        assert_eq!(ans.index_item([1, 2]), 8.0);
-        assert_eq!(ans.index_item([1, 3]), 9.0);
-        assert_eq!(ans.index_item([2, 0]), 10.0);
-        assert_eq!(ans.index_item([2, 1]), 11.0);
-        assert_eq!(ans.index_item([2, 2]), 12.0);
-        assert_eq!(ans.index_item([2, 3]), 13.0);
-        assert_eq!(ans.index_item([3, 0]), 14.0);
-        assert_eq!(ans.index_item([3, 1]), 15.0);
-        assert_eq!(ans.index_item([3, 2]), 16.0);
-        assert_eq!(ans.index_item([3, 3]), 17.0);
-    }
-
-    #[test]
-    fn add_2d_0d_dyn() {
-        let a: Matrix<Owned<f32>, DimDyn, Cpu> = Matrix::from_vec(
+        let b: Matrix<_, DimDyn, _> = Matrix::from_vec(
             vec![
                 1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12., 13., 14., 15., 16.,
             ],
             [4, 4],
         );
-        let b: Matrix<Owned<f32>, DimDyn, Cpu> = Matrix::from_vec(vec![1.], []);
-        let mut ans: Matrix<Owned<f32>, DimDyn, Cpu> = Matrix::zeros([4, 4]);
+
+        let a = a.slice(slice_dynamic!(1..;2, ..;2));
+        let b = b.slice(slice_dynamic!(..;2, 1..;2));
+        let mut ans: Matrix<Owned<f32>, DimDyn, D> = Matrix::zeros([2, 2]);
         ans.to_ref_mut().add_array(&a, &b);
-        assert_eq!(ans.index_item([0, 0]), 2.0);
-        assert_eq!(ans.index_item([0, 1]), 3.0);
-        assert_eq!(ans.index_item([0, 2]), 4.0);
-        assert_eq!(ans.index_item([0, 3]), 5.0);
-        assert_eq!(ans.index_item([1, 0]), 6.0);
-        assert_eq!(ans.index_item([1, 1]), 7.0);
-        assert_eq!(ans.index_item([1, 2]), 8.0);
-        assert_eq!(ans.index_item([1, 3]), 9.0);
-        assert_eq!(ans.index_item([2, 0]), 10.0);
-        assert_eq!(ans.index_item([2, 1]), 11.0);
-        assert_eq!(ans.index_item([2, 2]), 12.0);
-        assert_eq!(ans.index_item([2, 3]), 13.0);
-        assert_eq!(ans.index_item([3, 0]), 14.0);
-        assert_eq!(ans.index_item([3, 1]), 15.0);
-        assert_eq!(ans.index_item([3, 2]), 16.0);
-        assert_eq!(ans.index_item([3, 3]), 17.0);
+        assert_eq!(ans.index_item([0, 0]), 7.);
+        assert_eq!(ans.index_item([0, 1]), 11.);
+        assert_eq!(ans.index_item([1, 0]), 23.);
+        assert_eq!(ans.index_item([1, 1]), 27.);
+    }
+    #[test]
+    fn matrix_add_sliced_cpu() {
+        matrix_add_sliced::<crate::device::cpu::Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn matrix_add_sliced_gpu() {
+        matrix_add_sliced::<crate::device::nvidia::Nvidia>();
     }
 
+    fn transposed<D: DeviceBase + AddOps + CopyBlas>() {
+        let mut a: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(
+            vec![
+                1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12., 13., 14., 15., 16.,
+            ],
+            [4, 4],
+        );
+        let b: Matrix<_, DimDyn, _> = Matrix::from_vec(
+            vec![
+                1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12., 13., 14., 15., 16.,
+            ],
+            [4, 4],
+        );
+
+        a.transpose();
+        let mut ans: Matrix<Owned<f32>, DimDyn, D> = Matrix::zeros([4, 4]);
+        ans.to_ref_mut().add_array(&a, &b);
+        assert_eq!(ans.index_item([0, 0]), 2.);
+        assert_eq!(ans.index_item([0, 1]), 7.);
+        assert_eq!(ans.index_item([0, 2]), 12.);
+        assert_eq!(ans.index_item([0, 3]), 17.);
+        assert_eq!(ans.index_item([1, 0]), 7.);
+        assert_eq!(ans.index_item([1, 1]), 12.);
+        assert_eq!(ans.index_item([1, 2]), 17.);
+        assert_eq!(ans.index_item([1, 3]), 22.);
+        assert_eq!(ans.index_item([2, 0]), 12.);
+        assert_eq!(ans.index_item([2, 1]), 17.);
+        assert_eq!(ans.index_item([2, 2]), 22.);
+        assert_eq!(ans.index_item([2, 3]), 27.);
+        assert_eq!(ans.index_item([3, 0]), 17.);
+        assert_eq!(ans.index_item([3, 1]), 22.);
+        assert_eq!(ans.index_item([3, 2]), 27.);
+        assert_eq!(ans.index_item([3, 3]), 32.);
+    }
     #[test]
-    fn add_4d_2d_dyn() {
-        let zeros_4d: Matrix<Owned<f32>, DimDyn, Cpu> = Matrix::zeros([2, 2, 2, 2]);
-        let ones_2d: Matrix<Owned<f32>, DimDyn, Cpu> =
-            Matrix::from_vec(vec![1., 1., 1., 1.], [2, 2]);
-        let mut ans: Matrix<Owned<f32>, DimDyn, Cpu> = Matrix::zeros([2, 2, 2, 2]);
-        ans.to_ref_mut().add_array(&zeros_4d, &ones_2d);
-        assert_eq!(ans.index_item([0, 0, 0, 0]), 1.0);
-        assert_eq!(ans.index_item([0, 0, 0, 1]), 1.0);
-        assert_eq!(ans.index_item([0, 0, 1, 0]), 1.0);
-        assert_eq!(ans.index_item([0, 0, 1, 1]), 1.0);
-        assert_eq!(ans.index_item([0, 1, 0, 0]), 1.0);
-        assert_eq!(ans.index_item([0, 1, 0, 1]), 1.0);
-        assert_eq!(ans.index_item([0, 1, 1, 0]), 1.0);
-        assert_eq!(ans.index_item([0, 1, 1, 1]), 1.0);
-        assert_eq!(ans.index_item([1, 0, 0, 0]), 1.0);
-        assert_eq!(ans.index_item([1, 0, 0, 1]), 1.0);
-        assert_eq!(ans.index_item([1, 0, 1, 0]), 1.0);
-        assert_eq!(ans.index_item([1, 0, 1, 1]), 1.0);
-        assert_eq!(ans.index_item([1, 1, 0, 0]), 1.0);
-        assert_eq!(ans.index_item([1, 1, 0, 1]), 1.0);
-        assert_eq!(ans.index_item([1, 1, 1, 0]), 1.0);
-        assert_eq!(ans.index_item([1, 1, 1, 1]), 1.0);
+    fn transposed_cpu() {
+        transposed::<crate::device::cpu::Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn transposed_gpu() {
+        transposed::<crate::device::nvidia::Nvidia>();
     }
 
+    fn broadcast_add<D: DeviceBase + AddOps>() {
+        let a = vec![1., 2., 3., 4., 5., 6., 7., 8.];
+        let a: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(a, [2, 2, 2]);
+        let b: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(vec![1., 1.], [1, 1, 2]);
+        let mut ans: Matrix<Owned<f32>, DimDyn, D> = Matrix::zeros([2, 2, 2]);
+        ans.to_ref_mut().add_array(&a, &b);
+        assert_eq!(ans.index_item([0, 0, 0]), 2.);
+        assert_eq!(ans.index_item([0, 0, 1]), 3.);
+        assert_eq!(ans.index_item([0, 1, 0]), 4.);
+        assert_eq!(ans.index_item([0, 1, 1]), 5.);
+        assert_eq!(ans.index_item([1, 0, 0]), 6.);
+        assert_eq!(ans.index_item([1, 0, 1]), 7.);
+        assert_eq!(ans.index_item([1, 1, 0]), 8.);
+        assert_eq!(ans.index_item([1, 1, 1]), 9.);
+    }
     #[test]
-    fn broad_cast_4x1x1x1_4x3x3x3() {
-        let a: Matrix<Owned<f32>, DimDyn, Cpu> =
-            Matrix::from_vec(vec![1., 2., 3., 4.], [4, 1, 1, 1]);
-        let b: Matrix<Owned<f32>, DimDyn, Cpu> = Matrix::zeros([4, 2, 3, 3]);
-        let mut ans: Matrix<Owned<f32>, DimDyn, Cpu> = Matrix::zeros([4, 2, 3, 3]);
+    fn broadcast_add_cpu() {
+        broadcast_add::<crate::device::cpu::Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn broadcast_add_gpu() {
+        broadcast_add::<crate::device::nvidia::Nvidia>();
+    }
+
+    fn add_2d_1d<D: DeviceBase + AddOps>() {
+        let a = vec![1., 2., 3., 4., 5., 6., 7., 8.];
+        let a: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(a, [2, 2, 2]);
+        let b: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(vec![1., 1.], [2]);
+        let mut ans: Matrix<Owned<f32>, DimDyn, D> = Matrix::zeros([2, 2, 2]);
+        ans.to_ref_mut().add_array(&a, &b);
+        assert_eq!(ans.index_item([0, 0, 0]), 2.);
+        assert_eq!(ans.index_item([0, 0, 1]), 3.);
+        assert_eq!(ans.index_item([0, 1, 0]), 4.);
+        assert_eq!(ans.index_item([0, 1, 1]), 5.);
+        assert_eq!(ans.index_item([1, 0, 0]), 6.);
+        assert_eq!(ans.index_item([1, 0, 1]), 7.);
+        assert_eq!(ans.index_item([1, 1, 0]), 8.);
+        assert_eq!(ans.index_item([1, 1, 1]), 9.);
+    }
+    #[test]
+    fn add_2d_1d_cpu() {
+        add_2d_1d::<crate::device::cpu::Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn add_2d_1d_gpu() {
+        add_2d_1d::<crate::device::nvidia::Nvidia>();
+    }
+
+    fn add_2d_0d<D: DeviceBase + AddOps>() {
+        let a = vec![1., 2., 3., 4., 5., 6., 7., 8.];
+        let a: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(a, [2, 2, 2]);
+        let b: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(vec![1.], []);
+        let mut ans: Matrix<Owned<f32>, DimDyn, D> = Matrix::zeros([2, 2, 2]);
+        ans.to_ref_mut().add_array(&a, &b);
+        assert_eq!(ans.index_item([0, 0, 0]), 2.);
+        assert_eq!(ans.index_item([0, 0, 1]), 3.);
+        assert_eq!(ans.index_item([0, 1, 0]), 4.);
+        assert_eq!(ans.index_item([0, 1, 1]), 5.);
+        assert_eq!(ans.index_item([1, 0, 0]), 6.);
+        assert_eq!(ans.index_item([1, 0, 1]), 7.);
+        assert_eq!(ans.index_item([1, 1, 0]), 8.);
+        assert_eq!(ans.index_item([1, 1, 1]), 9.);
+    }
+    #[test]
+    fn add_2d_0d_cpu() {
+        add_2d_0d::<crate::device::cpu::Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn add_2d_0d_gpu() {
+        add_2d_0d::<crate::device::nvidia::Nvidia>();
+    }
+
+    fn broad_cast_4x1x1x1_4x3x3x3<D: DeviceBase + AddOps + Asum + SubOps>() {
+        let a = Matrix::<Owned<f32>, DimDyn, D>::from_vec(vec![1., 2., 3., 4.], [4, 1, 1, 1]);
+        let b = Matrix::<Owned<f32>, DimDyn, D>::zeros([4, 2, 3, 3]);
+        let mut ans = Matrix::<Owned<f32>, DimDyn, D>::zeros([4, 2, 3, 3]);
         ans.to_ref_mut().add_array(&a, &b);
         let one = vec![1; 2 * 3 * 3];
         let two = vec![2; 2 * 3 * 3];
@@ -746,389 +789,324 @@ mod add {
         result.extend_from_slice(&three);
         result.extend_from_slice(&four);
         let result = result.into_iter().map(|x| x as f32).collect::<Vec<f32>>();
-        let result: Matrix<Owned<f32>, DimDyn, Cpu> = Matrix::from_vec(result, [4, 2, 3, 3]);
-        // assert!((ans.to_ref() - result.to_ref()).asum() == 0.0);
+        let result = Matrix::<Owned<f32>, DimDyn, D>::from_vec(result, [4, 2, 3, 3]);
+        let diff = ans - result;
+        let diff = diff.asum();
+        assert!(diff == 0.0);
     }
-}
-
-#[cfg(test)]
-mod sub {
-    use crate::{dim::DimDyn, matrix::Owned};
-
-    use super::*;
-
     #[test]
-    fn sub_0d_0d() {
-        let a: Matrix<Owned<f32>, DimDyn, Cpu> = Matrix::from_vec(vec![1.0], []);
-        let b: Matrix<Owned<f32>, DimDyn, Cpu> = Matrix::from_vec(vec![1.0], []);
-        let mut ans: Matrix<Owned<f32>, DimDyn, Cpu> = Matrix::zeros([]);
+    fn broad_cast_4x1x1x1_4x3x3x3_cpu() {
+        broad_cast_4x1x1x1_4x3x3x3::<crate::device::cpu::Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn broad_cast_4x1x1x1_4x3x3x3_gpu() {
+        broad_cast_4x1x1x1_4x3x3x3::<crate::device::nvidia::Nvidia>();
+    }
+
+    fn sub_3d_scalar<D: DeviceBase + SubOps>() {
+        let a = vec![1., 2., 3., 4., 5., 6., 7., 8.];
+        let a: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(a, [2, 2, 2]);
+        let mut ans: Matrix<Owned<f32>, DimDyn, D> = Matrix::zeros([2, 2, 2]);
+        ans.to_ref_mut().sub_scalar(&a, 1.);
+
+        assert_eq!(ans.index_item([0, 0, 0]), 0.);
+        assert_eq!(ans.index_item([0, 0, 1]), 1.);
+        assert_eq!(ans.index_item([0, 1, 0]), 2.);
+        assert_eq!(ans.index_item([0, 1, 1]), 3.);
+        assert_eq!(ans.index_item([1, 0, 0]), 4.);
+        assert_eq!(ans.index_item([1, 0, 1]), 5.);
+        assert_eq!(ans.index_item([1, 1, 0]), 6.);
+        assert_eq!(ans.index_item([1, 1, 1]), 7.);
+    }
+    #[test]
+    fn sub_3d_scalar_cpu() {
+        sub_3d_scalar::<crate::device::cpu::Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn sub_3d_scalar_gpu() {
+        sub_3d_scalar::<crate::device::nvidia::Nvidia>();
+    }
+
+    fn sub_3d_scalar_assign<D: DeviceBase + SubOps>() {
+        let a = vec![1., 2., 3., 4., 5., 6., 7., 8.];
+        let mut a: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(a, [2, 2, 2]);
+        a.to_ref_mut().sub_scalar_assign(1.);
+
+        assert_eq!(a.index_item([0, 0, 0]), 0.);
+        assert_eq!(a.index_item([0, 0, 1]), 1.);
+        assert_eq!(a.index_item([0, 1, 0]), 2.);
+        assert_eq!(a.index_item([0, 1, 1]), 3.);
+        assert_eq!(a.index_item([1, 0, 0]), 4.);
+        assert_eq!(a.index_item([1, 0, 1]), 5.);
+        assert_eq!(a.index_item([1, 1, 0]), 6.);
+        assert_eq!(a.index_item([1, 1, 1]), 7.);
+    }
+    #[test]
+    fn sub_3d_scalar_assign_cpu() {
+        sub_3d_scalar_assign::<crate::device::cpu::Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn sub_3d_scalar_assign_gpu() {
+        sub_3d_scalar_assign::<crate::device::nvidia::Nvidia>();
+    }
+
+    fn sub_3d_array<D: DeviceBase + SubOps>() {
+        let a = vec![1., 2., 3., 4., 5., 6., 7., 8.];
+        let a: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(a, [2, 2, 2]);
+        let b = vec![1., 1., 1., 1., 1., 1., 1., 1.];
+        let b: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(b, [2, 2, 2]);
+        let mut ans: Matrix<Owned<f32>, DimDyn, D> = Matrix::zeros([2, 2, 2]);
         ans.to_ref_mut().sub_array(&a, &b);
-        assert_eq!(ans.index_item([]), 0.0);
+
+        assert_eq!(ans.index_item([0, 0, 0]), 0.);
+        assert_eq!(ans.index_item([0, 0, 1]), 1.);
+        assert_eq!(ans.index_item([0, 1, 0]), 2.);
+        assert_eq!(ans.index_item([0, 1, 1]), 3.);
+        assert_eq!(ans.index_item([1, 0, 0]), 4.);
+        assert_eq!(ans.index_item([1, 0, 1]), 5.);
+        assert_eq!(ans.index_item([1, 1, 0]), 6.);
+        assert_eq!(ans.index_item([1, 1, 1]), 7.);
     }
-}
-
-#[cfg(test)]
-mod div {
-    use crate::{
-        device::cpu::Cpu,
-        dim::DimDyn,
-        matrix::{Matrix, Owned},
-    };
-
     #[test]
-    fn div_0d_0d() {
-        let mut a = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(vec![2.0], &[]);
-        let b = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(vec![3.0], &[]);
-        let mut c = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros_like(&a);
-
-        c.to_ref_mut().div_array(&a, &b);
-        assert_eq!(c.as_slice(), &[2.0 / 3.0]);
-
-        a.to_ref_mut().div_assign(&b);
-        assert_eq!(a.as_slice(), &[2.0 / 3.0]);
+    fn sub_3d_array_cpu() {
+        sub_3d_array::<crate::device::cpu::Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn sub_3d_array_gpu() {
+        sub_3d_array::<crate::device::nvidia::Nvidia>();
     }
 
-    #[test]
-    fn div_1d_0d() {
-        let mut a = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(vec![2.0, 3.0], &[2]);
-        let b = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(vec![3.0], &[]);
-        let mut c = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros_like(&a);
-        c.to_ref_mut().div_array(&a, &b);
-        assert_eq!(c.as_slice(), &[2.0 / 3.0, 3.0 / 3.0]);
+    fn sub_assign_array_3d<D: DeviceBase + SubOps>() {
+        let a = vec![1., 2., 3., 4., 5., 6., 7., 8.];
+        let mut a: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(a, [2, 2, 2]);
+        let b = vec![1., 1., 1., 1., 1., 1., 1., 1.];
+        let b: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(b, [2, 2, 2]);
+        a.to_ref_mut().sub_assign(&b);
 
-        a.to_ref_mut().div_assign(&b);
-        assert_eq!(a.as_slice(), &[2.0 / 3.0, 3.0 / 3.0]);
+        assert_eq!(a.index_item([0, 0, 0]), 0.);
+        assert_eq!(a.index_item([0, 0, 1]), 1.);
+        assert_eq!(a.index_item([0, 1, 0]), 2.);
+        assert_eq!(a.index_item([0, 1, 1]), 3.);
+        assert_eq!(a.index_item([1, 0, 0]), 4.);
+        assert_eq!(a.index_item([1, 0, 1]), 5.);
+        assert_eq!(a.index_item([1, 1, 0]), 6.);
+        assert_eq!(a.index_item([1, 1, 1]), 7.);
+    }
+    #[test]
+    fn sub_assign_array_3d_cpu() {
+        sub_assign_array_3d::<crate::device::cpu::Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn sub_assign_array_3d_gpu() {
+        sub_assign_array_3d::<crate::device::nvidia::Nvidia>();
     }
 
-    #[test]
-    fn div_3d_3d() {
-        let mut a = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(
-            vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0],
-            &[2, 2, 2],
-        );
-        let b = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(
-            vec![2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0],
-            &[2, 2, 2],
-        );
-        let mut c = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros_like(&a);
-        c.to_ref_mut().div_array(&a, &b);
-        let ans = vec![
-            1.0 / 2.0,
-            2.0 / 3.0,
-            3.0 / 4.0,
-            4.0 / 5.0,
-            5.0 / 6.0,
-            6.0 / 7.0,
-            7.0 / 8.0,
-            8.0 / 9.0,
-        ];
-        let ans = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(ans, &[2, 2, 2]);
-        // let diff = c.to_ref() - ans.to_ref();
-        // let asum = diff.asum();
-        // assert_eq!(asum, 0.0);
-        //
-        // a.div_assign(b);
-        // let diff = a.to_ref() - ans.to_view();
-        // let asum = diff.asum();
-        // assert_eq!(asum, 0.0);
-    }
-
-    #[test]
-    fn div_4d_2d() {
-        let mut a = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(
-            vec![
-                1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0,
-            ],
-            &[2, 2, 2, 2],
-        );
-        let b = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(vec![2.0, 3.0, 4.0, 5.0], &[2, 2]);
-        let mut c = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros_like(&a);
-        c.to_ref_mut().div_array(&a, &b);
-        let ans = vec![
-            1.0 / 2.0,
-            2.0 / 3.0,
-            3.0 / 4.0,
-            4.0 / 5.0,
-            5.0 / 2.0,
-            6.0 / 3.0,
-            7.0 / 4.0,
-            8.0 / 5.0,
-            1.0 / 2.0,
-            2.0 / 3.0,
-            3.0 / 4.0,
-            4.0 / 5.0,
-            5.0 / 2.0,
-            6.0 / 3.0,
-            7.0 / 4.0,
-            8.0 / 5.0,
-        ];
-        let ans = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(ans, &[2, 2, 2, 2]);
-        // let diff = c.to_ref() - ans.to_view();
-        // let asum = diff.asum();
-        // assert_eq!(asum, 0.0);
-
-        a.to_ref_mut().div_assign(&b);
-        // let diff = a.to_ref() - ans.to_view();
-        // let asum = diff.asum();
-        // assert_eq!(asum, 0.0);
-    }
-
-    #[test]
-    fn broadcast_4d_4d() {
-        let a = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(
-            vec![
-                1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0,
-            ],
-            &[2, 2, 2, 2],
-        );
-        let b =
-            Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(vec![2.0, 3.0, 4.0, 5.0], &[1, 1, 2, 2]);
-        let mut c = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros_like(&a);
-        c.to_ref_mut().div_array(&a, &b);
-        let ans = vec![
-            1.0 / 2.0,
-            2.0 / 3.0,
-            3.0 / 4.0,
-            4.0 / 5.0,
-            5.0 / 2.0,
-            6.0 / 3.0,
-            7.0 / 4.0,
-            8.0 / 5.0,
-            1.0 / 2.0,
-            2.0 / 3.0,
-            3.0 / 4.0,
-            4.0 / 5.0,
-            5.0 / 2.0,
-            6.0 / 3.0,
-            7.0 / 4.0,
-            8.0 / 5.0,
-        ];
-        let ans = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(ans, &[2, 2, 2, 2]);
-        // let diff = c - ans;
-        // let asum = diff.asum();
-        // assert_eq!(asum, 0.0);
-
-        c.to_ref_mut().div_array(&b, &a);
-        let ans = vec![
-            2.0 / 1.0,
-            3.0 / 2.0,
-            4.0 / 3.0,
-            5.0 / 4.0,
-            2.0 / 5.0,
-            3.0 / 6.0,
-            4.0 / 7.0,
-            5.0 / 8.0,
-            2.0 / 1.0,
-            3.0 / 2.0,
-            4.0 / 3.0,
-            5.0 / 4.0,
-            2.0 / 5.0,
-            3.0 / 6.0,
-            4.0 / 7.0,
-            5.0 / 8.0,
-        ];
-        let ans = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(ans, &[2, 2, 2, 2]);
-        // let diff = c.to_ref() - ans.to_view();
-        // let asum = diff.asum();
-        // assert_eq!(asum, 0.0);
-    }
-}
-#[cfg(test)]
-mod mul {
-    // use crate::{
-    //     constructor::{ones::Ones, zeros::Zeros},
-    //     matrix::{IndexItem, MatrixSlice, OwnedMatrix, ToViewMatrix, ToViewMutMatrix},
-    //     matrix_impl::{OwnedMatrix0D, OwnedMatrix1D, OwnedMatrix2D, OwnedMatrix4D, Matrix::<Owned<f32>, DimDyn, Cpu>},
-    //     operation::basic_operations::MatrixMul,
-    //     slice,
-    // };
-    //
-    // use super::MatrixSin;
-
-    use crate::{
-        device::cpu::Cpu,
-        dim::DimDyn,
-        matrix::{Matrix, Owned},
-        slice_dynamic,
-    };
-
-    #[test]
-    fn mul_1d_scalar() {
-        let a = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(vec![1.0, 2.0, 3.0], [3]);
-        let b = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(vec![2.0], []);
-        let mut ans = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros([3]);
-        ans.to_ref_mut().mul_array(&a, &b);
-
-        assert_eq!(ans.index_item([0]), 2.0);
-        assert_eq!(ans.index_item([1]), 4.0);
-        assert_eq!(ans.index_item([2]), 6.0);
-    }
-
-    #[test]
-    fn scalar_1d() {
-        let a = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(vec![1., 2., 3.], [3]);
-        let mut ans = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros([3]);
+    fn mul_scalar<D: DeviceBase + MulOps>() {
+        let a = vec![1., 2., 3., 4., 5., 6., 7., 8.];
+        let a: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(a, [2, 2, 2]);
+        let mut ans: Matrix<Owned<f32>, DimDyn, D> = Matrix::zeros([2, 2, 2]);
         ans.to_ref_mut().mul_scalar(&a, 2.);
 
-        assert_eq!(ans.index_item([0]), 2.);
-        assert_eq!(ans.index_item([1]), 4.);
-        assert_eq!(ans.index_item([2]), 6.);
+        assert_eq!(ans.index_item([0, 0, 0]), 2.);
+        assert_eq!(ans.index_item([0, 0, 1]), 4.);
+        assert_eq!(ans.index_item([0, 1, 0]), 6.);
+        assert_eq!(ans.index_item([0, 1, 1]), 8.);
+        assert_eq!(ans.index_item([1, 0, 0]), 10.);
+        assert_eq!(ans.index_item([1, 0, 1]), 12.);
+        assert_eq!(ans.index_item([1, 1, 0]), 14.);
+        assert_eq!(ans.index_item([1, 1, 1]), 16.);
+    }
+    #[test]
+    fn mul_scalar_cpu() {
+        mul_scalar::<crate::device::cpu::Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn mul_scalar_gpu() {
+        mul_scalar::<crate::device::nvidia::Nvidia>();
     }
 
-    #[test]
-    fn sliced_scalar_1d() {
-        let a = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(vec![1., 2., 3., 4.], [4]);
-        let mut ans = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros([2]);
-        ans.to_ref_mut()
-            .mul_scalar(&a.to_ref().slice(slice_dynamic!(..;2)), 2.);
+    fn mul_scalar_assign<D: DeviceBase + MulOps>() {
+        let a = vec![1., 2., 3., 4., 5., 6., 7., 8.];
+        let mut a: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(a, [2, 2, 2]);
+        a.to_ref_mut().mul_scalar_assign(2.);
 
-        assert_eq!(ans.index_item([0]), 2.);
-        assert_eq!(ans.index_item([1]), 6.);
+        assert_eq!(a.index_item([0, 0, 0]), 2.);
+        assert_eq!(a.index_item([0, 0, 1]), 4.);
+        assert_eq!(a.index_item([0, 1, 0]), 6.);
+        assert_eq!(a.index_item([0, 1, 1]), 8.);
+        assert_eq!(a.index_item([1, 0, 0]), 10.);
+        assert_eq!(a.index_item([1, 0, 1]), 12.);
+        assert_eq!(a.index_item([1, 1, 0]), 14.);
+        assert_eq!(a.index_item([1, 1, 1]), 16.);
+    }
+    #[test]
+    fn mul_scalar_assign_cpu() {
+        mul_scalar_assign::<crate::device::cpu::Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn mul_scalar_assign_gpu() {
+        mul_scalar_assign::<crate::device::nvidia::Nvidia>();
     }
 
-    #[test]
-    fn scalar_2d() {
-        let a = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(vec![1., 2., 3., 4., 5., 6.], [2, 3]);
-        let mut ans = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros([2, 3]);
-        ans.to_ref_mut().mul_scalar(&a, 2.);
-
-        assert_eq!(ans.index_item([0, 0]), 2.);
-        assert_eq!(ans.index_item([0, 1]), 4.);
-        assert_eq!(ans.index_item([0, 2]), 6.);
-        assert_eq!(ans.index_item([1, 0]), 8.);
-        assert_eq!(ans.index_item([1, 1]), 10.);
-        assert_eq!(ans.index_item([1, 2]), 12.);
-    }
-
-    #[test]
-    fn default_1d_1d() {
-        let a = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(vec![1., 2., 3.], [3]);
-        let b = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(vec![1., 2., 3.], [3]);
-        let mut ans = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros([3]);
+    fn mul_array<D: DeviceBase + MulOps>() {
+        let a = vec![1., 2., 3., 4., 5., 6., 7., 8.];
+        let a: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(a, [2, 2, 2]);
+        let b = vec![8., 7., 6., 5., 4., 3., 2., 1.];
+        let b: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(b, [2, 2, 2]);
+        let mut ans: Matrix<Owned<f32>, DimDyn, D> = Matrix::zeros([2, 2, 2]);
         ans.to_ref_mut().mul_array(&a, &b);
 
-        assert_eq!(ans.index_item([0]), 1.);
-        assert_eq!(ans.index_item([1]), 4.);
-        assert_eq!(ans.index_item([2]), 9.);
+        assert_eq!(ans.index_item([0, 0, 0]), 8.);
+        assert_eq!(ans.index_item([0, 0, 1]), 14.);
+        assert_eq!(ans.index_item([0, 1, 0]), 18.);
+        assert_eq!(ans.index_item([0, 1, 1]), 20.);
+        assert_eq!(ans.index_item([1, 0, 0]), 20.);
+        assert_eq!(ans.index_item([1, 0, 1]), 18.);
+        assert_eq!(ans.index_item([1, 1, 0]), 14.);
+        assert_eq!(ans.index_item([1, 1, 1]), 8.);
     }
-
     #[test]
-    fn sliced_1d_1d() {
-        let a = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(vec![1., 2., 3., 4.], [4]);
-        let b = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(vec![1., 2., 3., 4.], [4]);
-        let mut ans = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros([2]);
-        ans.to_ref_mut().mul_array(
-            &a.to_ref().slice(slice_dynamic!(..;2)),
-            &b.to_ref().slice(slice_dynamic!(..;2)),
-        );
-
-        assert_eq!(ans.index_item([0]), 1.);
-        assert_eq!(ans.index_item([1]), 9.);
+    fn mul_array_cpu() {
+        mul_array::<crate::device::cpu::Cpu>();
     }
-
+    #[cfg(feature = "nvidia")]
     #[test]
-    fn default_2d_2d() {
-        let a = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(vec![1., 2., 3., 4., 5., 6.], [2, 3]);
-        let b = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(vec![1., 2., 3., 4., 5., 6.], [2, 3]);
-        let mut ans = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros([2, 3]);
-        ans.to_ref_mut().mul_array(&a, &b);
-
-        assert_eq!(ans.index_item([0, 0]), 1.);
-        assert_eq!(ans.index_item([0, 1]), 4.);
-        assert_eq!(ans.index_item([0, 2]), 9.);
-        assert_eq!(ans.index_item([1, 0]), 16.);
-        assert_eq!(ans.index_item([1, 1]), 25.);
-        assert_eq!(ans.index_item([1, 2]), 36.);
+    fn mul_array_gpu() {
+        mul_array::<crate::device::nvidia::Nvidia>();
     }
 
+    fn mul_assign_array<D: DeviceBase + MulOps>() {
+        let a = vec![1., 2., 3., 4., 5., 6., 7., 8.];
+        let mut a: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(a, [2, 2, 2]);
+        let b = vec![8., 7., 6., 5., 4., 3., 2., 1.];
+        let b: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(b, [2, 2, 2]);
+        a.to_ref_mut().mul_assign(&b);
+
+        assert_eq!(a.index_item([0, 0, 0]), 8.);
+        assert_eq!(a.index_item([0, 0, 1]), 14.);
+        assert_eq!(a.index_item([0, 1, 0]), 18.);
+        assert_eq!(a.index_item([0, 1, 1]), 20.);
+        assert_eq!(a.index_item([1, 0, 0]), 20.);
+        assert_eq!(a.index_item([1, 0, 1]), 18.);
+        assert_eq!(a.index_item([1, 1, 0]), 14.);
+        assert_eq!(a.index_item([1, 1, 1]), 8.);
+    }
     #[test]
-    fn sliced_4d_2d() {
-        let mut a_vec = Vec::new();
-        for i in 0..2 * 2 * 2 * 2 {
-            a_vec.push(i as f32);
-        }
-
-        let a = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(a_vec, [2, 2, 2, 2]);
-        let b = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(vec![1., 2.], [2]);
-
-        let mut ans = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros([2, 2, 2, 2]);
-
-        ans.to_ref_mut().mul_array(&a, &b);
-
-        for i in 0..2 {
-            for j in 0..2 {
-                for k in 0..2 {
-                    for l in 0..2 {
-                        assert_eq!(
-                            ans.index_item([i, j, k, l]),
-                            a.index_item([i, j, k, l]) * b.index_item([l])
-                        );
-                    }
-                }
-            }
-        }
+    fn mul_assign_array_cpu() {
+        mul_assign_array::<crate::device::cpu::Cpu>();
     }
-
+    #[cfg(feature = "nvidia")]
     #[test]
-    fn mul_4d_2d_dyn() {
-        let ones_4d = Matrix::<Owned<f32>, DimDyn, Cpu>::ones([2, 2, 2, 2]);
-        let ones_2d = Matrix::<Owned<f32>, DimDyn, Cpu>::ones([2, 2]);
-        let mut ans = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros([2, 2, 2, 2]);
-        ans.to_ref_mut().mul_array(&ones_4d, &ones_2d);
+    fn mul_assign_array_gpu() {
+        mul_assign_array::<crate::device::nvidia::Nvidia>();
     }
 
+    fn div_scalar<D: DeviceBase + DivOps>() {
+        let a = vec![1., 2., 3., 4., 5., 6., 7., 8.];
+        let a: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(a, [2, 2, 2]);
+        let mut ans: Matrix<Owned<f32>, DimDyn, D> = Matrix::zeros([2, 2, 2]);
+        ans.to_ref_mut().div_scalar(&a, 2.);
+
+        assert_eq!(ans.index_item([0, 0, 0]), 0.5);
+        assert_eq!(ans.index_item([0, 0, 1]), 1.);
+        assert_eq!(ans.index_item([0, 1, 0]), 1.5);
+        assert_eq!(ans.index_item([0, 1, 1]), 2.);
+        assert_eq!(ans.index_item([1, 0, 0]), 2.5);
+        assert_eq!(ans.index_item([1, 0, 1]), 3.);
+        assert_eq!(ans.index_item([1, 1, 0]), 3.5);
+        assert_eq!(ans.index_item([1, 1, 1]), 4.);
+    }
     #[test]
-    fn default_0d_0d() {
-        let a = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(vec![10.], &[]);
-        let b = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(vec![20.], &[]);
-        let mut ans = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros(&[]);
-        ans.to_ref_mut().mul_array(&a, &b);
-        assert_eq!(ans.index_item(&[]), 200.);
+    fn div_scalar_cpu() {
+        div_scalar::<crate::device::cpu::Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn div_scalar_gpu() {
+        div_scalar::<crate::device::nvidia::Nvidia>();
     }
 
-    // #[test]
-    // fn sin_0d() {
-    //     let a = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(vec![1.0], &[]);
-    //     let mut ans = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros(&[]);
-    //     ans.sin(a.to_ref());
-    //     let ans = ans.index_item(&[]);
-    //     assert!(ans - 1.0_f32.sin() < 1e-6);
-    // }
-    //
-    // #[test]
-    // fn sin1d() {
-    //     let a = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(vec![1.0, 2.0, 3.0], &[3]);
-    //     let mut ans = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros(&[3]);
-    //     ans.sin(a.to_ref());
-    //     assert!(ans.index_item(&[0]) - 1.0_f32.sin() < 1e-6);
-    //     assert!(ans.index_item(&[1]) - 2.0_f32.sin() < 1e-6);
-    //     assert!(ans.index_item(&[2]) - 3.0_f32.sin() < 1e-6);
-    // }
-    //
-    // #[test]
-    // fn sin_2d() {
-    //     let a = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(vec![1.0, 2.0, 3.0, 4.0], &[2, 2]);
-    //     let mut ans = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros(&[2, 2]);
-    //     ans.sin(a.to_ref());
-    //     assert!(ans.index_item(&[0, 0]) - 1.0_f32.sin() < 1e-6);
-    //     assert!(ans.index_item(&[0, 1]) - 2.0_f32.sin() < 1e-6);
-    //     assert!(ans.index_item(&[1, 0]) - 3.0_f32.sin() < 1e-6);
-    //     assert!(ans.index_item(&[1, 1]) - 4.0_f32.sin() < 1e-6);
-    // }
-    //
-    // #[test]
-    // fn sin_3d() {
-    //     let a = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(
-    //         vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
-    //         &[2, 1, 3],
-    //     );
-    //     let mut ans = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros(&[2, 1, 3]);
-    //     ans.sin(a.to_ref());
-    //     assert!(ans.index_item(&[0, 0, 0]) - 1.0_f32.sin() < 1e-6);
-    //     assert!(ans.index_item(&[0, 0, 1]) - 2.0_f32.sin() < 1e-6);
-    //     assert!(ans.index_item(&[0, 0, 2]) - 3.0_f32.sin() < 1e-6);
-    //     assert!(ans.index_item(&[1, 0, 0]) - 4.0_f32.sin() < 1e-6);
-    //     assert!(ans.index_item(&[1, 0, 1]) - 5.0_f32.sin() < 1e-6);
-    //     assert!(ans.index_item(&[1, 0, 2]) - 6.0_f32.sin() < 1e-6);
-    // }
+    fn div_scalar_assign<D: DeviceBase + DivOps>() {
+        let a = vec![1., 2., 3., 4., 5., 6., 7., 8.];
+        let mut a: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(a, [2, 2, 2]);
+        a.to_ref_mut().div_scalar_assign(2.);
+
+        assert_eq!(a.index_item([0, 0, 0]), 0.5);
+        assert_eq!(a.index_item([0, 0, 1]), 1.);
+        assert_eq!(a.index_item([0, 1, 0]), 1.5);
+        assert_eq!(a.index_item([0, 1, 1]), 2.);
+        assert_eq!(a.index_item([1, 0, 0]), 2.5);
+        assert_eq!(a.index_item([1, 0, 1]), 3.);
+        assert_eq!(a.index_item([1, 1, 0]), 3.5);
+        assert_eq!(a.index_item([1, 1, 1]), 4.);
+    }
+    #[test]
+    fn div_scalar_assign_cpu() {
+        div_scalar_assign::<crate::device::cpu::Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn div_scalar_assign_gpu() {
+        div_scalar_assign::<crate::device::nvidia::Nvidia>();
+    }
+
+    fn div_array<D: DeviceBase + DivOps>() {
+        let a = vec![1., 2., 3., 4., 5., 6., 7., 8.];
+        let a: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(a, [2, 2, 2]);
+        let b = vec![8., 7., 6., 5., 4., 3., 2., 1.];
+        let b: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(b, [2, 2, 2]);
+        let mut ans: Matrix<Owned<f32>, DimDyn, D> = Matrix::zeros([2, 2, 2]);
+        ans.to_ref_mut().div_array(&a, &b);
+
+        assert_eq!(ans.index_item([0, 0, 0]), 1. / 8.);
+        assert_eq!(ans.index_item([0, 0, 1]), 2. / 7.);
+        assert_eq!(ans.index_item([0, 1, 0]), 3. / 6.);
+        assert_eq!(ans.index_item([0, 1, 1]), 4. / 5.);
+        assert_eq!(ans.index_item([1, 0, 0]), 5. / 4.);
+        assert_eq!(ans.index_item([1, 0, 1]), 6. / 3.);
+        assert_eq!(ans.index_item([1, 1, 0]), 7. / 2.);
+        assert_eq!(ans.index_item([1, 1, 1]), 8. / 1.);
+    }
+    #[test]
+    fn div_array_cpu() {
+        div_array::<crate::device::cpu::Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn div_array_gpu() {
+        div_array::<crate::device::nvidia::Nvidia>();
+    }
+
+    fn div_assign_array<D: DeviceBase + DivOps>() {
+        let a = vec![1., 2., 3., 4., 5., 6., 7., 8.];
+        let mut a: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(a, [2, 2, 2]);
+        let b = vec![8., 7., 6., 5., 4., 3., 2., 1.];
+        let b: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(b, [2, 2, 2]);
+        a.to_ref_mut().div_assign(&b);
+
+        assert_eq!(a.index_item([0, 0, 0]), 1. / 8.);
+        assert_eq!(a.index_item([0, 0, 1]), 2. / 7.);
+        assert_eq!(a.index_item([0, 1, 0]), 3. / 6.);
+        assert_eq!(a.index_item([0, 1, 1]), 4. / 5.);
+        assert_eq!(a.index_item([1, 0, 0]), 5. / 4.);
+        assert_eq!(a.index_item([1, 0, 1]), 6. / 3.);
+        assert_eq!(a.index_item([1, 1, 0]), 7. / 2.);
+        assert_eq!(a.index_item([1, 1, 1]), 8. / 1.);
+    }
+    #[test]
+    fn div_assign_array_cpu() {
+        div_assign_array::<crate::device::cpu::Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn div_assign_array_gpu() {
+        div_assign_array::<crate::device::nvidia::Nvidia>();
+    }
 }
