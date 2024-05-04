@@ -226,9 +226,16 @@ macro_rules! impl_basic_ops {
                 }
 
                 if self.shape().is_empty() {
-                    let self_slice = self.as_mut_slice();
-                    let lhs_slice = lhs.as_slice();
-                    self_slice[0] = lhs_slice[0].$method(rhs);
+                    D::scalar(
+                        self.as_mut_ptr(),
+                        lhs.as_ptr(),
+                        rhs,
+                        self.shape().num_elm(),
+                        // self.stride()[0],
+                        // lhs.stride()[0]
+                        1,
+                        1
+                    );
                 } else if self.shape().len() == 1 {
                     D::scalar(
                         self.as_mut_ptr(),
@@ -300,10 +307,21 @@ macro_rules! impl_basic_ops {
                 }
 
                 if self.shape().is_empty() {
-                    let self_slice = self.as_mut_slice();
-                    let lhs_slice = lhs.as_slice();
-                    let rhs_slice = rhs.as_slice();
-                    self_slice[0] = lhs_slice[0].$method(rhs_slice[0]);
+                    // let self_slice = self.as_mut_slice();
+                    // let lhs_slice = lhs.as_slice();
+                    // let rhs_slice = rhs.as_slice();
+                    // self_slice[0] = lhs_slice[0].$method(rhs_slice[0]);
+                    D::scalar(
+                        self.as_mut_ptr(),
+                        lhs.as_ptr(),
+                        unsafe { *rhs.as_ptr() },
+                        // self.shape().num_elm(),
+                        1,
+                        // self.stride()[0],
+                        // lhs.stride()[0],
+                        1,
+                        1,
+                    );
                 } else if self.shape().len() == 1 {
                     if is_1d_1(lhs.shape().slice()) {
                         D::scalar(
@@ -409,10 +427,10 @@ macro_rules! impl_basic_ops {
         }
     };
 }
-impl_basic_ops!(add, add_assign, add_scalar, add_scalar_assign, AddOps);
-impl_basic_ops!(sub, sub_assign, sub_scalar, sub_scalar_assign, SubOps);
-impl_basic_ops!(mul, mul_assign, mul_scalar, mul_scalar_assign, MulOps);
-impl_basic_ops!(div, div_assign, div_scalar, div_scalar_assign, DivOps);
+impl_basic_ops!(add_array, add_assign, add_scalar, add_scalar_assign, AddOps);
+impl_basic_ops!(sub_array, sub_assign, sub_scalar, sub_scalar_assign, SubOps);
+impl_basic_ops!(mul_array, mul_assign, mul_scalar, mul_scalar_assign, MulOps);
+impl_basic_ops!(div_array, div_assign, div_scalar, div_scalar_assign, DivOps);
 
 #[cfg(test)]
 mod add {
@@ -430,7 +448,7 @@ mod add {
         let a: Matrix<Owned<f32>, Dim0, Cpu> = Matrix::from_vec(vec![1.0], []);
         let b: Matrix<Owned<f32>, Dim0, Cpu> = Matrix::from_vec(vec![1.0], []);
         let mut ans: Matrix<Owned<f32>, Dim0, Cpu> = Matrix::zeros([]);
-        ans.to_ref_mut().add(&a, &b);
+        ans.to_ref_mut().add_array(&a, &b);
         assert_eq!(ans.index_item([]), 2.0);
     }
 
@@ -444,7 +462,7 @@ mod add {
         let b = b.into_dyn_dim();
         let mut ans = ans.into_dyn_dim();
 
-        ans.to_ref_mut().add(&a.to_ref(), &b.to_ref());
+        ans.to_ref_mut().add_array(&a.to_ref(), &b.to_ref());
     }
 
     #[test]
@@ -452,7 +470,7 @@ mod add {
         let a: Matrix<Owned<f32>, Dim1, Cpu> = Matrix::from_vec(vec![1.0, 2.0, 3.0], [3]);
         let mut ans: Matrix<Owned<f32>, Dim1, Cpu> = Matrix::zeros([3]);
         let b: Matrix<Owned<f32>, Dim0, Cpu> = Matrix::from_vec(vec![2.0], []);
-        ans.to_ref_mut().add(&a, &b);
+        ans.to_ref_mut().add_array(&a, &b);
 
         assert_eq!(ans.index_item([0]), 3.0);
         assert_eq!(ans.index_item([1]), 4.0);
@@ -524,7 +542,7 @@ mod add {
         let a: Matrix<Owned<f32>, Dim1, Cpu> = Matrix::from_vec(vec![1.0, 2.0, 3.0], [3]);
         let b: Matrix<Owned<f32>, Dim1, Cpu> = Matrix::from_vec(vec![1.0, 2.0, 3.0], [3]);
         let mut ans: Matrix<Owned<f32>, Dim1, Cpu> = Matrix::zeros([3]);
-        ans.to_ref_mut().add(&a, &b);
+        ans.to_ref_mut().add_array(&a, &b);
         assert_eq!(ans.index_item([0]), 2.0);
         assert_eq!(ans.index_item([1]), 4.0);
         assert_eq!(ans.index_item([2]), 6.0);
@@ -539,7 +557,7 @@ mod add {
         let sliced_a = a.slice(slice!(..;2));
         let sliced_b = b.slice(slice!(1..;2));
         let mut ans: Matrix<Owned<f32>, Dim1, Cpu> = Matrix::zeros([3]);
-        ans.to_ref_mut().add(&sliced_a, &sliced_b);
+        ans.to_ref_mut().add_array(&sliced_a, &sliced_b);
         assert_eq!(ans.index_item([0]), 3.0);
         assert_eq!(ans.index_item([1]), 7.0);
         assert_eq!(ans.index_item([2]), 11.0);
@@ -558,7 +576,7 @@ mod add {
         let mut ans: Matrix<Owned<f32>, Dim2, Cpu> = Matrix::zeros([2, 2]);
         let sliced_a = a.slice(slice!(..2, ..2));
         let sliced_b = b.slice(slice!(..2));
-        ans.to_ref_mut().add(&sliced_a, &sliced_b);
+        ans.to_ref_mut().add_array(&sliced_a, &sliced_b);
         assert_eq!(ans.index_item([0, 0]), 2.0);
         assert_eq!(ans.index_item([0, 1]), 4.0);
         assert_eq!(ans.index_item([1, 0]), 6.0);
@@ -578,7 +596,7 @@ mod add {
         let sliced_a = a.slice(slice!(..2, 1..;2, ..2));
         let sliced_b = b.slice(slice!(..2));
 
-        ans.to_ref_mut().add(&sliced_a, &sliced_b);
+        ans.to_ref_mut().add_array(&sliced_a, &sliced_b);
 
         assert_eq!(ans.index_item([0, 0, 0]), 5.);
         assert_eq!(ans.index_item([0, 0, 1]), 7.);
@@ -605,7 +623,7 @@ mod add {
             [4, 4],
         );
         let mut ans: Matrix<Owned<f32>, Dim2, Cpu> = Matrix::zeros([4, 4]);
-        ans.to_ref_mut().add(&a, &b);
+        ans.to_ref_mut().add_array(&a, &b);
         assert_eq!(ans.index_item([0, 0]), 2.0);
         assert_eq!(ans.index_item([0, 1]), 4.0);
         assert_eq!(ans.index_item([0, 2]), 6.0);
@@ -634,7 +652,7 @@ mod add {
         );
         let b: Matrix<Owned<f32>, Dim0, Cpu> = Matrix::from_vec(vec![1.], []);
         let mut ans: Matrix<Owned<f32>, Dim2, Cpu> = Matrix::zeros([4, 4]);
-        ans.to_ref_mut().add(&a, &b);
+        ans.to_ref_mut().add_array(&a, &b);
         assert_eq!(ans.index_item([0, 0]), 2.0);
         assert_eq!(ans.index_item([0, 1]), 3.0);
         assert_eq!(ans.index_item([0, 2]), 4.0);
@@ -663,7 +681,7 @@ mod add {
         );
         let b: Matrix<Owned<f32>, DimDyn, Cpu> = Matrix::from_vec(vec![1.], []);
         let mut ans: Matrix<Owned<f32>, DimDyn, Cpu> = Matrix::zeros([4, 4]);
-        ans.to_ref_mut().add(&a, &b);
+        ans.to_ref_mut().add_array(&a, &b);
         assert_eq!(ans.index_item([0, 0]), 2.0);
         assert_eq!(ans.index_item([0, 1]), 3.0);
         assert_eq!(ans.index_item([0, 2]), 4.0);
@@ -688,7 +706,7 @@ mod add {
         let ones_2d: Matrix<Owned<f32>, DimDyn, Cpu> =
             Matrix::from_vec(vec![1., 1., 1., 1.], [2, 2]);
         let mut ans: Matrix<Owned<f32>, DimDyn, Cpu> = Matrix::zeros([2, 2, 2, 2]);
-        ans.to_ref_mut().add(&zeros_4d, &ones_2d);
+        ans.to_ref_mut().add_array(&zeros_4d, &ones_2d);
         assert_eq!(ans.index_item([0, 0, 0, 0]), 1.0);
         assert_eq!(ans.index_item([0, 0, 0, 1]), 1.0);
         assert_eq!(ans.index_item([0, 0, 1, 0]), 1.0);
@@ -713,7 +731,7 @@ mod add {
             Matrix::from_vec(vec![1., 2., 3., 4.], [4, 1, 1, 1]);
         let b: Matrix<Owned<f32>, DimDyn, Cpu> = Matrix::zeros([4, 2, 3, 3]);
         let mut ans: Matrix<Owned<f32>, DimDyn, Cpu> = Matrix::zeros([4, 2, 3, 3]);
-        ans.to_ref_mut().add(&a, &b);
+        ans.to_ref_mut().add_array(&a, &b);
         let one = vec![1; 2 * 3 * 3];
         let two = vec![2; 2 * 3 * 3];
         let three = vec![3; 2 * 3 * 3];
@@ -740,7 +758,7 @@ mod sub {
         let a: Matrix<Owned<f32>, DimDyn, Cpu> = Matrix::from_vec(vec![1.0], []);
         let b: Matrix<Owned<f32>, DimDyn, Cpu> = Matrix::from_vec(vec![1.0], []);
         let mut ans: Matrix<Owned<f32>, DimDyn, Cpu> = Matrix::zeros([]);
-        ans.to_ref_mut().sub(&a, &b);
+        ans.to_ref_mut().sub_array(&a, &b);
         assert_eq!(ans.index_item([]), 0.0);
     }
 }
@@ -759,7 +777,7 @@ mod div {
         let b = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(vec![3.0], &[]);
         let mut c = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros_like(&a);
 
-        c.to_ref_mut().div(&a, &b);
+        c.to_ref_mut().div_array(&a, &b);
         assert_eq!(c.as_slice(), &[2.0 / 3.0]);
 
         a.to_ref_mut().div_assign(&b);
@@ -771,7 +789,7 @@ mod div {
         let mut a = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(vec![2.0, 3.0], &[2]);
         let b = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(vec![3.0], &[]);
         let mut c = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros_like(&a);
-        c.to_ref_mut().div(&a, &b);
+        c.to_ref_mut().div_array(&a, &b);
         assert_eq!(c.as_slice(), &[2.0 / 3.0, 3.0 / 3.0]);
 
         a.to_ref_mut().div_assign(&b);
@@ -789,7 +807,7 @@ mod div {
             &[2, 2, 2],
         );
         let mut c = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros_like(&a);
-        c.to_ref_mut().div(&a, &b);
+        c.to_ref_mut().div_array(&a, &b);
         let ans = vec![
             1.0 / 2.0,
             2.0 / 3.0,
@@ -821,7 +839,7 @@ mod div {
         );
         let b = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(vec![2.0, 3.0, 4.0, 5.0], &[2, 2]);
         let mut c = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros_like(&a);
-        c.to_ref_mut().div(&a, &b);
+        c.to_ref_mut().div_array(&a, &b);
         let ans = vec![
             1.0 / 2.0,
             2.0 / 3.0,
@@ -862,7 +880,7 @@ mod div {
         let b =
             Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(vec![2.0, 3.0, 4.0, 5.0], &[1, 1, 2, 2]);
         let mut c = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros_like(&a);
-        c.to_ref_mut().div(&a, &b);
+        c.to_ref_mut().div_array(&a, &b);
         let ans = vec![
             1.0 / 2.0,
             2.0 / 3.0,
@@ -886,7 +904,7 @@ mod div {
         // let asum = diff.asum();
         // assert_eq!(asum, 0.0);
 
-        c.to_ref_mut().div(&b, &a);
+        c.to_ref_mut().div_array(&b, &a);
         let ans = vec![
             2.0 / 1.0,
             3.0 / 2.0,
@@ -935,7 +953,7 @@ mod mul {
         let a = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(vec![1.0, 2.0, 3.0], [3]);
         let b = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(vec![2.0], []);
         let mut ans = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros([3]);
-        ans.to_ref_mut().mul(&a, &b);
+        ans.to_ref_mut().mul_array(&a, &b);
 
         assert_eq!(ans.index_item([0]), 2.0);
         assert_eq!(ans.index_item([1]), 4.0);
@@ -983,7 +1001,7 @@ mod mul {
         let a = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(vec![1., 2., 3.], [3]);
         let b = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(vec![1., 2., 3.], [3]);
         let mut ans = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros([3]);
-        ans.to_ref_mut().mul(&a, &b);
+        ans.to_ref_mut().mul_array(&a, &b);
 
         assert_eq!(ans.index_item([0]), 1.);
         assert_eq!(ans.index_item([1]), 4.);
@@ -995,7 +1013,7 @@ mod mul {
         let a = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(vec![1., 2., 3., 4.], [4]);
         let b = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(vec![1., 2., 3., 4.], [4]);
         let mut ans = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros([2]);
-        ans.to_ref_mut().mul(
+        ans.to_ref_mut().mul_array(
             &a.to_ref().slice(slice_dynamic!(..;2)),
             &b.to_ref().slice(slice_dynamic!(..;2)),
         );
@@ -1009,7 +1027,7 @@ mod mul {
         let a = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(vec![1., 2., 3., 4., 5., 6.], [2, 3]);
         let b = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(vec![1., 2., 3., 4., 5., 6.], [2, 3]);
         let mut ans = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros([2, 3]);
-        ans.to_ref_mut().mul(&a, &b);
+        ans.to_ref_mut().mul_array(&a, &b);
 
         assert_eq!(ans.index_item([0, 0]), 1.);
         assert_eq!(ans.index_item([0, 1]), 4.);
@@ -1031,7 +1049,7 @@ mod mul {
 
         let mut ans = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros([2, 2, 2, 2]);
 
-        ans.to_ref_mut().mul(&a, &b);
+        ans.to_ref_mut().mul_array(&a, &b);
 
         for i in 0..2 {
             for j in 0..2 {
@@ -1052,7 +1070,7 @@ mod mul {
         let ones_4d = Matrix::<Owned<f32>, DimDyn, Cpu>::ones([2, 2, 2, 2]);
         let ones_2d = Matrix::<Owned<f32>, DimDyn, Cpu>::ones([2, 2]);
         let mut ans = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros([2, 2, 2, 2]);
-        ans.to_ref_mut().mul(&ones_4d, &ones_2d);
+        ans.to_ref_mut().mul_array(&ones_4d, &ones_2d);
     }
 
     #[test]
@@ -1060,7 +1078,7 @@ mod mul {
         let a = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(vec![10.], &[]);
         let b = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(vec![20.], &[]);
         let mut ans = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros(&[]);
-        ans.to_ref_mut().mul(&a, &b);
+        ans.to_ref_mut().mul_array(&a, &b);
         assert_eq!(ans.index_item(&[]), 200.);
     }
 
