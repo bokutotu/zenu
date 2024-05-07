@@ -149,9 +149,8 @@ fn copy<T: Num, D: DeviceBase + CopyBlas>(
     source: Matrix<Ref<&T>, DimDyn, D>,
 ) {
     if to.shape().is_empty() {
-        unsafe {
-            to.as_mut_ptr().write(source.as_ptr().read());
-        }
+        let source_value = source.index_item([]);
+        to.index_item_assign([], source_value);
         return;
     }
 
