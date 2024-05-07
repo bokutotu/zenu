@@ -502,7 +502,7 @@ where
         }
     }
 
-    pub fn index_item_assign<I: Into<S>>(&mut self, index: I, value: T) {
+    pub fn index_item_assign<I: Into<S>>(&self, index: I, value: T) {
         let index = index.into();
         if self.shape().is_overflow(index) {
             panic!("Index out of bounds");
