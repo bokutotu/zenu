@@ -1,4 +1,15 @@
-use crate::num::Num;
+use crate::{
+    matrix_blas::copy::CopyBlas,
+    num::Num,
+    operation::{
+        asum::Asum,
+        basic_operations::{
+            AbsOps, AcosOps, AddOps, AsinOps, AtanOps, CosOps, CoshOps, DivOps, ExpOps, MulOps,
+            SinOps, SinhOps, SqrtOps, SubOps, TanOps, TanhOps,
+        },
+        clip::ClipOps,
+    },
+};
 
 pub mod cpu;
 
@@ -11,4 +22,29 @@ pub trait DeviceBase: Copy + Default + 'static {
     fn assign_item<T: Num>(ptr: *mut T, offset: usize, value: T);
     fn get_item<T: Num>(ptr: *const T, offset: usize) -> T;
     fn from_vec<T: Num>(vec: Vec<T>) -> *mut T;
+}
+
+pub trait Device:
+    DeviceBase
+    + CopyBlas
+    + AddOps
+    + SubOps
+    + MulOps
+    + DivOps
+    + Asum
+    + ClipOps
+    + SinOps
+    + CosOps
+    + TanOps
+    + AsinOps
+    + AcosOps
+    + AtanOps
+    + SinhOps
+    + CoshOps
+    + TanhOps
+    + AbsOps
+    + SqrtOps
+    + ExpOps
+    + 'static
+{
 }

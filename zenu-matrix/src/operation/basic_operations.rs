@@ -427,6 +427,131 @@ impl_basic_ops!(sub_array, sub_assign, sub_scalar, sub_scalar_assign, SubOps);
 impl_basic_ops!(mul_array, mul_assign, mul_scalar, mul_scalar_assign, MulOps);
 impl_basic_ops!(div_array, div_assign, div_scalar, div_scalar_assign, DivOps);
 
+macro_rules! impl_basic_ops_no_inputs {
+    ($name:ident, $cpu_method:ident, $gpu_method:ident, $gpu_assign_method:ident) => {
+        pub trait $name: DeviceBase {
+            fn array<T: Num>(
+                to: *mut T,
+                other: *const T,
+                num_elm: usize,
+                to_stride: usize,
+                other_stride: usize,
+            );
+
+            fn array_assign<T: Num>(to: *mut T, num_elm: usize, to_stride: usize);
+        }
+
+        impl $name for Cpu {
+            fn array<T: Num>(
+                to: *mut T,
+                other: *const T,
+                num_elm: usize,
+                to_stride: usize,
+                other_stride: usize,
+            ) {
+                for i in 0..num_elm {
+                    unsafe {
+                        *to.add(i * to_stride) = T::$cpu_method(*other.add(i * other_stride));
+                    }
+                }
+            }
+
+            fn array_assign<T: Num>(to: *mut T, num_elm: usize, to_stride: usize) {
+                for i in 0..num_elm {
+                    unsafe {
+                        *to.add(i * to_stride) = T::$cpu_method(*to.add(i * to_stride));
+                    }
+                }
+            }
+        }
+
+        #[cfg(feature = "nvidia")]
+        impl $name for Nvidia {
+            fn array<T: Num>(
+                to: *mut T,
+                other: *const T,
+                num_elm: usize,
+                to_stride: usize,
+                other_stride: usize,
+            ) {
+                $gpu_method(to, other, num_elm, to_stride, other_stride);
+            }
+
+            fn array_assign<T: Num>(to: *mut T, num_elm: usize, to_stride: usize) {
+                $gpu_assign_method(to, num_elm, to_stride);
+            }
+        }
+    };
+}
+impl_basic_ops_no_inputs!(SinOps, sin, array_sin, array_sin_assign);
+impl_basic_ops_no_inputs!(CosOps, cos, array_cos, array_cos_assign);
+impl_basic_ops_no_inputs!(TanOps, tan, array_tan, array_tan_assign);
+impl_basic_ops_no_inputs!(AsinOps, asin, array_asin, array_asin_assign);
+impl_basic_ops_no_inputs!(AcosOps, acos, array_acos, array_acos_assign);
+impl_basic_ops_no_inputs!(AtanOps, atan, array_atan, array_atan_assign);
+impl_basic_ops_no_inputs!(SinhOps, sinh, array_sinh, array_sinh_assign);
+impl_basic_ops_no_inputs!(CoshOps, cosh, array_cosh, array_cosh_assign);
+impl_basic_ops_no_inputs!(TanhOps, tanh, array_tanh, array_tanh_assign);
+impl_basic_ops_no_inputs!(AbsOps, abs, array_abs, array_abs_assign);
+impl_basic_ops_no_inputs!(SqrtOps, sqrt, array_sqrt, array_sqrt_assign);
+impl_basic_ops_no_inputs!(ExpOps, exp, array_exp, array_exp_assign);
+
+macro_rules! impl_basic_ops_no_inputs {
+    ($trait_name:ident, $method:ident, $assign:ident) => {
+        impl<T: Num, S: DimTrait, D: DeviceBase + $trait_name> Matrix<Ref<&mut T>, S, D> {
+            pub fn $method<R: Repr<Item = T>, SO: DimTrait>(&self, other: Matrix<R, SO, D>) {
+                if self.shape().slice() != other.shape().slice() {
+                    panic!("Matrix shape mismatch");
+                }
+                if self.shape().is_empty() {
+                    D::array(self.as_mut_ptr(), other.as_ptr(), 1, 1, 1);
+                } else if self.shape().len() == 1 {
+                    D::array(
+                        self.as_mut_ptr(),
+                        other.as_ptr(),
+                        self.shape().num_elm(),
+                        self.stride()[0],
+                        other.stride()[0],
+                    );
+                } else {
+                    let num_iter = self.shape()[0];
+                    for idx in 0..num_iter {
+                        let s = self.index_axis_mut_dyn(Index0D::new(idx));
+                        let o = other.index_axis_dyn(Index0D::new(idx));
+                        s.$method(o);
+                    }
+                }
+            }
+
+            pub fn $assign(&mut self) {
+                if self.shape().is_empty() {
+                    D::array_assign(self.as_mut_ptr(), 1, 1);
+                } else if self.shape().len() == 1 {
+                    D::array_assign(self.as_mut_ptr(), self.shape().num_elm(), self.stride()[0]);
+                } else {
+                    let num_iter = self.shape()[0];
+                    for idx in 0..num_iter {
+                        let mut s = self.index_axis_mut_dyn(Index0D::new(idx));
+                        s.$assign();
+                    }
+                }
+            }
+        }
+    };
+}
+impl_basic_ops_no_inputs!(SinOps, sin, sin_assign);
+impl_basic_ops_no_inputs!(CosOps, cos, cos_assign);
+impl_basic_ops_no_inputs!(TanOps, tan, tan_assign);
+impl_basic_ops_no_inputs!(AsinOps, asin, asin_assign);
+impl_basic_ops_no_inputs!(AcosOps, acos, acos_assign);
+impl_basic_ops_no_inputs!(AtanOps, atan, atan_assign);
+impl_basic_ops_no_inputs!(SinhOps, sinh, sinh_assign);
+impl_basic_ops_no_inputs!(CoshOps, cosh, cosh_assign);
+impl_basic_ops_no_inputs!(TanhOps, tanh, tanh_assign);
+impl_basic_ops_no_inputs!(AbsOps, abs, abs_assign);
+impl_basic_ops_no_inputs!(SqrtOps, sqrt, sqrt_assign);
+impl_basic_ops_no_inputs!(ExpOps, exp, exp_assign);
+
 #[cfg(test)]
 mod basic_ops {
     use crate::{

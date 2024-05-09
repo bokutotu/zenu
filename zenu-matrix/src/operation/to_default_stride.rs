@@ -25,7 +25,6 @@ mod to_default_stride {
 
     use super::*;
 
-    // #[test]
     fn test_1d<D: DeviceBase + CopyBlas>() {
         // 0 t0 16 f32 vec
         let v = vec![
@@ -58,7 +57,6 @@ mod to_default_stride {
         test_1d::<crate::device::nvidia::Nvidia>();
     }
 
-    // #[test]
     fn test_2d<D: DeviceBase + CopyBlas>() {
         // 0 t0 16 f32 vec
         let v = vec![
