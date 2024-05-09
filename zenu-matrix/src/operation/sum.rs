@@ -1,23 +1,56 @@
+// use crate::{
+//     constructor::zeros::Zeros,
+//     dim::{DimDyn, DimTrait, LessDimTrait},
+//     index::index_dyn_impl::Index,
+//     matrix::{IndexAxisDyn, MatrixBase, OwnedMatrix, ToViewMatrix, ToViewMutMatrix, ViewMatrix},
+//     matrix_impl::Matrix,
+//     memory_impl::{OwnedMem, ViewMem, ViewMutMem},
+//     num::Num,
+// };
+//
+// use super::{add_axis::MatrixAddAxis, basic_operations::MatrixAddAssign, copy_from::CopyFrom};
+//
+// pub trait MatrixSum: ViewMatrix {
+//     type Output: OwnedMatrix;
+//     fn sum(self, axis: usize, keep_dim: bool) -> Self::Output;
+// }
+//
+// impl<'a, T: Num> MatrixSum for Matrix<ViewMem<'a, T>, DimDyn> {
+//     type Output = Matrix<OwnedMem<T>, DimDyn>;
+//     fn sum(self, axis: usize, keep_dim: bool) -> Self::Output {
+//         let shape = self.shape();
+//         if axis >= shape.len() {
+//             panic!("Invalid axis");
+//         }
+//
+//         let result_shape = self.shape().remove_axis(axis);
+//
+//         let mut result = Self::Output::zeros(result_shape);
+//
+//         for i in 0..shape[axis] {
+//             let mut result_view_mut = result.to_view_mut();
+//             let s = self.clone();
+//             let s = s.index_axis_dyn(Index::new(axis, i));
+//             result_view_mut.add_assign(s);
+//         }
+//
+//         if keep_dim {
+//             result.add_axis(axis);
+//         }
+//         result
+//     }
+// }
+
 use crate::{
-    constructor::zeros::Zeros,
+    device::DeviceBase,
     dim::{DimDyn, DimTrait, LessDimTrait},
-    index::index_dyn_impl::Index,
-    matrix::{IndexAxisDyn, MatrixBase, OwnedMatrix, ToViewMatrix, ToViewMutMatrix, ViewMatrix},
-    matrix_impl::Matrix,
-    memory_impl::{OwnedMem, ViewMem, ViewMutMem},
+    matrix::{Matrix, Owned, Ref},
+    matrix_blas::copy::CopyBlas,
     num::Num,
 };
 
-use super::{add_axis::MatrixAddAxis, basic_operations::MatrixAddAssign, copy_from::CopyFrom};
-
-pub trait MatrixSum: ViewMatrix {
-    type Output: OwnedMatrix;
-    fn sum(self, axis: usize, keep_dim: bool) -> Self::Output;
-}
-
-impl<'a, T: Num> MatrixSum for Matrix<ViewMem<'a, T>, DimDyn> {
-    type Output = Matrix<OwnedMem<T>, DimDyn>;
-    fn sum(self, axis: usize, keep_dim: bool) -> Self::Output {
+impl<T: Num, D: DeviceBase> Matrix<Ref<&mut T>, DimDyn, D> {
+    pub fn sum(&self, axis: usize, keep_dim: bool) -> Matrix<Owned<T>, DimDyn, D> {
         let shape = self.shape();
         if axis >= shape.len() {
             panic!("Invalid axis");
@@ -25,12 +58,12 @@ impl<'a, T: Num> MatrixSum for Matrix<ViewMem<'a, T>, DimDyn> {
 
         let result_shape = self.shape().remove_axis(axis);
 
-        let mut result = Self::Output::zeros(result_shape);
+        let mut result = Matrix::zeros(result_shape);
 
         for i in 0..shape[axis] {
-            let mut result_view_mut = result.to_view_mut();
+            let mut result_view_mut = result.to_ref_mut();
             let s = self.clone();
-            let s = s.index_axis_dyn(Index::new(axis, i));
+            let s = s.index_axis_dyn(axis, i);
             result_view_mut.add_assign(s);
         }
 
@@ -41,7 +74,10 @@ impl<'a, T: Num> MatrixSum for Matrix<ViewMem<'a, T>, DimDyn> {
     }
 }
 
-pub fn sum_to<T: Num>(source: Matrix<ViewMem<T>, DimDyn>, target: Matrix<ViewMutMem<T>, DimDyn>) {
+pub fn sum_to<T: Num, D: DeviceBase + CopyBlas>(
+    source: Matrix<Ref<&T>, DimDyn, D>,
+    target: Matrix<Ref<&mut T>, DimDyn, D>,
+) {
     if source.shape().len() < target.shape().len() {
         panic!("source.shape().len() < target.shape().len()");
     }
@@ -49,7 +85,7 @@ pub fn sum_to<T: Num>(source: Matrix<ViewMem<T>, DimDyn>, target: Matrix<ViewMut
     let diff_len = source.shape().len() - target.shape().len();
     if diff_len == 0 {
         let mut target = target;
-        target.to_view_mut().copy_from(&source.to_view());
+        target.copy_from(source);
         return;
     }
 
@@ -59,10 +95,10 @@ pub fn sum_to<T: Num>(source: Matrix<ViewMem<T>, DimDyn>, target: Matrix<ViewMut
 
     if diff_len == 1 {
         let mut target = target;
-        let ans = source.to_view().sum(0, false);
-        target.to_view_mut().copy_from(&ans.to_view());
+        let ans = source.sum(0, false);
+        target.copy_from(&ans.to_view());
     } else {
-        sum_to(source.to_view().sum(0, false).to_view(), target);
+        sum_to(source.sum(0, false).to_view(), target);
     }
 }
 

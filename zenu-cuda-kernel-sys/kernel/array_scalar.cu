@@ -99,18 +99,18 @@ void array_clip_assign_double(double *input, int size, int stride_in, double min
     clip_double_assign<<<gridSize, BLOCK_SIZE>>>(input, size, stride_in, min_val, max_val);
 }
 
-#define CUDA_VEC_FUNC(func, type)                                                          \
-__global__ void vector_##func##_##type(type* vec, int size, int stride, type* result) {    \
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;                                       \
-    if (idx < size) {                                                                      \
-        result[idx * stride] = func(vec[idx * stride]);                                    \
-    }                                                                                      \
-}                                                                                          \
-__global__ void vector_##func##_assign_##type(type* vec, int size, int stride) {           \
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;                                       \
-    if (idx < size) {                                                                      \
-        vec[idx * stride] = func(vec[idx * stride]);                                       \
-    }                                                                                      \
+#define CUDA_VEC_FUNC(func, type)                                                                                  \
+__global__ void vector_##func##_##type(type* vec, int size, int stride_in, type* result, int stride_out) {         \
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;                                                               \
+    if (idx < size) {                                                                                              \
+        result[idx * stride_out] = func(vec[idx * stride_in]);                                                     \
+    }                                                                                                              \
+}                                                                                                                  \
+__global__ void vector_##func##_assign_##type(type* vec, int size, int stride) {                                   \
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;                                                               \
+    if (idx < size) {                                                                                              \
+        vec[idx * stride] = func(vec[idx * stride]);                                                               \
+    }                                                                                                              \
 }
 
 CUDA_VEC_FUNC(sin, float)
@@ -124,6 +124,7 @@ CUDA_VEC_FUNC(cosh, float)
 CUDA_VEC_FUNC(tanh, float)
 CUDA_VEC_FUNC(abs, float)
 CUDA_VEC_FUNC(sqrt, float)
+CUDA_VEC_FUNC(exp, float)
 CUDA_VEC_FUNC(sin, double)
 CUDA_VEC_FUNC(cos, double)
 CUDA_VEC_FUNC(tan, double)
@@ -135,17 +136,16 @@ CUDA_VEC_FUNC(cosh, double)
 CUDA_VEC_FUNC(tanh, double)
 CUDA_VEC_FUNC(abs, double)
 CUDA_VEC_FUNC(sqrt, double)
-CUDA_VEC_FUNC(exp, float)
 CUDA_VEC_FUNC(exp, double)
 
-#define DEFINE_ARRAY_FUNC_WRAPPER(type, func)                                                  \
-void array_##func##_##type(type *a, int size, int stride, type *out) {                         \
-    int gridSize = (size + BLOCK_SIZE - 1) / BLOCK_SIZE;                                       \
-    vector_##func##_##type<<<gridSize, BLOCK_SIZE>>>(a, size, stride, out);                    \
-}                                                                                              \
-void array_##func##_assign_##type(type *a, int size, int stride) {                             \
-    int gridSize = (size + BLOCK_SIZE - 1) / BLOCK_SIZE;                                       \
-    vector_##func##_assign_##type<<<gridSize, BLOCK_SIZE>>>(a, size, stride);                  \
+#define DEFINE_ARRAY_FUNC_WRAPPER(type, func)                                                                      \
+void array_##func##_##type(type *a, int size, int stride_in, type *out, int stride_out) {                          \
+    int gridSize = (size + BLOCK_SIZE - 1) / BLOCK_SIZE;                                                           \
+    vector_##func##_##type<<<gridSize, BLOCK_SIZE>>>(a, size, stride_in, out, stride_out);                         \
+}                                                                                                                  \
+void array_##func##_assign_##type(type *a, int size, int stride) {                                                 \
+    int gridSize = (size + BLOCK_SIZE - 1) / BLOCK_SIZE;                                                           \
+    vector_##func##_assign_##type<<<gridSize, BLOCK_SIZE>>>(a, size, stride);                                      \
 }
 
 DEFINE_ARRAY_FUNC_WRAPPER(float, sin)
@@ -169,6 +169,6 @@ DEFINE_ARRAY_FUNC_WRAPPER(double, tanh)
 DEFINE_ARRAY_FUNC_WRAPPER(float, abs)
 DEFINE_ARRAY_FUNC_WRAPPER(double, abs)
 DEFINE_ARRAY_FUNC_WRAPPER(float, sqrt)
-DEFINE_ARRAY_FUNC_WRAPPER(double, sqrt)
+DEFINE_ARRAY_FUNC_WRAPPER(double, sqrt) 
 DEFINE_ARRAY_FUNC_WRAPPER(float, exp)
 DEFINE_ARRAY_FUNC_WRAPPER(double, exp)

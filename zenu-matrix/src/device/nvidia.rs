@@ -1,4 +1,4 @@
-use super::DeviceBase;
+use super::{Device, DeviceBase};
 use crate::num::Num;
 
 #[derive(Copy, Clone, Default)]
@@ -33,3 +33,5 @@ impl DeviceBase for Nvidia {
         zenu_cuda::runtime::copy_to_gpu(vec.as_mut_ptr(), vec.len())
     }
 }
+
+impl Device for Nvidia {}

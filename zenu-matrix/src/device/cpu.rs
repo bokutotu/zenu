@@ -1,4 +1,4 @@
-use super::DeviceBase;
+use super::{Device, DeviceBase};
 
 #[derive(Copy, Clone, Default)]
 pub struct Cpu;
@@ -38,3 +38,5 @@ impl DeviceBase for Cpu {
         ptr
     }
 }
+
+impl Device for Cpu {}

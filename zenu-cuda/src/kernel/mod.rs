@@ -169,17 +169,25 @@ impl_array_array_assign!(
 
 macro_rules! impl_array_scalar_sin {
     ($name:ident, $double_fn:ident, $float_fn:ident) => {
-        pub fn $name<T: 'static>(a: *mut T, size: usize, stride: usize, out: *mut T) {
-            let size = size as ::std::os::raw::c_int;
-            let stride = stride as ::std::os::raw::c_int;
+        pub fn $name<T: 'static>(
+            to: *mut T,
+            other: *const T,
+            num_elm: usize,
+            to_stride: usize,
+            other_stride: usize,
+        ) {
+            let other_stride = other_stride as ::std::os::raw::c_int;
+            let to_stride = to_stride as ::std::os::raw::c_int;
+            let num_elm = num_elm as ::std::os::raw::c_int;
             if TypeId::of::<T>() == TypeId::of::<f32>() {
-                let a = a as *mut f32;
-                let out = out as *mut f32;
-                unsafe { $float_fn(a, size, stride, out) };
+                let other = other as *mut f32;
+                let to = to as *mut f32;
+                unsafe { $float_fn(other, num_elm, other_stride, to, to_stride) };
             } else if TypeId::of::<T>() == TypeId::of::<f64>() {
-                let a = a as *mut f64;
-                let out = out as *mut f64;
-                unsafe { $double_fn(a, size, stride, out) }
+                let other = other as *mut f64;
+                let to = to as *mut f64;
+                // unsafe { $double_fn(a, size, stride, out) }
+                unsafe { $double_fn(other, num_elm, other_stride, to, to_stride) }
             }
         }
     };
@@ -677,7 +685,7 @@ mod array_scalar {
                 )
                 .unwrap();
                 let out_gpu = cuda_malloc(out.len()).unwrap();
-                $func(a_gpu, a.len(), 1, out_gpu);
+                $func(out_gpu, a_gpu, a.len(), 1, 1);
                 cuda_copy(
                     out.as_mut_ptr(),
                     out_gpu,
@@ -685,6 +693,7 @@ mod array_scalar {
                     ZenuCudaMemCopyKind::DeviceToHost,
                 )
                 .unwrap();
+                println!("{:?}", out);
                 let ans: Vec<$ty> = $ans;
                 for (a, b) in out.iter().zip(ans.iter()) {
                     assert!((a - b).abs() < 1e-6);
