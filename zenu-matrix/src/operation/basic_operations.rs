@@ -499,7 +499,7 @@ impl_basic_ops_no_inputs!(ExpOps, exp, array_exp, array_exp_assign);
 macro_rules! impl_basic_ops_no_inputs {
     ($trait_name:ident, $method:ident, $assign:ident) => {
         impl<T: Num, S: DimTrait, D: DeviceBase + $trait_name> Matrix<Ref<&mut T>, S, D> {
-            pub fn $method<R: Repr<Item = T>, SO: DimTrait>(&self, other: Matrix<R, SO, D>) {
+            pub fn $method<R: Repr<Item = T>, SO: DimTrait>(&self, other: &Matrix<R, SO, D>) {
                 if self.shape().slice() != other.shape().slice() {
                     panic!("Matrix shape mismatch");
                 }
@@ -518,7 +518,7 @@ macro_rules! impl_basic_ops_no_inputs {
                     for idx in 0..num_iter {
                         let s = self.index_axis_mut_dyn(Index0D::new(idx));
                         let o = other.index_axis_dyn(Index0D::new(idx));
-                        s.$method(o);
+                        s.$method(&o);
                     }
                 }
             }
@@ -555,7 +555,7 @@ impl_basic_ops_no_inputs!(ExpOps, exp, exp_assign);
 #[cfg(test)]
 mod basic_ops {
     use crate::{
-        device::DeviceBase,
+        device::{Device, DeviceBase},
         dim::DimDyn,
         matrix::{Matrix, Owned},
         matrix_blas::copy::CopyBlas,
@@ -1230,5 +1230,54 @@ mod basic_ops {
     #[test]
     fn div_assign_array_gpu() {
         div_assign_array::<crate::device::nvidia::Nvidia>();
+    }
+
+    fn sin_3d<D: Device>() {
+        let a = vec![0., 1., 2., 3., 4., 5., 6., 7.];
+        let a: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(a, [2, 2, 2]);
+        let mut ans: Matrix<Owned<f32>, DimDyn, D> = Matrix::zeros([2, 2, 2]);
+        ans.to_ref_mut().sin(&a);
+
+        // convert this test code to epsilon comparison
+        assert!(ans.index_item([0, 0, 0]) - 0. < 1e-6);
+        assert!((ans.index_item([0, 0, 1]) - f32::sin(1.)).abs() < 1e-6);
+        assert!((ans.index_item([0, 1, 0]) - f32::sin(2.)).abs() < 1e-6);
+        assert!((ans.index_item([0, 1, 1]) - f32::sin(3.)).abs() < 1e-6);
+        assert!((ans.index_item([1, 0, 0]) - f32::sin(4.)).abs() < 1e-6);
+        assert!((ans.index_item([1, 0, 1]) - f32::sin(5.)).abs() < 1e-6);
+        assert!((ans.index_item([1, 1, 0]) - f32::sin(6.)).abs() < 1e-6);
+        assert!((ans.index_item([1, 1, 1]) - f32::sin(7.)).abs() < 1e-6);
+    }
+    #[test]
+    fn sin_3d_cpu() {
+        sin_3d::<crate::device::cpu::Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn sin_3d_gpu() {
+        sin_3d::<crate::device::nvidia::Nvidia>();
+    }
+
+    fn sin_1d_sliced<D: Device>() {
+        let a = vec![0., 1., 2., 3., 4., 5., 6., 7.];
+        let a: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(a, [8]);
+        let a = a.slice(slice_dynamic![1..;2]);
+        println!("{:?}", a);
+        let mut ans: Matrix<Owned<f32>, DimDyn, D> = Matrix::zeros([4]);
+        ans.to_ref_mut().sin(&a);
+
+        assert!((ans.index_item([0]) - f32::sin(1.)).abs() < 1e-6);
+        assert!((ans.index_item([1]) - f32::sin(3.)).abs() < 1e-6);
+        assert!((ans.index_item([2]) - f32::sin(5.)).abs() < 1e-6);
+        assert!((ans.index_item([3]) - f32::sin(7.)).abs() < 1e-6);
+    }
+    #[test]
+    fn sin_1d_sliced_cpu() {
+        sin_1d_sliced::<crate::device::cpu::Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn sin_1d_sliced_gpu() {
+        sin_1d_sliced::<crate::device::nvidia::Nvidia>();
     }
 }
