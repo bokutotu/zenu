@@ -33,6 +33,7 @@ void array_tanh_float(float *a, int size, int stride_in, float *out, int stride_
 void array_abs_float(float *a, int size, int stride_in, float *out, int stride_out);
 void array_sqrt_float(float *a, int size, int stride_in, float *out, int stride_out);
 void array_exp_float(float *a, int size, int stride_in, float *out, int stride_out);
+void array_log_float(float *a, int size, int stride_in, float *out, int stride_out);
 
 void array_sin_double(double *a, int size, int stride_in, double *out, int stride_out);
 void array_cos_double(double *a, int size, int stride_in, double *out, int stride_out);
@@ -46,6 +47,7 @@ void array_tanh_double(double *a, int size, int stride_in, double *out, int stri
 void array_abs_double(double *a, int size, int stride_in, double *out, int stride_out);
 void array_sqrt_double(double *a, int size, int stride_in, double *out, int stride_out);
 void array_exp_double(double *a, int size, int stride_in, double *out, int stride_out);
+void array_log_double(double *a, int size, int stride_in, double *out, int stride_out);
 
 void array_sin_assign_float(float *a, int size, int stride);
 void array_cos_assign_float(float *a, int size, int stride);
@@ -59,6 +61,7 @@ void array_tanh_assign_float(float *a, int size, int stride);
 void array_abs_assign_float(float *a, int size, int stride);
 void array_sqrt_assign_float(float *a, int size, int stride);
 void array_exp_assign_float(float *a, int size, int stride);
+void array_log_assign_float(float *a, int size, int stride);
 
 void array_sin_assign_double(double *a, int size, int stride);
 void array_cos_assign_double(double *a, int size, int stride);
@@ -72,6 +75,7 @@ void array_tanh_assign_double(double *a, int size, int stride);
 void array_abs_assign_double(double *a, int size, int stride);
 void array_sqrt_assign_double(double *a, int size, int stride);
 void array_exp_assign_double(double *a, int size, int stride);
+void array_log_assign_double(double *a, int size, int stride);
 
 void array_clip_float(float* input, float *output, int size, int stride_in, int stride_out, float min, float max);
 void array_clip_double(double* input, double *output, int size, int stride_in, int stride_out, double min, double max);
