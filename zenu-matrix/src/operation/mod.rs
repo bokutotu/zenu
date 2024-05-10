@@ -5,7 +5,7 @@ pub mod broadcast;
 pub mod clip;
 pub mod copy_from;
 // pub mod dot;
-// pub mod max;
+pub mod max;
 // pub mod mean;
 // pub mod mul;
 // pub mod norm2;
