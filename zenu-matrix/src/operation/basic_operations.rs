@@ -495,6 +495,7 @@ impl_basic_ops_no_inputs!(TanhOps, tanh, array_tanh, array_tanh_assign);
 impl_basic_ops_no_inputs!(AbsOps, abs, array_abs, array_abs_assign);
 impl_basic_ops_no_inputs!(SqrtOps, sqrt, array_sqrt, array_sqrt_assign);
 impl_basic_ops_no_inputs!(ExpOps, exp, array_exp, array_exp_assign);
+impl_basic_ops_no_inputs!(LogOps, ln, array_log, array_log_assign);
 
 macro_rules! impl_basic_ops_no_inputs {
     ($trait_name:ident, $method:ident, $assign:ident) => {
@@ -551,6 +552,7 @@ impl_basic_ops_no_inputs!(TanhOps, tanh, tanh_assign);
 impl_basic_ops_no_inputs!(AbsOps, abs, abs_assign);
 impl_basic_ops_no_inputs!(SqrtOps, sqrt, sqrt_assign);
 impl_basic_ops_no_inputs!(ExpOps, exp, exp_assign);
+impl_basic_ops_no_inputs!(LogOps, log, log_assign);
 
 #[cfg(test)]
 mod basic_ops {

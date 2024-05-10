@@ -4,8 +4,8 @@ use crate::{
     operation::{
         asum::Asum,
         basic_operations::{
-            AbsOps, AcosOps, AddOps, AsinOps, AtanOps, CosOps, CoshOps, DivOps, ExpOps, MulOps,
-            SinOps, SinhOps, SqrtOps, SubOps, TanOps, TanhOps,
+            AbsOps, AcosOps, AddOps, AsinOps, AtanOps, CosOps, CoshOps, DivOps, ExpOps, LogOps,
+            MulOps, SinOps, SinhOps, SqrtOps, SubOps, TanOps, TanhOps,
         },
         clip::ClipOps,
     },
@@ -45,6 +45,7 @@ pub trait Device:
     + AbsOps
     + SqrtOps
     + ExpOps
+    + LogOps
     + 'static
 {
 }
