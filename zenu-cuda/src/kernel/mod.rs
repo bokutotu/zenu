@@ -49,7 +49,6 @@ impl_array_scalar!(
     array_scalar_div_double,
     array_scalar_div_float
 );
-
 macro_rules! impl_array_scalar_assign {
     ($name:ident, $double_fn:ident, $float_fn:ident) => {
         pub fn $name<T: 'static>(a: *mut T, scalar: T, size: usize, stride: usize) {
@@ -204,6 +203,7 @@ impl_array_scalar_sin!(array_tanh, array_tanh_double, array_tanh_float);
 impl_array_scalar_sin!(array_abs, array_abs_double, array_abs_float);
 impl_array_scalar_sin!(array_sqrt, array_sqrt_double, array_sqrt_float);
 impl_array_scalar_sin!(array_exp, array_exp_double, array_exp_float);
+impl_array_scalar_sin!(array_log, array_log_double, array_log_float);
 
 macro_rules! impl_array_scalar_sin_assign {
     ($name:ident, $double_fn:ident, $float_fn:ident) => {
@@ -279,6 +279,11 @@ impl_array_scalar_sin_assign!(
     array_exp_assign,
     array_exp_assign_double,
     array_exp_assign_float
+);
+impl_array_scalar_sin_assign!(
+    array_log_assign,
+    array_log_assign_double,
+    array_log_assign_float
 );
 
 pub fn get_memory<T: 'static + Default>(array: *const T, offset: usize) -> T {
@@ -914,6 +919,20 @@ mod array_scalar {
         f64,
         array_exp
     );
+    impl_test_sin!(
+        log_f32,
+        vec![1.0, 2.0, 3.0],
+        vec![0.0, 0.6931472, 1.0986123],
+        f32,
+        array_log
+    );
+    impl_test_sin!(
+        log_f64,
+        vec![1.0, 2.0, 3.0],
+        vec![0.0, 0.6931471805599453, 1.0986122886681098],
+        f64,
+        array_log
+    );
 
     #[test]
     fn set_value_f32() {
@@ -931,7 +950,6 @@ mod array_scalar {
         assert_eq!(out, 1.0);
     }
 
-    // fn clip_test() {
     macro_rules! clip_test {
         ($ty:ty) => {
             let a: Vec<$ty> = vec![0.0, 1.0, 2.0, 3.0];
