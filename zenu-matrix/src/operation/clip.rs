@@ -219,7 +219,6 @@ mod clip {
     #[cfg(feature = "nvidia")]
     #[test]
     fn clip_2d_nvidia() {
-        println!("here");
         clip_2d::<crate::device::nvidia::Nvidia>();
     }
 }
