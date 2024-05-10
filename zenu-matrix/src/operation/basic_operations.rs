@@ -442,6 +442,7 @@ macro_rules! impl_basic_ops_no_inputs {
         }
 
         impl $name for Cpu {
+            #[allow(clippy::not_unsafe_ptr_arg_deref)]
             fn array<T: Num>(
                 to: *mut T,
                 other: *const T,
@@ -456,6 +457,7 @@ macro_rules! impl_basic_ops_no_inputs {
                 }
             }
 
+            #[allow(clippy::not_unsafe_ptr_arg_deref)]
             fn array_assign<T: Num>(to: *mut T, num_elm: usize, to_stride: usize) {
                 for i in 0..num_elm {
                     unsafe {
