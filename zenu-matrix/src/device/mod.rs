@@ -8,6 +8,7 @@ use crate::{
             MulOps, SinOps, SinhOps, SqrtOps, SubOps, TanOps, TanhOps,
         },
         clip::ClipOps,
+        max::MaxIdx,
     },
 };
 
@@ -46,6 +47,7 @@ pub trait Device:
     + SqrtOps
     + ExpOps
     + LogOps
+    + MaxIdx
     + 'static
 {
 }
