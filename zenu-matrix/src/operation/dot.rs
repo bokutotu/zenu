@@ -51,7 +51,6 @@ where
     DL: DimTrait,
 {
     fn dot(self, rhs: Matrix<RM, DR>, lhs: Matrix<LM, DL>) {
-        // if let Ok(())にするように書き換えて
         if let Ok(()) = dot_shape_check(rhs.shape(), lhs.shape()) {
             let result = dot_unchecked(
                 matrix_into_dim(rhs).to_view(),

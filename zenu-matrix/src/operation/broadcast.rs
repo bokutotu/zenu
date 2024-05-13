@@ -1,13 +1,12 @@
 use crate::{
-    device::DeviceBase,
+    device::{Device, DeviceBase},
     dim::{DimDyn, DimTrait},
     index::Index0D,
     matrix::{Matrix, Ref, Repr},
-    matrix_blas::copy::CopyBlas,
     num::Num,
 };
 
-impl<T: Num, D: DeviceBase + CopyBlas> Matrix<Ref<&mut T>, DimDyn, D> {
+impl<T: Num, D: Device> Matrix<Ref<&mut T>, DimDyn, D> {
     pub fn broadcast<R: Repr<Item = T>>(&self, source: &Matrix<R, DimDyn, D>) {
         let source = source.to_ref();
         if !(self.shape().is_include(source.shape())
@@ -44,14 +43,13 @@ impl<T: Num, D: DeviceBase + CopyBlas> Matrix<Ref<&mut T>, DimDyn, D> {
 #[cfg(test)]
 mod broadcast {
     use crate::{
-        device::DeviceBase,
+        device::{Device, DeviceBase},
         dim::DimDyn,
         matrix::{Matrix, Owned},
-        matrix_blas::copy::CopyBlas,
         operation::{asum::Asum, basic_operations::SubOps},
     };
 
-    fn broadcast_1d_0d<D: DeviceBase + SubOps + Asum + CopyBlas>() {
+    fn broadcast_1d_0d<D: Device>() {
         let source: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(vec![1.], &[]);
         let mut res: Matrix<Owned<f32>, DimDyn, D> = Matrix::zeros([3]);
         res.to_ref_mut().broadcast(&source.to_ref());
@@ -71,7 +69,7 @@ mod broadcast {
     }
 
     // #[test]
-    fn broadcast_2d_0d<D: DeviceBase + SubOps + Asum + CopyBlas>() {
+    fn broadcast_2d_0d<D: Device>() {
         let source: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(vec![1.], &[]);
         let mut res: Matrix<Owned<f32>, DimDyn, D> = Matrix::zeros([2, 3]);
         res.to_ref_mut().broadcast(&source.to_ref());
@@ -92,7 +90,7 @@ mod broadcast {
     }
 
     // #[test]
-    fn broadcast_2d_1d<D: DeviceBase + SubOps + Asum + CopyBlas>() {
+    fn broadcast_2d_1d<D: Device>() {
         let source: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(vec![1., 2., 3.], &[3]);
         let mut res: Matrix<Owned<f32>, DimDyn, D> = Matrix::zeros([2, 3]);
         res.to_ref_mut().broadcast(&source.to_ref());
@@ -112,7 +110,7 @@ mod broadcast {
         broadcast_2d_1d::<crate::device::nvidia::Nvidia>();
     }
 
-    fn broadcast_4d_2d<D: DeviceBase + SubOps + Asum + CopyBlas>() {
+    fn broadcast_4d_2d<D: Device>() {
         let source: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(vec![1., 2.], &[1, 2]);
         let mut res: Matrix<Owned<f32>, DimDyn, D> = Matrix::zeros([2, 3, 1, 2]);
         res.to_ref_mut().broadcast(&source.to_ref());
@@ -135,7 +133,7 @@ mod broadcast {
     }
 
     // #[test]
-    fn broadcast_4d_4d<D: DeviceBase + SubOps + Asum + CopyBlas>() {
+    fn broadcast_4d_4d<D: Device>() {
         let source: Matrix<Owned<f32>, DimDyn, D> =
             Matrix::from_vec(vec![1., 2., 3., 4.], &[1, 1, 1, 4]);
         let mut res: Matrix<Owned<f32>, DimDyn, D> = Matrix::zeros([2, 3, 4, 4]);

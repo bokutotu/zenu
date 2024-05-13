@@ -562,7 +562,6 @@ mod basic_ops {
         device::{Device, DeviceBase},
         dim::DimDyn,
         matrix::{Matrix, Owned},
-        matrix_blas::copy::CopyBlas,
         operation::asum::Asum,
         slice_dynamic,
     };
@@ -781,7 +780,7 @@ mod basic_ops {
         matrix_add_sliced::<crate::device::nvidia::Nvidia>();
     }
 
-    fn transposed<D: DeviceBase + AddOps + CopyBlas>() {
+    fn transposed<D: Device>() {
         let mut a: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(
             vec![
                 1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12., 13., 14., 15., 16.,

@@ -1,5 +1,4 @@
 use crate::{
-    matrix_blas::copy::CopyBlas,
     num::Num,
     operation::{
         asum::Asum,
@@ -8,6 +7,7 @@ use crate::{
             MulOps, SinOps, SinhOps, SqrtOps, SubOps, TanOps, TanhOps,
         },
         clip::ClipOps,
+        copy_from::CopyBlas,
         max::MaxIdx,
         relu::ReluOps,
     },
