@@ -59,7 +59,7 @@ impl<R: Repr, D: Device> Matrix<R, DimDyn, D> {
 #[cfg(test)]
 mod transpose {
     use crate::{
-        device::{Device, DeviceBase},
+        device::Device,
         dim::DimDyn,
         matrix::{Matrix, Owned},
     };
@@ -94,7 +94,7 @@ mod transpose_inplace {
     // use super::TransposeInplace;
 
     use crate::{
-        device::{Device, DeviceBase},
+        device::Device,
         dim::DimDyn,
         matrix::{Matrix, Owned},
     };
@@ -149,8 +149,16 @@ mod transpose_inplace {
         let ans: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(ans, [4, 3, 5, 6]);
         assert!((output - ans).asum() < 1e-6);
     }
+    #[test]
+    fn inplace_transpose_4d_cpu() {
+        inplace_transpose_4d::<crate::device::cpu::Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn inplace_transpose_4d_cuda() {
+        inplace_transpose_4d::<crate::device::nvidia::Nvidia>();
+    }
 
-    // #[test]
     fn swap_axis<D: Device>() {
         let input: Matrix<Owned<f32>, DimDyn, D> =
             Matrix::from_vec(vec![1., 2., 3., 4., 5., 6.], [2, 3]);
@@ -160,13 +168,13 @@ mod transpose_inplace {
         assert!((output - ans).asum() < 1e-6);
     }
     #[test]
-    fn inplace_transpose_4d_cpu() {
-        inplace_transpose_4d::<crate::device::cpu::Cpu>();
+    fn swap_axis_cpu() {
+        swap_axis::<crate::device::cpu::Cpu>();
     }
     #[cfg(feature = "nvidia")]
     #[test]
-    fn inplace_transpose_4d_cuda() {
-        inplace_transpose_4d::<crate::device::nvidia::Nvidia>();
+    fn swap_axis_nvidia() {
+        swap_axis::<crate::device::nvidia::Nvidia>();
     }
 
     // #[test]

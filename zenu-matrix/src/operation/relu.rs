@@ -1,3 +1,4 @@
+#[cfg(feature = "nvidia")]
 use std::any::TypeId;
 
 use crate::{
@@ -142,28 +143,24 @@ impl ReluOps for Nvidia {
     ) {
         if TypeId::of::<T>() == TypeId::of::<f32>() {
             let alpha: f32 = unsafe { *(&alpha as *const T as *const f32) };
-            unsafe {
-                relu_backward_mask(
-                    input as *mut f32,
-                    mask as *mut f32,
-                    alpha,
-                    size,
-                    input_stride,
-                    mask_stride,
-                )
-            }
+            relu_backward_mask(
+                input as *mut f32,
+                mask as *mut f32,
+                alpha,
+                size,
+                input_stride,
+                mask_stride,
+            )
         } else if TypeId::of::<T>() == TypeId::of::<f64>() {
             let alpha: f64 = unsafe { *(&alpha as *const T as *const f64) };
-            unsafe {
-                relu_backward_mask(
-                    input as *mut f64,
-                    mask as *mut f64,
-                    alpha,
-                    size,
-                    input_stride,
-                    mask_stride,
-                )
-            }
+            relu_backward_mask(
+                input as *mut f64,
+                mask as *mut f64,
+                alpha,
+                size,
+                input_stride,
+                mask_stride,
+            )
         } else {
             panic!("Unsupported data type");
         }
