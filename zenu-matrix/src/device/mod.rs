@@ -9,6 +9,7 @@ use crate::{
         },
         clip::ClipOps,
         max::MaxIdx,
+        relu::ReluOps,
     },
 };
 
@@ -48,6 +49,7 @@ pub trait Device:
     + ExpOps
     + LogOps
     + MaxIdx
+    + ReluOps
     + 'static
 {
 }
