@@ -1,11 +1,10 @@
 use crate::{
-    device::DeviceBase,
+    device::Device,
     dim::{DimDyn, DimTrait},
     matrix::{Matrix, Owned, Repr},
-    matrix_blas::copy::CopyBlas,
 };
 
-impl<R: Repr, D: DeviceBase + CopyBlas> Matrix<R, DimDyn, D> {
+impl<R: Repr, D: Device> Matrix<R, DimDyn, D> {
     pub fn transpose(&mut self) {
         let shape_stride = self.shape_stride();
         let transposed = shape_stride.transpose();
@@ -60,14 +59,13 @@ impl<R: Repr, D: DeviceBase + CopyBlas> Matrix<R, DimDyn, D> {
 #[cfg(test)]
 mod transpose {
     use crate::{
-        device::DeviceBase,
+        device::{Device, DeviceBase},
         dim::DimDyn,
         matrix::{Matrix, Owned},
-        matrix_blas::copy::CopyBlas,
     };
 
     // #[test]
-    fn transpose_2d<D: DeviceBase + CopyBlas>() {
+    fn transpose_2d<D: Device>() {
         let mut a: Matrix<Owned<f32>, DimDyn, D> =
             Matrix::from_vec(vec![1., 2., 3., 4., 5., 6.], [2, 3]);
         a.transpose();
@@ -96,15 +94,12 @@ mod transpose_inplace {
     // use super::TransposeInplace;
 
     use crate::{
-        device::DeviceBase,
+        device::{Device, DeviceBase},
         dim::DimDyn,
         matrix::{Matrix, Owned},
-        matrix_blas::copy::CopyBlas,
-        operation::{asum::Asum, basic_operations::SubOps},
     };
 
-    // #[test]
-    fn inplace_transpose_4d<D: DeviceBase + CopyBlas + SubOps + Asum>() {
+    fn inplace_transpose_4d<D: Device>() {
         let mut input = vec![];
         for i in 0..3 {
             for j in 0..4 {
@@ -156,7 +151,7 @@ mod transpose_inplace {
     }
 
     // #[test]
-    fn swap_axis<D: DeviceBase + CopyBlas + SubOps + Asum>() {
+    fn swap_axis<D: Device>() {
         let input: Matrix<Owned<f32>, DimDyn, D> =
             Matrix::from_vec(vec![1., 2., 3., 4., 5., 6.], [2, 3]);
         let output = input.transpose_swap_index_new_matrix(0, 1);
@@ -175,7 +170,7 @@ mod transpose_inplace {
     }
 
     // #[test]
-    fn swap_axis_3d<D: DeviceBase + CopyBlas + SubOps + Asum>() {
+    fn swap_axis_3d<D: Device>() {
         // 2, 3, 4
         let input: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(
             vec![

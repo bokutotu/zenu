@@ -1,11 +1,10 @@
 use crate::{
-    device::DeviceBase,
+    device::Device,
     dim::DimTrait,
     matrix::{Matrix, Owned, Repr},
-    matrix_blas::copy::CopyBlas,
 };
 
-impl<R: Repr, S: DimTrait, D: DeviceBase + CopyBlas> Matrix<R, S, D> {
+impl<R: Repr, S: DimTrait, D: Device> Matrix<R, S, D> {
     pub fn to_default_stride(&self) -> Matrix<Owned<R::Item>, S, D> {
         let mut output: Matrix<Owned<R::Item>, S, D> = Matrix::zeros_like(self);
         {
@@ -25,7 +24,7 @@ mod to_default_stride {
 
     use super::*;
 
-    fn test_1d<D: DeviceBase + CopyBlas>() {
+    fn test_1d<D: Device>() {
         // 0 t0 16 f32 vec
         let v = vec![
             0., 1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12., 13., 14., 15.,
@@ -57,7 +56,7 @@ mod to_default_stride {
         test_1d::<crate::device::nvidia::Nvidia>();
     }
 
-    fn test_2d<D: DeviceBase + CopyBlas>() {
+    fn test_2d<D: Device>() {
         // 0 t0 16 f32 vec
         let v = vec![
             0., 1., 2., 3., 4., 5., 6., 7., //

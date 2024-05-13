@@ -1,13 +1,12 @@
 use crate::{
-    device::DeviceBase,
+    device::Device,
     dim::{default_stride, DimDyn, DimTrait},
     matrix::{Matrix, Owned, Ref, Repr},
-    matrix_blas::copy::CopyBlas,
     num::Num,
     shape_stride::ShapeStride,
 };
 
-impl<T: Num, R: Repr<Item = T>, S: DimTrait, D: DeviceBase> Matrix<R, S, D> {
+impl<T: Num, R: Repr<Item = T>, S: DimTrait, D: Device> Matrix<R, S, D> {
     pub fn reshape<I: Into<DimDyn>>(&self, new_shape: I) -> Matrix<Ref<&T>, DimDyn, D> {
         let new_shape = new_shape.into();
         assert_eq!(
@@ -30,7 +29,7 @@ Use `reshape_new_matrix` method instead.
     }
 }
 
-impl<T: Num, R: Repr<Item = T>, D: DeviceBase + CopyBlas> Matrix<R, DimDyn, D> {
+impl<T: Num, R: Repr<Item = T>, D: Device> Matrix<R, DimDyn, D> {
     pub fn reshape_new_matrix<I: Into<DimDyn>>(&self, new_shape: I) -> Matrix<Owned<T>, DimDyn, D> {
         let new_shape = new_shape.into();
         assert_eq!(
@@ -45,7 +44,7 @@ impl<T: Num, R: Repr<Item = T>, D: DeviceBase + CopyBlas> Matrix<R, DimDyn, D> {
         default_stride_matrix
     }
 }
-impl<T: Num, S: DimTrait, D: DeviceBase> Matrix<Owned<T>, S, D> {
+impl<T: Num, S: DimTrait, D: Device> Matrix<Owned<T>, S, D> {
     pub fn reshape_mut<I: Into<DimDyn>>(&mut self, new_shape: I) -> Matrix<Ref<&mut T>, DimDyn, D> {
         let new_shape = new_shape.into();
         assert_eq!(
@@ -68,7 +67,7 @@ Use `reshape_new_matrix` method instead.
     }
 }
 
-impl<T: Num, S: DimTrait, D: DeviceBase> Matrix<Owned<T>, S, D> {
+impl<T: Num, S: DimTrait, D: Device> Matrix<Owned<T>, S, D> {
     pub fn reshape_no_alloc_owned<I: Into<DimDyn>>(
         self,
         new_shape: I,
@@ -97,14 +96,12 @@ Use `reshape_new_matrix` method instead.
 #[cfg(test)]
 mod reshape {
     use crate::{
-        device::DeviceBase,
+        device::Device,
         dim::{DimDyn, DimTrait},
         matrix::{Matrix, Owned},
-        matrix_blas::copy::CopyBlas,
-        operation::{asum::Asum, basic_operations::SubOps},
     };
 
-    fn reshape_3d_1d<D: DeviceBase + SubOps + Asum>() {
+    fn reshape_3d_1d<D: Device>() {
         let a = Matrix::<Owned<f32>, DimDyn, D>::from_vec(
             vec![
                 1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12., 13., 14., 15., 16., 17., 18.,
@@ -131,7 +128,7 @@ mod reshape {
         reshape_3d_1d::<crate::device::nvidia::Nvidia>();
     }
 
-    fn reshape_1d_3d<D: DeviceBase + SubOps + Asum>() {
+    fn reshape_1d_3d<D: Device>() {
         let a = Matrix::<Owned<f32>, DimDyn, D>::from_vec(vec![1., 2., 3., 4., 5., 6.], [6]);
         let b = a.reshape([2, 3, 1]);
         let ans =
@@ -150,7 +147,7 @@ mod reshape {
     }
 
     // #[test]
-    fn reshape_new_matrix_3d_1d<D: DeviceBase + CopyBlas + SubOps + Asum>() {
+    fn reshape_new_matrix_3d_1d<D: Device>() {
         let mut a = Matrix::<Owned<f32>, DimDyn, D>::from_vec(
             vec![
                 1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12., 13., 14., 15., 16., 17., 18.,
