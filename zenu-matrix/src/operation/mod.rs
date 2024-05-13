@@ -9,7 +9,7 @@ pub mod max;
 pub mod mean;
 // pub mod mul;
 // pub mod norm2;
-// pub mod relu;
+pub mod relu;
 pub mod reshape;
 // pub mod softmax;
 pub mod sum;

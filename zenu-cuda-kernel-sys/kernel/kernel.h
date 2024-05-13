@@ -10,6 +10,7 @@ extern "C" {
 #include "array_scalar.h"
 #include "element_wise.h"
 #include "memory_access.h"
+#include "activations.h"
 
 #ifdef __cplusplus
 }

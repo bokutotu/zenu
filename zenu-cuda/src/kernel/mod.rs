@@ -2,6 +2,8 @@ use std::any::TypeId;
 
 use zenu_cuda_kernel_sys::*;
 
+pub mod activation;
+
 macro_rules! impl_array_scalar {
     ($name:ident, $double_fn:ident, $float_fn:ident) => {
         pub fn $name<T: 'static>(
