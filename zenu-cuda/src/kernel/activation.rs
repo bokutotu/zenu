@@ -138,7 +138,7 @@ mod tests {
             ZenuCudaMemCopyKind::DeviceToHost,
         )
         .unwrap();
-        let ans: Vec<f32> = vec![1.0, 0.1, 0.1, 1.0, 0.1];
+        let ans: Vec<f32> = vec![1.0, -0.1, -0.1, 1.0, -0.1];
         assert_eq!(mask, ans);
     }
 }

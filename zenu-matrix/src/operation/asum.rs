@@ -47,7 +47,7 @@ impl<T: Num, R: Repr<Item = T>, S: DimTrait, D: DeviceBase + Asum> Matrix<R, S, 
     pub fn asum(&self) -> T {
         let s = self.to_ref().into_dyn_dim();
         if s.shape().is_empty() {
-            unsafe { *s.as_ptr() }
+            self.index_item(&[] as &[usize])
         } else if s.shape_stride().is_contiguous() {
             let num_elm = s.shape().num_elm();
             let num_dim = s.shape().len();
