@@ -1,7 +1,5 @@
-// pub mod blas;
 // pub mod concat;
 pub mod constructor;
-// pub mod cpu_blas;
 pub mod dim;
 pub mod index;
 pub mod matrix;

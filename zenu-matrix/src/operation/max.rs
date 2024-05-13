@@ -80,6 +80,7 @@ mod max_idx {
         default_1d::<crate::device::cpu::Cpu>();
     }
     #[cfg(feature = "nvidia")]
+    #[test]
     fn default_1d_gpu() {
         default_1d::<crate::device::nvidia::Nvidia>();
     }

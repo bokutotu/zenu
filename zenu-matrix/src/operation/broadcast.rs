@@ -1,5 +1,5 @@
 use crate::{
-    device::{Device, DeviceBase},
+    device::Device,
     dim::{DimDyn, DimTrait},
     index::Index0D,
     matrix::{Matrix, Ref, Repr},
@@ -43,10 +43,9 @@ impl<T: Num, D: Device> Matrix<Ref<&mut T>, DimDyn, D> {
 #[cfg(test)]
 mod broadcast {
     use crate::{
-        device::{Device, DeviceBase},
+        device::Device,
         dim::DimDyn,
         matrix::{Matrix, Owned},
-        operation::{asum::Asum, basic_operations::SubOps},
     };
 
     fn broadcast_1d_0d<D: Device>() {
