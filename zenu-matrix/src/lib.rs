@@ -1,4 +1,4 @@
-// pub mod concat;
+pub mod concat;
 pub mod constructor;
 pub mod device;
 pub mod dim;

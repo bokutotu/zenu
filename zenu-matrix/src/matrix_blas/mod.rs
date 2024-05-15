@@ -1,7 +1,3 @@
-// pub mod dot;
-// pub mod copy;
-// pub mod gemm;
-// pub mod gemv;
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum BlasTrans {
     None,
