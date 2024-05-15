@@ -430,6 +430,10 @@ where
     D: DeviceBase,
     S: DimTrait,
 {
+    pub(crate) fn offset_ptr_mut(&self, offset: usize) -> Ptr<Ref<&'a mut T>, D> {
+        self.ptr.clone().offset_ptr_mut(offset)
+    }
+
     pub fn as_mut_ptr(&self) -> *mut T {
         unsafe { self.ptr.ptr.add(self.offset()) }
     }

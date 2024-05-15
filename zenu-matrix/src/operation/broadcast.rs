@@ -15,7 +15,7 @@ impl<T: Num, D: Device> Matrix<Ref<&mut T>, DimDyn, D> {
             panic!("!self.shape().is_include(source.shape())");
         }
         if self.shape() == source.shape() {
-            self.copy_from(source);
+            self.copy_from(&source);
             return;
         }
         if !source.shape().is_empty() && source.shape()[0] == 1 {
@@ -29,7 +29,7 @@ impl<T: Num, D: Device> Matrix<Ref<&mut T>, DimDyn, D> {
         if diff_len == 1 {
             for i in 0..self.shape()[0] {
                 let to = self.index_axis_mut_dyn(Index0D::new(i));
-                to.copy_from(source.clone());
+                to.copy_from(&source);
             }
         } else {
             for i in 0..self.shape()[0] {
