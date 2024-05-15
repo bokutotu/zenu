@@ -1,123 +1,232 @@
+#[cfg(feature = "nvidia")]
+use std::any::TypeId;
+
 use crate::{
-    dim::{DimDyn, DimTrait},
+    device::{cpu::Cpu, Device},
+    dim::DimTrait,
     index::Index0D,
-    matrix::{AsMutPtr, AsPtr, IndexAxisDyn, IndexAxisMutDyn, MatrixBase, ToViewMutMatrix},
-    matrix_impl::Matrix,
-    memory_impl::{ViewMem, ViewMutMem},
+    matrix::{Matrix, Ref, Repr},
     num::Num,
 };
 
-pub trait Relu<T: Num> {
-    fn relu(&mut self, source: Matrix<ViewMem<T>, DimDyn>);
-    fn relu_backward_mask(&mut self, source: Matrix<ViewMem<T>, DimDyn>);
+pub trait ReluOps {
+    fn relu<T: Num>(
+        input: *const T,
+        output: *mut T,
+        alpha: T,
+        size: usize,
+        input_stride: usize,
+        output_stride: usize,
+    );
+    fn relu_backward_mask<T: Num>(
+        input: *const T,
+        mask: *mut T,
+        alpha: T,
+        size: usize,
+        input_stride: usize,
+        mask_stride: usize,
+    );
 }
 
-impl<'a, T: Num> Relu<T> for Matrix<ViewMutMem<'a, T>, DimDyn> {
-    fn relu(&mut self, source: Matrix<ViewMem<T>, DimDyn>) {
-        if self.shape() != source.shape() {
-            panic!("shape mismatch");
-        }
-
-        let len = self.shape().len();
-        if len == 0 {
-            unsafe {
-                *self.as_mut_ptr() = if *source.as_ptr() > T::zero() {
-                    *source.as_ptr()
-                } else {
-                    T::zero()
-                };
-            };
-        } else if len == 1 {
-            let num_elm = self.shape().num_elm();
-            let stride_self = self.stride()[0];
-            let stride_source = source.stride()[0];
-            let self_ptr = self.as_mut_slice();
-            let source_ptr = source.as_slice();
-            relu_kernel_cpu(source_ptr, self_ptr, num_elm, stride_source, stride_self);
-        } else {
-            for i in 0..self.shape()[0] {
-                self.to_view_mut()
-                    .index_axis_mut_dyn(Index0D::new(i))
-                    .relu(source.index_axis_dyn(Index0D::new(i)).clone());
+impl ReluOps for Cpu {
+    #[allow(clippy::not_unsafe_ptr_arg_deref)]
+    fn relu<T: Num>(
+        input: *const T,
+        output: *mut T,
+        alpha: T,
+        size: usize,
+        input_stride: usize,
+        output_stride: usize,
+    ) {
+        unsafe {
+            if input_stride == 1 && output_stride == 1 {
+                for i in 0..size {
+                    *output.add(i) = if *input.add(i) > T::zero() {
+                        *input.add(i)
+                    } else {
+                        alpha * *input.add(i)
+                    };
+                }
+            } else {
+                for i in 0..size {
+                    *output.add(i * output_stride) = if *input.add(i * input_stride) > T::zero() {
+                        *input.add(i * input_stride)
+                    } else {
+                        alpha * *input.add(i * input_stride)
+                    };
+                }
             }
         }
     }
 
-    fn relu_backward_mask(&mut self, source: Matrix<ViewMem<T>, DimDyn>) {
-        if self.shape() != source.shape() {
+    #[allow(clippy::not_unsafe_ptr_arg_deref)]
+    fn relu_backward_mask<T: Num>(
+        input: *const T,
+        mask: *mut T,
+        alpha: T,
+        size: usize,
+        input_stride: usize,
+        mask_stride: usize,
+    ) {
+        unsafe {
+            if input_stride == 1 && mask_stride == 1 {
+                for i in 0..size {
+                    *mask.add(i) = if *input.add(i) > T::zero() {
+                        T::one()
+                    } else {
+                        alpha * T::minus_one()
+                    };
+                }
+            } else {
+                for i in 0..size {
+                    *mask.add(i * mask_stride) = if *input.add(i * input_stride) > T::zero() {
+                        T::one()
+                    } else {
+                        alpha * T::minus_one()
+                    };
+                }
+            }
+        }
+    }
+}
+
+#[cfg(feature = "nvidia")]
+use crate::device::nvidia::Nvidia;
+
+#[cfg(feature = "nvidia")]
+use zenu_cuda::kernel::activation::{relu, relu_backward_mask};
+
+#[cfg(feature = "nvidia")]
+impl ReluOps for Nvidia {
+    fn relu<T: Num>(
+        input: *const T,
+        output: *mut T,
+        alpha: T,
+        size: usize,
+        input_stride: usize,
+        output_stride: usize,
+    ) {
+        if TypeId::of::<T>() == TypeId::of::<f32>() {
+            let alpha: f32 = unsafe { *(&alpha as *const T as *const f32) };
+            relu(
+                input as *mut f32,
+                output as *mut f32,
+                alpha as f32,
+                size,
+                input_stride,
+                output_stride,
+            )
+        } else if TypeId::of::<T>() == TypeId::of::<f64>() {
+            let alpha: f64 = unsafe { *(&alpha as *const T as *const f64) };
+            relu(
+                input as *mut f64,
+                output as *mut f64,
+                alpha as f64,
+                size,
+                input_stride,
+                output_stride,
+            )
+        } else {
+            panic!("Unsupported data type");
+        }
+    }
+
+    fn relu_backward_mask<T: Num>(
+        input: *const T,
+        mask: *mut T,
+        alpha: T,
+        size: usize,
+        input_stride: usize,
+        mask_stride: usize,
+    ) {
+        if TypeId::of::<T>() == TypeId::of::<f32>() {
+            let alpha: f32 = unsafe { *(&alpha as *const T as *const f32) };
+            relu_backward_mask(
+                input as *mut f32,
+                mask as *mut f32,
+                alpha,
+                size,
+                input_stride,
+                mask_stride,
+            )
+        } else if TypeId::of::<T>() == TypeId::of::<f64>() {
+            let alpha: f64 = unsafe { *(&alpha as *const T as *const f64) };
+            relu_backward_mask(
+                input as *mut f64,
+                mask as *mut f64,
+                alpha,
+                size,
+                input_stride,
+                mask_stride,
+            )
+        } else {
+            panic!("Unsupported data type");
+        }
+    }
+}
+
+impl<T: Num, S: DimTrait, D: Device> Matrix<Ref<&mut T>, S, D> {
+    pub fn relu<R: Repr<Item = T>, SO: DimTrait>(&self, other: &Matrix<R, SO, D>, alpha: T) {
+        if self.shape().slice() != other.shape().slice() {
             panic!("shape mismatch");
         }
 
         let len = self.shape().len();
         if len == 0 {
-            unsafe {
-                *self.as_mut_ptr() = if *source.as_ptr() > T::zero() {
-                    T::one()
-                } else {
-                    T::zero()
-                };
-            };
-        } else if len <= 1 {
+            D::relu(other.as_ptr(), self.as_mut_ptr(), alpha, 1, 1, 1);
+        } else if len == 1 {
             let num_elm = self.shape().num_elm();
             let stride_self = self.stride()[0];
-            let stride_source = source.stride()[0];
-            let self_ptr = self.as_mut_slice();
-            let source_ptr = source.as_slice();
-            relu_backward_mask_kernel_cpu(
-                source_ptr,
+            let stride_other = other.stride()[0];
+            let self_ptr = self.as_mut_ptr();
+            let other_ptr = other.as_ptr();
+            D::relu(
+                other_ptr,
                 self_ptr,
+                alpha,
                 num_elm,
-                stride_source,
+                stride_other,
                 stride_self,
             );
         } else {
             for i in 0..self.shape()[0] {
-                self.to_view_mut()
-                    .index_axis_mut_dyn(Index0D::new(i))
-                    .relu_backward_mask(source.index_axis_dyn(Index0D::new(i)).clone());
+                self.index_axis_mut_dyn(Index0D::new(i))
+                    .relu(&other.index_axis_dyn(Index0D::new(i)), alpha);
             }
         }
     }
-}
 
-fn relu_kernel_cpu<T: Num>(x: &[T], y: &mut [T], len: usize, incx: usize, incy: usize) {
-    if incx == 1 && incy == 1 {
-        for i in 0..len {
-            y[i] = if x[i] > T::zero() { x[i] } else { T::zero() };
+    pub fn relu_backward_mask<R: Repr<Item = T>, SO: DimTrait>(
+        &self,
+        other: &Matrix<R, SO, D>,
+        alpha: T,
+    ) {
+        if self.shape().slice() != other.shape().slice() {
+            panic!("shape mismatch");
         }
-    } else {
-        for i in 0..len {
-            y[i * incy] = if x[i * incx] > T::zero() {
-                x[i * incx]
-            } else {
-                T::zero()
-            };
-        }
-    }
-}
 
-fn relu_backward_mask_kernel_cpu<T: Num>(
-    x: &[T],
-    mask: &mut [T],
-    len: usize,
-    incx: usize,
-    incmask: usize,
-) {
-    if incx == 1 && incmask == 1 {
-        for i in 0..len {
-            mask[i] = if x[i] > T::zero() {
-                T::one()
-            } else {
-                T::zero()
-            };
-        }
-    } else {
-        for i in 0..len {
-            mask[i * incmask] = if x[i * incx] > T::zero() {
-                T::one()
-            } else {
-                T::zero()
-            };
+        let len = self.shape().len();
+        if len == 0 {
+            D::relu_backward_mask(other.as_ptr(), self.as_mut_ptr(), alpha, 1, 1, 1);
+        } else if len == 1 {
+            let num_elm = self.shape().num_elm();
+            let stride_self = self.stride()[0];
+            let stride_other = other.stride()[0];
+            let self_ptr = self.as_mut_ptr();
+            let other_ptr = other.as_ptr();
+            D::relu_backward_mask(
+                other_ptr,
+                self_ptr,
+                alpha,
+                num_elm,
+                stride_other,
+                stride_self,
+            );
+        } else {
+            for i in 0..self.shape()[0] {
+                self.index_axis_mut_dyn(Index0D::new(i))
+                    .relu_backward_mask(&other.index_axis_dyn(Index0D::new(i)), alpha);
+            }
         }
     }
 }
@@ -125,55 +234,84 @@ fn relu_backward_mask_kernel_cpu<T: Num>(
 #[cfg(test)]
 mod relu {
     use crate::{
-        constructor::zeros::Zeros,
-        matrix::{OwnedMatrix, ToViewMatrix, ToViewMutMatrix},
-        matrix_impl::OwnedMatrixDyn,
-        operation::asum::Asum,
+        device::Device,
+        dim::DimDyn,
+        matrix::{Matrix, Owned},
     };
 
-    use super::Relu;
-
-    #[test]
-    fn relu() {
-        let x = OwnedMatrixDyn::from_vec(vec![1.0, -1.0, 0.0, 2.0], [2, 2]);
-        let mut y = OwnedMatrixDyn::zeros([2, 2]);
-        y.to_view_mut().relu(x.to_view());
-        let ans = OwnedMatrixDyn::from_vec(vec![1.0, 0.0, 0.0, 2.0], [2, 2]);
-        let diff = y.to_view() - ans.to_view();
+    fn relu<D: Device>() {
+        let x = Matrix::<Owned<f32>, DimDyn, D>::from_vec(vec![1.0, -1.0, 0.0, 2.0], [2, 2]);
+        let mut y = Matrix::<Owned<f32>, DimDyn, D>::zeros([2, 2]);
+        y.to_ref_mut().relu(&x.to_ref(), 0.0);
+        let ans = Matrix::<Owned<f32>, DimDyn, D>::from_vec(vec![1.0, 0.0, 0.0, 2.0], [2, 2]);
+        let diff = y.to_ref() - ans.to_ref();
         let diff_asum = diff.asum();
         assert!(diff_asum < 1.0e-6);
     }
-
     #[test]
-    fn relu_backward_mask() {
-        let x = OwnedMatrixDyn::from_vec(vec![1.0, -1.0, 0.0, 2.0], [2, 2]);
-        let mut y = OwnedMatrixDyn::zeros([2, 2]);
-        y.to_view_mut().relu_backward_mask(x.to_view());
-        let ans = OwnedMatrixDyn::from_vec(vec![1.0, 0.0, 0.0, 1.0], [2, 2]);
-        let diff = y.to_view() - ans.to_view();
+    fn relu_cpu() {
+        relu::<crate::device::cpu::Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn relu_nvidia() {
+        relu::<crate::device::nvidia::Nvidia>();
+    }
+
+    fn relu_backward_mask<D: Device>() {
+        let x = Matrix::<Owned<f32>, DimDyn, D>::from_vec(vec![1.0, -1.0, 0.0, 2.0], [2, 2]);
+        let mut y = Matrix::<Owned<f32>, DimDyn, D>::zeros([2, 2]);
+        y.to_ref_mut().relu_backward_mask(&x.to_ref(), 0.0);
+        let ans = Matrix::<Owned<f32>, DimDyn, D>::from_vec(vec![1.0, 0.0, 0.0, 1.0], [2, 2]);
+        let diff = y.to_ref() - ans.to_ref();
         let diff_asum = diff.asum();
         assert!(diff_asum < 1.0e-6);
     }
-
     #[test]
-    fn relu_0d() {
-        let x = OwnedMatrixDyn::from_vec(vec![1.0], []);
-        let mut y = OwnedMatrixDyn::zeros([]);
-        y.to_view_mut().relu(x.to_view());
-        let ans = OwnedMatrixDyn::from_vec(vec![1.0], []);
-        let diff = y.to_view() - ans.to_view();
+    fn relu_backward_mask_cpu() {
+        relu_backward_mask::<crate::device::cpu::Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn relu_backward_mask_nvidia() {
+        relu_backward_mask::<crate::device::nvidia::Nvidia>();
+    }
+
+    fn relu_0d<D: Device>() {
+        let x = Matrix::<Owned<f32>, DimDyn, D>::from_vec(vec![1.0], []);
+        let mut y = Matrix::<Owned<f32>, DimDyn, D>::zeros([]);
+        y.to_ref_mut().relu(&x.to_ref(), 0.0);
+        let ans = Matrix::<Owned<f32>, DimDyn, D>::from_vec(vec![1.0], []);
+        let diff = y.to_ref() - ans.to_ref();
         let diff_asum = diff.asum();
         assert!(diff_asum < 1.0e-6);
     }
-
     #[test]
-    fn relu_backward_mask_0d() {
-        let x = OwnedMatrixDyn::from_vec(vec![1.0], []);
-        let mut y = OwnedMatrixDyn::zeros([]);
-        y.to_view_mut().relu_backward_mask(x.to_view());
-        let ans = OwnedMatrixDyn::from_vec(vec![1.0], []);
-        let diff = y.to_view() - ans.to_view();
+    fn relu_0d_cpu() {
+        relu_0d::<crate::device::cpu::Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn relu_0d_nvidia() {
+        relu_0d::<crate::device::nvidia::Nvidia>();
+    }
+
+    fn relu_backward_mask_0d<D: Device>() {
+        let x = Matrix::<Owned<f32>, DimDyn, D>::from_vec(vec![1.0], []);
+        let mut y = Matrix::<Owned<f32>, DimDyn, D>::zeros([]);
+        y.to_ref_mut().relu_backward_mask(&x.to_ref(), 0.0);
+        let ans = Matrix::<Owned<f32>, DimDyn, D>::from_vec(vec![1.0], []);
+        let diff = y.to_ref() - ans.to_ref();
         let diff_asum = diff.asum();
         assert!(diff_asum < 1.0e-6);
+    }
+    #[test]
+    fn relu_backward_mask_0d_cpu() {
+        relu_backward_mask_0d::<crate::device::cpu::Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn relu_backward_mask_0d_nvidia() {
+        relu_backward_mask_0d::<crate::device::nvidia::Nvidia>();
     }
 }

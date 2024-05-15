@@ -126,6 +126,28 @@ impl<D: DimTrait> ShapeStride<D> {
 
         Self::new(shape, stride)
     }
+
+    pub(crate) fn swap_index(self, a: usize, b: usize) -> Self {
+        if a == b {
+            return self;
+        }
+        if a >= self.shape().len() || b >= self.shape().len() {
+            panic!("Index out of bounds");
+        }
+        let mut shape = self.shape();
+        let mut stride = self.stride();
+
+        let tmp_shape = shape[a];
+        let tmp_stride = stride[a];
+
+        shape[a] = shape[b];
+        stride[a] = stride[b];
+
+        shape[b] = tmp_shape;
+        stride[b] = tmp_stride;
+
+        Self::new(shape, stride)
+    }
 }
 
 impl ShapeStride<DimDyn> {

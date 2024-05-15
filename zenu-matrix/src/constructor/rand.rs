@@ -3,11 +3,12 @@
 //! This module provides functions and builders for creating matrices filled with random values
 //! from various distributions such as normal distribution and uniform distribution.
 
+use std::marker::PhantomData;
+
 use crate::{
+    device::DeviceBase,
     dim::DimTrait,
-    matrix::{MatrixBase, OwnedMatrix},
-    matrix_impl::Matrix,
-    memory_impl::OwnedMem,
+    matrix::{Matrix, Owned, Repr},
     num::Num,
 };
 use rand::prelude::*;
@@ -21,12 +22,12 @@ use rand_distr::{num_traits::Float, uniform::SampleUniform, Normal, StandardNorm
 /// * `std_dev` - The standard deviation of the normal distribution.
 /// * `shape` - The shape of the matrix.
 /// * `seed` - An optional seed for the random number generator.
-pub fn normal<T: Num, D: DimTrait>(
+pub fn normal<T: Num, S: DimTrait, D: DeviceBase>(
     mean: T,
     std_dev: T,
-    shape: D,
+    shape: S,
     seed: Option<u64>,
-) -> Matrix<OwnedMem<T>, D>
+) -> Matrix<Owned<T>, S, D>
 where
     StandardNormal: Distribution<T>,
 {
@@ -51,12 +52,12 @@ where
 /// * `std_dev` - The standard deviation of the normal distribution.
 /// * `a` - The matrix whose shape is used.
 /// * `seed` - An optional seed for the random number generator.
-pub fn normal_like<T: Num, D: DimTrait>(
+pub fn normal_like<T: Num, S: DimTrait, D: DeviceBase>(
     mean: T,
     std_dev: T,
-    a: &Matrix<OwnedMem<T>, D>,
+    a: &Matrix<Owned<T>, S, D>,
     seed: Option<u64>,
-) -> Matrix<OwnedMem<T>, D>
+) -> Matrix<Owned<T>, S, D>
 where
     StandardNormal: Distribution<T>,
 {
@@ -71,12 +72,12 @@ where
 /// * `high` - The upper bound of the uniform distribution.
 /// * `shape` - The shape of the matrix.
 /// * `seed` - An optional seed for the random number generator.
-pub fn uniform<T, D: DimTrait>(
+pub fn uniform<T, S: DimTrait, D: DeviceBase>(
     low: T,
     high: T,
-    shape: D,
+    shape: S,
     seed: Option<u64>,
-) -> Matrix<OwnedMem<T>, D>
+) -> Matrix<Owned<T>, S, D>
 where
     T: Num,
     Uniform<T>: Distribution<T>,
@@ -102,12 +103,12 @@ where
 /// * `high` - The upper bound of the uniform distribution.
 /// * `a` - The matrix whose shape is used.
 /// * `seed` - An optional seed for the random number generator.
-pub fn uniform_like<T, D: DimTrait>(
+pub fn uniform_like<T, S: DimTrait, D: DeviceBase>(
     low: T,
     high: T,
-    a: &Matrix<OwnedMem<T>, D>,
+    a: &Matrix<Owned<T>, S, D>,
     seed: Option<u64>,
-) -> Matrix<OwnedMem<T>, D>
+) -> Matrix<Owned<T>, S, D>
 where
     T: Num,
     Uniform<T>: Distribution<T>,
@@ -117,17 +118,19 @@ where
 
 /// A builder for creating matrices filled with random values from a normal distribution.
 #[derive(Debug, Clone, Default)]
-pub struct NormalBuilder<T: Num + Float, D: DimTrait> {
+pub struct NormalBuilder<T: Num + Float, S: DimTrait, D: DeviceBase> {
     mean: Option<T>,
     std_dev: Option<T>,
-    shape: Option<D>,
+    shape: Option<S>,
     seed: Option<u64>,
+    _marker: PhantomData<D>,
 }
 
-impl<T, D> NormalBuilder<T, D>
+impl<T, S, D> NormalBuilder<T, S, D>
 where
     T: Num,
-    D: DimTrait,
+    S: DimTrait,
+    D: DeviceBase,
 {
     /// Creates a new `NormalBuilder`.
     pub fn new() -> Self {
@@ -136,6 +139,7 @@ where
             std_dev: None,
             shape: None,
             seed: None,
+            _marker: PhantomData,
         }
     }
 
@@ -152,7 +156,7 @@ where
     }
 
     /// Sets the shape of the matrix.
-    pub fn shape(mut self, shape: D) -> Self {
+    pub fn shape(mut self, shape: S) -> Self {
         self.shape = Some(shape);
         self
     }
@@ -164,13 +168,13 @@ where
     }
 
     /// Sets the shape of the matrix to be the same as another matrix.
-    pub fn from_matrix<M: MatrixBase<Dim = D>>(mut self, a: &M) -> Self {
+    pub fn from_matrx<R2: Repr<Item = T>>(mut self, a: &Matrix<R2, S, D>) -> Self {
         self.shape = Some(a.shape());
         self
     }
 
     /// Builds the matrix.
-    pub fn build(self) -> Matrix<OwnedMem<T>, D>
+    pub fn build(self) -> Matrix<Owned<T>, S, D>
     where
         StandardNormal: Distribution<T>,
     {
@@ -188,18 +192,20 @@ where
 
 /// A builder for creating matrices filled with random values from a uniform distribution.
 #[derive(Debug, Clone, Default)]
-pub struct UniformBuilder<T, D> {
+pub struct UniformBuilder<T, S, D> {
     low: Option<T>,
     high: Option<T>,
-    shape: Option<D>,
+    shape: Option<S>,
     seed: Option<u64>,
+    _marker: PhantomData<D>,
 }
 
-impl<T, D> UniformBuilder<T, D>
+impl<T, S, D> UniformBuilder<T, S, D>
 where
     T: Num + Float + SampleUniform,
     Uniform<T>: Distribution<T>,
-    D: DimTrait,
+    S: DimTrait,
+    D: DeviceBase,
 {
     /// Creates a new `UniformBuilder`.
     pub fn new() -> Self {
@@ -208,6 +214,7 @@ where
             high: None,
             shape: None,
             seed: None,
+            _marker: PhantomData,
         }
     }
 
@@ -224,7 +231,7 @@ where
     }
 
     /// Sets the shape of the matrix.
-    pub fn shape(mut self, shape: D) -> Self {
+    pub fn shape(mut self, shape: S) -> Self {
         self.shape = Some(shape);
         self
     }
@@ -236,13 +243,13 @@ where
     }
 
     /// Sets the shape of the matrix to be the same as another matrix.
-    pub fn from_matrix<M: MatrixBase<Dim = D>>(mut self, a: &M) -> Self {
+    pub fn from_matrx<R2: Repr<Item = T>>(mut self, a: &Matrix<R2, S, D>) -> Self {
         self.shape = Some(a.shape());
         self
     }
 
     /// Builds the matrix.
-    pub fn build(self) -> Matrix<OwnedMem<T>, D> {
+    pub fn build(self) -> Matrix<Owned<T>, S, D> {
         if self.low.is_none() || self.high.is_none() || self.shape.is_none() {
             panic!("low, high, and shape must be set");
         }
