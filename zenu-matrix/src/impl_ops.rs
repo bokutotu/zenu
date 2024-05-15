@@ -8,64 +8,6 @@ use crate::{
     operation::basic_operations::{AddOps, DivOps, MulOps, SubOps},
 };
 
-// impl<T: Num, R: Repr<Item = T>, S: DimTrait, D: DeviceBase + AddOps<T>> Add<T> for Matrix<R, S, D> {
-//     type Output = Matrix<Owned<T>, DimDyn, D>;
-//
-//     fn add(self, rhs: T) -> Self::Output {
-//         let mut owned = Matrix::zeros_like(&self);
-//         owned.to_ref_mut().add_scalar(&self, rhs);
-//         owned.into_dyn_dim()
-//     }
-// }
-// impl<
-//         T: Num,
-//         RS: Repr<Item = T>,
-//         SS: DimTrait,
-//         RO: Repr<Item = T>,
-//         SO: DimTrait,
-//         D: DeviceBase + AddOps<T>,
-//     > Add<Matrix<RO, SO, D>> for Matrix<RS, SS, D>
-// {
-//     type Output = Matrix<Owned<T>, DimDyn, D>;
-//
-//     fn add(self, rhs: Matrix<RO, SO, D>) -> Self::Output {
-//         let larger = if self.shape().len() == rhs.shape().len() {
-//             DimDyn::from(larger_shape(self.shape(), rhs.shape()))
-//         } else if self.shape().len() > rhs.shape().len() {
-//             DimDyn::from(self.shape().slice())
-//         } else {
-//             DimDyn::from(rhs.shape().slice())
-//         };
-//         let mut owned: Matrix<Owned<T>, DimDyn, D> = Matrix::zeros(larger.slice());
-//         owned.to_ref_mut().add_array(&self, &rhs);
-//         owned
-//     }
-// }
-// impl<T: Num, S: DimTrait, D: DeviceBase + AddOps<T>> AddAssign<T> for Matrix<Ref<&mut T>, S, D> {
-//     fn add_assign(&mut self, rhs: T) {
-//         self.add_scalar_assign(rhs);
-//     }
-// }
-// impl<T: Num, S: DimTrait, D: DeviceBase + AddOps<T>> AddAssign<T> for Matrix<Owned<T>, S, D> {
-//     fn add_assign(&mut self, rhs: T) {
-//         self.to_ref_mut().add_scalar_assign(rhs);
-//     }
-// }
-// impl<T: Num, SS: DimTrait, RO: Repr<Item = T>, SO: DimTrait, D: DeviceBase + AddOps<T>>
-//     AddAssign<Matrix<RO, SO, D>> for Matrix<Owned<T>, SS, D>
-// {
-//     fn add_assign(&mut self, rhs: Matrix<RO, SO, D>) {
-//         self.to_ref_mut().add_assign(&rhs);
-//     }
-// }
-// impl<T: Num, R: Repr<Item = T>, SO: DimTrait, SS: DimTrait, D: DeviceBase + AddOps<T>>
-//     AddAssign<Matrix<R, SO, D>> for Matrix<Ref<&mut T>, SS, D>
-// {
-//     fn add_assign(&mut self, rhs: Matrix<R, SO, D>) {
-//         self.add_assign(&rhs);
-//     }
-// }
-
 macro_rules! call_on_self {
     ($self:ident, $F:ident, $($args:expr),*) => {
         $self.$F($($args),*)
