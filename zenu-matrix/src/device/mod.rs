@@ -9,6 +9,7 @@ use crate::{
         clip::ClipOps,
         copy_from::CopyBlas,
         max::MaxIdx,
+        mul::Gemm,
         relu::ReluOps,
     },
 };
@@ -50,6 +51,7 @@ pub trait Device:
     + LogOps
     + MaxIdx
     + ReluOps
+    + Gemm
     + 'static
 {
 }
