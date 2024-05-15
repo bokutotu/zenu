@@ -6,10 +6,13 @@ fn main() {
         "kernel/array_scalar.cu",
         "kernel/element_wise.cu",
         "kernel/memory_access.cu",
+        "kernel/array_array.cu",
+        "kernel/activations.cu",
     ];
 
-    for cuda_file in cuda_files.iter() {
-        println!("{}", format!("cargo:rerun-if-changed={}", cuda_file));
+    for cuda_file in &cuda_files {
+        // println!("{}", format!("cargo:rerun-if-changed={}", cuda_file));
+        println!("cargo:rerun-if-changed={cuda_file}");
     }
     println!("cargo:rerun-if-changed=kernel/kernel.h");
     println!("cargo:rerun-if-changed=build.rs");

@@ -1,11 +1,10 @@
 use std::fmt;
 
 use crate::{
+    device::DeviceBase,
     dim::{DimDyn, DimTrait},
     index::Index0D,
-    matrix::{IndexAxisDyn, IndexItem, MatrixBase, ToViewMatrix},
-    matrix_impl::Matrix,
-    memory::{Memory, ToViewMemory},
+    matrix::{Matrix, Ref, Repr},
     num::Num,
 };
 /// Default threshold, below this element count, we don't ellipsize
@@ -104,8 +103,8 @@ fn format_with_overflow(
     Ok(())
 }
 
-fn format_array<A, S, D, F>(
-    array: &Matrix<S, D>,
+fn format_array<A, R, S, D, F>(
+    array: &Matrix<R, S, D>,
     f: &mut fmt::Formatter<'_>,
     format: F,
     fmt_opt: &FormatOptions,
@@ -113,13 +112,14 @@ fn format_array<A, S, D, F>(
 where
     A: Num,
     F: FnMut(&A, &mut fmt::Formatter<'_>) -> fmt::Result + Clone,
-    D: DimTrait,
-    S: Memory<Item = A> + ToViewMemory,
+    S: DimTrait,
+    R: Repr<Item = A>,
+    D: DeviceBase,
 {
     // Cast into a dynamically dimensioned view
     // This is required to be able to use `index_axis` for the recursive case
     format_array_inner(
-        array.to_view().into_dyn_dim(),
+        array.to_ref().into_dyn_dim(),
         f,
         format,
         fmt_opt,
@@ -128,8 +128,8 @@ where
     )
 }
 
-fn format_array_inner<T, M, F>(
-    view: Matrix<M, DimDyn>,
+fn format_array_inner<T, F, D>(
+    view: Matrix<Ref<&T>, DimDyn, D>,
     f: &mut fmt::Formatter<'_>,
     mut format: F,
     fmt_opt: &FormatOptions,
@@ -138,8 +138,8 @@ fn format_array_inner<T, M, F>(
 ) -> fmt::Result
 where
     T: Num,
-    M: Memory<Item = T> + ToViewMemory,
     F: FnMut(&T, &mut fmt::Formatter<'_>) -> fmt::Result + Clone,
+    D: DeviceBase,
 {
     match view.shape().slice() {
         // If it's 0 dimensional, we just print out the scalar
@@ -187,10 +187,12 @@ where
 /// to each element.
 ///
 /// The array is shown in multiline style.
-impl<A: fmt::Display, S, D: DimTrait> fmt::Display for Matrix<S, D>
+impl<A, R, S, D> fmt::Display for Matrix<R, S, D>
 where
-    A: Num,
-    S: Memory<Item = A> + ToViewMemory,
+    A: Num + fmt::Display,
+    R: Repr<Item = A>,
+    S: DimTrait,
+    D: DeviceBase,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let fmt_opt = FormatOptions::default_for_array(self.shape().num_elm(), f.alternate());
@@ -202,10 +204,12 @@ where
 /// to each element.
 ///
 /// The array is shown in multiline style.
-impl<A: fmt::Debug, S, D: DimTrait> fmt::Debug for Matrix<S, D>
+impl<A, R, S, D> fmt::Debug for Matrix<R, S, D>
 where
-    A: Num,
-    S: Memory<Item = A> + ToViewMemory,
+    A: Num + fmt::Debug,
+    R: Repr<Item = A>,
+    S: DimTrait,
+    D: DeviceBase,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let fmt_opt = FormatOptions::default_for_array(self.shape().num_elm(), f.alternate());
@@ -224,9 +228,9 @@ where
 #[cfg(test)]
 mod matrix_format {
     use crate::{
-        constructor::ones::Ones,
-        matrix::OwnedMatrix,
-        matrix_impl::{OwnedMatrix1D, OwnedMatrix2D, OwnedMatrix3D, OwnedMatrix4D},
+        device::DeviceBase,
+        dim::{Dim2, Dim4, DimDyn},
+        matrix::{Matrix, Owned},
     };
 
     fn assert_str_eq(expected: &str, actual: &str) {
@@ -239,34 +243,58 @@ mod matrix_format {
         );
     }
 
-    #[test]
-    fn small_array_1d() {
-        let a = OwnedMatrix1D::from_vec(vec![1., 2., 3., 4., 5.], [5]);
+    fn small_array_1d<D: DeviceBase>() {
+        let a: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(vec![1., 2., 3., 4., 5.], [5]);
         assert_eq!(format!("{}", a), "[1, 2, 3, 4, 5]");
     }
-
     #[test]
-    fn mid_array_1d() {
-        let a = OwnedMatrix1D::from_vec(vec![1., 2., 3., 4., 5., 6., 7., 8., 9., 10.], [10]);
-        assert_eq!(format!("{}", a), "[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]");
+    fn small_array_1d_cpu() {
+        small_array_1d::<crate::device::cpu::Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn small_array_1d_nvidia() {
+        small_array_1d::<crate::device::nvidia::Nvidia>();
     }
 
+    fn mid_array_1d<D: DeviceBase>() {
+        let a: Matrix<Owned<f32>, DimDyn, D> =
+            Matrix::from_vec(vec![1., 2., 3., 4., 5., 6., 7., 8., 9., 10.], [10]);
+        assert_eq!(format!("{}", a), "[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]");
+    }
     #[test]
-    fn large_array_1d() {
+    fn mid_array_1d_cpu() {
+        mid_array_1d::<crate::device::cpu::Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn mid_array_1d_nvidia() {
+        mid_array_1d::<crate::device::nvidia::Nvidia>();
+    }
+
+    fn large_array_1d<D: DeviceBase>() {
         let mut v = Vec::new();
         for i in 1..=1000 {
             v.push(i as f32);
         }
-        let a = OwnedMatrix1D::from_vec(v, [1000]);
+        let a: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(v, [1000]);
         assert_eq!(
             format!("{}", a),
             "[1, 2, 3, 4, 5, ..., 996, 997, 998, 999, 1000]"
         );
     }
-
     #[test]
-    fn dim_2_last_axis_overflow() {
-        let a = OwnedMatrix2D::<f32>::ones([22, 24]);
+    fn large_array_1d_cpu() {
+        large_array_1d::<crate::device::cpu::Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn large_array_1d_nvidia() {
+        large_array_1d::<crate::device::nvidia::Nvidia>();
+    }
+
+    fn dim_2_last_axis_overflow<D: DeviceBase>() {
+        let a: Matrix<Owned<f32>, Dim2, D> = Matrix::ones([22, 24]);
         let actual = format!("{}", a);
         let expected = "\
 [[1, 1, 1, 1, 1, ..., 1, 1, 1, 1, 1],
@@ -283,7 +311,16 @@ mod matrix_format {
         assert_str_eq(expected, &actual);
     }
     #[test]
-    fn dim_3_overflow_most() {
+    fn dim_2_last_axis_overflow_cpu() {
+        dim_2_last_axis_overflow::<crate::device::cpu::Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn dim_2_last_axis_overflow_nvidia() {
+        dim_2_last_axis_overflow::<crate::device::nvidia::Nvidia>();
+    }
+
+    fn dim_3_overflow_most<D: DeviceBase>() {
         let mut v = Vec::new();
         for i in 0..7 {
             for j in 0..11 {
@@ -302,7 +339,7 @@ mod matrix_format {
         //         1000. + (100. * ((i as f64).sqrt() + (j as f64).sin() + k as f64)).round() / 100.
         //     },
         // );
-        let a = OwnedMatrix3D::from_vec(v, [7, 11, 12]);
+        let a: Matrix<Owned<f64>, DimDyn, D> = Matrix::from_vec(v, [7, 11, 12]);
         let actual = format!("{:6.1}", a);
         let expected = "\
 [[[1000.0, 1001.0, 1002.0, 1003.0, 1004.0, ..., 1007.0, 1008.0, 1009.0, 1010.0, 1011.0],
@@ -380,9 +417,17 @@ mod matrix_format {
   [1001.9, 1002.9, 1003.9, 1004.9, 1005.9, ..., 1008.9, 1009.9, 1010.9, 1011.9, 1012.9]]]";
         assert_str_eq(expected, &actual);
     }
-
     #[test]
-    fn dim_4_overflow_outer() {
+    fn dim_3_overflow_most_cpu() {
+        dim_3_overflow_most::<crate::device::cpu::Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn dim_3_overflow_most_nvidia() {
+        dim_3_overflow_most::<crate::device::nvidia::Nvidia>();
+    }
+
+    fn dim_4_overflow_outer<D: DeviceBase>() {
         // let a = Array4::from_shape_fn((10, 10, 3, 3), |(i, j, k, l)| i + j + k + l);
         let mut v = Vec::new();
         for i in 0..10 {
@@ -394,7 +439,7 @@ mod matrix_format {
                 }
             }
         }
-        let a = OwnedMatrix4D::from_vec(v, [10, 10, 3, 3]);
+        let a: Matrix<Owned<f32>, Dim4, D> = Matrix::from_vec(v, [10, 10, 3, 3]);
         let actual = format!("{:2}", a);
         // Generated using NumPy with:
         // np.set_printoptions(threshold=500, edgeitems=3)
@@ -565,5 +610,14 @@ mod matrix_format {
    [19, 20, 21],
    [20, 21, 22]]]]";
         assert_str_eq(expected, &actual);
+    }
+    #[test]
+    fn dim_4_overflow_outer_cpu() {
+        dim_4_overflow_outer::<crate::device::cpu::Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn dim_4_overflow_outer_nvidia() {
+        dim_4_overflow_outer::<crate::device::nvidia::Nvidia>();
     }
 }

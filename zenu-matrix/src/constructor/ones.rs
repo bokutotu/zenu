@@ -1,23 +1,24 @@
 use crate::{
+    device::DeviceBase,
     dim::DimTrait,
-    matrix::{MatrixBase, OwnedMatrix},
+    matrix::{Matrix, Owned, Repr},
     num::Num,
 };
 
-pub trait Ones: MatrixBase {
-    fn ones<I: Into<Self::Dim>>(dim: I) -> Self;
-}
-
-impl<D, T, OM> Ones for OM
+impl<T, S, D> Matrix<Owned<T>, S, D>
 where
-    D: DimTrait,
     T: Num,
-    OM: OwnedMatrix + MatrixBase<Dim = D, Item = T>,
+    S: DimTrait,
+    D: DeviceBase,
 {
-    fn ones<I: Into<D>>(dim: I) -> Self {
+    pub fn ones<I: Into<S>>(dim: I) -> Self {
         let dim = dim.into();
         let data = vec![T::one(); dim.num_elm()];
         let vec = data.iter().map(|_| T::from_usize(1)).collect();
         Self::from_vec(vec, dim)
+    }
+
+    pub fn ones_like<R: Repr<Item = T>>(m: &Matrix<R, S, D>) -> Self {
+        Self::ones(m.shape())
     }
 }

@@ -71,6 +71,7 @@ pub fn cublas_copy<T: 'static>(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn cublas_gemm<T: 'static>(
     transa: ZenuCublasOperation,
     transb: ZenuCublasOperation,

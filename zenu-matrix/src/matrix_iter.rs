@@ -1,29 +1,29 @@
 use crate::{
-    constructor::zeros::Zeros,
+    device::Device,
     dim::{cal_offset, DimDyn, DimTrait},
-    matrix::{MatrixBase, ToViewMatrix, ToViewMutMatrix},
-    matrix_impl::{Matrix, OwnedMatrixDyn},
-    memory::{ToViewMemory, ToViewMutMemory},
-    memory_impl::{OwnedMem, ViewMutMem},
+    matrix::{Matrix, Owned, Ref},
     num::Num,
-    operation::copy_from::CopyFrom,
     shape_stride::ShapeStride,
 };
 
-struct MapAxis<'a, T: Num, F>
+struct MapAxis<'a, T, F, D>
 where
-    F: FnMut(Matrix<ViewMutMem<T>, DimDyn>),
+    T: Num,
+    F: FnMut(Matrix<Ref<&'a mut T>, DimDyn, D>),
+    D: Device,
 {
-    matrix: Matrix<ViewMutMem<'a, T>, DimDyn>,
+    matrix: Matrix<Ref<&'a mut T>, DimDyn, D>,
     axis: usize,
     fn_map: F,
 }
 
-impl<'a, T: Num, F> MapAxis<'a, T, F>
+impl<'a, T, F, D> MapAxis<'a, T, F, D>
 where
-    F: FnMut(Matrix<ViewMutMem<T>, DimDyn>),
+    T: Num,
+    F: FnMut(Matrix<Ref<&'a mut T>, DimDyn, D>),
+    D: Device,
 {
-    fn new(matrix: Matrix<ViewMutMem<'a, T>, DimDyn>, axis: usize, fn_map: F) -> Self {
+    fn new(matrix: Matrix<Ref<&'a mut T>, DimDyn, D>, axis: usize, fn_map: F) -> Self {
         Self {
             matrix,
             axis,
@@ -76,8 +76,8 @@ where
     fn apply(&mut self) {
         let shapt_stride = self.target_shape_stride();
         for offset in self.get_offsets() {
-            let m = self.matrix.memory_mut();
-            let view = m.to_view_mut(offset);
+            // let m = self.matrix;
+            let view = self.matrix.offset_ptr_mut(offset);
             let matrix = Matrix::new(view, shapt_stride.shape(), shapt_stride.stride());
             (self.fn_map)(matrix);
         }
@@ -108,35 +108,34 @@ fn generate_combinations(nums: &[usize]) -> Vec<Vec<usize>> {
     result
 }
 
-pub trait MatrixIter<T: Num> {
-    fn map_axis<F>(&self, axis: usize, fn_map: F) -> Matrix<OwnedMem<T>, DimDyn>
+pub trait MatrixIter<T: Num, D: Device> {
+    fn map_axis<F>(&self, axis: usize, fn_map: F) -> Matrix<Owned<T>, DimDyn, D>
     where
-        F: FnMut(Matrix<ViewMutMem<T>, DimDyn>);
-    fn map_axis_mut<F>(&mut self, axis: usize, fn_map: F)
+        F: FnMut(Matrix<Ref<&mut T>, DimDyn, D>);
+    fn map_axis_mut<F>(self, axis: usize, fn_map: F)
     where
-        F: FnMut(Matrix<ViewMutMem<T>, DimDyn>);
+        F: FnMut(Matrix<Ref<&mut T>, DimDyn, D>);
 }
 
-impl<T: Num, M: ToViewMutMemory<Item = T> + ToViewMemory> MatrixIter<T> for Matrix<M, DimDyn> {
-    fn map_axis<F>(&self, axis: usize, fn_map: F) -> Matrix<OwnedMem<T>, DimDyn>
+impl<T: Num, D: Device> MatrixIter<T, D> for Matrix<Ref<&mut T>, DimDyn, D> {
+    fn map_axis<F>(&self, axis: usize, fn_map: F) -> Matrix<Owned<T>, DimDyn, D>
     where
-        F: FnMut(Matrix<ViewMutMem<T>, DimDyn>),
+        F: FnMut(Matrix<Ref<&mut T>, DimDyn, D>),
     {
-        let mut ans = OwnedMatrixDyn::zeros(self.shape());
-        ans.to_view_mut().copy_from(&self.to_view());
-        ans.map_axis_mut(axis, fn_map);
+        let mut ans = Matrix::<_, DimDyn, D>::zeros(self.shape());
+        ans.to_ref_mut().copy_from(self);
+        ans.to_ref_mut().map_axis_mut(axis, fn_map);
         ans
     }
 
-    fn map_axis_mut<F>(&mut self, axis: usize, fn_map: F)
+    fn map_axis_mut<F>(self, axis: usize, fn_map: F)
     where
-        F: FnMut(Matrix<ViewMutMem<T>, DimDyn>),
+        F: FnMut(Matrix<Ref<&mut T>, DimDyn, D>),
     {
         if self.shape().len() <= 1 {
             panic!("shape.len() <= 1");
         }
-        let mut_matrix = self.to_view_mut();
-        let mut map_axis = MapAxis::new(mut_matrix, axis, fn_map);
+        let mut map_axis = MapAxis::new(self, axis, fn_map);
         map_axis.apply();
     }
 }
@@ -144,109 +143,143 @@ impl<T: Num, M: ToViewMutMemory<Item = T> + ToViewMemory> MatrixIter<T> for Matr
 #[cfg(test)]
 mod map_axis {
     use crate::{
-        matrix::{OwnedMatrix, ToViewMatrix},
-        matrix_impl::OwnedMatrixDyn,
-        operation::{asum::Asum, copy_from::CopyFrom},
+        device::Device,
+        dim::DimDyn,
+        matrix::{Matrix, Owned},
+        matrix_iter::MatrixIter,
     };
 
-    use super::MatrixIter;
-
-    #[test]
-    fn test_2d_0() {
-        let mut a = OwnedMatrixDyn::from_vec(vec![1., 2., 3., 4., 5., 6.], [2, 3]);
-        a.map_axis_mut(0, |m| {
-            let mut m = m;
-            let ans = OwnedMatrixDyn::from_vec(vec![2., 1.], [2]);
-            CopyFrom::copy_from(&mut m, &ans.to_view());
+    fn test_2d_0<D: Device>() {
+        let mut a = Matrix::<Owned<f32>, DimDyn, D>::from_vec(vec![1., 2., 3., 4., 5., 6.], [2, 3]);
+        a.to_ref_mut().map_axis_mut(0, |m| {
+            let ans = Matrix::<Owned<f32>, DimDyn, D>::from_vec(vec![2., 1.], [2]);
+            m.copy_from(&ans);
         });
 
-        let ans = OwnedMatrixDyn::from_vec(vec![2., 2., 2., 1., 1., 1.], [2, 3]);
-        let diff = ans.to_view() - a.to_view();
+        let ans = Matrix::<Owned<f32>, DimDyn, D>::from_vec(vec![2., 2., 2., 1., 1., 1.], [2, 3]);
+        let diff = ans - a;
         let diff = diff.asum();
         assert_eq!(diff, 0.);
     }
-
     #[test]
-    fn test_2d_1() {
-        let mut a = OwnedMatrixDyn::from_vec(vec![1., 2., 3., 4., 5., 6.], [2, 3]);
-        a.map_axis_mut(1, |m| {
-            let mut m = m;
-            let ans = OwnedMatrixDyn::from_vec(vec![3., 2., 1.], [3]);
-            CopyFrom::copy_from(&mut m, &ans.to_view());
+    fn test_2d_0_cpu() {
+        test_2d_0::<crate::device::cpu::Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn test_2d_0_cuda() {
+        test_2d_0::<crate::device::nvidia::Nvidia>();
+    }
+
+    fn test_2d_1<D: Device>() {
+        let mut a = Matrix::<Owned<f32>, DimDyn, D>::from_vec(vec![1., 2., 3., 4., 5., 6.], [2, 3]);
+        a.to_ref_mut().map_axis_mut(1, |m| {
+            let ans = Matrix::<Owned<f32>, DimDyn, D>::from_vec(vec![3., 2., 1.], [3]);
+            m.copy_from(&ans);
         });
 
-        let ans = OwnedMatrixDyn::from_vec(vec![3., 2., 1., 3., 2., 1.], [2, 3]);
-        let diff = ans.to_view() - a.to_view();
+        let ans = Matrix::<Owned<f32>, DimDyn, D>::from_vec(vec![3., 2., 1., 3., 2., 1.], [2, 3]);
+        let diff = ans - a;
         let diff = diff.asum();
         assert_eq!(diff, 0.);
     }
-
     #[test]
-    fn test_3d_0() {
-        let mut a = OwnedMatrixDyn::from_vec(
+    fn test_2d_1_cpu() {
+        test_2d_1::<crate::device::cpu::Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn test_2d_1_cuda() {
+        test_2d_1::<crate::device::nvidia::Nvidia>();
+    }
+
+    fn test_3d_0<D: Device>() {
+        let mut a = Matrix::<Owned<f32>, DimDyn, D>::from_vec(
             vec![1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12.],
             [2, 2, 3],
         );
 
-        a.map_axis_mut(0, |m| {
-            let mut m = m;
-            let ans = OwnedMatrixDyn::from_vec(vec![2., 1.], [2]);
-            CopyFrom::copy_from(&mut m, &ans.to_view());
+        a.to_ref_mut().map_axis_mut(0, |m| {
+            let ans = Matrix::<Owned<f32>, DimDyn, D>::from_vec(vec![2., 1.], [2]);
+            m.copy_from(&ans);
         });
 
-        let ans = OwnedMatrixDyn::from_vec(
+        let ans = Matrix::<Owned<f32>, DimDyn, D>::from_vec(
             vec![2., 2., 2., 2., 2., 2., 1., 1., 1., 1., 1., 1.],
             [2, 2, 3],
         );
 
-        let diff = ans.to_view() - a.to_view();
+        let diff = ans - a;
         let diff = diff.asum();
         assert_eq!(diff, 0.);
     }
-
     #[test]
-    fn test_3d_1() {
-        let mut a = OwnedMatrixDyn::from_vec(
+    fn test_3d_0_cpu() {
+        test_3d_0::<crate::device::cpu::Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn test_3d_0_cuda() {
+        test_3d_0::<crate::device::nvidia::Nvidia>();
+    }
+
+    fn test_3d_1<D: Device>() {
+        let mut a = Matrix::<Owned<f32>, DimDyn, D>::from_vec(
             vec![1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12.],
             [2, 2, 3],
         );
 
-        a.map_axis_mut(1, |m| {
-            let mut m = m;
-            let ans = OwnedMatrixDyn::from_vec(vec![2., 1.], [2]);
-            CopyFrom::copy_from(&mut m, &ans.to_view());
+        a.to_ref_mut().map_axis_mut(1, |m| {
+            let ans = Matrix::<Owned<f32>, DimDyn, D>::from_vec(vec![2., 1.], [2]);
+            m.copy_from(&ans);
         });
 
-        let ans = OwnedMatrixDyn::from_vec(
+        let ans = Matrix::<Owned<f32>, DimDyn, D>::from_vec(
             vec![2., 2., 2., 1., 1., 1., 2., 2., 2., 1., 1., 1.],
             [2, 2, 3],
         );
 
-        let diff = ans.to_view() - a.to_view();
+        let diff = ans - a;
         let diff = diff.asum();
         assert_eq!(diff, 0.);
     }
-
     #[test]
-    fn test_3d_2() {
-        let mut a = OwnedMatrixDyn::from_vec(
+    fn test_3d_1_cpu() {
+        test_3d_1::<crate::device::cpu::Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn test_3d_1_cuda() {
+        test_3d_1::<crate::device::nvidia::Nvidia>();
+    }
+
+    fn test_3d_2<D: Device>() {
+        let mut a = Matrix::<Owned<f32>, DimDyn, D>::from_vec(
             vec![1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12.],
             [2, 2, 3],
         );
 
-        a.map_axis_mut(2, |m| {
-            let mut m = m;
-            let ans = OwnedMatrixDyn::from_vec(vec![3., 2., 1.], [3]);
-            CopyFrom::copy_from(&mut m, &ans.to_view());
+        a.to_ref_mut().map_axis_mut(2, |m| {
+            let ans = Matrix::<Owned<f32>, DimDyn, D>::from_vec(vec![3., 2., 1.], [3]);
+            m.copy_from(&ans);
         });
 
-        let ans = OwnedMatrixDyn::from_vec(
+        let ans = Matrix::<Owned<f32>, DimDyn, D>::from_vec(
             vec![3., 2., 1., 3., 2., 1., 3., 2., 1., 3., 2., 1.],
             [2, 2, 3],
         );
 
-        let diff = ans.to_view() - a.to_view();
+        let diff = ans - a;
         let diff = diff.asum();
         assert_eq!(diff, 0.);
+    }
+    #[test]
+    fn test_3d_2_cpu() {
+        test_3d_2::<crate::device::cpu::Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn test_3d_2_cuda() {
+        test_3d_2::<crate::device::nvidia::Nvidia>();
     }
 }

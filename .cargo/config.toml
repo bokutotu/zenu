@@ -1,5 +1,2 @@
 [env]
 RUST_TEST_THREADS = "1"
-
-[build]
-rustflags = ["--cfg", "feature=\"nvidia\""]

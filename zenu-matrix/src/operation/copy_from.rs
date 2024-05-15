@@ -1,33 +1,71 @@
 use crate::{
-    blas::Blas,
+    device::{cpu::Cpu, DeviceBase},
     dim::{DimDyn, DimTrait},
-    matrix::{AsMutPtr, AsPtr, MatrixBase, ToViewMatrix, ToViewMutMatrix},
-    matrix_impl::Matrix,
-    memory::{Memory, ToViewMemory, ToViewMutMemory},
-    memory_impl::{ViewMem, ViewMutMem},
+    matrix::{Matrix, Ref, Repr},
     num::Num,
     shape_stride::ShapeStride,
 };
 
-pub trait CopyFrom<RHS>: ToViewMutMatrix
-where
-    RHS: ToViewMatrix,
-{
-    fn copy_from(&mut self, rhs: &RHS);
+pub trait CopyBlas: DeviceBase {
+    fn copy_raw<T: Num>(n: usize, x: *const T, incx: usize, y: *mut T, incy: usize);
 }
 
-impl<T, V, VM> CopyFrom<Matrix<V, DimDyn>> for Matrix<VM, DimDyn>
-where
-    T: Num,
-    VM: ToViewMutMemory<Item = T>,
-    V: ToViewMemory<Item = T>,
-{
-    fn copy_from(&mut self, rhs: &Matrix<V, DimDyn>) {
-        assert_eq!(self.shape().slice(), rhs.shape().slice(), "Shape mismatch");
-        copy(self.to_view_mut(), rhs.to_view());
+impl CopyBlas for Cpu {
+    fn copy_raw<T: Num>(n: usize, x: *const T, incx: usize, y: *mut T, incy: usize) {
+        extern crate openblas_src;
+        use cblas::*;
+        if T::is_f32() {
+            let x = unsafe { std::slice::from_raw_parts(x as *const f32, n * incx) };
+            let y = unsafe { std::slice::from_raw_parts_mut(y as *mut f32, n * incy) };
+            unsafe {
+                scopy(
+                    n.try_into().unwrap(),
+                    x,
+                    incx.try_into().unwrap(),
+                    y,
+                    incy.try_into().unwrap(),
+                )
+            }
+        } else {
+            let x = unsafe { std::slice::from_raw_parts(x as *const f64, n * incx) };
+            let y = unsafe { std::slice::from_raw_parts_mut(y as *mut f64, n * incy) };
+            unsafe {
+                dcopy(
+                    n.try_into().unwrap(),
+                    x,
+                    incx.try_into().unwrap(),
+                    y,
+                    incy.try_into().unwrap(),
+                )
+            }
+        }
     }
 }
 
+#[cfg(feature = "nvidia")]
+use crate::device::nvidia::Nvidia;
+
+#[cfg(feature = "nvidia")]
+impl CopyBlas for Nvidia {
+    fn copy_raw<T: Num>(n: usize, x: *const T, incx: usize, y: *mut T, incy: usize) {
+        zenu_cuda::cublas::cublas_copy(n, x, incx, y, incy).unwrap();
+    }
+}
+
+pub fn copy_unchecked<T, SA, SB, RB, D>(x: Matrix<Ref<&T>, SA, D>, y: Matrix<Ref<&mut T>, SB, D>)
+where
+    T: Num,
+    SA: DimTrait,
+    SB: DimTrait,
+    D: CopyBlas,
+{
+    let n = x.shape()[0];
+    let incx = x.stride()[0];
+    let incy = y.stride()[0];
+    let x = x.as_ptr();
+    let y = y.as_mut_ptr();
+    D::copy_raw(n, x, incx, y, incy);
+}
 fn get_max_shape_idx_of_apply_blas(a: ShapeStride<DimDyn>, b: ShapeStride<DimDyn>) -> usize {
     let min_len = std::cmp::min(a.shape().len(), b.shape().len());
     let a_len = a.shape().len();
@@ -165,11 +203,13 @@ impl Iterator for PointerOffsetIter {
     }
 }
 
-fn copy<T: Num>(mut to: Matrix<ViewMutMem<T>, DimDyn>, source: Matrix<ViewMem<T>, DimDyn>) {
+fn copy<T: Num, D: DeviceBase + CopyBlas>(
+    to: Matrix<Ref<&mut T>, DimDyn, D>,
+    source: Matrix<Ref<&T>, DimDyn, D>,
+) {
     if to.shape().is_empty() {
-        unsafe {
-            to.as_mut_ptr().write(source.as_ptr().read());
-        }
+        let source_value = source.index_item([]);
+        to.index_item_assign([], source_value);
         return;
     }
 
@@ -198,7 +238,7 @@ fn copy<T: Num>(mut to: Matrix<ViewMutMem<T>, DimDyn>, source: Matrix<ViewMem<T>
     for (to_offset, source_offset) in iter {
         let to_ptr = unsafe { to_ptr.add(to_offset) };
         let source_ptr = unsafe { source_ptr.add(source_offset) };
-        <ViewMutMem<T> as Memory>::Blas::copy(
+        D::copy_raw(
             to_blas_num_elm_,
             source_ptr,
             source_stride_,
@@ -208,163 +248,41 @@ fn copy<T: Num>(mut to: Matrix<ViewMutMem<T>, DimDyn>, source: Matrix<ViewMem<T>
     }
 }
 
+impl<T, SA, D> Matrix<Ref<&mut T>, SA, D>
+where
+    T: Num,
+    SA: DimTrait,
+    D: DeviceBase + CopyBlas,
+{
+    pub fn copy_from<R: Repr<Item = T>, SB: DimTrait>(&self, source: &Matrix<R, SB, D>) {
+        copy(self.clone().into_dyn_dim(), source.to_ref().into_dyn_dim());
+    }
+}
+
 #[cfg(test)]
 mod deep_copy {
     use super::*;
     use crate::{
-        matrix::{
-            IndexItem, MatrixSlice, MatrixSliceMut, OwnedMatrix, ToViewMatrix, ToViewMutMatrix,
-        },
-        matrix_impl::{OwnedMatrix1D, OwnedMatrix2D},
+        device::cpu::Cpu,
+        dim::{Dim1, Dim2},
+        matrix::Owned,
         slice,
     };
 
-    // #[test]
-    // fn get_all_blas_opset_stride_2d_2d() {
-    //     let a = DimDyn::from(&[2, 3]);
-    //     let b = DimDyn::from(&[2, 3]);
-    //     let b_stride = DimDyn::from(&[3, 1]);
-    //     let a_stride = DimDyn::from(&[3, 1]);
-    //     let a_shape_stride = ShapeStride::new(a, a_stride);
-    //     let b_shape_stride = ShapeStride::new(b, b_stride);
-    //     let result = PointerOffsetIter::new(a_shape_stride, b_shape_stride).collect::<Vec<_>>();
-    //     assert_eq!(result, vec![(0, 0)]);
-    // }
-    //
-    // #[test]
-    // fn get_all_blas_opset_stride_2d_1d() {
-    //     let a = DimDyn::from(&[2, 3]);
-    //     let b = DimDyn::from(&[3]);
-    //     let b_stride = DimDyn::from(&[1]);
-    //     let a_stride = DimDyn::from(&[3, 1]);
-    //     let a_shape_stride = ShapeStride::new(a, a_stride);
-    //     let b_shape_stride = ShapeStride::new(b, b_stride);
-    //     let mut result = PointerOffsetIter::new(a_shape_stride, b_shape_stride).collect::<Vec<_>>();
-    //     result.sort_by(|a, b| a.0.cmp(&b.0));
-    //     assert_eq!(result, vec![(0, 0), (3, 0)]);
-    // }
-    //
-    // #[test]
-    // fn get_all_blas_opset_stride_2d_2d_sliced() {
-    //     let a = DimDyn::from(&[2, 3]);
-    //     let b = DimDyn::from(&[2, 3]);
-    //     let a_stride = DimDyn::from(&[9, 2]);
-    //     let b_stride = DimDyn::from(&[15, 3]);
-    //     let a_shape_stride = ShapeStride::new(a, a_stride);
-    //     let b_shape_stride = ShapeStride::new(b, b_stride);
-    //     let result = PointerOffsetIter::new(a_shape_stride, b_shape_stride).collect::<Vec<_>>();
-    //     assert_eq!(result, vec![(0, 0), (9, 15)]);
-    // }
-    //
-    // #[test]
-    // fn get_all_blas_opse_stride_3d_3d() {
-    //     let a = DimDyn::from(&[2, 3, 4]);
-    //     let b = DimDyn::from(&[2, 3, 4]);
-    //     let a_stride = DimDyn::from(&[12, 4, 1]);
-    //     let b_stride = DimDyn::from(&[12, 4, 1]);
-    //     let a_shape_stride = ShapeStride::new(a, a_stride);
-    //     let b_shape_stride = ShapeStride::new(b, b_stride);
-    //     let result = PointerOffsetIter::new(a_shape_stride, b_shape_stride).collect::<Vec<_>>();
-    //     assert_eq!(result, vec![(0, 0)]);
-    // }
-    //
-    // #[test]
-    // fn get_all_blas_offset_stride_3d_2d() {
-    //     let a = DimDyn::from(&[2, 3, 4]);
-    //     let b = DimDyn::from(&[3, 4]);
-    //     let a_stride = DimDyn::from(&[12, 4, 1]);
-    //     let b_stride = DimDyn::from(&[4, 1]);
-    //     let a_shape_stride = ShapeStride::new(a, a_stride);
-    //     let b_shape_stride = ShapeStride::new(b, b_stride);
-    //     let result = PointerOffsetIter::new(a_shape_stride, b_shape_stride).collect::<Vec<_>>();
-    //     assert_eq!(result, vec![(0, 0), (12, 0)]);
-    // }
-    //
-    // #[test]
-    // fn get_all_blas_offset_stride_3d_2d_sliced() {
-    //     let a = DimDyn::from(&[2, 3, 4]);
-    //     let b = DimDyn::from(&[3, 4]);
-    //     let a_stride = DimDyn::from(&[36, 8, 1]);
-    //     let b_stride = DimDyn::from(&[9, 1]);
-    //     let a_shape_stride = ShapeStride::new(a, a_stride);
-    //     let b_shape_stride = ShapeStride::new(b, b_stride);
-    //     let result = PointerOffsetIter::new(a_shape_stride, b_shape_stride).collect::<Vec<_>>();
-    //     assert_eq!(
-    //         result,
-    //         vec![(0, 0), (8, 9), (16, 18), (36, 0), (44, 9), (52, 18),]
-    //     );
-    // }
-    //
-    // #[test]
-    // fn get_all_blas_offset_stride_3d_2d_sliced_transposed() {
-    //     let a = DimDyn::from(&[2, 3, 4]);
-    //     let b = DimDyn::from(&[3, 4]);
-    //     let a_stride = DimDyn::from(&[12, 4, 1]);
-    //     let b_stride = DimDyn::from(&[1, 3]);
-    //     let a_shape_stride = ShapeStride::new(a, a_stride);
-    //     let b_shape_stride = ShapeStride::new(b, b_stride);
-    //     let result = PointerOffsetIter::new(a_shape_stride, b_shape_stride).collect::<Vec<_>>();
-    //     assert_eq!(
-    //         result,
-    //         vec![(0, 0), (4, 1), (8, 2), (12, 0), (16, 1), (20, 2)]
-    //     );
-    // }
-    //
-    // #[test]
-    // fn get_all_blas_offset_stride_4d_4d_swap_index() {
-    //     // 元が4, 2, 3, 5で2, 0, 1, 3でトランスポーズ
-    //     let a = DimDyn::from(&[2, 3, 4, 5]);
-    //     let b = DimDyn::from(&[2, 3, 4, 5]);
-    //     let a_stride = DimDyn::from(&[15, 5, 30, 1]);
-    //     let b_stride = DimDyn::from(&[60, 20, 5, 1]);
-    //     let result =
-    //         PointerOffsetIter::new(ShapeStride::new(a, a_stride), ShapeStride::new(b, b_stride))
-    //             .collect::<Vec<_>>();
-    //     assert_eq!(
-    //         result,
-    //         vec![
-    //             (0, 0),
-    //             (30, 5),
-    //             (60, 10),
-    //             (90, 15),
-    //             (5, 20),
-    //             (35, 25),
-    //             (65, 30),
-    //             (95, 35),
-    //             (10, 40),
-    //             (40, 45),
-    //             (70, 50),
-    //             (100, 55),
-    //             (15, 60),
-    //             (45, 65),
-    //             (75, 70),
-    //             (105, 75),
-    //             (20, 80),
-    //             (50, 85),
-    //             (80, 90),
-    //             (110, 95),
-    //             (25, 100),
-    //             (55, 105),
-    //             (85, 110),
-    //             (115, 115)
-    //         ]
-    //     );
-    // }
+    #[cfg(feature = "nvidia")]
+    use crate::device::nvidia::Nvidia;
 
-    #[test]
-    fn default_stride_1d() {
+    // #[test]
+    fn default_stride_1d<D: CopyBlas>() {
         let a = vec![0f32; 6];
         let b = vec![1f32, 2., 3., 4., 5., 6.];
 
-        let mut a = OwnedMatrix1D::from_vec(a, [6]);
-        let b = OwnedMatrix1D::from_vec(b, [6]);
+        let mut a: Matrix<Owned<f32>, Dim1, D> = Matrix::from_vec(a, [6]);
+        let b: Matrix<Owned<f32>, Dim1, D> = Matrix::from_vec(b, [6]);
 
-        let a_view_mut = a.to_view_mut();
+        let a_view_mut = a.to_ref_mut();
 
-        a_view_mut
-            .into_dyn_dim()
-            .to_view_mut()
-            .copy_from(&b.to_view().into_dyn_dim());
+        a_view_mut.into_dyn_dim().copy_from(&b.into_dyn_dim());
 
         assert_eq!(a.index_item([0]), 1.);
         assert_eq!(a.index_item([1]), 2.);
@@ -373,16 +291,24 @@ mod deep_copy {
         assert_eq!(a.index_item([4]), 5.);
         assert_eq!(a.index_item([5]), 6.);
     }
-
     #[test]
-    fn sliced_1d() {
+    fn default_stride_1d_cpu() {
+        default_stride_1d::<Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn default_stride_1d_nvidia() {
+        default_stride_1d::<Nvidia>();
+    }
+
+    fn sliced_1d<D: CopyBlas>() {
         let a = vec![0f32; 6];
         let v = vec![0f32, 1., 2., 3., 4., 5.];
 
-        let mut a = OwnedMatrix1D::from_vec(a.clone(), [6]);
-        let v = OwnedMatrix1D::from_vec(v, [6]);
+        let mut a: Matrix<Owned<f32>, Dim1, D> = Matrix::from_vec(a.clone(), [6]);
+        let v: Matrix<Owned<f32>, Dim1, D> = Matrix::from_vec(v, [6]);
 
-        let a_sliced = a.slice_mut(slice!(..;2));
+        let a_sliced = a.to_ref_mut().slice_mut(slice!(..;2));
         let v_sliced = v.slice(slice!(0..3));
 
         a_sliced.into_dyn_dim().copy_from(&v_sliced.into_dyn_dim());
@@ -393,21 +319,26 @@ mod deep_copy {
         assert_eq!(a.index_item([4]), 2.);
         assert_eq!(a.index_item([5]), 0.);
     }
-
     #[test]
-    fn defualt_stride_2d() {
+    fn sliced_1d_cpu() {
+        sliced_1d::<Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn sliced_1d_nvidia() {
+        sliced_1d::<Nvidia>();
+    }
+
+    fn defualt_stride_2d<D: CopyBlas>() {
         let a = vec![0f32; 6];
         let b = vec![1f32, 2., 3., 4., 5., 6.];
 
-        let mut a = OwnedMatrix2D::from_vec(a, [2, 3]);
-        let b = OwnedMatrix2D::from_vec(b, [2, 3]);
+        let mut a: Matrix<Owned<f32>, Dim2, D> = Matrix::from_vec(a, [2, 3]);
+        let b: Matrix<Owned<f32>, Dim2, D> = Matrix::from_vec(b, [2, 3]);
 
-        let a_view_mut = a.to_view_mut();
+        let a_view_mut = a.to_ref_mut();
 
-        a_view_mut
-            .into_dyn_dim()
-            .to_view_mut()
-            .copy_from(&b.to_view().into_dyn_dim());
+        a_view_mut.into_dyn_dim().copy_from(&b.into_dyn_dim());
 
         assert_eq!(a.index_item([0, 0]), 1.);
         assert_eq!(a.index_item([0, 1]), 2.);
@@ -416,15 +347,24 @@ mod deep_copy {
         assert_eq!(a.index_item([1, 1]), 5.);
         assert_eq!(a.index_item([1, 2]), 6.);
     }
-
     #[test]
-    fn sliced_2d() {
+    fn defualt_stride_2d_cpu() {
+        defualt_stride_2d::<Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn defualt_stride_2d_nvidia() {
+        defualt_stride_2d::<Nvidia>();
+    }
+
+    fn sliced_2d<D: CopyBlas>() {
         let a = vec![0f32; 12];
         let v = vec![0f32, 1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11.];
-        let mut a = OwnedMatrix2D::from_vec(a.clone(), [3, 4]);
-        let v = OwnedMatrix2D::from_vec(v, [3, 4]);
 
-        let a_sliced = a.slice_mut(slice!(0..2, 0..3));
+        let mut a: Matrix<Owned<f32>, Dim2, D> = Matrix::from_vec(a.clone(), [3, 4]);
+        let v: Matrix<Owned<f32>, Dim2, D> = Matrix::from_vec(v, [3, 4]);
+
+        let a_sliced = a.to_ref_mut().slice_mut(slice!(0..2, 0..3));
         let v_sliced = v.slice(slice!(1..3, 1..4));
 
         a_sliced.into_dyn_dim().copy_from(&v_sliced.into_dyn_dim());
@@ -436,5 +376,14 @@ mod deep_copy {
         assert_eq!(a.index_item([1, 1]), 10.);
         assert_eq!(a.index_item([1, 2]), 11.);
         assert_eq!(a.index_item([2, 3]), 0.);
+    }
+    #[test]
+    fn sliced_2d_cpu() {
+        sliced_2d::<Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn sliced_2d_nvidia() {
+        sliced_2d::<Nvidia>();
     }
 }

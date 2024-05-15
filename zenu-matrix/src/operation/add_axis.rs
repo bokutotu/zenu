@@ -1,11 +1,11 @@
-use crate::{dim::DimDyn, matrix::MatrixBase, matrix_impl::Matrix, memory::Memory};
+use crate::{
+    device::Device,
+    dim::DimDyn,
+    matrix::{Matrix, Repr},
+};
 
-pub trait MatrixAddAxis {
-    fn add_axis(&mut self, axis: usize);
-}
-
-impl<M: Memory> MatrixAddAxis for Matrix<M, DimDyn> {
-    fn add_axis(&mut self, axis: usize) {
+impl<R: Repr, D: Device> Matrix<R, DimDyn, D> {
+    pub fn add_axis(&mut self, axis: usize) {
         let shape_stride = self.shape_stride();
         let shape_stride = shape_stride.add_axis(axis);
         self.update_shape(shape_stride.shape());
@@ -16,20 +16,27 @@ impl<M: Memory> MatrixAddAxis for Matrix<M, DimDyn> {
 #[cfg(test)]
 mod add_axis {
     use crate::{
-        dim::DimTrait,
-        matrix::{MatrixBase, OwnedMatrix, ToViewMatrix},
-        matrix_impl::OwnedMatrixDyn,
-        operation::{add_axis::MatrixAddAxis, asum::Asum},
+        device::Device,
+        dim::{DimDyn, DimTrait},
+        matrix::{Matrix, Owned},
     };
 
-    #[test]
-    fn test() {
-        let mut a = OwnedMatrixDyn::from_vec(vec![1., 2., 3., 4.], &[2, 2]);
+    fn test<D: Device>() {
+        let mut a: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(vec![1., 2., 3., 4.], &[2, 2]);
         a.add_axis(0);
         assert_eq!(a.shape().slice(), [1, 2, 2]);
-        let ans = OwnedMatrixDyn::from_vec(vec![1., 2., 3., 4.], &[1, 2, 2]);
-        let diff = a.to_view() - ans.to_view();
+        let ans: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(vec![1., 2., 3., 4.], &[1, 2, 2]);
+        let diff = a.to_ref() - ans.to_ref();
         let diff = diff.asum();
         assert_eq!(diff, 0.);
+    }
+    #[test]
+    fn cpu() {
+        test::<crate::device::cpu::Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn nvidia() {
+        test::<crate::device::nvidia::Nvidia>();
     }
 }
