@@ -16,7 +16,7 @@ pub fn relu<T: 'static>(
             relu_float(
                 input as *mut f32,
                 output as *mut f32,
-                alpha as f32,
+                alpha,
                 size as ::libc::c_int,
                 input_stride as ::libc::c_int,
                 output_stride as ::libc::c_int,
@@ -28,7 +28,7 @@ pub fn relu<T: 'static>(
             relu_double(
                 input as *mut f64,
                 output as *mut f64,
-                alpha as f64,
+                alpha,
                 size as ::libc::c_int,
                 input_stride as ::libc::c_int,
                 output_stride as ::libc::c_int,

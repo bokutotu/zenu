@@ -29,6 +29,7 @@ pub trait ReluOps {
 }
 
 impl ReluOps for Cpu {
+    #[allow(clippy::not_unsafe_ptr_arg_deref)]
     fn relu<T: Num>(
         input: *const T,
         output: *mut T,
@@ -38,8 +39,6 @@ impl ReluOps for Cpu {
         output_stride: usize,
     ) {
         unsafe {
-            let input = input as *const T;
-            let output = output as *mut T;
             if input_stride == 1 && output_stride == 1 {
                 for i in 0..size {
                     *output.add(i) = if *input.add(i) > T::zero() {
@@ -60,6 +59,7 @@ impl ReluOps for Cpu {
         }
     }
 
+    #[allow(clippy::not_unsafe_ptr_arg_deref)]
     fn relu_backward_mask<T: Num>(
         input: *const T,
         mask: *mut T,
@@ -69,8 +69,6 @@ impl ReluOps for Cpu {
         mask_stride: usize,
     ) {
         unsafe {
-            let input = input as *const T;
-            let mask = mask as *mut T;
             if input_stride == 1 && mask_stride == 1 {
                 for i in 0..size {
                     *mask.add(i) = if *input.add(i) > T::zero() {

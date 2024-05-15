@@ -123,7 +123,7 @@ impl<T: Num, D: Device> MatrixIter<T, D> for Matrix<Ref<&mut T>, DimDyn, D> {
         F: FnMut(Matrix<Ref<&mut T>, DimDyn, D>),
     {
         let mut ans = Matrix::<_, DimDyn, D>::zeros(self.shape());
-        ans.to_ref_mut().copy_from(&self);
+        ans.to_ref_mut().copy_from(self);
         ans.to_ref_mut().map_axis_mut(axis, fn_map);
         ans
     }
