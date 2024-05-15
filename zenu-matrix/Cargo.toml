@@ -43,3 +43,8 @@ harness = false
 
 [profile.bench]
 debug = true
+
+# TODO: integrate to workspace level
+[lints.clippy]
+print_stdout = "deny"
+dbg_macro = "deny"
