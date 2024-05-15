@@ -10,6 +10,7 @@ use crate::{
 };
 
 pub trait Gemm: DeviceBase {
+    #[allow(clippy::too_many_arguments)]
     fn gemm_unchecked<T: Num>(
         transa: BlasTrans,
         transb: BlasTrans,

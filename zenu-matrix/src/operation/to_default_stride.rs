@@ -9,7 +9,7 @@ impl<R: Repr, S: DimTrait, D: Device> Matrix<R, S, D> {
         let mut output: Matrix<Owned<R::Item>, S, D> = Matrix::zeros_like(self);
         {
             let output_view_mut = output.to_ref_mut();
-            output_view_mut.copy_from(&self);
+            output_view_mut.copy_from(self);
         }
         output
     }

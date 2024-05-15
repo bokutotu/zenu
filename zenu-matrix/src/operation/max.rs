@@ -23,11 +23,11 @@ impl MaxIdx for Cpu {
 
         if TypeId::of::<T>() == TypeId::of::<f32>() {
             let input = input as *const f32;
-            let input = unsafe { std::slice::from_raw_parts(input as *const f32, size * stride) };
+            let input = unsafe { std::slice::from_raw_parts(input, size * stride) };
             unsafe { isamax(size as i32, input, stride as i32) as usize }
         } else if TypeId::of::<T>() == TypeId::of::<f64>() {
             let input = input as *const f64;
-            let input = unsafe { std::slice::from_raw_parts(input as *const f64, size * stride) };
+            let input = unsafe { std::slice::from_raw_parts(input, size * stride) };
             unsafe { idamax(size as i32, input, stride as i32) as usize }
         } else {
             panic!("Unsupported type");

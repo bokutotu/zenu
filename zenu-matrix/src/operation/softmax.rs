@@ -11,7 +11,7 @@ impl<T: Num, D: Device> Matrix<Ref<&mut T>, DimDyn, D> {
         if axis >= self.shape().len() {
             panic!("axis must be less than the number of dimensions");
         }
-        self.copy_from(&source);
+        self.copy_from(source);
         if self.shape().len() == 1 {
             softmax_kernel(self.clone());
         } else {
