@@ -1,7 +1,7 @@
 use crate::{
     device::{cpu::Cpu, DeviceBase},
     dim::{DimDyn, DimTrait},
-    matrix::{Matrix, Ref},
+    matrix::{Matrix, Ref, Repr},
     num::Num,
     shape_stride::ShapeStride,
 };
@@ -254,8 +254,8 @@ where
     SA: DimTrait,
     D: DeviceBase + CopyBlas,
 {
-    pub fn copy_from<SB: DimTrait>(&self, source: Matrix<Ref<&T>, SB, D>) {
-        copy(self.clone().into_dyn_dim(), source.into_dyn_dim());
+    pub fn copy_from<R: Repr<Item = T>, SB: DimTrait>(&self, source: &Matrix<R, SB, D>) {
+        copy(self.clone().into_dyn_dim(), source.to_ref().into_dyn_dim());
     }
 }
 
@@ -282,9 +282,7 @@ mod deep_copy {
 
         let a_view_mut = a.to_ref_mut();
 
-        a_view_mut
-            .into_dyn_dim()
-            .copy_from(b.to_ref().into_dyn_dim());
+        a_view_mut.into_dyn_dim().copy_from(&b.into_dyn_dim());
 
         assert_eq!(a.index_item([0]), 1.);
         assert_eq!(a.index_item([1]), 2.);
@@ -313,7 +311,7 @@ mod deep_copy {
         let a_sliced = a.to_ref_mut().slice_mut(slice!(..;2));
         let v_sliced = v.slice(slice!(0..3));
 
-        a_sliced.into_dyn_dim().copy_from(v_sliced.into_dyn_dim());
+        a_sliced.into_dyn_dim().copy_from(&v_sliced.into_dyn_dim());
         assert_eq!(a.index_item([0]), 0.);
         assert_eq!(a.index_item([1]), 0.);
         assert_eq!(a.index_item([2]), 1.);
@@ -340,9 +338,7 @@ mod deep_copy {
 
         let a_view_mut = a.to_ref_mut();
 
-        a_view_mut
-            .into_dyn_dim()
-            .copy_from(b.to_ref().into_dyn_dim());
+        a_view_mut.into_dyn_dim().copy_from(&b.into_dyn_dim());
 
         assert_eq!(a.index_item([0, 0]), 1.);
         assert_eq!(a.index_item([0, 1]), 2.);
@@ -371,7 +367,7 @@ mod deep_copy {
         let a_sliced = a.to_ref_mut().slice_mut(slice!(0..2, 0..3));
         let v_sliced = v.slice(slice!(1..3, 1..4));
 
-        a_sliced.into_dyn_dim().copy_from(v_sliced.into_dyn_dim());
+        a_sliced.into_dyn_dim().copy_from(&v_sliced.into_dyn_dim());
         assert_eq!(a.index_item([0, 0]), 5.);
         assert_eq!(a.index_item([0, 1]), 6.);
         assert_eq!(a.index_item([0, 2]), 7.);

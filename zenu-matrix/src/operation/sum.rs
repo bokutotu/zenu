@@ -85,7 +85,7 @@ pub fn sum_to<T: Num, D: Device>(
     let diff_len = source.shape().len() - target.shape().len();
     if diff_len == 0 {
         let target = target;
-        target.copy_from(source);
+        target.copy_from(&source);
         return;
     }
 
@@ -96,7 +96,7 @@ pub fn sum_to<T: Num, D: Device>(
     if diff_len == 1 {
         let target = target;
         let ans = source.sum(0, false);
-        target.copy_from(ans.to_ref());
+        target.copy_from(&ans);
     } else {
         sum_to(source.sum(0, false).to_ref(), target);
     }

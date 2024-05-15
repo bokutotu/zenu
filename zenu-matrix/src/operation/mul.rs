@@ -25,12 +25,6 @@ pub trait Gemm: DeviceBase {
         c: *mut T,
         ldc: usize,
     );
-
-    // fn gemm_shape_check<SA: DimTrait, SB: DimTrait, SC: DimTrait>(
-    //     a: ShapeStride<SA>,
-    //     b: ShapeStride<SB>,
-    //     c: ShapeStride<SC>,
-    // ) -> Result<(), String>;
 }
 
 fn from_trans(value: BlasTrans) -> Transpose {
@@ -145,9 +139,7 @@ impl Gemm for Nvidia {
         let lda = lda as i32;
         let ldb = ldb as i32;
         let ldc = ldc as i32;
-        unsafe {
-            cublas_gemm::<T>(transb, transa, n, m, k, alpha, b, ldb, a, lda, beta, c, ldc).unwrap();
-        }
+        cublas_gemm::<T>(transb, transa, n, m, k, alpha, b, ldb, a, lda, beta, c, ldc).unwrap();
     }
 }
 

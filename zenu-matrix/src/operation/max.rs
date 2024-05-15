@@ -3,7 +3,7 @@ use std::any::TypeId;
 use crate::{
     device::{cpu::Cpu, Device, DeviceBase},
     dim::{DimDyn, DimTrait},
-    matrix::{Matrix, Ref},
+    matrix::{Matrix, Repr},
     num::Num,
 };
 
@@ -45,7 +45,7 @@ impl MaxIdx for Nvidia {
     }
 }
 
-impl<T: Num, D: Device> Matrix<Ref<&T>, DimDyn, D> {
+impl<T: Num, R: Repr<Item = T>, D: Device> Matrix<R, DimDyn, D> {
     pub fn max_idx(&self) -> DimDyn {
         let default_stride = self.to_default_stride();
         let idx = <D as MaxIdx>::max_idx(
@@ -56,7 +56,7 @@ impl<T: Num, D: Device> Matrix<Ref<&T>, DimDyn, D> {
         default_stride.shape_stride().get_dim_by_offset(idx)
     }
 
-    pub fn max(&self) -> T {
+    pub fn max_item(&self) -> T {
         let idx = self.max_idx();
         self.index_item(idx)
     }
