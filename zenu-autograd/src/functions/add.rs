@@ -66,6 +66,7 @@ mod add {
         dim::DimDyn,
         matrix::{Matrix, Owned},
     };
+    use zenu_matrix_test::{assert_val_eq, assert_val_eq_grad, run_test};
 
     use crate::Variable;
 
@@ -76,34 +77,13 @@ mod add {
         let y_val = Variable::new(y);
         let z = x_val.clone() + y_val.clone();
         z.backward();
-        let z_data = z.get_data();
         let ans: Matrix<Owned<f32>, DimDyn, D> = Matrix::ones([20, 100, 200]).to_ref() * 2.0;
-        let diff = z_data.to_ref() - ans.to_ref();
-        let diff_sum = diff.asum();
-        assert!(diff_sum < 1e-6);
+        assert_val_eq!(z, ans, 1e-6);
 
-        x_val.with_grad_data(|grad| {
-            let grad = grad.to_ref();
-            let ans: Matrix<Owned<f32>, DimDyn, D> = Matrix::ones([100, 200]).to_ref() * 20.;
-            let diff = grad - ans.to_ref();
-            let diff_sum = diff.asum();
-            assert!(diff_sum < 1e-6);
-        });
-        y_val.with_grad_data(|grad| {
-            let grad = grad.to_ref();
-            let ans: Matrix<Owned<f32>, DimDyn, D> = Matrix::ones([20, 100, 200]);
-            let diff = grad - ans.to_ref();
-            let diff_sum = diff.asum();
-            assert!(diff_sum < 1e-6);
-        });
+        let x_grad_ans = Matrix::<_, DimDyn, _>::ones([100, 200]).to_ref() * 20.;
+        let y_grad_ans = Matrix::<_, DimDyn, _>::ones([20, 100, 200]);
+        assert_val_eq_grad!(x_val, x_grad_ans, 1e-6);
+        assert_val_eq_grad!(y_val, y_grad_ans, 1e-6);
     }
-    #[test]
-    fn add_cpu() {
-        add::<zenu_matrix::device::cpu::Cpu>();
-    }
-    #[cfg(feature = "nvidia")]
-    #[test]
-    fn add_cuda() {
-        add::<zenu_matrix::device::nvidia::Nvidia>();
-    }
+    run_test!(add, add_cpu, add_gpu);
 }

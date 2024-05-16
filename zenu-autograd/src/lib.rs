@@ -11,7 +11,7 @@ use std::{
     sync::Mutex,
 };
 
-use creator::{ones::ones, zeros::zeros};
+use creator::ones::ones;
 use lazy_static::lazy_static;
 use zenu_matrix::{
     device::Device,
