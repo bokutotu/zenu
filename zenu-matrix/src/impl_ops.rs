@@ -1,11 +1,10 @@
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign};
 
 use crate::{
-    device::DeviceBase,
+    device::Device,
     dim::{larger_shape, DimDyn, DimTrait},
     matrix::{Matrix, Owned, Ref, Repr},
     num::Num,
-    operation::basic_operations::{AddOps, DivOps, MulOps, SubOps},
 };
 
 macro_rules! call_on_self {
@@ -15,11 +14,18 @@ macro_rules! call_on_self {
 }
 
 macro_rules! impl_arithmetic_ops {
-    ($trait:ident, $trait_method:ident, $assign_trait:ident, $assign_trait_method:ident, $device_trait:ident, $scalr:ident, $scalar_assign:ident, $array:ident, $array_assign:ident) => {
+    (
+        $trait:ident, 
+        $trait_method:ident, 
+        $assign_trait:ident, 
+        $assign_trait_method:ident, 
+        $scalr:ident, 
+        $scalar_assign:ident, 
+        $array:ident, 
+        $array_assign:ident
+    ) => {
         // Add<T> for Matrix<R, S, D>
-        impl<T: Num, R: Repr<Item = T>, S: DimTrait, D: DeviceBase + $device_trait> $trait<T>
-            for Matrix<R, S, D>
-        {
+        impl<T: Num, R: Repr<Item = T>, S: DimTrait, D: Device> $trait<T> for Matrix<R, S, D> {
             type Output = Matrix<Owned<T>, S, D>;
 
             fn $trait_method(self, rhs: T) -> Self::Output {
@@ -32,6 +38,19 @@ macro_rules! impl_arithmetic_ops {
             }
         }
 
+        impl<T: Num, R: Repr<Item = T>, S: DimTrait, D: Device> $trait<T> for &Matrix<R, S, D> {
+            type Output = Matrix<Owned<T>, S, D>;
+
+            fn $trait_method(self, rhs: T) -> Self::Output {
+                let mut owned = Matrix::zeros_like(self);
+                {
+                    let mut ref_mut = owned.to_ref_mut();
+                    call_on_self!(ref_mut, $scalr, self, rhs);
+                }
+                owned
+            }
+        }
+
         // Add<Matrix<RO, SO, D>> for Matrix<RS, SS, D>
         impl<
                 T: Num,
@@ -39,7 +58,7 @@ macro_rules! impl_arithmetic_ops {
                 SS: DimTrait,
                 RO: Repr<Item = T>,
                 SO: DimTrait,
-                D: DeviceBase + $device_trait,
+                D: Device,
             > $trait<Matrix<RO, SO, D>> for Matrix<RS, SS, D>
         {
             type Output = Matrix<Owned<T>, DimDyn, D>;
@@ -61,19 +80,98 @@ macro_rules! impl_arithmetic_ops {
             }
         }
 
-        // AddAssign<T> for Matrix<Ref<&mut T>, S, D>
-        impl<T: Num, S: DimTrait, D: DeviceBase + $device_trait> $assign_trait<T>
-            for Matrix<Ref<&mut T>, S, D>
+        impl<
+                T: Num,
+                RS: Repr<Item = T>,
+                SS: DimTrait,
+                RO: Repr<Item = T>,
+                SO: DimTrait,
+                D: Device,
+            > $trait<&Matrix<RO, SO, D>> for Matrix<RS, SS, D>
         {
+            type Output = Matrix<Owned<T>, DimDyn, D>;
+
+            fn $trait_method(self, rhs: &Matrix<RO, SO, D>) -> Self::Output {
+                let larger = if self.shape().len() == rhs.shape().len() {
+                    DimDyn::from(larger_shape(self.shape(), rhs.shape()))
+                } else if self.shape().len() > rhs.shape().len() {
+                    DimDyn::from(self.shape().slice())
+                } else {
+                    DimDyn::from(rhs.shape().slice())
+                };
+                let mut owned: Matrix<Owned<T>, DimDyn, D> = Matrix::zeros(larger.slice());
+                {
+                    let mut ref_mut = owned.to_ref_mut();
+                    call_on_self!(ref_mut, $array, &self, &rhs);
+                }
+                owned
+            }
+        }
+        impl<
+                T: Num,
+                RS: Repr<Item = T>,
+                SS: DimTrait,
+                RO: Repr<Item = T>,
+                SO: DimTrait,
+                D: Device,
+            > $trait<Matrix<RO, SO, D>> for &Matrix<RS, SS, D>
+        {
+            type Output = Matrix<Owned<T>, DimDyn, D>;
+
+            fn $trait_method(self, rhs: Matrix<RO, SO, D>) -> Self::Output {
+                let larger = if self.shape().len() == rhs.shape().len() {
+                    DimDyn::from(larger_shape(self.shape(), rhs.shape()))
+                } else if self.shape().len() > rhs.shape().len() {
+                    DimDyn::from(self.shape().slice())
+                } else {
+                    DimDyn::from(rhs.shape().slice())
+                };
+                let mut owned: Matrix<Owned<T>, DimDyn, D> = Matrix::zeros(larger.slice());
+                {
+                    let mut ref_mut = owned.to_ref_mut();
+                    call_on_self!(ref_mut, $array, &self, &rhs);
+                }
+                owned
+            }
+        }
+
+        impl<
+                T: Num,
+                RS: Repr<Item = T>,
+                SS: DimTrait,
+                RO: Repr<Item = T>,
+                SO: DimTrait,
+                D: Device,
+            > $trait<&Matrix<RO, SO, D>> for &Matrix<RS, SS, D>
+        {
+            type Output = Matrix<Owned<T>, DimDyn, D>;
+
+            fn $trait_method(self, rhs: &Matrix<RO, SO, D>) -> Self::Output {
+                let larger = if self.shape().len() == rhs.shape().len() {
+                    DimDyn::from(larger_shape(self.shape(), rhs.shape()))
+                } else if self.shape().len() > rhs.shape().len() {
+                    DimDyn::from(self.shape().slice())
+                } else {
+                    DimDyn::from(rhs.shape().slice())
+                };
+                let mut owned: Matrix<Owned<T>, DimDyn, D> = Matrix::zeros(larger.slice());
+                {
+                    let mut ref_mut = owned.to_ref_mut();
+                    call_on_self!(ref_mut, $array, &self, &rhs);
+                }
+                owned
+            }
+        }
+
+        // AddAssign<T> for Matrix<Ref<&mut T>, S, D>
+        impl<T: Num, S: DimTrait, D: Device> $assign_trait<T> for Matrix<Ref<&mut T>, S, D> {
             fn $assign_trait_method(&mut self, rhs: T) {
                 call_on_self!(self, $scalar_assign, rhs);
             }
         }
 
         // AddAssign<T> for Matrix<Owned<T>, S, D>
-        impl<T: Num, S: DimTrait, D: DeviceBase + $device_trait> $assign_trait<T>
-            for Matrix<Owned<T>, S, D>
-        {
+        impl<T: Num, S: DimTrait, D: Device> $assign_trait<T> for Matrix<Owned<T>, S, D> {
             fn $assign_trait_method(&mut self, rhs: T) {
                 let mut ref_mut = self.to_ref_mut();
                 call_on_self!(ref_mut, $scalar_assign, rhs);
@@ -81,13 +179,8 @@ macro_rules! impl_arithmetic_ops {
         }
 
         // AddAssign<Matrix<RO, SO, D>> for Matrix<Owned<T>, SS, D>
-        impl<
-                T: Num,
-                SS: DimTrait,
-                RO: Repr<Item = T>,
-                SO: DimTrait,
-                D: DeviceBase + $device_trait,
-            > $assign_trait<Matrix<RO, SO, D>> for Matrix<Owned<T>, SS, D>
+        impl<T: Num, SS: DimTrait, RO: Repr<Item = T>, SO: DimTrait, D: Device>
+            $assign_trait<Matrix<RO, SO, D>> for Matrix<Owned<T>, SS, D>
         {
             fn $assign_trait_method(&mut self, rhs: Matrix<RO, SO, D>) {
                 let mut ref_mut = self.to_ref_mut();
@@ -96,13 +189,8 @@ macro_rules! impl_arithmetic_ops {
         }
 
         // AddAssign<Matrix<R, SO, D>> for Matrix<Ref<&mut T>, SS, D>
-        impl<
-                T: Num,
-                R: Repr<Item = T>,
-                SO: DimTrait,
-                SS: DimTrait,
-                D: DeviceBase + $device_trait,
-            > $assign_trait<Matrix<R, SO, D>> for Matrix<Ref<&mut T>, SS, D>
+        impl<T: Num, R: Repr<Item = T>, SO: DimTrait, SS: DimTrait, D: Device>
+            $assign_trait<Matrix<R, SO, D>> for Matrix<Ref<&mut T>, SS, D>
         {
             fn $assign_trait_method(&mut self, rhs: Matrix<R, SO, D>) {
                 call_on_self!(self, $array_assign, &rhs);
@@ -115,7 +203,6 @@ impl_arithmetic_ops!(
     add,
     AddAssign,
     add_assign,
-    AddOps,
     add_scalar,
     add_scalar_assign,
     add_array,
@@ -126,7 +213,6 @@ impl_arithmetic_ops!(
     sub,
     SubAssign,
     sub_assign,
-    SubOps,
     sub_scalar,
     sub_scalar_assign,
     sub_array,
@@ -137,7 +223,6 @@ impl_arithmetic_ops!(
     mul,
     MulAssign,
     mul_assign,
-    MulOps,
     mul_scalar,
     mul_scalar_assign,
     mul_array,
@@ -148,7 +233,6 @@ impl_arithmetic_ops!(
     div,
     DivAssign,
     div_assign,
-    DivOps,
     div_scalar,
     div_scalar_assign,
     div_array,
