@@ -1,12 +1,17 @@
-use zenu_matrix::{constructor::zeros::Zeros, dim::DimDyn, matrix::MatrixBase, num::Num};
+use zenu_matrix::{
+    device::Device,
+    dim::DimDyn,
+    matrix::{Matrix, Owned},
+    num::Num,
+};
 
 use crate::Variable;
 
-pub fn ones<T: Num, I: Into<DimDyn>>(dim: I) -> Variable<T> {
-    let matrix = Zeros::zeros(dim.into());
+pub fn ones<T: Num, I: Into<DimDyn>, D: Device>(dim: I) -> Variable<T, D> {
+    let matrix = Matrix::<Owned<T>, DimDyn, D>::zeros(dim.into());
     Variable::new(matrix)
 }
 
-pub fn ones_like<T: Num>(a: &Variable<T>) -> Variable<T> {
+pub fn ones_like<T: Num, D: Device>(a: &Variable<T, D>) -> Variable<T, D> {
     ones(a.get_data().shape())
 }

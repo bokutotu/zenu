@@ -1,12 +1,6 @@
 use std::{cell::RefCell, rc::Rc};
 
-use zenu_matrix::{
-    constructor::zeros::Zeros,
-    dim::DimDyn,
-    matrix::{MatrixBase, ToViewMatrix, ToViewMutMatrix},
-    num::Num,
-    operation::sum::sum_to as sum_to_func,
-};
+use zenu_matrix::{dim::DimDyn, num::Num, operation::sum::sum_to as sum_to_func};
 
 use crate::{Function, Variable, VariableWeak};
 

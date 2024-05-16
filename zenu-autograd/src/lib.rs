@@ -1,4 +1,4 @@
-pub mod concat;
+// pub mod concat;
 pub mod creator;
 pub mod functions;
 
@@ -11,20 +11,19 @@ use std::{
     sync::Mutex,
 };
 
+use creator::zeros::zeros;
 use lazy_static::lazy_static;
 use zenu_matrix::{
-    constructor::ones::Ones,
+    device::Device,
     dim::DimDyn,
-    matrix::{AsPtr, MatrixBase, OwnedMatrix},
-    matrix_impl::Matrix,
-    memory_impl::OwnedMem,
+    matrix::{Matrix, Owned},
     num::Num,
 };
 
-pub trait Function<T: Num> {
+pub trait Function<T: Num, D: Device> {
     fn forward(&self);
     fn backward(&self);
-    fn get_inputs(&self) -> Vec<Variable<T>>;
+    fn get_inputs(&self) -> Vec<Variable<T, D>>;
     fn get_gen(&self) -> usize {
         let inputs = self.get_inputs();
         inputs.iter().map(|input| input.get_gen()).max().unwrap()
@@ -51,13 +50,13 @@ pub fn set_train() {
 }
 
 #[derive(Clone)]
-pub(crate) struct FunctionQueueItem<T: Num> {
-    pub(crate) func: Rc<RefCell<Box<dyn Function<T>>>>,
+pub(crate) struct FunctionQueueItem<T: Num, D: Device> {
+    pub(crate) func: Rc<RefCell<Box<dyn Function<T, D>>>>,
     pub(crate) gen: usize,
 }
 
-impl<T: Num> From<Rc<RefCell<Box<dyn Function<T>>>>> for FunctionQueueItem<T> {
-    fn from(func: Rc<RefCell<Box<dyn Function<T>>>>) -> Self {
+impl<T: Num, D: Device> From<Rc<RefCell<Box<dyn Function<T, D>>>>> for FunctionQueueItem<T, D> {
+    fn from(func: Rc<RefCell<Box<dyn Function<T, D>>>>) -> Self {
         Self {
             func: func.clone(),
             gen: func.borrow().get_gen(),
@@ -65,30 +64,30 @@ impl<T: Num> From<Rc<RefCell<Box<dyn Function<T>>>>> for FunctionQueueItem<T> {
     }
 }
 
-impl<T: Num> PartialEq for FunctionQueueItem<T> {
+impl<T: Num, D: Device> PartialEq for FunctionQueueItem<T, D> {
     fn eq(&self, other: &Self) -> bool {
         self.gen == other.gen
     }
 }
 
-impl<T: Num> Eq for FunctionQueueItem<T> {
+impl<T: Num, D: Device> Eq for FunctionQueueItem<T, D> {
     fn assert_receiver_is_total_eq(&self) {}
 }
 
-impl<T: Num> PartialOrd for FunctionQueueItem<T> {
+impl<T: Num, D: Device> PartialOrd for FunctionQueueItem<T, D> {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         Some(self.gen.cmp(&other.gen))
     }
 }
 
-impl<T: Num> Ord for FunctionQueueItem<T> {
+impl<T: Num, D: Device> Ord for FunctionQueueItem<T, D> {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         self.gen.cmp(&other.gen)
     }
 }
 
-impl<T: Num> Deref for FunctionQueueItem<T> {
-    type Target = Rc<RefCell<Box<dyn Function<T>>>>;
+impl<T: Num, D: Device> Deref for FunctionQueueItem<T, D> {
+    type Target = Rc<RefCell<Box<dyn Function<T, D>>>>;
 
     fn deref(&self) -> &Self::Target {
         &self.func
@@ -96,17 +95,17 @@ impl<T: Num> Deref for FunctionQueueItem<T> {
 }
 
 #[derive(Clone)]
-pub struct VariableInner<T: Num> {
-    data: Matrix<OwnedMem<T>, DimDyn>,
-    creator: Option<Rc<RefCell<Box<dyn Function<T>>>>>,
-    grad: Option<Variable<T>>,
+pub struct VariableInner<T: Num, D: Device> {
+    data: Matrix<Owned<T>, DimDyn, D>,
+    creator: Option<Rc<RefCell<Box<dyn Function<T, D>>>>>,
+    grad: Option<Variable<T, D>>,
     gen: usize,
     name: Option<String>,
     is_train: bool,
 }
 
-impl<T: Num> VariableInner<T> {
-    pub fn new(data: Matrix<OwnedMem<T>, DimDyn>) -> Self {
+impl<T: Num, D: Device> VariableInner<T, D> {
+    pub fn new(data: Matrix<Owned<T>, DimDyn, D>) -> Self {
         VariableInner {
             data,
             creator: None,
@@ -118,11 +117,11 @@ impl<T: Num> VariableInner<T> {
     }
 
     #[allow(clippy::type_complexity)]
-    fn get_creator(&self) -> Option<Rc<RefCell<Box<dyn Function<T>>>>> {
+    fn get_creator(&self) -> Option<Rc<RefCell<Box<dyn Function<T, D>>>>> {
         self.creator.clone()
     }
 
-    fn set_creator(&mut self, creator: Rc<RefCell<Box<dyn Function<T>>>>) {
+    fn set_creator(&mut self, creator: Rc<RefCell<Box<dyn Function<T, D>>>>) {
         self.creator = Some(creator);
         let gen = self.creator.as_ref().unwrap().borrow().get_gen();
         self.gen = gen + 1;
@@ -141,7 +140,7 @@ impl<T: Num> VariableInner<T> {
     }
 
     pub fn backward(&self) {
-        let mut funcs: BinaryHeap<FunctionQueueItem<T>> = BinaryHeap::new();
+        let mut funcs: BinaryHeap<FunctionQueueItem<T, D>> = BinaryHeap::new();
         let mut seen_rc = HashSet::new();
 
         funcs.push(self.creator.clone().unwrap().into());
@@ -174,10 +173,10 @@ impl<T: Num> VariableInner<T> {
         self.is_train = is_train;
     }
 
-    fn get_all_variable(&self) -> Vec<Variable<T>> {
+    fn get_all_variable(&self) -> Vec<Variable<T, D>> {
         let mut variables = Vec::new();
         let mut seen_rc = HashSet::new();
-        let mut funcs: BinaryHeap<FunctionQueueItem<T>> = BinaryHeap::new();
+        let mut funcs: BinaryHeap<FunctionQueueItem<T, D>> = BinaryHeap::new();
 
         funcs.push(self.creator.clone().unwrap().into());
 
@@ -201,10 +200,10 @@ impl<T: Num> VariableInner<T> {
         variables
     }
 
-    fn get_all_trainable_variables(&self) -> Vec<Variable<T>> {
+    fn get_all_trainable_variables(&self) -> Vec<Variable<T, D>> {
         let mut variables = Vec::new();
         let mut seen_rc = HashSet::new();
-        let mut funcs: BinaryHeap<FunctionQueueItem<T>> = BinaryHeap::new();
+        let mut funcs: BinaryHeap<FunctionQueueItem<T, D>> = BinaryHeap::new();
 
         funcs.push(self.creator.clone().unwrap().into());
 
@@ -232,70 +231,69 @@ impl<T: Num> VariableInner<T> {
 }
 
 #[derive(Clone)]
-pub struct Variable<T: Num> {
-    inner: Rc<RefCell<VariableInner<T>>>,
+pub struct Variable<T: Num, D: Device> {
+    inner: Rc<RefCell<VariableInner<T, D>>>,
 }
 
-impl<T: Num> From<T> for Variable<T> {
+impl<T: Num, D: Device> From<T> for Variable<T, D> {
     fn from(data: T) -> Self {
         let data = Matrix::from_vec(vec![data], DimDyn::new(&[]));
         Variable::new(data)
     }
 }
 
-impl<T: Num> From<Matrix<OwnedMem<T>, DimDyn>> for Variable<T> {
-    fn from(data: Matrix<OwnedMem<T>, DimDyn>) -> Self {
+impl<T: Num, D: Device> From<Matrix<Owned<T>, DimDyn, D>> for Variable<T, D> {
+    fn from(data: Matrix<Owned<T>, DimDyn, D>) -> Self {
         Variable::new(data)
     }
 }
 
-impl<T: Num> Variable<T> {
-    pub fn new(data: Matrix<OwnedMem<T>, DimDyn>) -> Self {
+impl<T: Num, D: Device> Variable<T, D> {
+    pub fn new(data: Matrix<Owned<T>, DimDyn, D>) -> Self {
         Variable {
             inner: Rc::new(RefCell::new(VariableInner::new(data))),
         }
     }
-    pub fn get_data<'a>(&'a self) -> Matrix<OwnedMem<T>, DimDyn> {
-        let reference: Ref<'a, VariableInner<T>> = self.inner.borrow();
+    pub fn get_data<'a>(&'a self) -> Matrix<Owned<T>, DimDyn, D> {
+        let reference: Ref<'a, VariableInner<T, D>> = self.inner.borrow();
         let ref_v = Ref::map(reference, |r| &r.data);
         ref_v.clone()
     }
 
-    pub fn get_data_mut<'a>(&'a self) -> RefMut<'a, Matrix<OwnedMem<T>, DimDyn>> {
-        let reference: RefMut<'a, VariableInner<T>> = self.inner.borrow_mut();
+    pub fn get_data_mut<'a>(&'a self) -> RefMut<'a, Matrix<Owned<T>, DimDyn, D>> {
+        let reference: RefMut<'a, VariableInner<T, D>> = self.inner.borrow_mut();
         RefMut::map(reference, |r| &mut r.data)
     }
 
-    pub fn set_creator(&self, creator: Rc<RefCell<Box<dyn Function<T>>>>) {
+    pub fn set_creator(&self, creator: Rc<RefCell<Box<dyn Function<T, D>>>>) {
         self.inner.borrow_mut().set_creator(creator);
     }
 
-    pub fn get_creator(&self) -> Option<Rc<RefCell<Box<dyn Function<T>>>>> {
+    pub fn get_creator(&self) -> Option<Rc<RefCell<Box<dyn Function<T, D>>>>> {
         self.inner.borrow().get_creator().clone()
     }
 
-    pub fn get_grad<'a>(&'a self) -> Option<Variable<T>> {
-        let reference: Ref<'a, VariableInner<T>> = self.inner.borrow();
+    pub fn get_grad<'a>(&'a self) -> Option<Variable<T, D>> {
+        let reference: Ref<'a, VariableInner<T, D>> = self.inner.borrow();
         let ref_option = Ref::map(reference, |r| &r.grad);
         ref_option.clone()
     }
 
-    fn get_grad_mut<'a>(&'a self) -> RefMut<'a, Option<Variable<T>>> {
-        let reference: RefMut<'a, VariableInner<T>> = self.inner.borrow_mut();
+    fn get_grad_mut<'a>(&'a self) -> RefMut<'a, Option<Variable<T, D>>> {
+        let reference: RefMut<'a, VariableInner<T, D>> = self.inner.borrow_mut();
         RefMut::map(reference, |r| &mut r.grad)
     }
 
     pub fn backward(&self) {
         if self.inner.borrow().grad.is_none() {
-            let ones = Ones::ones(self.get_data().shape());
-            let ones = Variable::new(ones);
+            let ones = zeros(self.get_data().shape());
             ones.set_name(&format!("{:?}_grad", self.get_name().unwrap_or_default()));
             self.inner.borrow_mut().grad = Some(ones);
         }
         self.inner.borrow().backward();
     }
 
-    pub fn downgrade(self) -> VariableWeak<T> {
+    pub fn downgrade(self) -> VariableWeak<T, D> {
         VariableWeak {
             inner: Rc::downgrade(&self.inner),
         }
@@ -323,7 +321,7 @@ impl<T: Num> Variable<T> {
 
     pub fn with_grad_data<F>(&self, mut f: F)
     where
-        F: FnMut(&Matrix<OwnedMem<T>, DimDyn>),
+        F: FnMut(&Matrix<Owned<T>, DimDyn, D>),
     {
         let inner = self.inner.borrow();
         if let Some(grad_variable) = &inner.grad {
@@ -334,7 +332,7 @@ impl<T: Num> Variable<T> {
         }
     }
 
-    pub fn set_grad(&self, grad: Variable<T>) {
+    pub fn set_grad(&self, grad: Variable<T, D>) {
         if self.get_data().shape() != grad.get_data().shape() {
             panic!("shape of grad and data must be same");
         }
@@ -359,23 +357,23 @@ impl<T: Num> Variable<T> {
         self.inner.borrow_mut().set_is_train(is_train);
     }
 
-    pub fn get_all_trainable_variables(&self) -> Vec<Variable<T>> {
+    pub fn get_all_trainable_variables(&self) -> Vec<Variable<T, D>> {
         self.inner.borrow().get_all_trainable_variables()
     }
 }
 
 #[derive(Debug, Clone)]
-pub struct VariableWeak<T: Num> {
-    inner: Weak<RefCell<VariableInner<T>>>,
+pub struct VariableWeak<T: Num, D: Device> {
+    inner: Weak<RefCell<VariableInner<T, D>>>,
 }
 
-impl<T: Num> VariableWeak<T> {
-    pub fn upgrade(&self) -> Option<Variable<T>> {
+impl<T: Num, D: Device> VariableWeak<T, D> {
+    pub fn upgrade(&self) -> Option<Variable<T, D>> {
         self.inner.upgrade().map(|inner| Variable { inner })
     }
 }
 
-impl<T: Num> Debug for Variable<T> {
+impl<T: Num, D: Device> Debug for Variable<T, D> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let inner = self.get_data().clone();
         write!(f, "Variable {{ data: {:?} }}", inner)?;
@@ -383,7 +381,7 @@ impl<T: Num> Debug for Variable<T> {
     }
 }
 
-impl<T: Num> Display for Variable<T> {
+impl<T: Num, D: Device> Display for Variable<T, D> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let inner = self.get_data().clone();
         write!(f, "Variable {{ data: {:?} }}", inner)?;
@@ -391,14 +389,14 @@ impl<T: Num> Display for Variable<T> {
     }
 }
 
-impl<T: Num> Debug for VariableInner<T> {
+impl<T: Num, D: Device> Debug for VariableInner<T, D> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "VariableInner {{ data: {:?} }}", self.data)?;
         Ok(())
     }
 }
 
-impl<T: Num> Display for VariableInner<T> {
+impl<T: Num, D: Device> Display for VariableInner<T, D> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "VariableInner {{ data: {:?} }}", self.data)?;
         Ok(())
