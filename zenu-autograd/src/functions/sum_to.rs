@@ -54,6 +54,7 @@ mod sum_to {
         dim::DimDyn,
         matrix::{Matrix, Owned},
     };
+    use zenu_test::{assert_val_eq, assert_val_eq_grad, run_test};
 
     use crate::Variable;
 
@@ -65,23 +66,10 @@ mod sum_to {
         let x = Variable::from(x);
         let y = sum_to(x.clone(), DimDyn::new(&[3]));
         let forward_ans: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(vec![2.0, 4.0, 6.0], [3]);
-        let diff = y.get_data().to_ref() - forward_ans;
-        assert!(diff.asum() == 0.);
-
         y.backward();
         let x_grad: Matrix<Owned<f32>, DimDyn, D> = Matrix::ones([2, 3]);
-        x.with_grad_data(|grad| {
-            let diff = grad.to_ref() - x_grad.to_ref();
-            assert!(diff.asum() == 0.);
-        });
+        assert_val_eq!(y, forward_ans, 1e-6);
+        assert_val_eq_grad!(x, x_grad, 1e-6);
     }
-    #[test]
-    fn sum_to_2d_1d_cpu() {
-        sum_to_2d_1d::<zenu_matrix::device::cpu::Cpu>();
-    }
-    #[cfg(feature = "nvidia")]
-    #[test]
-    fn sum_to_2d_1d_cuda() {
-        sum_to_2d_1d::<zenu_matrix::device::nvidia::Nvidia>();
-    }
+    run_test!(sum_to_2d_1d, sum_to_2d_1d_cpu, sum_to_2d_1d_nvidia);
 }

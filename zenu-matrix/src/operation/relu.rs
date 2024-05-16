@@ -233,6 +233,8 @@ impl<T: Num, S: DimTrait, D: Device> Matrix<Ref<&mut T>, S, D> {
 
 #[cfg(test)]
 mod relu {
+    use zenu_test::{assert_mat_eq_epsilon, run_mat_test};
+
     use crate::{
         device::Device,
         dim::DimDyn,
@@ -244,74 +246,42 @@ mod relu {
         let mut y = Matrix::<Owned<f32>, DimDyn, D>::zeros([2, 2]);
         y.to_ref_mut().relu(&x.to_ref(), 0.0);
         let ans = Matrix::<Owned<f32>, DimDyn, D>::from_vec(vec![1.0, 0.0, 0.0, 2.0], [2, 2]);
-        let diff = y.to_ref() - ans.to_ref();
-        let diff_asum = diff.asum();
-        assert!(diff_asum < 1.0e-6);
+        assert_mat_eq_epsilon!(y.to_ref(), ans.to_ref(), 1.0e-6);
     }
-    #[test]
-    fn relu_cpu() {
-        relu::<crate::device::cpu::Cpu>();
-    }
-    #[cfg(feature = "nvidia")]
-    #[test]
-    fn relu_nvidia() {
-        relu::<crate::device::nvidia::Nvidia>();
-    }
+    run_mat_test!(relu, relu_cpu, relu_nvidia);
 
     fn relu_backward_mask<D: Device>() {
         let x = Matrix::<Owned<f32>, DimDyn, D>::from_vec(vec![1.0, -1.0, 0.0, 2.0], [2, 2]);
         let mut y = Matrix::<Owned<f32>, DimDyn, D>::zeros([2, 2]);
         y.to_ref_mut().relu_backward_mask(&x.to_ref(), 0.0);
         let ans = Matrix::<Owned<f32>, DimDyn, D>::from_vec(vec![1.0, 0.0, 0.0, 1.0], [2, 2]);
-        let diff = y.to_ref() - ans.to_ref();
-        let diff_asum = diff.asum();
-        assert!(diff_asum < 1.0e-6);
+        assert_mat_eq_epsilon!(y.to_ref(), ans.to_ref(), 1.0e-6);
     }
-    #[test]
-    fn relu_backward_mask_cpu() {
-        relu_backward_mask::<crate::device::cpu::Cpu>();
-    }
-    #[cfg(feature = "nvidia")]
-    #[test]
-    fn relu_backward_mask_nvidia() {
-        relu_backward_mask::<crate::device::nvidia::Nvidia>();
-    }
+    run_mat_test!(
+        relu_backward_mask,
+        relu_backward_mask_cpu,
+        relu_backward_mask_nvidia
+    );
 
     fn relu_0d<D: Device>() {
         let x = Matrix::<Owned<f32>, DimDyn, D>::from_vec(vec![1.0], []);
         let mut y = Matrix::<Owned<f32>, DimDyn, D>::zeros([]);
         y.to_ref_mut().relu(&x.to_ref(), 0.0);
         let ans = Matrix::<Owned<f32>, DimDyn, D>::from_vec(vec![1.0], []);
-        let diff = y.to_ref() - ans.to_ref();
-        let diff_asum = diff.asum();
-        assert!(diff_asum < 1.0e-6);
+        assert_mat_eq_epsilon!(y.to_ref(), ans.to_ref(), 1.0e-6);
     }
-    #[test]
-    fn relu_0d_cpu() {
-        relu_0d::<crate::device::cpu::Cpu>();
-    }
-    #[cfg(feature = "nvidia")]
-    #[test]
-    fn relu_0d_nvidia() {
-        relu_0d::<crate::device::nvidia::Nvidia>();
-    }
+    run_mat_test!(relu_0d, relu_0d_cpu, relu_0d_nvidia);
 
     fn relu_backward_mask_0d<D: Device>() {
         let x = Matrix::<Owned<f32>, DimDyn, D>::from_vec(vec![1.0], []);
         let mut y = Matrix::<Owned<f32>, DimDyn, D>::zeros([]);
         y.to_ref_mut().relu_backward_mask(&x.to_ref(), 0.0);
         let ans = Matrix::<Owned<f32>, DimDyn, D>::from_vec(vec![1.0], []);
-        let diff = y.to_ref() - ans.to_ref();
-        let diff_asum = diff.asum();
-        assert!(diff_asum < 1.0e-6);
+        assert_mat_eq_epsilon!(y.to_ref(), ans.to_ref(), 1.0e-6);
     }
-    #[test]
-    fn relu_backward_mask_0d_cpu() {
-        relu_backward_mask_0d::<crate::device::cpu::Cpu>();
-    }
-    #[cfg(feature = "nvidia")]
-    #[test]
-    fn relu_backward_mask_0d_nvidia() {
-        relu_backward_mask_0d::<crate::device::nvidia::Nvidia>();
-    }
+    run_mat_test!(
+        relu_backward_mask_0d,
+        relu_backward_mask_0d_cpu,
+        relu_backward_mask_0d_nvidia
+    );
 }
