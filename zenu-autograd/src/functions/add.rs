@@ -24,7 +24,7 @@ impl<T: Num, D: Device> Function<T, D> for Addition<T, D> {
         let x = self.x.get_data();
         let y = self.y.get_data();
         let output = self.output.upgrade().unwrap();
-        let output_mat = x + y;
+        let output_mat = x.to_ref() + y.to_ref();
         output.get_data_mut().to_ref_mut().copy_from(&output_mat);
     }
 
@@ -62,39 +62,48 @@ impl<T: Num, D: Device> Add<Variable<T, D>> for Variable<T, D> {
 #[cfg(test)]
 mod add {
     use zenu_matrix::{
-        constructor::ones::Ones, matrix::ToViewMatrix, matrix_impl::OwnedMatrixDyn,
-        operation::asum::Asum,
+        device::Device,
+        dim::DimDyn,
+        matrix::{Matrix, Owned},
     };
 
     use crate::Variable;
 
-    #[test]
-    fn add() {
-        let x: OwnedMatrixDyn<f32> = Ones::ones([100, 200]);
-        let y: OwnedMatrixDyn<f32> = Ones::ones([20, 100, 200]);
+    fn add<D: Device>() {
+        let x: Matrix<Owned<f32>, DimDyn, D> = Matrix::ones([100, 200]);
+        let y: Matrix<Owned<f32>, DimDyn, D> = Matrix::ones([20, 100, 200]);
         let x_val = Variable::new(x);
         let y_val = Variable::new(y);
         let z = x_val.clone() + y_val.clone();
         z.backward();
         let z_data = z.get_data();
-        let ans: OwnedMatrixDyn<f32> = OwnedMatrixDyn::ones([20, 100, 200]).to_view() * 2.0;
-        let diff = z_data.to_view() - ans.to_view();
+        let ans: Matrix<Owned<f32>, DimDyn, D> = Matrix::ones([20, 100, 200]).to_ref() * 2.0;
+        let diff = z_data.to_ref() - ans.to_ref();
         let diff_sum = diff.asum();
         assert!(diff_sum < 1e-6);
 
         x_val.with_grad_data(|grad| {
-            let grad = grad.to_view();
-            let ans: OwnedMatrixDyn<f32> = OwnedMatrixDyn::ones([100, 200]).to_view() * 20.;
-            let diff = grad - ans.to_view();
+            let grad = grad.to_ref();
+            let ans: Matrix<Owned<f32>, DimDyn, D> = Matrix::ones([100, 200]).to_ref() * 20.;
+            let diff = grad - ans.to_ref();
             let diff_sum = diff.asum();
             assert!(diff_sum < 1e-6);
         });
         y_val.with_grad_data(|grad| {
-            let grad = grad.to_view();
-            let ans: OwnedMatrixDyn<f32> = OwnedMatrixDyn::ones([20, 100, 200]);
-            let diff = grad - ans.to_view();
+            let grad = grad.to_ref();
+            let ans: Matrix<Owned<f32>, DimDyn, D> = Matrix::ones([20, 100, 200]);
+            let diff = grad - ans.to_ref();
             let diff_sum = diff.asum();
             assert!(diff_sum < 1e-6);
         });
+    }
+    #[test]
+    fn add_cpu() {
+        add::<zenu_matrix::device::cpu::Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn add_cuda() {
+        add::<zenu_matrix::device::nvidia::Nvidia>();
     }
 }

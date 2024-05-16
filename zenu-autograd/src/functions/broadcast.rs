@@ -52,53 +52,67 @@ pub fn broadcast<T: Num, D: Device>(x: Variable<T, D>, shape: DimDyn) -> Variabl
 #[cfg(test)]
 mod broadcast {
     use zenu_matrix::{
+        device::Device,
         dim::DimDyn,
-        matrix::{OwnedMatrix, ToViewMatrix},
-        matrix_impl::Matrix,
-        memory_impl::OwnedMem,
-        operation::asum::Asum,
+        matrix::{Matrix, Owned},
     };
 
     use crate::Variable;
 
     use super::broadcast;
 
-    #[test]
-    fn broadcast_2d_1d() {
-        let x: Matrix<OwnedMem<f32>, DimDyn> = Matrix::from_vec(vec![1.0, 2.0, 3.0], [3]);
+    fn broadcast_2d_1d<D: Device>() {
+        let x: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(vec![1.0, 2.0, 3.0], [3]);
         let x = Variable::from(x);
         let y = broadcast(x.clone(), DimDyn::new(&[3, 3]));
-        let forward_ans: Matrix<OwnedMem<f32>, DimDyn> =
+        let forward_ans: Matrix<Owned<f32>, DimDyn, D> =
             Matrix::from_vec(vec![1.0, 2.0, 3.0, 1.0, 2.0, 3.0, 1.0, 2.0, 3.0], [3, 3]);
-        let diff = y.get_data().to_view() - forward_ans.to_view();
+        let diff = y.get_data().to_ref() - forward_ans.to_ref();
         assert!(diff.asum() == 0.);
 
         y.backward();
-        let backward_ans: Matrix<OwnedMem<f32>, DimDyn> =
+        let backward_ans: Matrix<Owned<f32>, DimDyn, D> =
             Matrix::from_vec(vec![3.0, 3.0, 3.0], [3]);
         x.with_grad_data(|grad| {
-            let diff = grad.to_view() - backward_ans.to_view();
+            let diff = grad.to_ref() - backward_ans.to_ref();
             assert!(diff.asum() < 1e-6);
         });
     }
-
     #[test]
-    fn broadcast_4d_2d() {
-        let x: Matrix<OwnedMem<f32>, DimDyn> = Matrix::from_vec(vec![1.0, 2.0], [1, 2]);
+    fn broadcast_2d_1d_cpu() {
+        broadcast_2d_1d::<zenu_matrix::device::cpu::Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn broadcast_2d_1d_cuda() {
+        broadcast_2d_1d::<zenu_matrix::device::nvidia::Nvidia>();
+    }
+
+    fn broadcast_4d_2d<D: Device>() {
+        let x: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(vec![1.0, 2.0], [1, 2]);
         let x = Variable::from(x);
         let y = broadcast(x.clone(), DimDyn::new(&[2, 3, 1, 2]));
-        let forward_ans: Matrix<OwnedMem<f32>, DimDyn> = Matrix::from_vec(
+        let forward_ans: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(
             vec![1.0, 2.0, 1.0, 2.0, 1.0, 2.0, 1.0, 2.0, 1.0, 2.0, 1.0, 2.0],
             [2, 3, 1, 2],
         );
-        let diff = y.get_data().to_view() - forward_ans.to_view();
+        let diff = y.get_data().to_ref() - forward_ans.to_ref();
         assert!(diff.asum() == 0.);
 
         y.backward();
-        let backward_ans: Matrix<OwnedMem<f32>, DimDyn> = Matrix::from_vec(vec![6.0, 6.0], [1, 2]);
+        let backward_ans: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(vec![6.0, 6.0], [1, 2]);
         x.with_grad_data(|grad| {
-            let diff = grad.to_view() - backward_ans.to_view();
+            let diff = grad.to_ref() - backward_ans.to_ref();
             assert!(diff.asum() < 1e-6);
         });
+    }
+    #[test]
+    fn broadcast_4d_2d_cpu() {
+        broadcast_4d_2d::<zenu_matrix::device::cpu::Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn broadcast_4d_2d_cuda() {
+        broadcast_4d_2d::<zenu_matrix::device::nvidia::Nvidia>();
     }
 }

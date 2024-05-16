@@ -55,25 +55,25 @@ mod sum_to {
         matrix::{Matrix, Owned},
     };
 
-    use crate::{creator::ones::ones, Variable};
+    use crate::Variable;
 
     use super::sum_to;
 
     fn sum_to_2d_1d<D: Device>() {
-        // let x: Matrix<Owned<f32>, DimDyn, D> =
-        //     Matrix::from_vec(vec![1.0, 2.0, 3.0, 1.0, 2.0, 3.0], [2, 3]);
-        // let x = Variable::from(x);
-        // let y = sum_to(x.clone(), DimDyn::new(&[3]));
-        // let forward_ans: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(vec![2.0, 4.0, 6.0], [3]);
-        // let diff = y.get_data() - forward_ans;
-        // assert!(diff.asum() == 0.);
-        //
-        // y.backward();
-        // let x_grad: Matrix<Owned<f32>, DimDyn, D> = ones([2, 3]);
-        // x.with_grad_data(|grad| {
-        //     let diff = grad - x_grad;
-        //     assert!(diff.asum() == 0.);
-        // });
+        let x: Matrix<Owned<f32>, DimDyn, D> =
+            Matrix::from_vec(vec![1.0, 2.0, 3.0, 1.0, 2.0, 3.0], [2, 3]);
+        let x = Variable::from(x);
+        let y = sum_to(x.clone(), DimDyn::new(&[3]));
+        let forward_ans: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(vec![2.0, 4.0, 6.0], [3]);
+        let diff = y.get_data().to_ref() - forward_ans;
+        assert!(diff.asum() == 0.);
+
+        y.backward();
+        let x_grad: Matrix<Owned<f32>, DimDyn, D> = Matrix::ones([2, 3]);
+        x.with_grad_data(|grad| {
+            let diff = grad.to_ref() - x_grad.to_ref();
+            assert!(diff.asum() == 0.);
+        });
     }
     #[test]
     fn sum_to_2d_1d_cpu() {
