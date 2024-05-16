@@ -14,7 +14,7 @@ members = [
     "zenu-cudnn-sys",
     # "zenu-layer",
     "zenu-matrix", 
-    "zenu-matrix-test", 
+    "zenu-test", 
     # "zenu-optimizer"
 ]
 

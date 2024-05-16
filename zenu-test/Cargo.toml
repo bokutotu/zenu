@@ -1,5 +1,5 @@
 [package]
-name = "zenu-matrix-test"
+name = "zenu-test"
 version = "0.1.0"
 edition = "2021"
 

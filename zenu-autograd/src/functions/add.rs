@@ -66,7 +66,8 @@ mod add {
         dim::DimDyn,
         matrix::{Matrix, Owned},
     };
-    use zenu_matrix_test::{assert_val_eq, assert_val_eq_grad, run_test};
+
+    use zenu_test::{assert_val_eq, assert_val_eq_grad, run_test};
 
     use crate::Variable;
 
