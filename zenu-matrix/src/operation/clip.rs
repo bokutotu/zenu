@@ -165,19 +165,17 @@ impl<T: Num, D: DeviceBase + ClipOps> Matrix<Ref<&mut T>, DimDyn, D> {
 
 #[cfg(test)]
 mod clip {
+
     use crate::{
-        device::DeviceBase,
+        device::Device,
         dim::DimDyn,
         matrix::{Matrix, Owned},
-        operation::{asum::Asum, basic_operations::SubOps},
     };
 
-    use super::ClipOps;
-
-    fn clip_1d<D: DeviceBase + ClipOps + SubOps + Asum>() {
+    fn clip_1d<D: Device>() {
         let mut a: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(vec![1.0, 2.0, 3.0, 4.0], [4]);
         let b = a.clip(2.0, 3.0);
-        let ans: Matrix<_, DimDyn, _> = Matrix::from_vec(vec![2.0, 2.0, 3.0, 3.0], [4]);
+        let ans: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(vec![2.0, 2.0, 3.0, 3.0], [4]);
         let diff = b - ans.to_ref();
         let diff_asum = diff.asum();
         assert_eq!(diff_asum, 0.0);
@@ -197,12 +195,12 @@ mod clip {
         clip_1d::<crate::device::nvidia::Nvidia>();
     }
 
-    fn clip_2d<D: DeviceBase + ClipOps + SubOps + Asum>() {
+    fn clip_2d<D: Device>() {
         let mut a: Matrix<Owned<f32>, DimDyn, D> =
             Matrix::from_vec(vec![1.0, 2.0, 3.0, 4.0], [2, 2]);
         let b = a.clip(2.0, 3.0);
-        let ans: Matrix<_, DimDyn, _> = Matrix::from_vec(vec![2.0, 2.0, 3.0, 3.0], [2, 2]);
-        let diff = b - ans;
+        let ans: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(vec![2.0, 2.0, 3.0, 3.0], [2, 2]);
+        let diff = b - ans.to_ref();
         let diff_asum = diff.asum();
         assert_eq!(diff_asum, 0.0);
 

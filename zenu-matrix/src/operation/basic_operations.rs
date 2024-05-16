@@ -567,7 +567,7 @@ impl_basic_ops_no_inputs!(LogOps, log, log_array, log_assign);
 #[cfg(test)]
 mod basic_ops {
     use crate::{
-        device::{Device, DeviceBase},
+        device::Device,
         dim::DimDyn,
         matrix::{Matrix, Owned},
         operation::asum::Asum,
@@ -581,7 +581,7 @@ mod basic_ops {
     // sliced
     // transposed
 
-    fn scalar_add_1d<D: DeviceBase + AddOps>() {
+    fn scalar_add_1d<D: Device>() {
         let a: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(vec![1., 2., 3.], [3]);
         let mut ans: Matrix<Owned<f32>, DimDyn, D> = Matrix::zeros([3]);
         ans.to_ref_mut().add_scalar(&a, 1.);
@@ -599,7 +599,7 @@ mod basic_ops {
         scalar_add_1d::<crate::device::nvidia::Nvidia>();
     }
 
-    fn scalar_add_2d<D: DeviceBase + AddOps>() {
+    fn scalar_add_2d<D: Device>() {
         let a: Matrix<Owned<f32>, DimDyn, D> =
             Matrix::from_vec(vec![1., 2., 3., 4., 5., 6.], [2, 3]);
         let mut ans: Matrix<Owned<f32>, DimDyn, D> = Matrix::zeros([2, 3]);
@@ -621,7 +621,7 @@ mod basic_ops {
         scalar_add_2d::<crate::device::nvidia::Nvidia>();
     }
 
-    fn sliced_3d<D: DeviceBase + AddOps>() {
+    fn sliced_3d<D: Device>() {
         let a: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(
             vec![
                 1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12., 13., 14., 15., 16.,
@@ -646,7 +646,7 @@ mod basic_ops {
         sliced_3d::<crate::device::nvidia::Nvidia>();
     }
 
-    fn scalar_assign_4d<D: DeviceBase + AddOps>() {
+    fn scalar_assign_4d<D: Device>() {
         let mut a: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(
             vec![
                 1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12., 13., 14., 15., 16.,
@@ -681,7 +681,7 @@ mod basic_ops {
         scalar_assign_4d::<crate::device::nvidia::Nvidia>();
     }
 
-    fn sliced_3d_assign<D: DeviceBase + AddOps>() {
+    fn sliced_3d_assign<D: Device>() {
         let mut a = Vec::new();
         for i in 0..3 {
             for j in 0..4 {
@@ -712,7 +712,7 @@ mod basic_ops {
         sliced_3d_assign::<crate::device::nvidia::Nvidia>();
     }
 
-    fn matrix_add_4d<D: DeviceBase + AddOps>() {
+    fn matrix_add_4d<D: Device>() {
         let a: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(
             vec![
                 1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12., 13., 14., 15., 16.,
@@ -755,7 +755,7 @@ mod basic_ops {
         matrix_add_4d::<crate::device::nvidia::Nvidia>();
     }
 
-    fn matrix_add_sliced<D: DeviceBase + AddOps>() {
+    fn matrix_add_sliced<D: Device>() {
         let a: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(
             vec![
                 1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12., 13., 14., 15., 16.,
@@ -832,7 +832,7 @@ mod basic_ops {
         transposed::<crate::device::nvidia::Nvidia>();
     }
 
-    fn broadcast_add<D: DeviceBase + AddOps>() {
+    fn broadcast_add<D: Device>() {
         let a = vec![1., 2., 3., 4., 5., 6., 7., 8.];
         let a: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(a, [2, 2, 2]);
         let b: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(vec![1., 1.], [1, 1, 2]);
@@ -857,7 +857,7 @@ mod basic_ops {
         broadcast_add::<crate::device::nvidia::Nvidia>();
     }
 
-    fn add_2d_1d<D: DeviceBase + AddOps>() {
+    fn add_2d_1d<D: Device>() {
         let a = vec![1., 2., 3., 4., 5., 6., 7., 8.];
         let a: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(a, [2, 2, 2]);
         let b: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(vec![1., 1.], [2]);
@@ -882,7 +882,7 @@ mod basic_ops {
         add_2d_1d::<crate::device::nvidia::Nvidia>();
     }
 
-    fn add_2d_0d<D: DeviceBase + AddOps>() {
+    fn add_2d_0d<D: Device>() {
         let a = vec![1., 2., 3., 4., 5., 6., 7., 8.];
         let a: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(a, [2, 2, 2]);
         let b: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(vec![1.], []);
@@ -907,7 +907,7 @@ mod basic_ops {
         add_2d_0d::<crate::device::nvidia::Nvidia>();
     }
 
-    fn broad_cast_4x1x1x1_4x3x3x3<D: DeviceBase + AddOps + Asum + SubOps>() {
+    fn broad_cast_4x1x1x1_4x3x3x3<D: Device>() {
         let a = Matrix::<Owned<f32>, DimDyn, D>::from_vec(vec![1., 2., 3., 4.], [4, 1, 1, 1]);
         let b = Matrix::<Owned<f32>, DimDyn, D>::zeros([4, 2, 3, 3]);
         let mut ans = Matrix::<Owned<f32>, DimDyn, D>::zeros([4, 2, 3, 3]);
@@ -937,7 +937,7 @@ mod basic_ops {
         broad_cast_4x1x1x1_4x3x3x3::<crate::device::nvidia::Nvidia>();
     }
 
-    fn sub_3d_scalar<D: DeviceBase + SubOps>() {
+    fn sub_3d_scalar<D: Device>() {
         let a = vec![1., 2., 3., 4., 5., 6., 7., 8.];
         let a: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(a, [2, 2, 2]);
         let mut ans: Matrix<Owned<f32>, DimDyn, D> = Matrix::zeros([2, 2, 2]);
@@ -962,7 +962,7 @@ mod basic_ops {
         sub_3d_scalar::<crate::device::nvidia::Nvidia>();
     }
 
-    fn sub_3d_scalar_assign<D: DeviceBase + SubOps>() {
+    fn sub_3d_scalar_assign<D: Device>() {
         let a = vec![1., 2., 3., 4., 5., 6., 7., 8.];
         let mut a: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(a, [2, 2, 2]);
         a.to_ref_mut().sub_scalar_assign(1.);
@@ -986,7 +986,7 @@ mod basic_ops {
         sub_3d_scalar_assign::<crate::device::nvidia::Nvidia>();
     }
 
-    fn sub_3d_array<D: DeviceBase + SubOps>() {
+    fn sub_3d_array<D: Device>() {
         let a = vec![1., 2., 3., 4., 5., 6., 7., 8.];
         let a: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(a, [2, 2, 2]);
         let b = vec![1., 1., 1., 1., 1., 1., 1., 1.];
@@ -1013,7 +1013,7 @@ mod basic_ops {
         sub_3d_array::<crate::device::nvidia::Nvidia>();
     }
 
-    fn sub_assign_array_3d<D: DeviceBase + SubOps>() {
+    fn sub_assign_array_3d<D: Device>() {
         let a = vec![1., 2., 3., 4., 5., 6., 7., 8.];
         let mut a: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(a, [2, 2, 2]);
         let b = vec![1., 1., 1., 1., 1., 1., 1., 1.];
@@ -1039,7 +1039,7 @@ mod basic_ops {
         sub_assign_array_3d::<crate::device::nvidia::Nvidia>();
     }
 
-    fn mul_scalar<D: DeviceBase + MulOps>() {
+    fn mul_scalar<D: Device>() {
         let a = vec![1., 2., 3., 4., 5., 6., 7., 8.];
         let a: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(a, [2, 2, 2]);
         let mut ans: Matrix<Owned<f32>, DimDyn, D> = Matrix::zeros([2, 2, 2]);
@@ -1064,7 +1064,7 @@ mod basic_ops {
         mul_scalar::<crate::device::nvidia::Nvidia>();
     }
 
-    fn mul_scalar_assign<D: DeviceBase + MulOps>() {
+    fn mul_scalar_assign<D: Device>() {
         let a = vec![1., 2., 3., 4., 5., 6., 7., 8.];
         let mut a: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(a, [2, 2, 2]);
         a.to_ref_mut().mul_scalar_assign(2.);
@@ -1088,7 +1088,7 @@ mod basic_ops {
         mul_scalar_assign::<crate::device::nvidia::Nvidia>();
     }
 
-    fn mul_array<D: DeviceBase + MulOps>() {
+    fn mul_array<D: Device>() {
         let a = vec![1., 2., 3., 4., 5., 6., 7., 8.];
         let a: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(a, [2, 2, 2]);
         let b = vec![8., 7., 6., 5., 4., 3., 2., 1.];
@@ -1115,7 +1115,7 @@ mod basic_ops {
         mul_array::<crate::device::nvidia::Nvidia>();
     }
 
-    fn mul_assign_array<D: DeviceBase + MulOps>() {
+    fn mul_assign_array<D: Device>() {
         let a = vec![1., 2., 3., 4., 5., 6., 7., 8.];
         let mut a: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(a, [2, 2, 2]);
         let b = vec![8., 7., 6., 5., 4., 3., 2., 1.];
@@ -1141,7 +1141,7 @@ mod basic_ops {
         mul_assign_array::<crate::device::nvidia::Nvidia>();
     }
 
-    fn div_scalar<D: DeviceBase + DivOps>() {
+    fn div_scalar<D: Device>() {
         let a = vec![1., 2., 3., 4., 5., 6., 7., 8.];
         let a: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(a, [2, 2, 2]);
         let mut ans: Matrix<Owned<f32>, DimDyn, D> = Matrix::zeros([2, 2, 2]);
@@ -1166,7 +1166,7 @@ mod basic_ops {
         div_scalar::<crate::device::nvidia::Nvidia>();
     }
 
-    fn div_scalar_assign<D: DeviceBase + DivOps>() {
+    fn div_scalar_assign<D: Device>() {
         let a = vec![1., 2., 3., 4., 5., 6., 7., 8.];
         let mut a: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(a, [2, 2, 2]);
         a.to_ref_mut().div_scalar_assign(2.);
@@ -1190,7 +1190,7 @@ mod basic_ops {
         div_scalar_assign::<crate::device::nvidia::Nvidia>();
     }
 
-    fn div_array<D: DeviceBase + DivOps>() {
+    fn div_array<D: Device>() {
         let a = vec![1., 2., 3., 4., 5., 6., 7., 8.];
         let a: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(a, [2, 2, 2]);
         let b = vec![8., 7., 6., 5., 4., 3., 2., 1.];
@@ -1217,7 +1217,7 @@ mod basic_ops {
         div_array::<crate::device::nvidia::Nvidia>();
     }
 
-    fn div_assign_array<D: DeviceBase + DivOps>() {
+    fn div_assign_array<D: Device>() {
         let a = vec![1., 2., 3., 4., 5., 6., 7., 8.];
         let mut a: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(a, [2, 2, 2]);
         let b = vec![8., 7., 6., 5., 4., 3., 2., 1.];
