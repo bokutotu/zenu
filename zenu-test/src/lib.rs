@@ -7,8 +7,7 @@ macro_rules! assert_mat_eq_epsilon {
         let mat2 = $mat2;
         let epsilon = $epsilon;
         let diff = mat.to_ref() - mat2.to_ref();
-        let mut abs = Matrix::<_, DimDyn, _>::zeros(diff.shape());
-        abs.to_ref_mut().abs(&diff.to_ref());
+        let abs = diff.abs();
         let diff_asum = abs.asum();
         if diff_asum > epsilon {
             panic!(

@@ -8,7 +8,7 @@ use crate::Variable;
 
 mod add;
 // mod mul;
-//
+
 // pub mod activation;
 // pub mod batch_norm;
 pub mod broadcast;
