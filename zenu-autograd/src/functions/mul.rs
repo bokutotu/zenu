@@ -1,39 +1,30 @@
-use std::{
-    cell::RefCell,
-    ops::{DerefMut, Mul},
-    rc::Rc,
-};
+use std::{cell::RefCell, ops::Mul, rc::Rc};
 
-use zenu_matrix::{
-    constructor::zeros::Zeros,
-    matrix::{MatrixBase, ToViewMatrix},
-    num::Num,
-    operation::basic_operations::MatrixMul,
-};
+use zenu_matrix::{device::Device, num::Num};
 
 use crate::{Function, Variable, VariableWeak};
 
 use super::{output_shape, sum_to::sum_to};
 
-struct Multiply<T: Num> {
-    x: Variable<T>,
-    y: Variable<T>,
-    output: VariableWeak<T>,
+struct Multiply<T: Num, D: Device> {
+    x: Variable<T, D>,
+    y: Variable<T, D>,
+    output: VariableWeak<T, D>,
 }
 
-impl<T: Num> Multiply<T> {
-    pub fn new(x: Variable<T>, y: Variable<T>, output: Variable<T>) -> Self {
+impl<T: Num, D: Device> Multiply<T, D> {
+    pub fn new(x: Variable<T, D>, y: Variable<T, D>, output: Variable<T, D>) -> Self {
         let output = output.downgrade();
         Self { x, y, output }
     }
 }
 
-impl<T: Num> Function<T> for Multiply<T> {
+impl<T: Num, D: Device> Function<T, D> for Multiply<T, D> {
     fn forward(&self) {
         let x = self.x.get_data();
         let y = self.y.get_data();
-        let x = x.to_view();
-        let y = y.to_view();
+        let x = x.to_ref();
+        let y = y.to_ref();
         let output = self.output.upgrade().unwrap();
         let mut output = output.get_data_mut();
         MatrixMul::mul(output.deref_mut(), x, y);
