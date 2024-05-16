@@ -2,7 +2,7 @@ use crate::{
     device::{cpu::Cpu, DeviceBase},
     dim::{larger_shape, smaller_shape, DimDyn, DimTrait},
     index::Index0D,
-    matrix::{Matrix, Ref, Repr},
+    matrix::{Matrix, Owned, Ref, Repr},
     num::Num,
 };
 
@@ -500,7 +500,7 @@ impl_basic_ops_no_inputs!(ExpOps, exp, array_exp, array_exp_assign);
 impl_basic_ops_no_inputs!(LogOps, ln, array_log, array_log_assign);
 
 macro_rules! impl_basic_ops_no_inputs {
-    ($trait_name:ident, $method:ident, $assign:ident) => {
+    ($trait_name:ident, $output:ident, $method:ident, $assign:ident) => {
         impl<T: Num, S: DimTrait, D: DeviceBase + $trait_name> Matrix<Ref<&mut T>, S, D> {
             pub fn $method<R: Repr<Item = T>, SO: DimTrait>(&self, other: &Matrix<R, SO, D>) {
                 if self.shape().slice() != other.shape().slice() {
@@ -540,21 +540,29 @@ macro_rules! impl_basic_ops_no_inputs {
                 }
             }
         }
+
+        impl<T: Num, R: Repr<Item = T>, S: DimTrait, D: DeviceBase + $trait_name> Matrix<R, S, D> {
+            pub fn $output(&self) -> Matrix<Owned<T>, S, D> {
+                let mut ans = Matrix::zeros(self.shape().clone());
+                ans.to_ref_mut().$method(self);
+                ans
+            }
+        }
     };
 }
-impl_basic_ops_no_inputs!(SinOps, sin, sin_assign);
-impl_basic_ops_no_inputs!(CosOps, cos, cos_assign);
-impl_basic_ops_no_inputs!(TanOps, tan, tan_assign);
-impl_basic_ops_no_inputs!(AsinOps, asin, asin_assign);
-impl_basic_ops_no_inputs!(AcosOps, acos, acos_assign);
-impl_basic_ops_no_inputs!(AtanOps, atan, atan_assign);
-impl_basic_ops_no_inputs!(SinhOps, sinh, sinh_assign);
-impl_basic_ops_no_inputs!(CoshOps, cosh, cosh_assign);
-impl_basic_ops_no_inputs!(TanhOps, tanh, tanh_assign);
-impl_basic_ops_no_inputs!(AbsOps, abs, abs_assign);
-impl_basic_ops_no_inputs!(SqrtOps, sqrt, sqrt_assign);
-impl_basic_ops_no_inputs!(ExpOps, exp, exp_assign);
-impl_basic_ops_no_inputs!(LogOps, log, log_assign);
+impl_basic_ops_no_inputs!(SinOps, sin, sin_array, sin_assign);
+impl_basic_ops_no_inputs!(CosOps, cos, cos_array, cos_assign);
+impl_basic_ops_no_inputs!(TanOps, tan, tan_array, tan_assign);
+impl_basic_ops_no_inputs!(AsinOps, asin, asin_array, asin_assign);
+impl_basic_ops_no_inputs!(AcosOps, acos, acos_array, acos_assign);
+impl_basic_ops_no_inputs!(AtanOps, atan, atan_array, atan_assign);
+impl_basic_ops_no_inputs!(SinhOps, sinh, sinh_array, sinh_assign);
+impl_basic_ops_no_inputs!(CoshOps, cosh, cosh_array, cosh_assign);
+impl_basic_ops_no_inputs!(TanhOps, tanh, tanh_array, tanh_assign);
+impl_basic_ops_no_inputs!(AbsOps, abs, abs_array, abs_assign);
+impl_basic_ops_no_inputs!(SqrtOps, sqrt, sqrt_array, sqrt_assign);
+impl_basic_ops_no_inputs!(ExpOps, exp, exp_array, exp_assign);
+impl_basic_ops_no_inputs!(LogOps, log, log_array, log_assign);
 
 #[cfg(test)]
 mod basic_ops {
@@ -1239,7 +1247,7 @@ mod basic_ops {
         let a = vec![0., 1., 2., 3., 4., 5., 6., 7.];
         let a: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(a, [2, 2, 2]);
         let mut ans: Matrix<Owned<f32>, DimDyn, D> = Matrix::zeros([2, 2, 2]);
-        ans.to_ref_mut().sin(&a);
+        ans.to_ref_mut().sin_array(&a);
 
         // convert this test code to epsilon comparison
         assert!(ans.index_item([0, 0, 0]) - 0. < 1e-6);
@@ -1266,7 +1274,7 @@ mod basic_ops {
         let a: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(a, [8]);
         let a = a.slice(slice_dynamic![1..;2]);
         let mut ans: Matrix<Owned<f32>, DimDyn, D> = Matrix::zeros([4]);
-        ans.to_ref_mut().sin(&a);
+        ans.to_ref_mut().sin_array(&a);
 
         assert!((ans.index_item([0]) - f32::sin(1.)).abs() < 1e-6);
         assert!((ans.index_item([1]) - f32::sin(3.)).abs() < 1e-6);
