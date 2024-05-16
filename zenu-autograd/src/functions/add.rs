@@ -1,35 +1,31 @@
-use std::{
-    cell::RefCell,
-    ops::{Add, DerefMut},
-    rc::Rc,
-};
+use std::{cell::RefCell, ops::Add, rc::Rc};
 
-use zenu_matrix::num::Num;
+use zenu_matrix::{device::Device, num::Num};
 
-use crate::{Function, Variable, VariableWeak};
+use crate::{creator::zeros::zeros, Function, Variable, VariableWeak};
 
 use super::{output_shape, sum_to::sum_to};
 
-struct Addition<T: Num> {
-    x: Variable<T>,
-    y: Variable<T>,
-    output: VariableWeak<T>,
+struct Addition<T: Num, D: Device> {
+    x: Variable<T, D>,
+    y: Variable<T, D>,
+    output: VariableWeak<T, D>,
 }
 
-impl<T: Num> Addition<T> {
-    pub fn new(x: Variable<T>, y: Variable<T>, output: Variable<T>) -> Self {
+impl<T: Num, D: Device> Addition<T, D> {
+    pub fn new(x: Variable<T, D>, y: Variable<T, D>, output: Variable<T, D>) -> Self {
         let output = output.downgrade();
         Self { x, y, output }
     }
 }
 
-impl<T: Num> Function<T> for Addition<T> {
+impl<T: Num, D: Device> Function<T, D> for Addition<T, D> {
     fn forward(&self) {
         let x = self.x.get_data();
         let y = self.y.get_data();
         let output = self.output.upgrade().unwrap();
-        let mut output = output.get_data_mut();
-        MatrixAdd::add(output.deref_mut(), x.to_view(), y.to_view());
+        let output_mat = x + y;
+        output.get_data_mut().to_ref_mut().copy_from(&output_mat);
     }
 
     fn backward(&self) {
@@ -41,25 +37,24 @@ impl<T: Num> Function<T> for Addition<T> {
         self.y.set_grad(sum_to(grad, y_shape));
     }
 
-    fn get_inputs(&self) -> Vec<Variable<T>> {
+    fn get_inputs(&self) -> Vec<Variable<T, D>> {
         vec![self.x.clone(), self.y.clone()]
     }
 }
 
-fn add<T: Num>(x: Variable<T>, y: Variable<T>) -> Variable<T> {
+fn add<T: Num, D: Device>(x: Variable<T, D>, y: Variable<T, D>) -> Variable<T, D> {
     let output_shape = output_shape(&x, &y);
-    let output = Zeros::zeros(output_shape);
-    let output = Variable::new(output);
+    let output = zeros(output_shape);
     let add = Addition::new(x, y, output.clone());
     add.forward();
     output.set_creator(Rc::new(RefCell::new(Box::new(add))));
     output
 }
 
-impl<T: Num> Add<Variable<T>> for Variable<T> {
-    type Output = Variable<T>;
+impl<T: Num, D: Device> Add<Variable<T, D>> for Variable<T, D> {
+    type Output = Variable<T, D>;
 
-    fn add(self, other: Variable<T>) -> Self::Output {
+    fn add(self, other: Variable<T, D>) -> Self::Output {
         add(self, other)
     }
 }
