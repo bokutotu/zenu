@@ -8,7 +8,7 @@ use zenu_matrix::{
 use crate::Variable;
 
 pub fn ones<T: Num, I: Into<DimDyn>, D: Device>(dim: I) -> Variable<T, D> {
-    let matrix = Matrix::<Owned<T>, DimDyn, D>::zeros(dim.into());
+    let matrix = Matrix::<Owned<T>, DimDyn, D>::ones(dim.into());
     Variable::new(matrix)
 }
 

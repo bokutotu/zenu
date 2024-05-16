@@ -11,7 +11,7 @@ use std::{
     sync::Mutex,
 };
 
-use creator::zeros::zeros;
+use creator::{ones::ones, zeros::zeros};
 use lazy_static::lazy_static;
 use zenu_matrix::{
     device::Device,
@@ -254,10 +254,9 @@ impl<T: Num, D: Device> Variable<T, D> {
             inner: Rc::new(RefCell::new(VariableInner::new(data))),
         }
     }
-    pub fn get_data<'a>(&'a self) -> Matrix<Owned<T>, DimDyn, D> {
+    pub fn get_data<'a>(&'a self) -> Ref<'a, Matrix<Owned<T>, DimDyn, D>> {
         let reference: Ref<'a, VariableInner<T, D>> = self.inner.borrow();
-        let ref_v = Ref::map(reference, |r| &r.data);
-        ref_v.clone()
+        Ref::map(reference, |r| &r.data)
     }
 
     pub fn get_data_mut<'a>(&'a self) -> RefMut<'a, Matrix<Owned<T>, DimDyn, D>> {
@@ -286,7 +285,7 @@ impl<T: Num, D: Device> Variable<T, D> {
 
     pub fn backward(&self) {
         if self.inner.borrow().grad.is_none() {
-            let ones = zeros(self.get_data().shape());
+            let ones = ones(self.get_data().shape());
             ones.set_name(&format!("{:?}_grad", self.get_name().unwrap_or_default()));
             self.inner.borrow_mut().grad = Some(ones);
         }
