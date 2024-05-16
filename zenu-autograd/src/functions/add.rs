@@ -4,12 +4,7 @@ use std::{
     rc::Rc,
 };
 
-use zenu_matrix::{
-    constructor::zeros::Zeros,
-    matrix::{MatrixBase, ToViewMatrix},
-    num::Num,
-    operation::basic_operations::MatrixAdd,
-};
+use zenu_matrix::num::Num;
 
 use crate::{Function, Variable, VariableWeak};
 
