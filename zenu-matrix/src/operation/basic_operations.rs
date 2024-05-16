@@ -570,11 +570,8 @@ mod basic_ops {
         device::Device,
         dim::DimDyn,
         matrix::{Matrix, Owned},
-        operation::asum::Asum,
         slice_dynamic,
     };
-
-    use super::{AddOps, DivOps, MulOps, SubOps};
 
     // 必要なテスト群
     // default stride
