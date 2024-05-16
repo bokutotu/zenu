@@ -1,31 +1,31 @@
 use std::{cell::RefCell, rc::Rc};
 
-use zenu_matrix::{dim::DimDyn, num::Num};
+use zenu_matrix::{device::Device, dim::DimDyn, num::Num};
 
-use crate::{Function, Variable, VariableWeak};
+use crate::{creator::zeros::zeros, Function, Variable, VariableWeak};
 
 use super::sum_to::sum_to;
 
-struct Broadcast<T: Num> {
-    x: Variable<T>,
-    output: VariableWeak<T>,
+struct Broadcast<T: Num, D: Device> {
+    x: Variable<T, D>,
+    output: VariableWeak<T, D>,
 }
 
-impl<T: Num> Broadcast<T> {
-    pub fn new(x: Variable<T>, output: Variable<T>) -> Self {
+impl<T: Num, D: Device> Broadcast<T, D> {
+    pub fn new(x: Variable<T, D>, output: Variable<T, D>) -> Self {
         let output = output.downgrade();
         Self { x, output }
     }
 }
 
-impl<T: Num> Function<T> for Broadcast<T> {
+impl<T: Num, D: Device> Function<T, D> for Broadcast<T, D> {
     fn forward(&self) {
         let output = self.output.upgrade().unwrap();
         let mut output = output.get_data_mut();
         let x = self.x.get_data();
-        let x = x.to_view();
-        let mut output = output.to_view_mut();
-        B::broadcast(&mut output, &x);
+        let x = x.to_ref();
+        let output = output.to_ref_mut();
+        output.broadcast(&x);
     }
 
     fn backward(&self) {
@@ -36,13 +36,13 @@ impl<T: Num> Function<T> for Broadcast<T> {
         self.x.set_grad(x_grad);
     }
 
-    fn get_inputs(&self) -> Vec<Variable<T>> {
+    fn get_inputs(&self) -> Vec<Variable<T, D>> {
         vec![self.x.clone()]
     }
 }
 
-pub fn broadcast<T: Num>(x: Variable<T>, shape: DimDyn) -> Variable<T> {
-    let output = Variable::new(Zeros::zeros(shape));
+pub fn broadcast<T: Num, D: Device>(x: Variable<T, D>, shape: DimDyn) -> Variable<T, D> {
+    let output = zeros(shape);
     let broadcast = Broadcast::new(x, output.clone());
     broadcast.forward();
     output.set_creator(Rc::new(RefCell::new(Box::new(broadcast))));
