@@ -17,7 +17,7 @@ pub mod broadcast;
 // pub mod clip;
 // pub mod conv2d;
 pub mod cosh;
-// pub mod exp;
+pub mod exp;
 // pub mod flatten;
 // pub mod log;
 // pub mod loss;
