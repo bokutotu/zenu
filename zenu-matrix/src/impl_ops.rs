@@ -15,13 +15,13 @@ macro_rules! call_on_self {
 
 macro_rules! impl_arithmetic_ops {
     (
-        $trait:ident, 
-        $trait_method:ident, 
-        $assign_trait:ident, 
-        $assign_trait_method:ident, 
-        $scalr:ident, 
-        $scalar_assign:ident, 
-        $array:ident, 
+        $trait:ident,
+        $trait_method:ident,
+        $assign_trait:ident,
+        $assign_trait_method:ident,
+        $scalr:ident,
+        $scalar_assign:ident,
+        $array:ident,
         $array_assign:ident
     ) => {
         // Add<T> for Matrix<R, S, D>
