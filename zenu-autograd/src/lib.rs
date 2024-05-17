@@ -359,6 +359,10 @@ impl<T: Num, D: Device> Variable<T, D> {
     pub fn get_all_trainable_variables(&self) -> Vec<Variable<T, D>> {
         self.inner.borrow().get_all_trainable_variables()
     }
+
+    pub fn get_shape(&self) -> DimDyn {
+        self.get_data().shape()
+    }
 }
 
 #[derive(Debug, Clone)]

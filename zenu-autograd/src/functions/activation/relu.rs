@@ -1,16 +1,13 @@
 use std::{cell::RefCell, rc::Rc};
 
 use zenu_matrix::{
-    constructor::zeros::Zeros,
+    device::Device,
     dim::DimDyn,
-    matrix::{MatrixBase, ToViewMatrix, ToViewMutMatrix},
-    matrix_impl::{Matrix, OwnedMatrixDyn},
-    memory_impl::OwnedMem,
+    matrix::{Matrix, Owned},
     num::Num,
-    operation::relu::Relu as R,
 };
 
-use crate::{Function, Variable, VariableWeak};
+use crate::{creator::zeros::zeros, Function, Variable, VariableWeak};
 
 struct Relu<T: Num, D: Device> {
     input: Variable<T, D>,
@@ -29,8 +26,8 @@ impl<T: Num, D: Device> Function<T, D> for Relu<T, D> {
         let input = self.input.get_data();
         let output = self.output.upgrade().unwrap();
         let mut output = output.get_data_mut();
-        let mut output_view_mut = output.to_ref_mut();
-        R::relu(&mut output_view_mut, input.to_ref());
+        let output_view_mut = output.to_ref_mut();
+        output_view_mut.relu(&input.to_ref(), T::zero());
     }
 
     fn backward(&self) {
@@ -39,8 +36,9 @@ impl<T: Num, D: Device> Function<T, D> for Relu<T, D> {
             let input = self.input.get_data();
             let output = self.output.upgrade().unwrap();
             let output_grad = output.get_grad().clone().unwrap();
-            let mut mask = OwnedMatrixDyn::zeros(input.shape());
-            R::relu_backward_mask(&mut mask.to_ref_mut(), input.to_ref());
+            let mut mask: Matrix<Owned<T>, DimDyn, D> = Matrix::zeros(input.shape());
+            mask.to_ref_mut()
+                .relu_backward_mask(&input.to_ref(), T::zero());
             let mask = Variable::from(mask);
             output_grad * mask
         };
@@ -53,8 +51,7 @@ impl<T: Num, D: Device> Function<T, D> for Relu<T, D> {
 }
 
 pub fn relu<T: Num, D: Device>(input: Variable<T, D>) -> Variable<T, D> {
-    let output: Matrix<OwnedMem<T, D>, DimDyn> = Zeros::zeros(input.get_data().shape());
-    let output = Variable::from(output);
+    let output = zeros(input.get_shape());
     let relu = Relu::new(input, output.clone());
     relu.forward();
     output.set_creator(Rc::new(RefCell::new(Box::new(relu))));
@@ -63,34 +60,27 @@ pub fn relu<T: Num, D: Device>(input: Variable<T, D>) -> Variable<T, D> {
 
 #[cfg(test)]
 mod relu {
+
     use zenu_matrix::{
-        matrix::{OwnedMatrix, ToViewMatrix},
-        matrix_impl::OwnedMatrixDyn,
-        operation::asum::Asum,
+        device::Device,
+        dim::DimDyn,
+        matrix::{Matrix, Owned},
     };
+    use zenu_test::{assert_val_eq, assert_val_eq_grad, run_test};
 
     use crate::Variable;
 
     use super::relu;
 
-    #[test]
-    fn relu_1d() {
-        let x = OwnedMatrixDyn::from_vec(vec![-1., 0., 2., 3.], [2, 2]);
-        let x_v = Variable::from(x.clone());
+    fn relu_1d<D: Device>() {
+        let x: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(vec![-1., 0., 2., 3.], [2, 2]);
+        let x_v = Variable::from(x);
         let y = relu(x_v.clone());
-        let ans = OwnedMatrixDyn::from_vec(vec![0., 0., 2., 3.], [2, 2]);
-        let diff = y.get_data().to_ref() - ans.to_ref();
-        let diff_asum = diff.asum();
-        assert!(diff_asum < 1.0e-6);
-
         y.backward();
-
-        let ans = OwnedMatrixDyn::from_vec(vec![0., 0., 1., 1.], [2, 2]);
-
-        x_v.with_grad_data(|x_grad| {
-            let diff = x_grad.to_ref() - ans.to_ref();
-            let diff_asum = diff.asum();
-            assert!(diff_asum < 1.0e-6);
-        });
+        let ans = Matrix::<Owned<f32>, DimDyn, D>::from_vec(vec![0., 0., 2., 3.], [2, 2]);
+        let x_grad = Matrix::<Owned<f32>, DimDyn, D>::from_vec(vec![0., 0., 1., 1.], [2, 2]);
+        assert_val_eq!(y, ans, 1.0e-6);
+        assert_val_eq_grad!(x_v, x_grad, 1.0e-6);
     }
+    run_test!(relu_1d, relu_1d_cpu, relu_1d_nvidia);
 }
