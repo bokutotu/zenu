@@ -359,6 +359,49 @@ pub fn clip_assign<T: 'static>(input: *mut T, size: usize, stride: usize, min: T
     }
 }
 
+pub fn clip_backward<T: 'static>(
+    input: *mut T,
+    mask: *mut T,
+    max: T,
+    min: T,
+    size: usize,
+    stride_in: usize,
+    stride_out: usize,
+) {
+    let size = size as ::std::os::raw::c_int;
+    let stride_in = stride_in as ::std::os::raw::c_int;
+    let stride_out = stride_out as ::std::os::raw::c_int;
+    if TypeId::of::<T>() == TypeId::of::<f32>() {
+        let input = input as *mut f32;
+        let mask = mask as *mut f32;
+        let min = unsafe { *{ &min as *const T as *const f32 } };
+        let max = unsafe { *{ &max as *const T as *const f32 } };
+        unsafe { array_clip_backward_float(input, mask, max, min, size, stride_in, stride_out) };
+    } else if TypeId::of::<T>() == TypeId::of::<f64>() {
+        let input = input as *mut f64;
+        let mask = mask as *mut f64;
+        let min = unsafe { *{ &min as *const T as *const f64 } };
+        let max = unsafe { *{ &max as *const T as *const f64 } };
+        unsafe { array_clip_backward_double(input, mask, max, min, size, stride_in, stride_out) };
+    }
+}
+
+pub fn clip_backward_assign<T: 'static>(mask: *mut T, max: T, min: T, size: usize, stride: usize) {
+    let size = size as ::std::os::raw::c_int;
+    let stride = stride as ::std::os::raw::c_int;
+    if TypeId::of::<T>() == TypeId::of::<f32>() {
+        let mask = mask as *mut f32;
+        let min = unsafe { *{ &min as *const T as *const f32 } };
+        let max = unsafe { *{ &max as *const T as *const f32 } };
+        unsafe { array_clip_backward_assign_float(mask, max, min, size, stride) };
+    } else if TypeId::of::<T>() == TypeId::of::<f64>() {
+        let mask = mask as *mut f64;
+        let min = unsafe { *{ &min as *const T as *const f64 } };
+        let max = unsafe { *{ &max as *const T as *const f64 } };
+        unsafe { array_clip_backward_assign_double(mask, max, min, size, stride) };
+    }
+}
+
 #[cfg(test)]
 mod array_array {
     use super::*;
@@ -994,5 +1037,71 @@ mod array_scalar {
     #[test]
     fn clip_test_f64() {
         clip_test!(f64);
+    }
+
+    macro_rules! clip_backward {
+        ($ty:ty) => {
+            let a: Vec<$ty> = vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0];
+            let mut out = vec![0.0; a.len()];
+            let a_gpu = cuda_malloc(a.len()).unwrap();
+            cuda_copy(
+                a_gpu,
+                a.as_ptr(),
+                a.len(),
+                ZenuCudaMemCopyKind::HostToDevice,
+            )
+            .unwrap();
+            clip_backward(a_gpu, a_gpu, 2.0, 1.0, a.len(), 1, 1);
+            cuda_copy(
+                out.as_mut_ptr(),
+                a_gpu,
+                out.len(),
+                ZenuCudaMemCopyKind::DeviceToHost,
+            )
+            .unwrap();
+            let ans: Vec<$ty> = vec![0.0, 1.0, 1.0, 0.0, 0.0, 0.0];
+            assert_eq!(out, ans);
+        };
+    }
+    #[test]
+    fn clip_backward_f32() {
+        clip_backward!(f32);
+    }
+    #[test]
+    fn clip_backward_f64() {
+        clip_backward!(f64);
+    }
+
+    macro_rules! clip_backward_assign {
+        ($ty:ty) => {
+            let a: Vec<$ty> = vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0];
+            let mut out = vec![0.0; a.len()];
+            let a_gpu = cuda_malloc(a.len()).unwrap();
+            cuda_copy(
+                a_gpu,
+                a.as_ptr(),
+                a.len(),
+                ZenuCudaMemCopyKind::HostToDevice,
+            )
+            .unwrap();
+            clip_backward_assign(a_gpu, 2.0, 1.0, a.len(), 1);
+            cuda_copy(
+                out.as_mut_ptr(),
+                a_gpu,
+                out.len(),
+                ZenuCudaMemCopyKind::DeviceToHost,
+            )
+            .unwrap();
+            let ans: Vec<$ty> = vec![0.0, 1.0, 1.0, 0.0, 0.0, 0.0];
+            assert_eq!(out, ans);
+        };
+    }
+    #[test]
+    fn clip_backward_assign_f32() {
+        clip_backward_assign!(f32);
+    }
+    #[test]
+    fn clip_backward_assign_f64() {
+        clip_backward_assign!(f64);
     }
 }
