@@ -44,4 +44,4 @@ jobs:
         run: cd zenu-matrix && cargo test --verbose
           
       - name: Run tests on zenu-autograd
-        run: cd ../zenu-autograd && cargo test --verbose
+        run: cd zenu-autograd && cargo test --verbose
