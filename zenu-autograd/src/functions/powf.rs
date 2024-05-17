@@ -1,10 +1,6 @@
 use std::{cell::RefCell, rc::Rc};
 
-use zenu_matrix::{
-    matrix::{ToViewMatrix, ToViewMutMatrix},
-    num::Num,
-    operation::basic_operations::MatrixPowf,
-};
+use zenu_matrix::{device::Device, num::Num};
 
 use crate::{creator::zeros::zeros_like, Function, Variable, VariableWeak};
 

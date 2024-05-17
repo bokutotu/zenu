@@ -1,4 +1,4 @@
-use zenu_matrix::num::Num;
+use zenu_matrix::{device::Device, num::Num};
 
 use crate::{functions::tanh::tanh, Variable};
 
@@ -14,44 +14,44 @@ pub fn sigmoid<T: Num, D: Device>(x: Variable<T, D>) -> Variable<T, D> {
 
 #[cfg(test)]
 mod sigmoid {
+    use zenu_test::run_test;
+
     use crate::creator::from_vec::from_vec;
 
     use super::*;
-    use zenu_matrix::matrix::IndexItem;
 
-    #[test]
-    fn test_sigmoid() {
-        let x = Variable::from(0.0);
+    fn test_sigmoid<D: Device>() {
+        let x = Variable::<f32, D>::from(0.0);
         let y = sigmoid(x);
         assert_eq!(y.get_data().index_item([]) - 0.5 < 1e-6, true);
     }
+    run_test!(test_sigmoid, test_sigmoid_cpu, test_sigmoid_nvidia);
 
-    #[test]
-    fn test_sigmoid_05() {
-        let x = Variable::from(0.5);
+    fn test_sigmoid_05<D: Device>() {
+        let x = Variable::<f32, D>::from(0.5);
         let y = sigmoid(x);
         assert_eq!(y.get_data().index_item([]) - 0.62245935 < 1e-6, true);
     }
+    run_test!(test_sigmoid_05, test_sigmoid_05_cpu, test_sigmoid_05_nvidia);
 
-    #[test]
-    fn test_sigmoid_01() {
-        let x = Variable::from(0.1);
+    fn test_sigmoid_01<D: Device>() {
+        let x = Variable::<f32, D>::from(0.1);
         let y = sigmoid(x);
         assert_eq!(y.get_data().index_item([]) - 0.52497919 < 1e-6, true);
     }
+    run_test!(test_sigmoid_01, test_sigmoid_01_cpu, test_sigmoid_01_nvidia);
 
-    #[test]
-    fn sigmoid_1d() {
-        let x = from_vec(vec![0.0, 0.5, 0.1], [3]);
+    fn sigmoid_1d<D: Device>() {
+        let x: Variable<f64, D> = from_vec(vec![0.0, 0.5, 0.1], [3]);
         let y = sigmoid(x);
         assert_eq!(y.get_data().index_item([0]) - 0.5 < 1e-6, true);
         assert_eq!(y.get_data().index_item([1]) - 0.62245935 < 1e-6, true);
         assert_eq!(y.get_data().index_item([2]) - 0.52497919 < 1e-6, true);
     }
+    run_test!(sigmoid_1d, sigmoid_1d_cpu, sigmoid_1d_nvidia);
 
-    #[test]
-    fn sigmoid_2d() {
-        let x = from_vec(vec![0.0, 0.5, 0.1, 0.2, 0.3, 0.4], [2, 3]);
+    fn sigmoid_2d<D: Device>() {
+        let x: Variable<f32, D> = from_vec(vec![0.0, 0.5, 0.1, 0.2, 0.3, 0.4], [2, 3]);
         let y = sigmoid(x);
         assert_eq!(y.get_data().index_item([0, 0]) - 0.5 < 1e-6, true);
         assert_eq!(y.get_data().index_item([0, 1]) - 0.62245935 < 1e-6, true);
@@ -60,4 +60,5 @@ mod sigmoid {
         assert_eq!(y.get_data().index_item([1, 1]) - 0.57444252 < 1e-6, true);
         assert_eq!(y.get_data().index_item([1, 2]) - 0.59868766 < 1e-6, true);
     }
+    run_test!(sigmoid_2d, sigmoid_2d_cpu, sigmoid_2d_nvidia);
 }

@@ -1,11 +1,6 @@
 use std::{cell::RefCell, rc::Rc};
 
-use zenu_matrix::{
-    dim::DimTrait,
-    matrix::MatrixBase,
-    num::Num,
-    operation::{copy_from::CopyFrom, reshape::Reshape},
-};
+use zenu_matrix::{device::Device, dim::DimTrait, num::Num};
 
 use crate::{creator::zeros::zeros, Function, Variable, VariableWeak};
 
@@ -31,6 +26,7 @@ impl<T: Num, D: Device> Function<T, D> for Flatten<T, D> {
             .upgrade()
             .unwrap()
             .get_data_mut()
+            .to_ref_mut()
             .copy_from(&input_mat.reshape(output_shape.slice()));
     }
 

@@ -1,11 +1,6 @@
 use std::{cell::RefCell, rc::Rc};
 
-use zenu_matrix::{
-    constructor::zeros::Zeros,
-    matrix::{MatrixBase, ToViewMatrix, ToViewMutMatrix},
-    num::Num,
-    operation::softmax::SoftMax as S,
-};
+use zenu_matrix::{device::Device, num::Num};
 
 use crate::{Function, Variable, VariableWeak};
 
@@ -30,12 +25,10 @@ impl<T: Num, D: Device> SoftMax<T, D> {
 impl<T: Num, D: Device> Function<T, D> for SoftMax<T, D> {
     fn forward(&self) {
         let output = self.output.upgrade().unwrap();
-        let mut output = output.get_data_mut();
-        S::softmax_assign(
-            &mut output.to_ref_mut(),
-            self.input.get_data().to_ref(),
-            self.axis,
-        )
+        let output = output.get_data_mut();
+        output
+            .to_ref_mut()
+            .softmax_assign(&self.input.get_data().to_ref(), self.axis)
     }
 
     fn backward(&self) {
