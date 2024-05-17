@@ -18,14 +18,14 @@ struct MatMul<T: Num> {
     output: VariableWeak<T>,
 }
 
-impl<T: Num> MatMul<T> {
+impl<T: Num, D: Device> MatMul<T> {
     pub fn new(x: Variable<T>, y: Variable<T>, output: Variable<T>) -> Self {
         let output = output.downgrade();
         Self { x, y, output }
     }
 }
 
-impl<T: Num> Function<T> for MatMul<T> {
+impl<T: Num, D: Device> Function<T> for MatMul<T> {
     fn forward(&self) {
         if self.x.get_data().shape().len() != 2 || self.y.get_data().shape().len() != 2 {
             panic!("x.shape().len() != 2 || y.shape().len() != 2");

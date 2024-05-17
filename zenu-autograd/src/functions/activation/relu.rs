@@ -17,14 +17,14 @@ struct Relu<T: Num> {
     output: VariableWeak<T>,
 }
 
-impl<T: Num> Relu<T> {
+impl<T: Num, D: Device> Relu<T> {
     pub fn new(input: Variable<T>, output: Variable<T>) -> Self {
         let output = output.downgrade();
         Self { input, output }
     }
 }
 
-impl<T: Num> Function<T> for Relu<T> {
+impl<T: Num, D: Device> Function<T> for Relu<T> {
     fn forward(&self) {
         let input = self.input.get_data();
         let output = self.output.upgrade().unwrap();

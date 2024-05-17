@@ -16,14 +16,14 @@ struct Flatten<T: Num> {
     output: VariableWeak<T>,
 }
 
-impl<T: Num> Flatten<T> {
+impl<T: Num, D: Device> Flatten<T> {
     fn new(input: Variable<T>, output: Variable<T>) -> Self {
         let output = output.downgrade();
         Self { input, output }
     }
 }
 
-impl<T: Num> Function<T> for Flatten<T> {
+impl<T: Num, D: Device> Function<T> for Flatten<T> {
     fn forward(&self) {
         let output_shape = self.output.upgrade().unwrap().get_data().shape();
         let input_mat = self.input.get_data();

@@ -54,7 +54,7 @@ struct Conv2dGrad<T: Num> {
     output: VariableWeak<T>,
 }
 
-impl<T: Num> Function<T> for Conv2d<T> {
+impl<T: Num, D: Device> Function<T> for Conv2d<T> {
     fn forward(&self) {
         let output = conv2d_inner(
             self.input.get_data().to_view(),
@@ -108,7 +108,7 @@ impl<T: Num> Function<T> for Conv2d<T> {
     }
 }
 
-impl<T: Num> Function<T> for Deconv2d<T> {
+impl<T: Num, D: Device> Function<T> for Deconv2d<T> {
     fn forward(&self) {
         let output = deconv2d_inner(
             self.input.get_data().to_view(),
@@ -159,7 +159,7 @@ impl<T: Num> Function<T> for Deconv2d<T> {
     }
 }
 
-impl<T: Num> Function<T> for Conv2dGrad<T> {
+impl<T: Num, D: Device> Function<T> for Conv2dGrad<T> {
     fn forward(&self) {
         let input = self.input.get_data();
         let kernel_shape = self.kernel.get_data().shape();

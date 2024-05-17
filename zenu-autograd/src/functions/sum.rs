@@ -20,7 +20,7 @@ struct Sum<T: Num> {
     keep_dim: bool,
 }
 
-impl<T: Num> Sum<T> {
+impl<T: Num, D: Device> Sum<T> {
     pub fn new(input: Variable<T>, output: VariableWeak<T>, axis: usize, keep_dim: bool) -> Self {
         Self {
             input,
@@ -31,7 +31,7 @@ impl<T: Num> Sum<T> {
     }
 }
 
-impl<T: Num> Function<T> for Sum<T> {
+impl<T: Num, D: Device> Function<T> for Sum<T> {
     fn forward(&self) {
         let input = self.input.get_data();
         let input = input.to_view();

@@ -1,20 +1,18 @@
 use std::{cell::RefCell, rc::Rc};
 
 use zenu_matrix::{
-    matrix::{MatrixBase, ToViewMatrix, ToViewMutMatrix},
-    num::Num,
-    operation::log::Log as L,
+    device::Device, num::Num
 };
 
 use crate::{creator::zeros::zeros_like, Function, Variable, VariableWeak};
 
-struct Log<T: Num> {
-    input: Variable<T>,
-    output: VariableWeak<T>,
+struct Log<T: Num, D: Device> {
+    input: Variable<T, D>,
+    output: VariableWeak<T, D>,
 }
 
-impl<T: Num> Log<T> {
-    pub fn new(input: Variable<T>, output: Variable<T>) -> Self {
+impl<T: Num, D: Device> Log<T, D> {
+    pub fn new(input: Variable<T, D>, output: Variable<T, D>) -> Self {
         assert_eq!(
             input.get_data().shape(),
             output.get_data().shape(),
@@ -25,7 +23,7 @@ impl<T: Num> Log<T> {
     }
 }
 
-impl<T: Num> Function<T> for Log<T> {
+impl<T: Num, D: Device> Function<T, D> for Log<T, D> {
     fn forward(&self) {
         let input = self.input.get_data();
         self.output
@@ -41,7 +39,7 @@ impl<T: Num> Function<T> for Log<T> {
         self.input.set_grad(output / self.input.clone());
     }
 
-    fn get_inputs(&self) -> Vec<Variable<T>> {
+    fn get_inputs(&self) -> Vec<Variable<T, D>> {
         vec![self.input.clone()]
     }
 }

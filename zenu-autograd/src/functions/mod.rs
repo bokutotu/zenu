@@ -19,7 +19,7 @@ pub mod broadcast;
 pub mod cosh;
 pub mod exp;
 // pub mod flatten;
-// pub mod log;
+pub mod log;
 // pub mod loss;
 // pub mod matmul;
 // pub mod powf;
