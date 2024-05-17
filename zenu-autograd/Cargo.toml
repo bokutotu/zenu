@@ -24,3 +24,6 @@ harness = false
 
 [profile.bench]
 debug = true
+
+[features]
+nvidia = ["zenu-matrix/nvidia"]
