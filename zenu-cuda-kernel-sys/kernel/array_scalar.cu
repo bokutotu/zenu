@@ -35,6 +35,34 @@ __global__ void clip_double_assign(double* d_input, int size, int stride_in, dou
     }
 }
 
+__global__ void clip_backward_float(float* input, float* mask, float max, float min, int size, int stride_in, int stride_mask) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx < size) {
+        mask[idx * stride_mask] = (input[idx * stride_in] >= min && input[idx * stride_in] <= max) ? 1 : 0;
+    }
+}
+
+__global__ void clip_backward_double(double* input, double* mask, double max, double min, int size, int stride_in, int stride_mask) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx < size) {
+        mask[idx * stride_mask] = (input[idx * stride_in] >= min && input[idx * stride_in] <= max) ? 1 : 0;
+    }
+}
+
+__global__ void clip_backward_assign_float(float* mask, float max, float min, int size, int stride) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx < size) {
+        mask[idx * stride] = (mask[idx * stride] >= min && mask[idx * stride] <= max) ? 1 : 0;
+    }
+}
+
+__global__ void clip_backward_assign_double(double* mask, double max, double min, int size, int stride) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx < size) {
+        mask[idx * stride] = (mask[idx * stride] >= min && mask[idx * stride] <= max) ? 1 : 0;
+    }
+}
+
 #define CUDA_VEC_SCALAR_OP(op, func, assign_func, type)                                                                     \
 __global__ void vector_scalar_##func##_##type(type* vec, int size, int stride_v, type scalar, type* result, int stride_r) { \
     int idx = blockIdx.x * blockDim.x + threadIdx.x;                                                                        \
@@ -97,6 +125,26 @@ void array_clip_assign_float(float *input, int size, int stride_in, float min_va
 void array_clip_assign_double(double *input, int size, int stride_in, double min_val, double max_val) {
     int gridSize = (size + BLOCK_SIZE - 1) / BLOCK_SIZE;
     clip_double_assign<<<gridSize, BLOCK_SIZE>>>(input, size, stride_in, min_val, max_val);
+}
+
+void array_clip_backward_float(float *input, float *mask, float max, float min, int size, int stride_in, int stride_mask) {
+    int gridSize = (size + BLOCK_SIZE - 1) / BLOCK_SIZE;
+    clip_backward_float<<<gridSize, BLOCK_SIZE>>>(input, mask, max, min, size, stride_in, stride_mask);
+}
+
+void array_clip_backward_double(double *input, double *mask, double max, double min, int size, int stride_in, int stride_mask) {
+    int gridSize = (size + BLOCK_SIZE - 1) / BLOCK_SIZE;
+    clip_backward_double<<<gridSize, BLOCK_SIZE>>>(input, mask, max, min, size, stride_in, stride_mask);
+}
+
+void array_clip_backward_assign_float(float *mask, float max, float min, int size, int stride) {
+    int gridSize = (size + BLOCK_SIZE - 1) / BLOCK_SIZE;
+    clip_backward_assign_float<<<gridSize, BLOCK_SIZE>>>(mask, max, min, size, stride);
+}
+
+void array_clip_backward_assign_double(double *mask, double max, double min, int size, int stride) {
+    int gridSize = (size + BLOCK_SIZE - 1) / BLOCK_SIZE;
+    clip_backward_assign_double<<<gridSize, BLOCK_SIZE>>>(mask, max, min, size, stride);
 }
 
 #define CUDA_VEC_FUNC(func, type)                                                                                  \

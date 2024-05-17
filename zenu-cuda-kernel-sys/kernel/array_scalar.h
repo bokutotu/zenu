@@ -82,6 +82,13 @@ void array_clip_double(double* input, double *output, int size, int stride_in, i
 void array_clip_assign_float(float* input, int size, int stride, float min, float max);
 void array_clip_assign_double(double* input, int size, int stride, double min, double max);
 
+void array_clip_backward_float(float* input, float* mask, float max, float min, int size, int stride_in, int stride_mask);
+void array_clip_backward_double(double* input, double* mask, double max, double min, int size, int stride_in, int stride_mask);
+
+void array_clip_backward_assign_float(float* input, float max, float min, int size, int stride);
+void array_clip_backward_assign_double(double* input, double max, double min, int size, int stride);
+
+
 #ifdef __cplusplus
 }
 #endif

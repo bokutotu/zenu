@@ -31,7 +31,11 @@ impl<T: Num, D: Device> Clip<T, D> {
 impl<T: Num, D: Device> Function<T, D> for Clip<T, D> {
     fn backward(&self) {
         let output_grad = self.output.upgrade().unwrap().get_grad().clone().unwrap();
-        let clip_filter = self.input.get_data().clip(self.min, self.max);
+        let clip_filter = self
+            .input
+            .get_data()
+            .to_ref()
+            .clip_backward_mask(self.min, self.max);
         let clip_filter = Variable::from(clip_filter);
         let input_grad = output_grad * clip_filter;
         self.input.set_grad(input_grad);
@@ -79,7 +83,7 @@ mod clip {
         let ans: Matrix<Owned<f32>, DimDyn, D> =
             Matrix::from_vec(vec![2., 2., 3., 4., 4., 4.], [6]);
         let grad_ans: Matrix<Owned<f32>, DimDyn, D> =
-            Matrix::from_vec(vec![0., 2., 3., 4., 0., 0.], [6]);
+            Matrix::from_vec(vec![0., 1., 1., 1., 0., 0.], [6]);
         assert_val_eq!(output, ans, 1.0e-6);
         assert_val_eq_grad!(input, grad_ans, 1.0e-6);
     }

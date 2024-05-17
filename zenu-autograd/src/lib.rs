@@ -378,30 +378,30 @@ impl<T: Num, D: Device> VariableWeak<T, D> {
 
 impl<T: Num, D: Device> Debug for Variable<T, D> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let inner = self.get_data().clone();
-        write!(f, "Variable {{ data: {:?} }}", inner)?;
+        let inner = self.get_data();
+        write!(f, "Variable {{ data: \n{:?} }}", inner)?;
         Ok(())
     }
 }
 
 impl<T: Num, D: Device> Display for Variable<T, D> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let inner = self.get_data().clone();
-        write!(f, "Variable {{ data: {:?} }}", inner)?;
+        let inner = self.get_data();
+        write!(f, "Variable {{ data: \n{:?} }}", inner)?;
         Ok(())
     }
 }
 
 impl<T: Num, D: Device> Debug for VariableInner<T, D> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "VariableInner {{ data: {:?} }}", self.data)?;
+        write!(f, "VariableInner {{ data: \n{:?} }}", self.data)?;
         Ok(())
     }
 }
 
 impl<T: Num, D: Device> Display for VariableInner<T, D> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "VariableInner {{ data: {:?} }}", self.data)?;
+        write!(f, "VariableInner {{ data: \n{:?} }}", self.data)?;
         Ok(())
     }
 }
