@@ -27,7 +27,8 @@ impl<T: Num, D: Device> Function<T, D> for Multiply<T, D> {
         let y = y.to_ref();
         let output = self.output.upgrade().unwrap();
         let mut output = output.get_data_mut();
-        MatrixMul::mul(output.deref_mut(), x, y);
+        // MatrixMul::mul(output.deref_mut(), x, y);
+        output.to_ref_mut().mul
     }
 
     fn backward(&self) {
