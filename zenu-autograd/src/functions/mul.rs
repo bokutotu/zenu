@@ -81,8 +81,6 @@ mod mul {
         let a = Variable::new(a_mat);
         let b = Variable::new(b_mat);
         let c = a.clone() * b.clone();
-        let c_ans: Matrix<Owned<f32>, DimDyn, D> =
-            Matrix::from_vec(vec![1., 4., 9., 4., 10., 18.], [2, 3]);
         c.backward();
         let c_ans: Matrix<Owned<f32>, DimDyn, D> =
             Matrix::from_vec(vec![1., 4., 9., 4., 10., 18.], [2, 3]);
