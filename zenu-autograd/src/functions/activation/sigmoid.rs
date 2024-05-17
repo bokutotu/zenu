@@ -2,7 +2,7 @@ use zenu_matrix::num::Num;
 
 use crate::{functions::tanh::tanh, Variable};
 
-pub fn sigmoid<T: Num>(x: Variable<T>) -> Variable<T> {
+pub fn sigmoid<T: Num, D: Device>(x: Variable<T, D>) -> Variable<T, D> {
     let one = T::one();
     let two = one + one;
     let half = one / two;

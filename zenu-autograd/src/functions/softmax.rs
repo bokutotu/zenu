@@ -11,14 +11,14 @@ use crate::{Function, Variable, VariableWeak};
 
 use super::sum::sum;
 
-struct SoftMax<T: Num> {
-    input: Variable<T>,
-    output: VariableWeak<T>,
+struct SoftMax<T: Num, D: Device> {
+    input: Variable<T, D>,
+    output: VariableWeak<T, D>,
     axis: usize,
 }
 
-impl<T: Num, D: Device> SoftMax<T> {
-    fn new(input: Variable<T>, output: VariableWeak<T>, axis: usize) -> Self {
+impl<T: Num, D: Device> SoftMax<T, D> {
+    fn new(input: Variable<T, D>, output: VariableWeak<T, D>, axis: usize) -> Self {
         Self {
             input,
             output,
@@ -27,13 +27,13 @@ impl<T: Num, D: Device> SoftMax<T> {
     }
 }
 
-impl<T: Num, D: Device> Function<T> for SoftMax<T> {
+impl<T: Num, D: Device> Function<T, D> for SoftMax<T, D> {
     fn forward(&self) {
         let output = self.output.upgrade().unwrap();
         let mut output = output.get_data_mut();
         S::softmax_assign(
-            &mut output.to_view_mut(),
-            self.input.get_data().to_view(),
+            &mut output.to_ref_mut(),
+            self.input.get_data().to_ref(),
             self.axis,
         )
     }
@@ -46,12 +46,12 @@ impl<T: Num, D: Device> Function<T> for SoftMax<T> {
         self.input.set_grad(input_grad);
     }
 
-    fn get_inputs(&self) -> Vec<Variable<T>> {
+    fn get_inputs(&self) -> Vec<Variable<T, D>> {
         vec![self.input.clone()]
     }
 }
 
-pub fn softmax<T: Num>(input: Variable<T>, axis: usize) -> Variable<T> {
+pub fn softmax<T: Num, D: Device>(input: Variable<T, D>, axis: usize) -> Variable<T, D> {
     let output = Variable::new(Zeros::zeros(input.get_data().shape()));
     let softmax = SoftMax::new(input, output.clone().downgrade(), axis);
     softmax.forward();
@@ -84,7 +84,7 @@ mod softmax {
             ],
             [2, 4],
         );
-        let diff = output.get_data().to_view() - expected.to_view();
+        let diff = output.get_data().to_ref() - expected.to_ref();
         assert!(diff.asum() < 1e-6);
         let output =
             output * Variable::from(OwnedMatrixDyn::from_vec(vec![1.0, 2.0, 3.0, 4.0], [4]));
@@ -106,7 +106,7 @@ mod softmax {
             ],
             [2, 4],
         );
-        let diff = grad.get_data().to_view() - ans.to_view();
+        let diff = grad.get_data().to_ref() - ans.to_ref();
         assert!(diff.asum() < 1e-6);
     }
 }

@@ -9,19 +9,19 @@ use zenu_matrix::{
 
 use crate::{creator::zeros::zeros, Function, Variable, VariableWeak};
 
-struct Reshape<T: Num> {
-    input: Variable<T>,
-    output: VariableWeak<T>,
+struct Reshape<T: Num, D: Device> {
+    input: Variable<T, D>,
+    output: VariableWeak<T, D>,
 }
 
-impl<T: Num, D: Device> Reshape<T> {
-    fn new(input: Variable<T>, output: Variable<T>) -> Self {
+impl<T: Num, D: Device> Reshape<T, D> {
+    fn new(input: Variable<T, D>, output: Variable<T, D>) -> Self {
         let output = output.downgrade();
         Self { input, output }
     }
 }
 
-impl<T: Num, D: Device> Function<T> for Reshape<T> {
+impl<T: Num, D: Device> Function<T, D> for Reshape<T, D> {
     fn forward(&self) {
         let output_shape = self.output.upgrade().unwrap().get_data().shape();
         let input_mat = self.input.get_data();
@@ -29,7 +29,7 @@ impl<T: Num, D: Device> Function<T> for Reshape<T> {
             .upgrade()
             .unwrap()
             .get_data_mut()
-            .to_view_mut()
+            .to_ref_mut()
             .copy_from(&input_mat.reshape(output_shape.slice()));
     }
 
@@ -41,12 +41,12 @@ impl<T: Num, D: Device> Function<T> for Reshape<T> {
         ));
     }
 
-    fn get_inputs(&self) -> Vec<Variable<T>> {
+    fn get_inputs(&self) -> Vec<Variable<T, D>> {
         vec![self.input.clone()]
     }
 }
 
-pub fn reshape<T: Num>(input: Variable<T>, output_shape: &[usize]) -> Variable<T> {
+pub fn reshape<T: Num, D: Device>(input: Variable<T, D>, output_shape: &[usize]) -> Variable<T, D> {
     let output = zeros(output_shape);
     let reshape = Reshape::new(input, output.clone());
     reshape.forward();

@@ -27,38 +27,38 @@ mod conv2d_impl;
 mod deconv2_impl;
 mod im2col;
 
-struct Conv2d<T: Num> {
-    kernel: Variable<T>,
-    bias: Option<Variable<T>>,
-    input: Variable<T>,
+struct Conv2d<T: Num, D: Device> {
+    kernel: Variable<T, D>,
+    bias: Option<Variable<T, D>>,
+    input: Variable<T, D>,
     stride: (usize, usize),
     pad: (usize, usize),
-    output: VariableWeak<T>,
+    output: VariableWeak<T, D>,
 }
 
-struct Deconv2d<T: Num> {
-    kernel: Variable<T>,
-    bias: Option<Variable<T>>,
-    input: Variable<T>,
+struct Deconv2d<T: Num, D: Device> {
+    kernel: Variable<T, D>,
+    bias: Option<Variable<T, D>>,
+    input: Variable<T, D>,
     stride: (usize, usize),
     pad: (usize, usize),
-    output: VariableWeak<T>,
+    output: VariableWeak<T, D>,
 }
 
-struct Conv2dGrad<T: Num> {
-    kernel: Variable<T>,
-    input: Variable<T>,
-    gradient_output: Variable<T>,
+struct Conv2dGrad<T: Num, D: Device> {
+    kernel: Variable<T, D>,
+    input: Variable<T, D>,
+    gradient_output: Variable<T, D>,
     stride: (usize, usize),
     pad: (usize, usize),
-    output: VariableWeak<T>,
+    output: VariableWeak<T, D>,
 }
 
-impl<T: Num, D: Device> Function<T> for Conv2d<T> {
+impl<T: Num, D: Device> Function<T, D> for Conv2d<T, D> {
     fn forward(&self) {
         let output = conv2d_inner(
-            self.input.get_data().to_view(),
-            self.kernel.get_data().to_view(),
+            self.input.get_data().to_ref(),
+            self.kernel.get_data().to_ref(),
             self.bias.clone().map(|x| x.get_data()),
             self.pad,
             self.stride,
@@ -100,7 +100,7 @@ impl<T: Num, D: Device> Function<T> for Conv2d<T> {
         }
     }
 
-    fn get_inputs(&self) -> Vec<Variable<T>> {
+    fn get_inputs(&self) -> Vec<Variable<T, D>> {
         match self.bias.clone() {
             Some(bias) => vec![self.kernel.clone(), self.input.clone(), bias],
             None => vec![self.kernel.clone(), self.input.clone()],
@@ -108,11 +108,11 @@ impl<T: Num, D: Device> Function<T> for Conv2d<T> {
     }
 }
 
-impl<T: Num, D: Device> Function<T> for Deconv2d<T> {
+impl<T: Num, D: Device> Function<T, D> for Deconv2d<T, D> {
     fn forward(&self) {
         let output = deconv2d_inner(
-            self.input.get_data().to_view(),
-            self.kernel.get_data().to_view(),
+            self.input.get_data().to_ref(),
+            self.kernel.get_data().to_ref(),
             self.bias.clone().map(|x| x.get_data()),
             self.pad,
             self.stride,
@@ -151,7 +151,7 @@ impl<T: Num, D: Device> Function<T> for Deconv2d<T> {
         }
     }
 
-    fn get_inputs(&self) -> Vec<Variable<T>> {
+    fn get_inputs(&self) -> Vec<Variable<T, D>> {
         match self.bias.clone() {
             Some(bias) => vec![self.kernel.clone(), self.input.clone(), bias],
             None => vec![self.kernel.clone(), self.input.clone()],
@@ -159,12 +159,12 @@ impl<T: Num, D: Device> Function<T> for Deconv2d<T> {
     }
 }
 
-impl<T: Num, D: Device> Function<T> for Conv2dGrad<T> {
+impl<T: Num, D: Device> Function<T, D> for Conv2dGrad<T, D> {
     fn forward(&self) {
         let input = self.input.get_data();
         let kernel_shape = self.kernel.get_data().shape();
         let Im2ColRes { mut col, .. } = im2col(
-            input.to_view(),
+            input.to_ref(),
             (kernel_shape[2], kernel_shape[3]),
             self.stride,
             self.pad,
@@ -183,7 +183,7 @@ impl<T: Num, D: Device> Function<T> for Conv2dGrad<T> {
         let output = self.output.upgrade().unwrap();
         output
             .get_data_mut()
-            .to_view_mut()
+            .to_ref_mut()
             .reshape_mut([gradient_output.shape()[0], col.shape()[1]])
             .gemm(gradient_output, col);
     }
@@ -207,7 +207,7 @@ impl<T: Num, D: Device> Function<T> for Conv2dGrad<T> {
         self.gradient_output.set_grad(grad_grad_output);
     }
 
-    fn get_inputs(&self) -> Vec<Variable<T>> {
+    fn get_inputs(&self) -> Vec<Variable<T, D>> {
         vec![
             self.kernel.clone(),
             self.input.clone(),
@@ -216,13 +216,13 @@ impl<T: Num, D: Device> Function<T> for Conv2dGrad<T> {
     }
 }
 
-pub fn conv2d<T: Num>(
-    x: Variable<T>,
-    kernel: Variable<T>,
-    bias: Option<Variable<T>>,
+pub fn conv2d<T: Num, D: Device>(
+    x: Variable<T, D>,
+    kernel: Variable<T, D>,
+    bias: Option<Variable<T, D>>,
     stride: (usize, usize),
     pad: (usize, usize),
-) -> Variable<T> {
+) -> Variable<T, D> {
     let x_shape = x.get_data().shape();
     let kernel_shape = kernel.get_data().shape();
     let out_shape = conv2d_out_size(x_shape.slice(), kernel_shape.slice(), pad, stride);
@@ -242,13 +242,13 @@ pub fn conv2d<T: Num>(
     output
 }
 
-pub fn deconv2d<T: Num>(
-    x: Variable<T>,
-    kernel: Variable<T>,
-    bias: Option<Variable<T>>,
+pub fn deconv2d<T: Num, D: Device>(
+    x: Variable<T, D>,
+    kernel: Variable<T, D>,
+    bias: Option<Variable<T, D>>,
     stride: (usize, usize),
     pad: (usize, usize),
-) -> Variable<T> {
+) -> Variable<T, D> {
     let x_shape = x.get_data().shape();
     let kernel_shape = kernel.get_data().shape();
     let out_shape = deconv2d_out_size(x_shape.slice(), kernel_shape.slice(), pad, stride);
@@ -266,13 +266,13 @@ pub fn deconv2d<T: Num>(
     output
 }
 
-pub fn conv2d_grad<T: Num>(
-    x: Variable<T>,
-    gradient_output: Variable<T>,
-    kernel: Variable<T>,
+pub fn conv2d_grad<T: Num, D: Device>(
+    x: Variable<T, D>,
+    gradient_output: Variable<T, D>,
+    kernel: Variable<T, D>,
     stride: (usize, usize),
     pad: (usize, usize),
-) -> Variable<T> {
+) -> Variable<T, D> {
     let output = zeros(kernel.get_data().shape());
     let conv2d_grad = Conv2dGrad {
         kernel,

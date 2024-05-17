@@ -13,10 +13,10 @@ use zenu_matrix::{
     slice_dynamic,
 };
 
-fn padding<T: Num>(
-    input: Matrix<ViewMem<T>, DimDyn>,
+fn padding<T: Num, D: Device>(
+    input: Matrix<ViewMem<T, D>, DimDyn>,
     padding: (usize, usize),
-) -> Matrix<OwnedMem<T>, DimDyn> {
+) -> Matrix<OwnedMem<T, D>, DimDyn> {
     let (padding_height, padding_width) = padding;
     let (batch_size, in_channels, in_height, in_width) = (
         input.shape()[0],
@@ -28,7 +28,7 @@ fn padding<T: Num>(
     let out_width = in_width + 2 * padding_width;
 
     let mut output = OwnedMatrixDyn::zeros([batch_size, in_channels, out_height, out_width]);
-    let mut output_view_mut = output.to_view_mut();
+    let mut output_view_mut = output.to_ref_mut();
 
     let mut output_view_mut = output_view_mut.slice_mut_dyn(slice_dynamic!(
         ..,
@@ -41,17 +41,17 @@ fn padding<T: Num>(
     output
 }
 
-pub(super) struct Im2ColRes<T: Num> {
-    pub(crate) col: Matrix<OwnedMem<T>, DimDyn>,
+pub(super) struct Im2ColRes<T: Num, D: Device> {
+    pub(crate) col: Matrix<OwnedMem<T, D>, DimDyn>,
     pub(crate) out_size: (usize, usize),
 }
 
-pub(super) fn im2col<T: Num>(
-    img: Matrix<ViewMem<T>, DimDyn>,
+pub(super) fn im2col<T: Num, D: Device>(
+    img: Matrix<ViewMem<T, D>, DimDyn>,
     kernel_size: (usize, usize),
     stride: (usize, usize),
     pad: (usize, usize),
-) -> Im2ColRes<T> {
+) -> Im2ColRes<T, D> {
     let batch_size = img.shape()[0];
     let c = img.shape()[1];
     let h = img.shape()[2];
@@ -105,7 +105,7 @@ mod im2col {
             ],
             [1, 1, 4, 4],
         );
-        let result = im2col(input.to_view(), (2, 2), (1, 1), (0, 0));
+        let result = im2col(input.to_ref(), (2, 2), (1, 1), (0, 0));
         let mut ans = OwnedMatrixDyn::from_vec(
             vec![
                 1., 2., 5., 6., 2., 3., 6., 7., 3., 4., 7., 8., 5., 6., 9., 10., 6., 7., 10., 11.,
@@ -114,14 +114,14 @@ mod im2col {
             [9, 4],
         );
         ans.transpose();
-        assert!((ans - result.col).to_view().asum() < 1e-6);
+        assert!((ans - result.col).to_ref().asum() < 1e-6);
     }
 
     #[test]
     fn im2col_medium() {
         let input = (1..151).map(|x| x as f32).collect::<Vec<f32>>();
         let input = OwnedMatrixDyn::from_vec(input, [2, 3, 5, 5]);
-        let result = im2col(input.to_view(), (3, 3), (1, 1), (1, 1));
+        let result = im2col(input.to_ref(), (3, 3), (1, 1), (1, 1));
         let ans = vec![
             0.0, 0.0, 0.0, 0.0, 1.0, 2.0, 0.0, 6.0, 7.0, 0.0, 0.0, 0.0, 0.0, 26.0, 27.0, 0.0, 31.0,
             32.0, 0.0, 0.0, 0.0, 0.0, 51.0, 52.0, 0.0, 56.0, 57.0, 0.0, 0.0, 0.0, 1.0, 2.0, 3.0,
@@ -221,6 +221,6 @@ mod im2col {
         ];
         let mut ans = OwnedMatrixDyn::from_vec(ans, [50, 27]);
         ans.transpose();
-        assert!((ans - result.col).to_view().asum() < 1e-6);
+        assert!((ans - result.col).to_ref().asum() < 1e-6);
     }
 }

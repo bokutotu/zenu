@@ -36,13 +36,13 @@ pub(super) fn deconv2d_out_size(
     [b, ic, h, w]
 }
 
-pub(crate) fn deconv2d_inner<T: Num>(
-    img: Matrix<ViewMem<T>, DimDyn>,
-    kernel: Matrix<ViewMem<T>, DimDyn>,
-    bias: Option<Matrix<OwnedMem<T>, DimDyn>>,
+pub(crate) fn deconv2d_inner<T: Num, D: Device>(
+    img: Matrix<ViewMem<T, D>, DimDyn>,
+    kernel: Matrix<ViewMem<T, D>, DimDyn>,
+    bias: Option<Matrix<OwnedMem<T, D>, DimDyn>>,
     padding: (usize, usize),
     stride: (usize, usize),
-) -> Matrix<OwnedMem<T>, DimDyn> {
+) -> Matrix<OwnedMem<T, D>, DimDyn> {
     let (batch_size, c, h, w) = (
         img.shape()[0],
         img.shape()[1],
@@ -71,20 +71,20 @@ pub(crate) fn deconv2d_inner<T: Num>(
     kernel.transpose();
 
     let mut col = OwnedMatrixDyn::zeros([ic * kh * kw, batch_size * h * w]);
-    col.to_view_mut().gemm(kernel.to_view(), img.to_view());
+    col.to_ref_mut().gemm(kernel.to_ref(), img.to_ref());
 
     let col = col.reshape([ic, kh, kw, batch_size, h, w]);
     let col = col.transpose_by_index_inplace(&[3, 0, 1, 2, 4, 5]);
 
     let mut result = col2im(
-        col.to_view(),
+        col.to_ref(),
         [batch_size, ic, out_h, out_w],
         (kh, kw),
         stride,
         padding,
     );
     if let Some(bias) = bias {
-        result.add_assign(bias.to_view());
+        result.add_assign(bias.to_ref());
     }
     result
 }
@@ -105,7 +105,7 @@ mod deconv2d {
         let input = OwnedMatrixDyn::from_vec(input, [2, 3, 5, 5]);
         let kernel = (1..=108).map(|x| x as f32).collect::<Vec<f32>>();
         let kernel = OwnedMatrixDyn::from_vec(kernel, [3, 4, 3, 3]);
-        let output = deconv2d_inner(input.to_view(), kernel.to_view(), None, (1, 1), (2, 2));
+        let output = deconv2d_inner(input.to_ref(), kernel.to_ref(), None, (1, 1), (2, 2));
         let ans = vec![
             4998, 10116, 5121, 10362, 5244, 10608, 5367, 10854, 5490, 10566, 21372, 10812, 21864,
             11058, 22356, 11304, 22848, 11550, 5613, 11346, 5736, 11592, 5859, 11838, 5982, 12084,
@@ -637,7 +637,7 @@ mod deconv2d {
             -4.132973670959473,
         ];
         let ans = OwnedMatrixDyn::from_vec(ans, [2, 4, 5, 5]);
-        let pred = deconv2d_inner(input.to_view(), kernel.to_view(), None, (1, 1), (1, 1));
+        let pred = deconv2d_inner(input.to_ref(), kernel.to_ref(), None, (1, 1), (1, 1));
         assert!((pred - ans).asum() < 5e-5);
     }
 }

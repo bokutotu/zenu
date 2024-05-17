@@ -20,30 +20,30 @@ use crate::{creator::zeros::zeros, is_train, Function, Variable, VariableWeak};
 
 use super::{reshape::reshape, sum::sum, transpose::transpose_by_index};
 
-struct BatchNorm<T: Num> {
-    mean: Variable<T>,
-    variance: Variable<T>,
-    decay: Variable<T>,
-    epsilon: Variable<T>,
-    inv_std: Variable<T>,
-    gamma: Variable<T>,
-    beta: Variable<T>,
-    input: Variable<T>,
-    output: VariableWeak<T>,
+struct BatchNorm<T: Num, D: Device> {
+    mean: Variable<T, D>,
+    variance: Variable<T, D>,
+    decay: Variable<T, D>,
+    epsilon: Variable<T, D>,
+    inv_std: Variable<T, D>,
+    gamma: Variable<T, D>,
+    beta: Variable<T, D>,
+    input: Variable<T, D>,
+    output: VariableWeak<T, D>,
 }
 
-impl<T: Num, D: Device> BatchNorm<T> {
+impl<T: Num, D: Device> BatchNorm<T, D> {
     #[allow(clippy::too_many_arguments)]
     fn new(
-        mean: Variable<T>,
-        variance: Variable<T>,
-        decay: Variable<T>,
-        epsilon: Variable<T>,
-        inv_std: Variable<T>,
-        gamma: Variable<T>,
-        beta: Variable<T>,
-        input: Variable<T>,
-        output: Variable<T>,
+        mean: Variable<T, D>,
+        variance: Variable<T, D>,
+        decay: Variable<T, D>,
+        epsilon: Variable<T, D>,
+        inv_std: Variable<T, D>,
+        gamma: Variable<T, D>,
+        beta: Variable<T, D>,
+        input: Variable<T, D>,
+        output: Variable<T, D>,
     ) -> Self {
         let output = output.downgrade();
         Self {
@@ -60,7 +60,7 @@ impl<T: Num, D: Device> BatchNorm<T> {
     }
 }
 
-impl<T: Num, D: Device> Function<T> for BatchNorm<T> {
+impl<T: Num, D: Device> Function<T, D> for BatchNorm<T, D> {
     fn forward(&self) {
         let input_mat = self.input.get_data();
         let input_shape = input_mat.shape();
@@ -79,20 +79,20 @@ impl<T: Num, D: Device> Function<T> for BatchNorm<T> {
         if is_train() {
             let mean = input_mat.mean(Some(0), false);
             let var = input_mat.variance(Some(0), false);
-            let var_eps = var.to_view() + self.epsilon.get_data();
-            let mut zeros = OwnedMatrixDyn::zeros_like(var_eps.to_view());
+            let var_eps = var.to_ref() + self.epsilon.get_data();
+            let mut zeros = OwnedMatrixDyn::zeros_like(var_eps.to_ref());
 
-            zeros.to_view_mut().sqrt(var_eps);
+            zeros.to_ref_mut().sqrt(var_eps);
 
             let inv_std = OwnedMatrixDyn::ones(var.shape()) / zeros;
-            xc = (input_mat.to_view() - mean.to_view()) * inv_std.to_view();
+            xc = (input_mat.to_ref() - mean.to_ref()) * inv_std.to_ref();
             let m = input_mat.shape().num_elm() / self.gamma.get_data().shape().num_elm();
             let s = if m - 1 > 1 { m - 1 } else { 1 };
             let adjust = m / s;
 
             self.mean.get_data_mut().mul_assign(self.decay.get_data());
-            self.mean.get_data_mut().to_view_mut().add_assign(
-                mean.to_view()
+            self.mean.get_data_mut().to_ref_mut().add_assign(
+                mean.to_ref()
                     * (OwnedMatrixDyn::ones(self.decay.get_data().shape()) - self.decay.get_data()),
             );
 
@@ -100,26 +100,26 @@ impl<T: Num, D: Device> Function<T> for BatchNorm<T> {
                 .get_data_mut()
                 .mul_assign(self.decay.get_data());
 
-            self.variance.get_data_mut().to_view_mut().add_assign(
-                var.to_view()
+            self.variance.get_data_mut().to_ref_mut().add_assign(
+                var.to_ref()
                     * (OwnedMatrixDyn::ones(self.decay.get_data().shape()) - self.decay.get_data())
                     * T::from_usize(adjust),
             );
 
             self.inv_std
                 .get_data_mut()
-                .to_view_mut()
-                .copy_from(&inv_std.to_view());
+                .to_ref_mut()
+                .copy_from(&inv_std.to_ref());
         } else {
-            let var_eps = self.variance.get_data().to_view() + self.epsilon.get_data();
-            let mut zeros = OwnedMatrixDyn::zeros_like(var_eps.to_view());
-            zeros.to_view_mut().sqrt(var_eps);
+            let var_eps = self.variance.get_data().to_ref() + self.epsilon.get_data();
+            let mut zeros = OwnedMatrixDyn::zeros_like(var_eps.to_ref());
+            zeros.to_ref_mut().sqrt(var_eps);
             let inv_std = OwnedMatrixDyn::ones(self.variance.get_data().shape()) / zeros;
-            xc = (input_mat.to_view() - self.mean.get_data().to_view()) * inv_std.to_view();
+            xc = (input_mat.to_ref() - self.mean.get_data().to_ref()) * inv_std.to_ref();
         }
 
         let output =
-            self.gamma.get_data().to_view() * xc.to_view() + self.beta.get_data().to_view();
+            self.gamma.get_data().to_ref() * xc.to_ref() + self.beta.get_data().to_ref();
 
         let output = if num_channels == 4 {
             let output = output.reshape_new_matrix([
@@ -137,7 +137,7 @@ impl<T: Num, D: Device> Function<T> for BatchNorm<T> {
             .upgrade()
             .unwrap()
             .get_data_mut()
-            .to_view_mut()
+            .to_ref_mut()
             .copy_from(&output);
     }
 
@@ -196,7 +196,7 @@ impl<T: Num, D: Device> Function<T> for BatchNorm<T> {
         self.beta.set_grad(beta_grad);
     }
 
-    fn get_inputs(&self) -> Vec<Variable<T>> {
+    fn get_inputs(&self) -> Vec<Variable<T, D>> {
         vec![
             self.mean.clone(),
             self.variance.clone(),
@@ -212,15 +212,15 @@ impl<T: Num, D: Device> Function<T> for BatchNorm<T> {
 }
 
 #[allow(clippy::too_many_arguments)]
-pub fn batch_norm<T: Num>(
-    mean: Variable<T>,
-    variance: Variable<T>,
-    decay: Variable<T>,
-    epsilon: Variable<T>,
-    gamma: Variable<T>,
-    beta: Variable<T>,
-    input: Variable<T>,
-) -> Variable<T> {
+pub fn batch_norm<T: Num, D: Device>(
+    mean: Variable<T, D>,
+    variance: Variable<T, D>,
+    decay: Variable<T, D>,
+    epsilon: Variable<T, D>,
+    gamma: Variable<T, D>,
+    beta: Variable<T, D>,
+    input: Variable<T, D>,
+) -> Variable<T, D> {
     let output_shape = input.get_data().shape();
     let output = zeros(output_shape);
     let inv_std = zeros(variance.get_data().shape());

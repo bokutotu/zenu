@@ -9,13 +9,13 @@ use zenu_matrix::{
     slice_dynamic,
 };
 
-pub(crate) fn col2im<T: Num>(
-    col: Matrix<ViewMem<T>, DimDyn>,
+pub(crate) fn col2im<T: Num, D: Device>(
+    col: Matrix<ViewMem<T, D>, DimDyn>,
     img_shape: [usize; 4],
     kernel_size: (usize, usize),
     stride: (usize, usize),
     pad: (usize, usize),
-) -> Matrix<OwnedMem<T>, DimDyn> {
+) -> Matrix<OwnedMem<T, D>, DimDyn> {
     let (batch_size, c, h, w) = (img_shape[0], img_shape[1], img_shape[2], img_shape[3]);
     let (kh, kw) = kernel_size;
     let (sh, sw) = stride;
@@ -62,7 +62,7 @@ mod col2im {
         let kernel_shape = (3, 3);
         let stride = (1, 1);
         let pad = (1, 1);
-        let img = col2im(col.to_view(), img_shape, kernel_shape, stride, pad);
+        let img = col2im(col.to_ref(), img_shape, kernel_shape, stride, pad);
         let ans = vec![
             216, 402, 408, 414, 328, 564, 963, 972, 981, 732, 594, 1008, 1017, 1026, 762, 624,
             1053, 1062, 1071, 792, 576, 942, 948, 954, 688, 1116, 1752, 1758, 1764, 1228, 1914,
