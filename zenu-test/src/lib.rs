@@ -12,10 +12,10 @@ macro_rules! assert_mat_eq_epsilon {
         if diff_asum > epsilon {
             panic!(
                 "assertion failed: `(left == right)`\n\
-                left: `{:?}`,\n\
-                right: `{:?}`\n\
-                diff: `{:?}`\n\
-                diff_asum: `{:?}`",
+                left: \n{:?},\n\
+                right: \n{:?}\n\
+                diff: \n{:?}\n\
+                diff_asum: \n{:?}",
                 mat, mat2, diff, diff_asum
             );
         }
