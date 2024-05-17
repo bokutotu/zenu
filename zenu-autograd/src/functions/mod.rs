@@ -26,7 +26,7 @@ pub mod log;
 pub mod reshape;
 pub mod sinh;
 pub mod softmax;
-// pub mod sum;
+pub mod sum;
 pub mod sum_to;
 pub mod tanh;
 // pub mod transpose;

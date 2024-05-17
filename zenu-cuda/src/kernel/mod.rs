@@ -743,7 +743,6 @@ mod array_scalar {
                     ZenuCudaMemCopyKind::DeviceToHost,
                 )
                 .unwrap();
-                println!("{:?}", out);
                 let ans: Vec<$ty> = $ans;
                 for (a, b) in out.iter().zip(ans.iter()) {
                     assert!((a - b).abs() < 1e-6);

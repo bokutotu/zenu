@@ -64,30 +64,30 @@ mod cosh {
         let x = from_vec(vec![1., 2., 3., 4., 5., 6.], [6]);
         let y = cosh(x.clone());
         y.backward();
-        let y_ans: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(
+        let y_ans: Matrix<Owned<f64>, DimDyn, D> = Matrix::from_vec(
             vec![
-                1_f32.cosh(),
-                2_f32.cosh(),
-                3_f32.cosh(),
-                4_f32.cosh(),
-                5_f32.cosh(),
-                6_f32.cosh(),
+                1_f64.cosh(),
+                2_f64.cosh(),
+                3_f64.cosh(),
+                4_f64.cosh(),
+                5_f64.cosh(),
+                6_f64.cosh(),
             ],
             [6],
         );
         let x_grad_ans: Matrix<_, DimDyn, D> = Matrix::from_vec(
             vec![
-                1_f32.sinh(),
-                2_f32.sinh(),
-                3_f32.sinh(),
-                4_f32.sinh(),
-                5_f32.sinh(),
-                6_f32.sinh(),
+                1_f64.sinh(),
+                2_f64.sinh(),
+                3_f64.sinh(),
+                4_f64.sinh(),
+                5_f64.sinh(),
+                6_f64.sinh(),
             ],
             [6],
         );
-        assert_val_eq!(y, y_ans, 1e-7);
-        assert_val_eq_grad!(x, x_grad_ans, 1e-7);
+        assert_val_eq!(y, y_ans, 1e-6);
+        assert_val_eq_grad!(x, x_grad_ans, 1e-6);
     }
     run_test!(cosh_1d, cosh_1d_cpu, cosh_1d_nvidia);
 

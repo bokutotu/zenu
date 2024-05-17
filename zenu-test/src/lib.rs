@@ -2,7 +2,7 @@
 /// becase this macro uses them.
 #[macro_export]
 macro_rules! assert_mat_eq_epsilon {
-    ($mat:expr, $mat2: expr, $epsilon:expr) => {
+    ($mat:expr, $mat2: expr, $epsilon:expr) => {{
         let mat = $mat;
         let mat2 = $mat2;
         let epsilon = $epsilon;
@@ -19,7 +19,7 @@ macro_rules! assert_mat_eq_epsilon {
                 mat, mat2, diff, diff_asum
             );
         }
-    };
+    }};
 }
 
 #[macro_export]
