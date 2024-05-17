@@ -20,14 +20,14 @@ struct Transpose<T: Num> {
     output: VariableWeak<T>,
 }
 
-impl<T: Num> Transpose<T> {
+impl<T: Num, D: Device> Transpose<T> {
     pub fn new(x: Variable<T>, output: Variable<T>) -> Self {
         let output = output.downgrade();
         Self { x, output }
     }
 }
 
-impl<T: Num> Function<T> for Transpose<T> {
+impl<T: Num, D: Device> Function<T> for Transpose<T> {
     // FIXME: メモリを使いまわす
     fn forward(&self) {
         let x = self.x.get_data();
@@ -72,14 +72,14 @@ pub struct TransposeByIndex<T: Num> {
     index: Vec<usize>,
 }
 
-impl<T: Num> TransposeByIndex<T> {
+impl<T: Num, D: Device> TransposeByIndex<T> {
     pub fn new(x: Variable<T>, output: Variable<T>, index: Vec<usize>) -> Self {
         let output = output.downgrade();
         Self { x, output, index }
     }
 }
 
-impl<T: Num> Function<T> for TransposeByIndex<T> {
+impl<T: Num, D: Device> Function<T> for TransposeByIndex<T> {
     fn forward(&self) {
         let x = self.x.get_data();
         let mut out: Matrix<OwnedMem<T>, DimDyn> = Zeros::zeros(x.shape());

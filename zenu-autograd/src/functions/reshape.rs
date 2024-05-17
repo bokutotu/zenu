@@ -14,14 +14,14 @@ struct Reshape<T: Num> {
     output: VariableWeak<T>,
 }
 
-impl<T: Num> Reshape<T> {
+impl<T: Num, D: Device> Reshape<T> {
     fn new(input: Variable<T>, output: Variable<T>) -> Self {
         let output = output.downgrade();
         Self { input, output }
     }
 }
 
-impl<T: Num> Function<T> for Reshape<T> {
+impl<T: Num, D: Device> Function<T> for Reshape<T> {
     fn forward(&self) {
         let output_shape = self.output.upgrade().unwrap().get_data().shape();
         let input_mat = self.input.get_data();

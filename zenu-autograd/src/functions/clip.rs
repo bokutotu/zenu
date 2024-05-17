@@ -18,7 +18,7 @@ struct Clip<T: Num> {
     output: VariableWeak<T>,
 }
 
-impl<T: Num> Clip<T> {
+impl<T: Num, D: Device> Clip<T> {
     pub fn new(min: T, max: T, input: Variable<T>, output: Variable<T>) -> Self {
         assert_eq!(
             input.get_data().shape(),
@@ -35,7 +35,7 @@ impl<T: Num> Clip<T> {
     }
 }
 
-impl<T: Num> Function<T> for Clip<T> {
+impl<T: Num, D: Device> Function<T> for Clip<T> {
     fn backward(&self) {
         let output_grad = self.output.upgrade().unwrap().get_grad().clone().unwrap();
         let clip_filter = clip_filter(self.input.get_data(), self.min, self.max);

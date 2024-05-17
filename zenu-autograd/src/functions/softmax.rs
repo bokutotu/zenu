@@ -17,7 +17,7 @@ struct SoftMax<T: Num> {
     axis: usize,
 }
 
-impl<T: Num> SoftMax<T> {
+impl<T: Num, D: Device> SoftMax<T> {
     fn new(input: Variable<T>, output: VariableWeak<T>, axis: usize) -> Self {
         Self {
             input,
@@ -27,7 +27,7 @@ impl<T: Num> SoftMax<T> {
     }
 }
 
-impl<T: Num> Function<T> for SoftMax<T> {
+impl<T: Num, D: Device> Function<T> for SoftMax<T> {
     fn forward(&self) {
         let output = self.output.upgrade().unwrap();
         let mut output = output.get_data_mut();

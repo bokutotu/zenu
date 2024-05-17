@@ -14,7 +14,7 @@ struct Powf<T: Num> {
     output: VariableWeak<T>,
 }
 
-impl<T: Num> Function<T> for Powf<T> {
+impl<T: Num, D: Device> Function<T> for Powf<T> {
     fn get_inputs(&self) -> Vec<Variable<T>> {
         vec![self.input.clone()]
     }

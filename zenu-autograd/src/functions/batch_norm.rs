@@ -32,7 +32,7 @@ struct BatchNorm<T: Num> {
     output: VariableWeak<T>,
 }
 
-impl<T: Num> BatchNorm<T> {
+impl<T: Num, D: Device> BatchNorm<T> {
     #[allow(clippy::too_many_arguments)]
     fn new(
         mean: Variable<T>,
@@ -60,7 +60,7 @@ impl<T: Num> BatchNorm<T> {
     }
 }
 
-impl<T: Num> Function<T> for BatchNorm<T> {
+impl<T: Num, D: Device> Function<T> for BatchNorm<T> {
     fn forward(&self) {
         let input_mat = self.input.get_data();
         let input_shape = input_mat.shape();
