@@ -1,27 +1,30 @@
 use std::{cell::RefCell, rc::Rc};
 
-use zenu_matrix::{num::Num, operation::basic_operations::MatrixTanh};
+use zenu_matrix::{device::Device, num::Num};
 
 use crate::{creator::zeros::zeros_like, Function, Variable, VariableWeak};
 
 use super::cosh::cosh;
 
-struct Tanh<T: Num> {
-    input: Variable<T>,
-    output: VariableWeak<T>,
+struct Tanh<T: Num, D: Device> {
+    input: Variable<T, D>,
+    output: VariableWeak<T, D>,
 }
 
-impl<T: Num> Tanh<T> {
-    pub fn new(input: Variable<T>, output: Variable<T>) -> Self {
+impl<T: Num, D: Device> Tanh<T, D> {
+    pub fn new(input: Variable<T, D>, output: Variable<T, D>) -> Self {
         let output = output.downgrade();
         Self { input, output }
     }
 }
 
-impl<T: Num> Function<T> for Tanh<T> {
+impl<T: Num, D: Device> Function<T, D> for Tanh<T, D> {
     fn forward(&self) {
         let output = self.output.upgrade().unwrap();
-        output.get_data_mut().tanh(self.input.get_data());
+        output
+            .get_data_mut()
+            .to_ref_mut()
+            .tanh_array(&self.input.get_data().to_ref());
     }
 
     fn backward(&self) {
@@ -33,12 +36,12 @@ impl<T: Num> Function<T> for Tanh<T> {
         self.input.set_grad(grad);
     }
 
-    fn get_inputs(&self) -> Vec<Variable<T>> {
+    fn get_inputs(&self) -> Vec<Variable<T, D>> {
         vec![self.input.clone()]
     }
 }
 
-pub fn tanh<T: Num>(input: Variable<T>) -> Variable<T> {
+pub fn tanh<T: Num, D: Device>(input: Variable<T, D>) -> Variable<T, D> {
     let output = zeros_like(&input);
     let tanh = Tanh::new(input, output.clone());
     tanh.forward();
@@ -48,44 +51,46 @@ pub fn tanh<T: Num>(input: Variable<T>) -> Variable<T> {
 
 #[cfg(test)]
 mod tanh {
-    use zenu_matrix::{matrix::OwnedMatrix, matrix_impl::OwnedMatrixDyn, operation::asum::Asum};
+
+    use zenu_matrix::{
+        device::Device,
+        dim::DimDyn,
+        matrix::{Matrix, Owned},
+    };
+    use zenu_test::{assert_val_eq, assert_val_eq_grad, run_test};
 
     use crate::creator::from_vec::from_vec;
 
     use super::tanh;
 
-    #[test]
-    fn tanh_1d() {
-        let x = from_vec(vec![1., 2., 3., 4., 5., 6.], [6]);
+    fn tanh_1d<D: Device>() {
+        let x = from_vec(vec![1f32, 2., 3., 4., 5., 6.], [6]);
         let y = tanh(x.clone());
         y.backward();
-        let y_data = y.get_data();
-        let x_grad = x.get_grad().unwrap().get_data();
-        let y_ans = OwnedMatrixDyn::from_vec(
+        let y_ans: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(
             vec![
-                1_f64.tanh(),
-                2_f64.tanh(),
-                3_f64.tanh(),
-                4_f64.tanh(),
-                5_f64.tanh(),
-                6_f64.tanh(),
+                1_f32.tanh(),
+                2_f32.tanh(),
+                3_f32.tanh(),
+                4_f32.tanh(),
+                5_f32.tanh(),
+                6_f32.tanh(),
             ],
             [6],
         );
-        let x_grad_ans = OwnedMatrixDyn::from_vec(
+        let x_grad_ans: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(
             vec![
-                1. / (1_f64.cosh() * 1_f64.cosh()),
-                1. / (2_f64.cosh() * 2_f64.cosh()),
-                1. / (3_f64.cosh() * 3_f64.cosh()),
-                1. / (4_f64.cosh() * 4_f64.cosh()),
-                1. / (5_f64.cosh() * 5_f64.cosh()),
-                1. / (6_f64.cosh() * 6_f64.cosh()),
+                1. / (1_f32.cosh() * 1_f32.cosh()),
+                1. / (2_f32.cosh() * 2_f32.cosh()),
+                1. / (3_f32.cosh() * 3_f32.cosh()),
+                1. / (4_f32.cosh() * 4_f32.cosh()),
+                1. / (5_f32.cosh() * 5_f32.cosh()),
+                1. / (6_f32.cosh() * 6_f32.cosh()),
             ],
             [6],
         );
-        let diff_y = (y_data - y_ans).asum();
-        let diff_x_grad = (x_grad.clone() - x_grad_ans.clone()).asum();
-        assert!(diff_y < 1e-10);
-        assert!(diff_x_grad < 1e-10);
+        assert_val_eq!(y, y_ans, 1e-6);
+        assert_val_eq_grad!(x, x_grad_ans, 1e-6);
     }
+    run_test!(tanh_1d, tanh_1d_cpu, tanh_1d_nvidia);
 }

@@ -16,7 +16,7 @@ mod sub;
 pub mod broadcast;
 // pub mod clip;
 // pub mod conv2d;
-// pub mod cosh;
+pub mod cosh;
 // pub mod exp;
 // pub mod flatten;
 // pub mod log;
@@ -24,11 +24,11 @@ pub mod broadcast;
 // pub mod matmul;
 // pub mod powf;
 // pub mod reshape;
-// pub mod sinh;
+pub mod sinh;
 // pub mod softmax;
 // pub mod sum;
 pub mod sum_to;
-// pub mod tanh;
+pub mod tanh;
 // pub mod transpose;
 
 pub(crate) fn output_shape<T: Num, D: Device>(x: &Variable<T, D>, y: &Variable<T, D>) -> DimDyn {
