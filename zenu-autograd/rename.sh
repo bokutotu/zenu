@@ -12,5 +12,6 @@ fi
 # Loop over every .rs file in the current directory and its subdirectories
 for file in $(find src/functions -name "*.rs")
 do
-  sed -i "s/$from/$to/g" "$file"
+  # sed -i "s/$from/$to/g" "$file"
+  sed -i '' -e "s/$from/$to/g" "$file"
 done

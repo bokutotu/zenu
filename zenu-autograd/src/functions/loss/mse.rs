@@ -2,7 +2,7 @@ use zenu_matrix::{matrix::MatrixBase, num::Num};
 
 use crate::{functions::sum_to::sum_to, Variable};
 
-pub fn mean_squared_error<T: Num>(y_true: Variable<T>, y_pred: Variable<T>) -> Variable<T> {
+pub fn mean_squared_error<T: Num, D: Device>(y_true: Variable<T, D>, y_pred: Variable<T, D>) -> Variable<T, D> {
     let batch_size = y_true.get_data().shape()[0];
     let diff = y_true - y_pred;
     let diff_squared = diff.clone() * diff;

@@ -11,15 +11,15 @@ use zenu_matrix::{
 
 use crate::{Function, Variable, VariableWeak};
 
-struct Clip<T: Num> {
+struct Clip<T: Num, D: Device> {
     min: T,
     max: T,
-    input: Variable<T>,
-    output: VariableWeak<T>,
+    input: Variable<T, D>,
+    output: VariableWeak<T, D>,
 }
 
-impl<T: Num, D: Device> Clip<T> {
-    pub fn new(min: T, max: T, input: Variable<T>, output: Variable<T>) -> Self {
+impl<T: Num, D: Device> Clip<T, D> {
+    pub fn new(min: T, max: T, input: Variable<T, D>, output: Variable<T, D>) -> Self {
         assert_eq!(
             input.get_data().shape(),
             output.get_data().shape(),
@@ -35,7 +35,7 @@ impl<T: Num, D: Device> Clip<T> {
     }
 }
 
-impl<T: Num, D: Device> Function<T> for Clip<T> {
+impl<T: Num, D: Device> Function<T, D> for Clip<T, D> {
     fn backward(&self) {
         let output_grad = self.output.upgrade().unwrap().get_grad().clone().unwrap();
         let clip_filter = clip_filter(self.input.get_data(), self.min, self.max);
@@ -51,16 +51,16 @@ impl<T: Num, D: Device> Function<T> for Clip<T> {
             .upgrade()
             .unwrap()
             .get_data_mut()
-            .to_view_mut()
-            .copy_from(&output.to_view());
+            .to_ref_mut()
+            .copy_from(&output.to_ref());
     }
 
-    fn get_inputs(&self) -> Vec<Variable<T>> {
+    fn get_inputs(&self) -> Vec<Variable<T, D>> {
         vec![self.input.clone()]
     }
 }
 
-pub fn clip<T: Num>(input: Variable<T>, min: T, max: T) -> Variable<T> {
+pub fn clip<T: Num, D: Device>(input: Variable<T, D>, min: T, max: T) -> Variable<T, D> {
     let output = Variable::new(input.get_data().clone());
     let clip = Clip::new(min, max, input, output.clone());
     clip.forward();

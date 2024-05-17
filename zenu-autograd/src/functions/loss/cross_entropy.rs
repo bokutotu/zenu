@@ -5,7 +5,7 @@ use crate::{
     Variable,
 };
 
-pub fn cross_entropy<T: Num>(pred: Variable<T>, ans: Variable<T>) -> Variable<T> {
+pub fn cross_entropy<T: Num, D: Device>(pred: Variable<T, D>, ans: Variable<T, D>) -> Variable<T, D> {
     let pred = softmax(pred, 1);
     let log = log(pred.clone());
     let y_log_pred = ans.clone() * log;
@@ -35,11 +35,11 @@ mod cross_entropy {
         loss.backward();
         let loss_data = loss.get_data();
         let ans = OwnedMatrixDyn::from_vec(vec![0.8536], &[]);
-        let diff = loss_data.to_view() - ans.to_view();
+        let diff = loss_data.to_ref() - ans.to_ref();
         assert!(diff.asum() < 1e-4);
         let pred_grad = pred.get_grad().clone().unwrap();
         let pred_ans = OwnedMatrixDyn::from_vec(vec![0.1914, -0.5741, 0.1914, 0.1914], [1, 4]);
-        let diff = pred_grad.get_data().to_view() - pred_ans.to_view();
+        let diff = pred_grad.get_data().to_ref() - pred_ans.to_ref();
         assert!(diff.asum() < 1e-4);
     }
 
@@ -51,7 +51,7 @@ mod cross_entropy {
         loss.backward();
         let loss_data = loss.get_data();
         let ans_ = OwnedMatrixDyn::from_vec(vec![1.2975], []);
-        let diff = loss_data.to_view() - ans_.to_view();
+        let diff = loss_data.to_ref() - ans_.to_ref();
         assert!(diff.asum() < 1e-4);
         let pred_grad_ans = OwnedMatrixDyn::from_vec(
             vec![
@@ -60,7 +60,7 @@ mod cross_entropy {
             [2, 4],
         );
         let pred_grad = pred.get_grad().clone().unwrap().get_data();
-        let diff = pred_grad.to_view() - pred_grad_ans.to_view();
+        let diff = pred_grad.to_ref() - pred_grad_ans.to_ref();
         assert!(diff.asum() < 5e-4);
         let ans_grad_ans = OwnedMatrixDyn::from_vec(
             vec![
@@ -69,7 +69,7 @@ mod cross_entropy {
             [2, 4],
         );
         let ans_grad_pred = ans.get_grad().unwrap().get_data();
-        let diff = ans_grad_pred.to_view() - ans_grad_ans.to_view();
+        let diff = ans_grad_pred.to_ref() - ans_grad_ans.to_ref();
         assert!(diff.asum() < 5e-4);
     }
 }

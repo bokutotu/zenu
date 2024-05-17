@@ -12,20 +12,20 @@ use crate::{Function, Variable, VariableWeak};
 
 use super::transpose::transpose;
 
-struct MatMul<T: Num> {
-    x: Variable<T>,
-    y: Variable<T>,
-    output: VariableWeak<T>,
+struct MatMul<T: Num, D: Device> {
+    x: Variable<T, D>,
+    y: Variable<T, D>,
+    output: VariableWeak<T, D>,
 }
 
-impl<T: Num, D: Device> MatMul<T> {
-    pub fn new(x: Variable<T>, y: Variable<T>, output: Variable<T>) -> Self {
+impl<T: Num, D: Device> MatMul<T, D> {
+    pub fn new(x: Variable<T, D>, y: Variable<T, D>, output: Variable<T, D>) -> Self {
         let output = output.downgrade();
         Self { x, y, output }
     }
 }
 
-impl<T: Num, D: Device> Function<T> for MatMul<T> {
+impl<T: Num, D: Device> Function<T, D> for MatMul<T, D> {
     fn forward(&self) {
         if self.x.get_data().shape().len() != 2 || self.y.get_data().shape().len() != 2 {
             panic!("x.shape().len() != 2 || y.shape().len() != 2");
@@ -35,9 +35,9 @@ impl<T: Num, D: Device> Function<T> for MatMul<T> {
         let y = self.y.get_data();
         let output = self.output.upgrade().unwrap();
         let mut output = output.get_data_mut();
-        let x = x.to_view();
-        let y = y.to_view();
-        let output = output.to_view_mut();
+        let x = x.to_ref();
+        let y = y.to_ref();
+        let output = output.to_ref_mut();
         output.gemm(x, y);
     }
 
@@ -50,12 +50,12 @@ impl<T: Num, D: Device> Function<T> for MatMul<T> {
         self.y.set_grad(y_grad);
     }
 
-    fn get_inputs(&self) -> Vec<Variable<T>> {
+    fn get_inputs(&self) -> Vec<Variable<T, D>> {
         vec![self.x.clone(), self.y.clone()]
     }
 }
 
-pub fn matmul<T: Num>(x: Variable<T>, y: Variable<T>) -> Variable<T> {
+pub fn matmul<T: Num, D: Device>(x: Variable<T, D>, y: Variable<T, D>) -> Variable<T, D> {
     let output_shape = DimDyn::new(&[x.get_data().shape()[0], y.get_data().shape()[1]]);
     let output = Zeros::zeros(output_shape);
     let output = Variable::new(output);
@@ -92,7 +92,7 @@ mod matmul {
         let output = matmul(x.clone(), y.clone());
         let ans = vec![50., 60., 114., 140., 178., 220.];
         let ans: Matrix<OwnedMem<f64>, DimDyn> = OwnedMatrix::from_vec(ans, &[3, 2]);
-        let diff = output.get_data().to_view() - ans.to_view();
+        let diff = output.get_data().to_ref() - ans.to_ref();
         let diff_asum = diff.asum();
         assert!(diff_asum < 1e-6);
 
@@ -100,14 +100,14 @@ mod matmul {
         x.with_grad_data(|grad| {
             let ans = vec![3., 7., 11., 15., 3., 7., 11., 15., 3., 7., 11., 15.];
             let ans: Matrix<OwnedMem<f64>, DimDyn> = OwnedMatrix::from_vec(ans, &[3, 4]);
-            let diff = grad.to_view() - ans.to_view();
+            let diff = grad.to_ref() - ans.to_ref();
             let diff_asum = diff.asum();
             assert!(diff_asum < 1e-6);
         });
         y.with_grad_data(|grad| {
             let ans = vec![15., 15., 18., 18., 21., 21., 24., 24.];
             let ans: Matrix<OwnedMem<f64>, DimDyn> = OwnedMatrix::from_vec(ans, &[4, 2]);
-            let diff = grad.to_view() - ans.to_view();
+            let diff = grad.to_ref() - ans.to_ref();
             let diff_asum = diff.asum();
             assert!(diff_asum < 1e-6);
         });
