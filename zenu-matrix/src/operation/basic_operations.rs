@@ -389,8 +389,8 @@ macro_rules! impl_basic_ops {
 
                 if self.shape().is_empty() {
                     let self_slice = self.as_mut_slice();
-                    let rhs_slice = rhs.as_slice();
-                    self_slice[0].$assign_method(rhs_slice[0]);
+                    let rhs_slice = rhs.index_item(&[] as &[usize]);
+                    D::scalar_assign(self_slice.as_mut_ptr(), rhs_slice, 1, 1);
                 } else if rhs.shape().is_empty() {
                     self.$scalar_assign_method(rhs.index_item(&[] as &[usize]));
                 } else if self.shape().len() == 1 {
