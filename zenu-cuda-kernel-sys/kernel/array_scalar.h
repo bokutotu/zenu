@@ -89,6 +89,11 @@ void array_clip_backward_assign_float(float* input, float max, float min, int si
 void array_clip_backward_assign_double(double* input, double max, double min, int size, int stride);
 
 
+void array_pow_float(float *a, int size, int stride_a, float scalar, float *out, int stride_o);
+void array_pow_assign_float(float *a, int size, int stride, float scalar);
+void array_pow_double(double *a, int size, int stride_a, double scalar, double *out, int stride_o);
+void array_pow_assign_double(double *a, int size, int stride, double scalar);
+
 #ifdef __cplusplus
 }
 #endif

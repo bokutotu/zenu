@@ -107,6 +107,48 @@ DEFINE_ARRAY_SCALAR_WRAPPER(double, mul)
 DEFINE_ARRAY_SCALAR_WRAPPER(float, div)
 DEFINE_ARRAY_SCALAR_WRAPPER(double, div)
 
+__global__ void array_powf(float* a, int size, int stride_a, float scalar, float* out, int stride_o) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx < size) {
+        out[idx * stride_o] = powf(a[idx * stride_a], scalar);
+    }
+}
+__global__ void array_powf_assign(float* a, int size, int stride, float scalar) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx < size) {
+        a[idx * stride] = powf(a[idx * stride], scalar);
+    }
+}
+__global__ void array_powd(double* a, int size, int stride_a, double scalar, double* out, int stride_o) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx < size) {
+        out[idx * stride_o] = pow(a[idx * stride_a], scalar);
+    }
+}
+__global__ void array_powd_assign(double* a, int size, int stride, double scalar) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx < size) {
+        a[idx * stride] = pow(a[idx * stride], scalar);
+    }
+}
+
+void array_pow_float(float *a, int size, int stride_a, float scalar, float *out, int stride_o) {
+    int gridSize = (size + BLOCK_SIZE - 1) / BLOCK_SIZE;
+    array_powf<<<gridSize, BLOCK_SIZE>>>(a, size, stride_a, scalar, out, stride_o);
+}
+void array_pow_assign_float(float *a, int size, int stride, float scalar) {
+    int gridSize = (size + BLOCK_SIZE - 1) / BLOCK_SIZE;
+    array_powf_assign<<<gridSize, BLOCK_SIZE>>>(a, size, stride, scalar);
+}
+void array_pow_double(double *a, int size, int stride_a, double scalar, double *out, int stride_o) {
+    int gridSize = (size + BLOCK_SIZE - 1) / BLOCK_SIZE;
+    array_powd<<<gridSize, BLOCK_SIZE>>>(a, size, stride_a, scalar, out, stride_o);
+}
+void array_pow_assign_double(double *a, int size, int stride, double scalar) {
+    int gridSize = (size + BLOCK_SIZE - 1) / BLOCK_SIZE;
+    array_powd_assign<<<gridSize, BLOCK_SIZE>>>(a, size, stride, scalar);
+}
+
 void array_clip_float(float *input, float* output, int size, int stride_in, int stride_out, float min_val, float max_val) {
     int gridSize = (size + BLOCK_SIZE - 1) / BLOCK_SIZE;
     clip_float<<<gridSize, BLOCK_SIZE>>>(input, output, size, stride_in, stride_out, min_val, max_val);
