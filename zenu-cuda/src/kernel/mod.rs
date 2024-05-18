@@ -402,6 +402,45 @@ pub fn clip_backward_assign<T: 'static>(mask: *mut T, max: T, min: T, size: usiz
     }
 }
 
+pub fn array_pow<T: 'static>(
+    input: *const T,
+    size: usize,
+    stride_a: usize,
+    scalar: T,
+    out: *mut T,
+    stride_out: usize,
+) {
+    let size = size as ::std::os::raw::c_int;
+    let stride_a = stride_a as ::std::os::raw::c_int;
+    let stride_out = stride_out as ::std::os::raw::c_int;
+    if TypeId::of::<T>() == TypeId::of::<f32>() {
+        let input = input as *mut f32;
+        let out = out as *mut f32;
+        let scalar = unsafe { *{ &scalar as *const T as *const f32 } };
+        println!("scalar: {:?}", scalar);
+        unsafe { array_pow_float(input, size, stride_a, scalar, out, stride_out) };
+    } else if TypeId::of::<T>() == TypeId::of::<f64>() {
+        let input = input as *mut f64;
+        let out = out as *mut f64;
+        let scalar = unsafe { *{ &scalar as *const T as *const f64 } };
+        unsafe { array_pow_double(input, size, stride_a, scalar, out, stride_out) };
+    }
+}
+
+pub fn array_pow_assign<T: 'static>(input: *mut T, size: usize, stride: usize, scalar: T) {
+    let size = size as ::std::os::raw::c_int;
+    let stride = stride as ::std::os::raw::c_int;
+    if TypeId::of::<T>() == TypeId::of::<f32>() {
+        let input = input as *mut f32;
+        let scalar = unsafe { *{ &scalar as *const T as *const f32 } };
+        unsafe { array_pow_assign_float(input, size, stride, scalar) };
+    } else if TypeId::of::<T>() == TypeId::of::<f64>() {
+        let input = input as *mut f64;
+        let scalar = unsafe { *{ &scalar as *const T as *const f64 } };
+        unsafe { array_pow_assign_double(input, size, stride, scalar) };
+    }
+}
+
 #[cfg(test)]
 mod array_array {
     use super::*;
@@ -1102,5 +1141,82 @@ mod array_scalar {
     #[test]
     fn clip_backward_assign_f64() {
         clip_backward_assign!(f64);
+    }
+
+    macro_rules! pow_test {
+        ($ty:ty) => {
+            let a: Vec<$ty> = vec![0.0, 1.0, 2.0, 3.0];
+            let mut out = vec![0.0; a.len()];
+            let a_gpu = cuda_malloc(a.len()).unwrap();
+            let out_gpu = cuda_malloc(out.len()).unwrap();
+            cuda_copy(
+                a_gpu,
+                a.as_ptr(),
+                a.len(),
+                ZenuCudaMemCopyKind::HostToDevice,
+            )
+            .unwrap();
+            array_pow(a_gpu, a.len(), 1, 2.0, out_gpu, 1);
+            cuda_copy(
+                out.as_mut_ptr(),
+                out_gpu,
+                out.len(),
+                ZenuCudaMemCopyKind::DeviceToHost,
+            )
+            .unwrap();
+            let ans: Vec<$ty> = vec![0.0, 1.0, 4.0, 9.0];
+            assert_eq!(out, ans);
+
+            array_pow_assign(a_gpu, a.len(), 1, 2.0);
+            cuda_copy(
+                out.as_mut_ptr(),
+                a_gpu,
+                out.len(),
+                ZenuCudaMemCopyKind::DeviceToHost,
+            )
+            .unwrap();
+            assert_eq!(out, ans);
+        };
+    }
+    #[test]
+    fn pow_test_f32() {
+        pow_test!(f32);
+    }
+    #[test]
+    fn pow_test_f64() {
+        pow_test!(f64);
+    }
+
+    macro_rules! pow_assign {
+        ($ty:ty) => {
+            let a: Vec<$ty> = vec![0.0, 1.0, 2.0, 3.0];
+            let mut out = vec![0.0; a.len()];
+            let a_gpu = cuda_malloc(a.len()).unwrap();
+            cuda_copy(
+                a_gpu,
+                a.as_ptr(),
+                a.len(),
+                ZenuCudaMemCopyKind::HostToDevice,
+            )
+            .unwrap();
+            array_pow_assign(a_gpu, a.len(), 1, 2.0);
+            cuda_copy(
+                out.as_mut_ptr(),
+                a_gpu,
+                out.len(),
+                ZenuCudaMemCopyKind::DeviceToHost,
+            )
+            .unwrap();
+            let ans: Vec<$ty> = vec![0.0, 1.0, 4.0, 9.0];
+            assert_eq!(out, ans);
+        };
+    }
+    #[test]
+    fn pow_assign_f32() {
+        pow_assign!(f32);
+    }
+    #[test]
+    fn pow_assign_f64() {
+        pow_assign!(f64);
     }
 }
