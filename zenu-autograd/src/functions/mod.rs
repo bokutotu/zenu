@@ -29,7 +29,7 @@ pub mod softmax;
 pub mod sum;
 pub mod sum_to;
 pub mod tanh;
-// pub mod transpose;
+pub mod transpose;
 
 pub(crate) fn output_shape<T: Num, D: Device>(x: &Variable<T, D>, y: &Variable<T, D>) -> DimDyn {
     let x_shape = x.get_data().shape();
