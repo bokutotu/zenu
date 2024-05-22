@@ -417,7 +417,6 @@ pub fn array_pow<T: 'static>(
         let input = input as *mut f32;
         let out = out as *mut f32;
         let scalar = unsafe { *{ &scalar as *const T as *const f32 } };
-        println!("scalar: {:?}", scalar);
         unsafe { array_pow_float(input, size, stride_a, scalar, out, stride_out) };
     } else if TypeId::of::<T>() == TypeId::of::<f64>() {
         let input = input as *mut f64;

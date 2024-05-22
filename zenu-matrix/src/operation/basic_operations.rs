@@ -12,6 +12,8 @@ use crate::device::nvidia::Nvidia;
 #[cfg(feature = "nvidia")]
 use zenu_cuda::kernel::*;
 
+use super::copy_from::CopyBlas;
+
 fn get_tmp_matrix<R: Repr, S: DimTrait, D: DeviceBase>(
     a: &Matrix<R, S, D>,
     len: usize,
@@ -499,6 +501,63 @@ impl_basic_ops_no_inputs!(SqrtOps, sqrt, array_sqrt, array_sqrt_assign);
 impl_basic_ops_no_inputs!(ExpOps, exp, array_exp, array_exp_assign);
 impl_basic_ops_no_inputs!(LogOps, ln, array_log, array_log_assign);
 
+pub trait PowOws: DeviceBase {
+    fn array<T: Num>(
+        to: *mut T,
+        other: *const T,
+        scalar: T,
+        num_elm: usize,
+        to_stride: usize,
+        other_stride: usize,
+    );
+
+    fn array_assign<T: Num>(to: *mut T, scalar: T, num_elm: usize, to_stride: usize);
+}
+impl PowOws for Cpu {
+    #[allow(clippy::not_unsafe_ptr_arg_deref)]
+    fn array<T: Num>(
+        to: *mut T,
+        other: *const T,
+        scalar: T,
+        num_elm: usize,
+        to_stride: usize,
+        other_stride: usize,
+    ) {
+        for i in 0..num_elm {
+            unsafe {
+                *to.add(i * to_stride) = T::powf(*other.add(i * other_stride), scalar);
+            }
+        }
+    }
+
+    #[allow(clippy::not_unsafe_ptr_arg_deref)]
+    fn array_assign<T: Num>(to: *mut T, scalar: T, num_elm: usize, to_stride: usize) {
+        for i in 0..num_elm {
+            unsafe {
+                *to.add(i * to_stride) = T::powf(*to.add(i * to_stride), scalar);
+            }
+        }
+    }
+}
+
+#[cfg(feature = "nvidia")]
+impl PowOws for Nvidia {
+    fn array<T: Num>(
+        to: *mut T,
+        other: *const T,
+        scalar: T,
+        num_elm: usize,
+        to_stride: usize,
+        other_stride: usize,
+    ) {
+        array_pow(other, num_elm, other_stride, scalar, to, to_stride);
+    }
+
+    fn array_assign<T: Num>(to: *mut T, scalar: T, num_elm: usize, to_stride: usize) {
+        array_pow_assign(to, num_elm, to_stride, scalar);
+    }
+}
+
 macro_rules! impl_basic_ops_no_inputs {
     ($trait_name:ident, $output:ident, $method:ident, $assign:ident) => {
         impl<T: Num, S: DimTrait, D: DeviceBase + $trait_name> Matrix<Ref<&mut T>, S, D> {
@@ -563,6 +622,61 @@ impl_basic_ops_no_inputs!(AbsOps, abs, abs_array, abs_assign);
 impl_basic_ops_no_inputs!(SqrtOps, sqrt, sqrt_array, sqrt_assign);
 impl_basic_ops_no_inputs!(ExpOps, exp, exp_array, exp_assign);
 impl_basic_ops_no_inputs!(LogOps, log, log_array, log_assign);
+
+impl<R: Repr, S: DimTrait, D: DeviceBase + PowOws + CopyBlas> Matrix<R, S, D> {
+    pub fn powf_array(&self, scalar: R::Item) -> Matrix<Owned<R::Item>, S, D> {
+        let mut powf = Matrix::zeros(self.shape());
+        powf.to_ref_mut().powf(self, scalar);
+        powf
+    }
+}
+
+impl<T: Num, S: DimTrait, D: DeviceBase + PowOws + CopyBlas> Matrix<Ref<&mut T>, S, D> {
+    pub fn powf<R: Repr<Item = T>, SO: DimTrait>(&self, other: &Matrix<R, SO, D>, scalar: T) {
+        if self.shape().slice() != other.shape().slice() {
+            panic!("Matrix shape mismatch");
+        }
+
+        if self.shape().is_empty() {
+            D::array(self.as_mut_ptr(), other.as_ptr(), scalar, 1, 1, 1);
+        } else if self.shape().len() == 1 {
+            D::array(
+                self.as_mut_ptr(),
+                other.as_ptr(),
+                scalar,
+                self.shape().num_elm(),
+                self.stride()[0],
+                other.stride()[0],
+            );
+        } else {
+            let num_iter = self.shape()[0];
+            for idx in 0..num_iter {
+                let s = self.index_axis_mut_dyn(Index0D::new(idx));
+                let o = other.index_axis_dyn(Index0D::new(idx));
+                s.powf(&o, scalar);
+            }
+        }
+    }
+
+    pub fn powf_assign(&self, scalar: T) {
+        if self.shape().is_empty() {
+            D::array_assign(self.as_mut_ptr(), scalar, 1, 1);
+        } else if self.shape().len() == 1 {
+            D::array_assign(
+                self.as_mut_ptr(),
+                scalar,
+                self.shape().num_elm(),
+                self.stride()[0],
+            );
+        } else {
+            let num_iter = self.shape()[0];
+            for idx in 0..num_iter {
+                let s = self.index_axis_mut_dyn(Index0D::new(idx));
+                s.powf_assign(scalar);
+            }
+        }
+    }
+}
 
 #[cfg(test)]
 mod basic_ops {
@@ -1286,5 +1400,68 @@ mod basic_ops {
     #[test]
     fn sin_1d_sliced_gpu() {
         sin_1d_sliced::<crate::device::nvidia::Nvidia>();
+    }
+
+    fn pow_1d<D: Device>() {
+        let a = vec![0., 1., 2., 3., 4., 5., 6., 7.];
+        let a: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(a, [8]);
+        let ans = a.powf_array(2.);
+        assert_eq!(ans.index_item([0]), 0.);
+        assert_eq!(ans.index_item([1]), 1.);
+        assert_eq!(ans.index_item([2]), 4.);
+        assert_eq!(ans.index_item([3]), 9.);
+        assert_eq!(ans.index_item([4]), 16.);
+        assert_eq!(ans.index_item([5]), 25.);
+        assert_eq!(ans.index_item([6]), 36.);
+        assert_eq!(ans.index_item([7]), 49.);
+    }
+    #[test]
+    fn pow_1d_cpu() {
+        pow_1d::<crate::device::cpu::Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn pow_1d_gpu() {
+        pow_1d::<crate::device::nvidia::Nvidia>();
+    }
+
+    fn pow_0d<D: Device>() {
+        let a = vec![4.];
+        let a: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(a, []);
+        let ans = a.powf_array(2.);
+        assert_eq!(ans.index_item([]), 16.);
+    }
+    #[test]
+    fn pow_0d_cpu() {
+        pow_0d::<crate::device::cpu::Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn pow_0d_gpu() {
+        pow_0d::<crate::device::nvidia::Nvidia>();
+    }
+
+    fn pow_2d_transposed<D: Device>() {
+        let a = vec![1., 2., 3., 4., 5., 6., 7., 8.];
+        let mut a: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(a, [2, 4]);
+        a.transpose();
+        let ans = a.powf_array(2.);
+        assert_eq!(ans.index_item([0, 0]), 1.);
+        assert_eq!(ans.index_item([0, 1]), 25.);
+        assert_eq!(ans.index_item([1, 0]), 4.);
+        assert_eq!(ans.index_item([1, 1]), 36.);
+        assert_eq!(ans.index_item([2, 0]), 9.);
+        assert_eq!(ans.index_item([2, 1]), 49.);
+        assert_eq!(ans.index_item([3, 0]), 16.);
+        assert_eq!(ans.index_item([3, 1]), 64.);
+    }
+    #[test]
+    fn pow_2d_transposed_cpu() {
+        pow_2d_transposed::<crate::device::cpu::Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn pow_2d_transposed_gpu() {
+        pow_2d_transposed::<crate::device::nvidia::Nvidia>();
     }
 }
