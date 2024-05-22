@@ -19,7 +19,7 @@ impl<T: Num, D: Device> Function<T, D> for Powf<T, D> {
         let x = self.input.get_data();
         let output = self.output.upgrade().unwrap();
         let mut y = output.get_data_mut();
-        y.to_ref_mut().powf(x.to_ref(), self.factor);
+        y.to_ref_mut().powf(&x, self.factor);
     }
 
     fn backward(&self) {
@@ -45,22 +45,25 @@ pub fn powf<T: Num, D: Device>(x: Variable<T, D>, factor: T) -> Variable<T, D> {
 
 #[cfg(test)]
 mod powf {
-    use zenu_matrix::{matrix::OwnedMatrix, matrix_impl::OwnedMatrixDyn, operation::asum::Asum};
+    use zenu_matrix::{
+        device::Device,
+        dim::DimDyn,
+        matrix::{Matrix, Owned},
+    };
+    use zenu_test::{assert_val_eq, assert_val_eq_grad, run_test};
 
-    use crate::creator::from_vec::from_vec;
+    use crate::{creator::from_vec::from_vec, Variable};
 
     use super::powf;
 
-    #[test]
-    fn powf_() {
-        let input = from_vec(vec![1.0, 2.0, 3.0], [3]);
+    fn powf_<D: Device>() {
+        let input: Variable<f32, D> = from_vec(vec![1.0, 2.0, 3.0], [3]);
         let output = powf(input.clone(), 2.0);
         output.backward();
-        let output_data = output.get_data();
-        let expected = OwnedMatrixDyn::from_vec(vec![1.0, 4.0, 9.0], [3]);
-        assert!((output_data - expected).asum() < 1e-6);
-        let input_grad = input.get_grad().unwrap().get_data();
-        let expected = OwnedMatrixDyn::from_vec(vec![2.0, 4.0, 6.0], [3]);
-        assert!((input_grad - expected).asum() < 1e-6);
+        let expected = Matrix::<Owned<f32>, DimDyn, D>::from_vec(vec![1.0, 4.0, 9.0], [3]);
+        assert_val_eq!(output, expected, 1e-6);
+        let expected = Matrix::<Owned<f32>, DimDyn, D>::from_vec(vec![2.0, 4.0, 6.0], [3]);
+        assert_val_eq_grad!(input, expected, 1e-6);
     }
+    run_test!(powf_, powf_cpu, pow_nvidia);
 }
