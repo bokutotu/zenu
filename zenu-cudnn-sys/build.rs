@@ -9,6 +9,8 @@ fn main() {
 
     println!("cargo:rustc-link-lib=dylib=cudart");
     println!("cargo:rerun-if-changed=build.rs");
+    println!("cargo:rustc-link-lib=dylib=cudnn");
+
     let bindings = bindgen::Builder::default()
         .ctypes_prefix("::libc")
         .allowlist_function("cu.*")
