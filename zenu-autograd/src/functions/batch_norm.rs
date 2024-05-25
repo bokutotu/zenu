@@ -1,20 +1,6 @@
 use std::{cell::RefCell, rc::Rc};
 
-use zenu_matrix::{
-    constructor::{ones::Ones, zeros::Zeros},
-    dim::DimTrait,
-    matrix::{MatrixBase, ToViewMatrix, ToViewMutMatrix},
-    matrix_impl::OwnedMatrixDyn,
-    num::Num,
-    operation::{
-        basic_operations::{MatrixAddAssign, MatrixMulAssign, MatrixSqrt},
-        copy_from::CopyFrom,
-        mean::Mean,
-        reshape::Reshape,
-        transpose::TransposeInplace,
-        var::Variance,
-    },
-};
+use zenu_matrix::{device::Device, dim::DimTrait, num::Num};
 
 use crate::{creator::zeros::zeros, is_train, Function, Variable, VariableWeak};
 
@@ -118,8 +104,7 @@ impl<T: Num, D: Device> Function<T, D> for BatchNorm<T, D> {
             xc = (input_mat.to_ref() - self.mean.get_data().to_ref()) * inv_std.to_ref();
         }
 
-        let output =
-            self.gamma.get_data().to_ref() * xc.to_ref() + self.beta.get_data().to_ref();
+        let output = self.gamma.get_data().to_ref() * xc.to_ref() + self.beta.get_data().to_ref();
 
         let output = if num_channels == 4 {
             let output = output.reshape_new_matrix([
