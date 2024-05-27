@@ -9,7 +9,7 @@ use cublas::cublas_error::ZenuCublasError;
 use cudnn::error::ZenuCudnnError;
 use once_cell::sync::Lazy;
 use zenu_cublas_sys::{cublasContext, cublasCreate_v2, cublasDestroy_v2};
-use zenu_cudnn_sys::{cudnnContext, cudnnCreate};
+use zenu_cudnn_sys::{cudnnContext, cudnnCreate, cudnnDestroy};
 
 static ZENU_CUDA_STATE: Lazy<Mutex<ZenuCudaState>> = Lazy::new(|| Mutex::new(ZenuCudaState::new()));
 
@@ -73,6 +73,10 @@ impl Drop for ZenuCudaState {
     fn drop(&mut self) {
         unsafe {
             cublasDestroy_v2(self.cublas.as_ptr());
+        }
+
+        unsafe {
+            cudnnDestroy(self.cudnn.as_ptr());
         }
     }
 }
