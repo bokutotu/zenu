@@ -353,48 +353,19 @@ impl ConvolutionBuilder {
 
 #[cfg(test)]
 mod cudnn {
+    use crate::runtime::{cuda_copy, cuda_malloc, ZenuCudaMemCopyKind};
+
     use super::*;
 
-    // #[test]
-    // fn test_convolution() {
-    //     // int n = 1, c = 3, h = 32, w = 32;
-    //     // int k = 8, kh = 5, kw = 5;
-    //     // int pad_h = 1, pad_w = 1, stride_h = 1, stride_w = 1;
-    //     let n = 1;
-    //     let c = 3;
-    //     let h = 32;
-    //     let w = 32;
-    //     let k = 8;
-    //     let kh = 5;
-    //     let kw = 5;
-    //     let pad_h = 1;
-    //     let pad_w = 1;
-    //     let stride_h = 1;
-    //     let stride_w = 1;
-    //
-    //     let conv = ConvolutionBuilder::default()
-    //         .input::<f32>(n, c, h, w, TensorFormat::NCHW)
-    //         .unwrap()
-    //         .filter::<f32>(k, c, kh, kw, TensorFormat::NCHW)
-    //         .unwrap()
-    //         .conv(pad_h, pad_w, stride_h, stride_w, 1, 1)
-    //         .unwrap()
-    //         .output::<f32>(n, k, h, w, TensorFormat::NCHW)
-    //         .unwrap()
-    //         .algorithm(1)
-    //         .unwrap()
-    //         .build()
-    //         .unwrap();
-    // }
     #[test]
     fn test_convolution() {
         let n = 1;
         let c = 3;
-        let h = 32;
-        let w = 32;
-        let k = 8;
-        let kh = 5;
-        let kw = 5;
+        let h = 5;
+        let w = 5;
+        let k = 3;
+        let kh = 3;
+        let kw = 3;
         let pad_h = 1;
         let pad_w = 1;
         let stride_h = 1;
@@ -417,5 +388,65 @@ mod cudnn {
             .unwrap()
             .build()
             .unwrap();
+
+        // create input tensor
+        let mut input_cpu = Vec::new();
+        for idx in 0..n * c * h * w {
+            input_cpu.push(idx as f32);
+        }
+        let input_gpu = cuda_malloc::<f32>((n * c * h * w) as usize).unwrap();
+        cuda_copy(
+            input_gpu,
+            input_cpu.as_ptr(),
+            (n * c * h * w) as usize,
+            ZenuCudaMemCopyKind::HostToDevice,
+        )
+        .unwrap();
+
+        // create filter tensor
+        let mut filter_cpu = Vec::new();
+        for idx in 0..k * c * kh * kw {
+            filter_cpu.push(idx as f32);
+        }
+        let filter_gpu = cuda_malloc::<f32>((k * c * kh * kw) as usize).unwrap();
+        cuda_copy(
+            filter_gpu,
+            filter_cpu.as_ptr(),
+            (k * c * kh * kw) as usize,
+            ZenuCudaMemCopyKind::HostToDevice,
+        )
+        .unwrap();
+
+        // create output tensor
+        let output_gpu = cuda_malloc::<f32>((n * k * out_h * out_w) as usize).unwrap();
+
+        // execute convolution
+        conv.forward(1.0, input_gpu, filter_gpu, 0.0, output_gpu);
+
+        // copy output tensor to cpu
+        let mut output_cpu = Vec::new();
+        for _ in 0..n * k * out_h * out_w {
+            output_cpu.push(0.0);
+        }
+        cuda_copy(
+            output_cpu.as_mut_ptr(),
+            output_gpu,
+            (n * k * out_h * out_w) as usize,
+            ZenuCudaMemCopyKind::DeviceToHost,
+        )
+        .unwrap();
+
+        // check output tensor
+        let ans = vec![
+            6888, 10218, 10479, 10740, 7056, 10296, 15219, 15570, 15921, 10422, 11511, 16974,
+            17325, 17676, 11547, 12726, 18729, 19080, 19431, 12672, 8040, 11784, 11991, 12198,
+            7920, 15960, 24069, 24816, 25563, 17100, 25119, 37818, 38898, 39978, 26703, 28764,
+            43218, 44298, 45378, 30258, 32409, 48618, 49698, 50778, 33813, 21972, 32925, 33618,
+            34311, 22824, 25032, 37920, 39153, 40386, 27144, 39942, 60417, 62226, 64035, 42984,
+            46017, 69462, 71271, 73080, 48969, 52092, 78507, 80316, 82125, 54954, 35904, 54066,
+            55245, 56424, 37728,
+        ];
+        let ans = ans.iter().map(|&x| x as f32).collect::<Vec<f32>>();
+        assert_eq!(output_cpu, ans);
     }
 }
