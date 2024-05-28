@@ -6,7 +6,6 @@ pub mod runtime;
 use std::{ptr::NonNull, sync::Mutex};
 
 use cublas::cublas_error::ZenuCublasError;
-use cudnn::error::ZenuCudnnError;
 use once_cell::sync::Lazy;
 use zenu_cublas_sys::{cublasContext, cublasCreate_v2, cublasDestroy_v2};
 use zenu_cudnn_sys::{cudnnContext, cudnnCreate, cudnnDestroy};
