@@ -355,11 +355,39 @@ impl ConvolutionBuilder {
 mod cudnn {
     use super::*;
 
+    // #[test]
+    // fn test_convolution() {
+    //     // int n = 1, c = 3, h = 32, w = 32;
+    //     // int k = 8, kh = 5, kw = 5;
+    //     // int pad_h = 1, pad_w = 1, stride_h = 1, stride_w = 1;
+    //     let n = 1;
+    //     let c = 3;
+    //     let h = 32;
+    //     let w = 32;
+    //     let k = 8;
+    //     let kh = 5;
+    //     let kw = 5;
+    //     let pad_h = 1;
+    //     let pad_w = 1;
+    //     let stride_h = 1;
+    //     let stride_w = 1;
+    //
+    //     let conv = ConvolutionBuilder::default()
+    //         .input::<f32>(n, c, h, w, TensorFormat::NCHW)
+    //         .unwrap()
+    //         .filter::<f32>(k, c, kh, kw, TensorFormat::NCHW)
+    //         .unwrap()
+    //         .conv(pad_h, pad_w, stride_h, stride_w, 1, 1)
+    //         .unwrap()
+    //         .output::<f32>(n, k, h, w, TensorFormat::NCHW)
+    //         .unwrap()
+    //         .algorithm(1)
+    //         .unwrap()
+    //         .build()
+    //         .unwrap();
+    // }
     #[test]
     fn test_convolution() {
-        // int n = 1, c = 3, h = 32, w = 32;
-        // int k = 8, kh = 5, kw = 5;
-        // int pad_h = 1, pad_w = 1, stride_h = 1, stride_w = 1;
         let n = 1;
         let c = 3;
         let h = 32;
@@ -372,6 +400,10 @@ mod cudnn {
         let stride_h = 1;
         let stride_w = 1;
 
+        // 畳み込み後の出力テンソルのサイズ
+        let out_h = (h + 2 * pad_h - kh) / stride_h + 1;
+        let out_w = (w + 2 * pad_w - kw) / stride_w + 1;
+
         let conv = ConvolutionBuilder::default()
             .input::<f32>(n, c, h, w, TensorFormat::NCHW)
             .unwrap()
@@ -379,9 +411,9 @@ mod cudnn {
             .unwrap()
             .conv(pad_h, pad_w, stride_h, stride_w, 1, 1)
             .unwrap()
-            .output::<f32>(n, k, h, w, TensorFormat::NCHW)
+            .output::<f32>(n, k, out_h, out_w, TensorFormat::NCHW) // ここで出力テンソルのサイズを変更
             .unwrap()
-            .algorithm(5)
+            .algorithm(1)
             .unwrap()
             .build()
             .unwrap();
