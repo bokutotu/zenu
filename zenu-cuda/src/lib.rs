@@ -42,14 +42,12 @@ fn create_cudnn_context() -> Result<NonNull<cudnnContext>, ()> {
     let null_ptr_ptr = &mut null_ptr as *mut *mut cudnnContext;
     let cudnn_handel = NonNull::new(null_ptr_ptr).unwrap();
     let err: u32 = unsafe { cudnnCreate(cudnn_handel.as_ptr()) as u32 };
-    let err = ZenuCudnnError::from(err);
-    match err {
-        ZenuCudnnError::CudnnStatusSuccess => {
-            let cudnn = unsafe { *cudnn_handel.as_ptr() };
-            let cudnn = NonNull::new(cudnn).unwrap();
-            Ok(cudnn)
-        }
-        _ => Err(()),
+    if err != 0 {
+        Err(())
+    } else {
+        let cudnn = unsafe { *cudnn_handel.as_ptr() };
+        let cudnn = NonNull::new(cudnn).unwrap();
+        Ok(cudnn)
     }
 }
 
