@@ -155,13 +155,49 @@ fn convolution_algorithm(
     }
 }
 
+fn convolution_backward_data_algorithm(
+    input: cudnnTensorDescriptor_t,
+    filter: cudnnFilterDescriptor_t,
+    conv: cudnnConvolutionDescriptor_t,
+    output: cudnnTensorDescriptor_t,
+) -> Result<cudnnConvolutionBwdDataAlgo_t, ZenuCudnnError> {
+    let state = ZENU_CUDA_STATE.lock().unwrap();
+    let handle = state.get_cudnn();
+    let mut returned_algo_count = 0;
+    unsafe {
+        let mut algorithm: Vec<cudnnConvolutionBwdDataAlgoPerf_t> = Vec::with_capacity(1);
+        for _ in 0..1 {
+            algorithm.push(cudnnConvolutionBwdDataAlgoPerf_t::default());
+        }
+
+        // enable tensor core
+        cudnnSetConvolutionMathType(conv, cudnnMathType_t::CUDNN_TENSOR_OP_MATH_ALLOW_CONVERSION);
+
+        let state = cudnnGetConvolutionBackwardDataAlgorithm_v7(
+            handle.as_ptr(),
+            filter,
+            output,
+            conv,
+            input,
+            1,
+            &mut returned_algo_count as *mut i32,
+            algorithm.as_mut_ptr() as *mut cudnnConvolutionBwdDataAlgoPerf_t,
+        );
+        if state != cudnnStatus_t::CUDNN_STATUS_SUCCESS {
+            return Err(ZenuCudnnError::from(state));
+        }
+
+        Ok(algorithm[0].algo)
+    }
+}
+
 fn convolution_workspace(
     input: cudnnTensorDescriptor_t,
     filter: cudnnFilterDescriptor_t,
     conv: cudnnConvolutionDescriptor_t,
     output: cudnnTensorDescriptor_t,
     algorithm: cudnnConvolutionFwdAlgo_t,
-) -> Result<ConvWorkspace, ZenuCudnnError> {
+) -> Result<Workspace, ZenuCudnnError> {
     let state = ZENU_CUDA_STATE.lock().unwrap();
     let handle = state.get_cudnn();
     let mut workspace_size = 0;
@@ -183,7 +219,42 @@ fn convolution_workspace(
         if status != cudaError_t::cudaSuccess {
             panic!("Failed to allocate convolution forward workspace");
         }
-        Ok(ConvWorkspace {
+        Ok(Workspace {
+            workspace,
+            workspace_size,
+        })
+    }
+}
+
+fn convolution_backward_data_workspace(
+    input: cudnnTensorDescriptor_t,
+    filter: cudnnFilterDescriptor_t,
+    conv: cudnnConvolutionDescriptor_t,
+    output: cudnnTensorDescriptor_t,
+    algorithm: cudnnConvolutionBwdDataAlgo_t,
+) -> Result<Workspace, ZenuCudnnError> {
+    let state = ZENU_CUDA_STATE.lock().unwrap();
+    let handle = state.get_cudnn();
+    let mut workspace_size = 0;
+    unsafe {
+        let status = cudnnGetConvolutionBackwardDataWorkspaceSize(
+            handle.as_ptr(),
+            filter,
+            output,
+            conv,
+            input,
+            algorithm,
+            &mut workspace_size as *mut usize,
+        );
+        if status != cudnnStatus_t::CUDNN_STATUS_SUCCESS {
+            panic!("Failed to get convolution backward data workspace size");
+        }
+        let mut workspace = std::ptr::null_mut();
+        let status = cudaMalloc(&mut workspace as *mut *mut libc::c_void, workspace_size);
+        if status != cudaError_t::cudaSuccess {
+            panic!("Failed to allocate convolution backward data workspace");
+        }
+        Ok(Workspace {
             workspace,
             workspace_size,
         })
@@ -191,7 +262,7 @@ fn convolution_workspace(
 }
 
 #[derive(Debug)]
-pub struct ConvWorkspace {
+pub struct Workspace {
     workspace: *mut libc::c_void,
     workspace_size: usize,
 }
@@ -203,7 +274,7 @@ pub struct ConvDescriptor {
     conv: cudnnConvolutionDescriptor_t,
     output: cudnnTensorDescriptor_t,
     algorithm: cudnnConvolutionFwdAlgo_t,
-    workspace: ConvWorkspace,
+    workspace: Workspace,
 }
 
 impl ConvDescriptor {
@@ -341,6 +412,161 @@ impl ConvolutionBuilder {
         let algorithm = self.algorithm.unwrap();
         let workspace = convolution_workspace(input, filter, conv, output, algorithm)?;
         Ok(ConvDescriptor {
+            input,
+            filter,
+            conv,
+            output,
+            algorithm,
+            workspace,
+        })
+    }
+}
+
+pub struct ConvolutionBackwardData {
+    input: cudnnTensorDescriptor_t,
+    filter: cudnnFilterDescriptor_t,
+    conv: cudnnConvolutionDescriptor_t,
+    output: cudnnTensorDescriptor_t,
+    algorithm: cudnnConvolutionBwdDataAlgo_t,
+    workspace: Workspace,
+}
+
+impl ConvolutionBackwardData {
+    pub fn backward_data<T: 'static>(
+        &self,
+        alpha: T,
+        filter: *const T,
+        output: *const T,
+        beta: T,
+        input: *mut T,
+    ) {
+        let state = ZENU_CUDA_STATE.lock().unwrap();
+        let handle = state.get_cudnn();
+        unsafe {
+            cudnnConvolutionBackwardData(
+                handle.as_ptr(),
+                &alpha as *const T as *const libc::c_void,
+                self.filter,
+                filter as *const libc::c_void,
+                self.output,
+                output as *const libc::c_void,
+                self.conv,
+                self.algorithm,
+                self.workspace.workspace,
+                self.workspace.workspace_size,
+                &beta as *const T as *const libc::c_void,
+                self.input,
+                input as *mut libc::c_void,
+            );
+        }
+    }
+}
+
+impl Drop for ConvolutionBackwardData {
+    fn drop(&mut self) {
+        unsafe {
+            cudnnDestroyTensorDescriptor(self.input);
+            cudnnDestroyFilterDescriptor(self.filter);
+            cudnnDestroyConvolutionDescriptor(self.conv);
+            cudnnDestroyTensorDescriptor(self.output);
+            cudaFree(self.workspace.workspace);
+        }
+    }
+}
+
+#[derive(Debug, Default, PartialEq, Eq, Hash)]
+pub struct ConvolutionBackwardDataBuilder {
+    input: Option<cudnnTensorDescriptor_t>,
+    filter: Option<cudnnFilterDescriptor_t>,
+    conv: Option<cudnnConvolutionDescriptor_t>,
+    output: Option<cudnnTensorDescriptor_t>,
+    algorithm: Option<cudnnConvolutionBwdDataAlgo_t>,
+}
+
+impl ConvolutionBackwardDataBuilder {
+    pub fn input<T: 'static>(
+        self,
+        n: i32,
+        c: i32,
+        h: i32,
+        w: i32,
+        format: TensorFormat,
+    ) -> Result<Self, ZenuCudnnError> {
+        let input = tensor_descriptor::<T>(n, c, h, w, format)?;
+        Ok(Self {
+            input: Some(input),
+            ..self
+        })
+    }
+
+    pub fn filter<T: 'static>(
+        self,
+        k: i32,
+        c: i32,
+        h: i32,
+        w: i32,
+        format: TensorFormat,
+    ) -> Result<Self, ZenuCudnnError> {
+        let filter = filter_descriptor::<T>(k, c, h, w, format)?;
+        Ok(Self {
+            filter: Some(filter),
+            ..self
+        })
+    }
+
+    pub fn conv(
+        self,
+        pad_h: i32,
+        pad_w: i32,
+        stride_h: i32,
+        stride_w: i32,
+        dilation_h: i32,
+        dilation_w: i32,
+    ) -> Result<Self, ZenuCudnnError> {
+        let conv =
+            convolution_descriptor(pad_h, pad_w, stride_h, stride_w, dilation_h, dilation_w)?;
+        Ok(Self {
+            conv: Some(conv),
+            ..self
+        })
+    }
+
+    pub fn output<T: 'static>(
+        self,
+        n: i32,
+        c: i32,
+        h: i32,
+        w: i32,
+        format: TensorFormat,
+    ) -> Result<Self, ZenuCudnnError> {
+        let output = tensor_descriptor::<T>(n, c, h, w, format)?;
+        Ok(Self {
+            output: Some(output),
+            ..self
+        })
+    }
+
+    pub fn algorithm(self) -> Result<Self, ZenuCudnnError> {
+        let input = self.input.unwrap();
+        let filter = self.filter.unwrap();
+        let conv = self.conv.unwrap();
+        let output = self.output.unwrap();
+        let algorithm = convolution_backward_data_algorithm(input, filter, conv, output)?;
+        Ok(Self {
+            algorithm: Some(algorithm),
+            ..self
+        })
+    }
+
+    pub fn build(self) -> Result<ConvolutionBackwardData, ZenuCudnnError> {
+        let input = self.input.unwrap();
+        let filter = self.filter.unwrap();
+        let conv = self.conv.unwrap();
+        let output = self.output.unwrap();
+        let algorithm = self.algorithm.unwrap();
+        let workspace =
+            convolution_backward_data_workspace(input, filter, conv, output, algorithm)?;
+        Ok(ConvolutionBackwardData {
             input,
             filter,
             conv,
