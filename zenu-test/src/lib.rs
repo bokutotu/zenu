@@ -79,12 +79,12 @@ macro_rules! run_mat_test {
     ($test_func:ident, $cpu_name:ident, $gpu_name:ident) => {
         #[test]
         fn $cpu_name() {
-            $test_func::<$crate::device::cpu::Cpu>();
+            $test_func::<crate::device::cpu::Cpu>();
         }
         #[cfg(feature = "nvidia")]
         #[test]
         fn $gpu_name() {
-            $test_func::<$crate::device::nvidia::Nvidia>();
+            $test_func::<crate::device::nvidia::Nvidia>();
         }
     };
 }
