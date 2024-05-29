@@ -117,6 +117,34 @@ fn convolution_descriptor(
     Ok(conv)
 }
 
+fn convolution_backward_filter_descriptor(
+    input: cudnnTensorDescriptor_t,
+    output: cudnnTensorDescriptor_t,
+    conv: cudnnConvolutionDescriptor_t,
+) -> Result<cudnnFilterDescriptor_t, ZenuCudnnError> {
+    let mut filter: cudnnFilterDescriptor_t = std::ptr::null_mut();
+    unsafe {
+        let status = cudnnCreateFilterDescriptor(&mut filter as *mut cudnnFilterDescriptor_t);
+        if status != cudnnStatus_t::CUDNN_STATUS_SUCCESS {
+            return Err(ZenuCudnnError::from(status));
+        }
+        let status = cudnnGetConvolutionBackwardFilterAlgorithm(
+            ZENU_CUDA_STATE.lock().unwrap().get_cudnn().as_ptr(),
+            input,
+            output,
+            conv,
+            filter,
+            cudnnConvolutionBwdFilterPreference_t::CUDNN_CONVOLUTION_BWD_FILTER_NO_WORKSPACE,
+            0,
+            &mut cudnnConvolutionBwdFilterAlgo_t::CUDNN_CONVOLUTION_BWD_FILTER_ALGO_0,
+        );
+        if status != cudnnStatus_t::CUDNN_STATUS_SUCCESS {
+            return Err(ZenuCudnnError::from(status));
+        }
+    }
+    Ok(filter)
+}
+
 fn convolution_algorithm(
     input: cudnnTensorDescriptor_t,
     filter: cudnnFilterDescriptor_t,
@@ -425,7 +453,7 @@ impl ConvolutionBuilder {
 pub struct ConvolutionBackwardData {
     input: cudnnTensorDescriptor_t,
     filter: cudnnFilterDescriptor_t,
-    conv: cudnnConvolutionDescriptor_t,
+    conv: cudnnConvolutionBwdDescriptor_t,
     output: cudnnTensorDescriptor_t,
     algorithm: cudnnConvolutionBwdDataAlgo_t,
     workspace: Workspace,
