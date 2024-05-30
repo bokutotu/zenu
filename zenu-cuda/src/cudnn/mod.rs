@@ -177,9 +177,9 @@ fn convolution_backward_data_algorithm(
         let state = cudnnGetConvolutionBackwardDataAlgorithm_v7(
             handle.as_ptr(),
             filter,
-            output,
-            conv,
             input,
+            conv,
+            output,
             requested_algo_count as i32,
             &mut returned_algo_count as *mut i32,
             algorithm.as_mut_ptr() as *mut cudnnConvolutionBwdDataAlgoPerf_t,
@@ -697,17 +697,73 @@ mod cudnn {
         let out_w = (w + 2 * pad_w - kw) / stride_w + 1;
 
         let conv = ConvolutionBackwardDataBuilder::default()
-            .input::<f32>(n, c, h, w, TensorFormat::NCHW)
+            .input::<f32>(n, c, out_h, out_w, TensorFormat::NCHW)
             .unwrap()
             .filter::<f32>(k, c, kh, kw, TensorFormat::NCHW)
             .unwrap()
             .conv(pad_h, pad_w, stride_h, stride_w, 1, 1)
             .unwrap()
-            .output::<f32>(n, k, out_h, out_w, TensorFormat::NCHW) // ここで出力テンソルのサイズを変更
+            .output::<f32>(n, k, h, w, TensorFormat::NCHW) // ここで出力テンソルのサイズを変更
             .unwrap()
             .algorithm(5)
             .unwrap()
             .build()
             .unwrap();
+
+        let mut input_cpu = Vec::new();
+        for idx in 0..n * c * out_h * out_w {
+            input_cpu.push(idx as f32);
+        }
+
+        let mut filter_cpu = Vec::new();
+        for idx in 0..k * c * kh * kw {
+            filter_cpu.push(idx as f32);
+        }
+
+        let input_gpu = cuda_malloc::<f32>((n * c * out_h * out_w) as usize).unwrap();
+        let filter_gpu = cuda_malloc::<f32>((k * c * kh * kw) as usize).unwrap();
+        let output_gpu = cuda_malloc::<f32>((n * k * h * w) as usize).unwrap();
+
+        cuda_copy(
+            input_gpu,
+            input_cpu.as_ptr(),
+            (n * c * out_h * out_w) as usize,
+            ZenuCudaMemCopyKind::HostToDevice,
+        )
+        .unwrap();
+        cuda_copy(
+            filter_gpu,
+            filter_cpu.as_ptr(),
+            (k * c * kh * kw) as usize,
+            ZenuCudaMemCopyKind::HostToDevice,
+        )
+        .unwrap();
+
+        conv.backward_data(1.0, filter_gpu, input_gpu, 0.0, output_gpu);
+
+        let mut output_cpu = Vec::new();
+        for _ in 0..n * k * h * w {
+            output_cpu.push(0.0);
+        }
+        cuda_copy(
+            output_cpu.as_mut_ptr(),
+            output_gpu,
+            (n * k * h * w) as usize,
+            ZenuCudaMemCopyKind::DeviceToHost,
+        )
+        .unwrap();
+        println!("{:?}", output_cpu);
+        let ans = vec![
+            15096.0, 23154.0, 23685.0, 24216.0, 16512.0, 24660.0, 37809.0, 38646.0, 39483.0,
+            26910.0, 27405.0, 41994.0, 42831.0, 43668.0, 29745.0, 30150.0, 46179.0, 47016.0,
+            47853.0, 32580.0, 21864.0, 33468.0, 34053.0, 34638.0, 23568.0, 18120.0, 27771.0,
+            28464.0, 29157.0, 19860.0, 29601.0, 45342.0, 46422.0, 47502.0, 32337.0, 33156.0,
+            50742.0, 51822.0, 52902.0, 35982.0, 36711.0, 56142.0, 57222.0, 58302.0, 39627.0,
+            26508.0, 40515.0, 41262.0, 42009.0, 28536.0, 21144.0, 32388.0, 33243.0, 34098.0,
+            23208.0, 34542.0, 52875.0, 54198.0, 55521.0, 37764.0, 38907.0, 59490.0, 60813.0,
+            62136.0, 42219.0, 43272.0, 66105.0, 67428.0, 68751.0, 46674.0, 31152.0, 47562.0,
+            48471.0, 49380.0, 33504.0,
+        ];
+        assert_eq!(output_cpu, ans);
     }
 }
