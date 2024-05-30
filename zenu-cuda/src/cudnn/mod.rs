@@ -192,6 +192,44 @@ fn convolution_backward_data_algorithm(
     }
 }
 
+fn convolution_backward_filter_algorithm(
+    input: cudnnTensorDescriptor_t,
+    filter: cudnnFilterDescriptor_t,
+    conv: cudnnConvolutionDescriptor_t,
+    output: cudnnTensorDescriptor_t,
+    requested_algo_count: usize,
+) -> Result<cudnnConvolutionBwdFilterAlgo_t, ZenuCudnnError> {
+    let state = ZENU_CUDA_STATE.lock().unwrap();
+    let handle = state.get_cudnn();
+    let mut returned_algo_count = 0;
+    unsafe {
+        let mut algorithm: Vec<cudnnConvolutionBwdFilterAlgoPerf_t> =
+            Vec::with_capacity(requested_algo_count);
+        for _ in 0..requested_algo_count {
+            algorithm.push(cudnnConvolutionBwdFilterAlgoPerf_t::default());
+        }
+
+        // enable tensor core
+        cudnnSetConvolutionMathType(conv, cudnnMathType_t::CUDNN_TENSOR_OP_MATH_ALLOW_CONVERSION);
+
+        let state = cudnnGetConvolutionBackwardFilterAlgorithm_v7(
+            handle.as_ptr(),
+            input,
+            output,
+            conv,
+            filter,
+            requested_algo_count as i32,
+            &mut returned_algo_count as *mut i32,
+            algorithm.as_mut_ptr() as *mut cudnnConvolutionBwdFilterAlgoPerf_t,
+        );
+        if state != cudnnStatus_t::CUDNN_STATUS_SUCCESS {
+            return Err(ZenuCudnnError::from(state));
+        }
+
+        Ok(algorithm[0].algo)
+    }
+}
+
 fn convolution_workspace(
     input: cudnnTensorDescriptor_t,
     filter: cudnnFilterDescriptor_t,
@@ -254,6 +292,41 @@ fn convolution_backward_data_workspace(
         let status = cudaMalloc(&mut workspace as *mut *mut libc::c_void, workspace_size);
         if status != cudaError_t::cudaSuccess {
             panic!("Failed to allocate convolution backward data workspace");
+        }
+        Ok(Workspace {
+            workspace,
+            workspace_size,
+        })
+    }
+}
+
+fn convolution_backward_filter_workspace(
+    input: cudnnTensorDescriptor_t,
+    filter: cudnnFilterDescriptor_t,
+    conv: cudnnConvolutionDescriptor_t,
+    output: cudnnTensorDescriptor_t,
+    algorithm: cudnnConvolutionBwdFilterAlgo_t,
+) -> Result<Workspace, ZenuCudnnError> {
+    let state = ZENU_CUDA_STATE.lock().unwrap();
+    let handle = state.get_cudnn();
+    let mut workspace_size = 0;
+    unsafe {
+        let status = cudnnGetConvolutionBackwardFilterWorkspaceSize(
+            handle.as_ptr(),
+            input,
+            output,
+            conv,
+            filter,
+            algorithm,
+            &mut workspace_size as *mut usize,
+        );
+        if status != cudnnStatus_t::CUDNN_STATUS_SUCCESS {
+            panic!("Failed to get convolution backward filter workspace size");
+        }
+        let mut workspace = std::ptr::null_mut();
+        let status = cudaMalloc(&mut workspace as *mut *mut libc::c_void, workspace_size);
+        if status != cudaError_t::cudaSuccess {
+            panic!("Failed to allocate convolution backward filter workspace");
         }
         Ok(Workspace {
             workspace,
@@ -579,6 +652,167 @@ impl ConvolutionBackwardDataBuilder {
     }
 }
 
+pub struct ConvolutionBackwardFilter {
+    input: cudnnTensorDescriptor_t,
+    filter: cudnnFilterDescriptor_t,
+    conv: cudnnConvolutionDescriptor_t,
+    output: cudnnTensorDescriptor_t,
+    algorithm: cudnnConvolutionBwdFilterAlgo_t,
+    workspace: Workspace,
+}
+
+impl ConvolutionBackwardFilter {
+    pub fn backward_filter<T: 'static>(
+        &self,
+        alpha: T,
+        input: *const T,
+        d_output: *const T,
+        beta: T,
+        filter: *mut T,
+    ) {
+        let state = ZENU_CUDA_STATE.lock().unwrap();
+        let handle = state.get_cudnn();
+        unsafe {
+            cudnnConvolutionBackwardFilter(
+                handle.as_ptr(),
+                &alpha as *const T as *const libc::c_void,
+                self.input,
+                input as *const libc::c_void,
+                self.output,
+                d_output as *const libc::c_void,
+                self.conv,
+                self.algorithm,
+                self.workspace.workspace,
+                self.workspace.workspace_size,
+                &beta as *const T as *const libc::c_void,
+                self.filter,
+                filter as *mut libc::c_void,
+            );
+        }
+    }
+}
+
+impl Drop for ConvolutionBackwardFilter {
+    fn drop(&mut self) {
+        unsafe {
+            cudnnDestroyTensorDescriptor(self.input);
+            cudnnDestroyFilterDescriptor(self.filter);
+            cudnnDestroyConvolutionDescriptor(self.conv);
+            cudnnDestroyTensorDescriptor(self.output);
+            cudaFree(self.workspace.workspace);
+        }
+    }
+}
+
+#[derive(Debug, Default, PartialEq, Eq, Hash)]
+pub struct ConvolutionBackwardFilterBuilder {
+    input: Option<cudnnTensorDescriptor_t>,
+    filter: Option<cudnnFilterDescriptor_t>,
+    conv: Option<cudnnConvolutionDescriptor_t>,
+    output: Option<cudnnTensorDescriptor_t>,
+    algorithm: Option<cudnnConvolutionBwdFilterAlgo_t>,
+}
+
+impl ConvolutionBackwardFilterBuilder {
+    pub fn input<T: 'static>(
+        self,
+        n: i32,
+        c: i32,
+        h: i32,
+        w: i32,
+        format: TensorFormat,
+    ) -> Result<Self, ZenuCudnnError> {
+        let input = tensor_descriptor::<T>(n, c, h, w, format)?;
+        Ok(Self {
+            input: Some(input),
+            ..self
+        })
+    }
+
+    pub fn filter<T: 'static>(
+        self,
+        k: i32,
+        c: i32,
+        h: i32,
+        w: i32,
+        format: TensorFormat,
+    ) -> Result<Self, ZenuCudnnError> {
+        let filter = filter_descriptor::<T>(k, c, h, w, format)?;
+        Ok(Self {
+            filter: Some(filter),
+            ..self
+        })
+    }
+
+    pub fn conv(
+        self,
+        pad_h: i32,
+        pad_w: i32,
+        stride_h: i32,
+        stride_w: i32,
+        dilation_h: i32,
+        dilation_w: i32,
+    ) -> Result<Self, ZenuCudnnError> {
+        let conv =
+            convolution_descriptor(pad_h, pad_w, stride_h, stride_w, dilation_h, dilation_w)?;
+        Ok(Self {
+            conv: Some(conv),
+            ..self
+        })
+    }
+
+    pub fn output<T: 'static>(
+        self,
+        n: i32,
+        c: i32,
+        h: i32,
+        w: i32,
+        format: TensorFormat,
+    ) -> Result<Self, ZenuCudnnError> {
+        let output = tensor_descriptor::<T>(n, c, h, w, format)?;
+        Ok(Self {
+            output: Some(output),
+            ..self
+        })
+    }
+
+    pub fn algorithm(self, requested_algo_count: usize) -> Result<Self, ZenuCudnnError> {
+        let input = self.input.unwrap();
+        let filter = self.filter.unwrap();
+        let conv = self.conv.unwrap();
+        let output = self.output.unwrap();
+        let algorithm = convolution_backward_filter_algorithm(
+            input,
+            filter,
+            conv,
+            output,
+            requested_algo_count,
+        )?;
+        Ok(Self {
+            algorithm: Some(algorithm),
+            ..self
+        })
+    }
+
+    pub fn build(self) -> Result<ConvolutionBackwardFilter, ZenuCudnnError> {
+        let input = self.input.unwrap();
+        let filter = self.filter.unwrap();
+        let conv = self.conv.unwrap();
+        let output = self.output.unwrap();
+        let algorithm = self.algorithm.unwrap();
+        let workspace =
+            convolution_backward_filter_workspace(input, filter, conv, output, algorithm)?;
+        Ok(ConvolutionBackwardFilter {
+            input,
+            filter,
+            conv,
+            output,
+            algorithm,
+            workspace,
+        })
+    }
+}
+
 #[cfg(test)]
 mod cudnn {
     use crate::runtime::{cuda_copy, cuda_malloc, ZenuCudaMemCopyKind};
@@ -765,5 +999,100 @@ mod cudnn {
             48471.0, 49380.0, 33504.0,
         ];
         assert_eq!(output_cpu, ans);
+    }
+
+    #[test]
+    fn bkwd_filter() {
+        let n = 1;
+        let c = 3;
+        let h = 5;
+        let w = 5;
+        let k = 3;
+        let kh = 3;
+        let kw = 3;
+        let pad_h = 1;
+        let pad_w = 1;
+        let stride_h = 1;
+        let stride_w = 1;
+
+        // 畳み込み後の出力テンソルのサイズ
+        let out_h = (h + 2 * pad_h - kh) / stride_h + 1;
+        let out_w = (w + 2 * pad_w - kw) / stride_w + 1;
+
+        let conv = ConvolutionBackwardFilterBuilder::default()
+            .input::<f32>(n, c, h, w, TensorFormat::NCHW)
+            .unwrap()
+            .filter::<f32>(k, c, kh, kw, TensorFormat::NCHW)
+            .unwrap()
+            .conv(pad_h, pad_w, stride_h, stride_w, 1, 1)
+            .unwrap()
+            .output::<f32>(n, k, out_h, out_w, TensorFormat::NCHW)
+            .unwrap()
+            .algorithm(1)
+            .unwrap()
+            .build()
+            .unwrap();
+
+        let mut input_cpu = Vec::new();
+        for idx in 0..n * c * h * w {
+            input_cpu.push(idx as f32);
+        }
+
+        let mut d_output_cpu = Vec::new();
+        for idx in 0..n * k * out_h * out_w {
+            d_output_cpu.push((idx % 10) as f32);
+        }
+
+        let input_gpu = cuda_malloc::<f32>((n * c * h * w) as usize).unwrap();
+        let filter_gpu = cuda_malloc::<f32>((k * c * kh * kw) as usize).unwrap();
+        let output_gpu = cuda_malloc::<f32>((n * k * out_h * out_w) as usize).unwrap();
+
+        cuda_copy(
+            input_gpu,
+            input_cpu.as_ptr(),
+            (n * c * h * w) as usize,
+            ZenuCudaMemCopyKind::HostToDevice,
+        )
+        .unwrap();
+        cuda_copy(
+            output_gpu,
+            d_output_cpu.as_ptr(),
+            (n * k * out_h * out_w) as usize,
+            ZenuCudaMemCopyKind::HostToDevice,
+        )
+        .unwrap();
+
+        conv.backward_filter(1.0, input_gpu, output_gpu, 0.0, filter_gpu);
+
+        let mut filter_cpu = Vec::new();
+        for _ in 0..k * c * kh * kw {
+            filter_cpu.push(0.0);
+        }
+        cuda_copy(
+            filter_cpu.as_mut_ptr(),
+            filter_gpu,
+            (k * c * kh * kw) as usize,
+            ZenuCudaMemCopyKind::DeviceToHost,
+        )
+        .unwrap();
+
+        println!("{:?}", filter_cpu);
+
+        // Expected results (you need to calculate them or use another framework)
+        // let expected = vec![
+        //     3480.0, 3945.0, 4410.0, 5055.0, 5685.0, 6315.0, 7140.0, 7995.0, 8850.0,
+        // ];
+        let ans = vec![
+            640.0, 770.0, 560.0, 1060.0, 1250.0, 900.0, 1240.0, 1470.0, 1080.0, 2640.0, 3020.0,
+            2160.0, 3310.0, 3750.0, 2650.0, 3240.0, 3720.0, 2680.0, 4640.0, 5270.0, 3760.0, 5560.0,
+            6250.0, 4400.0, 5240.0, 5970.0, 4280.0, 840.0, 1020.0, 760.0, 1290.0, 1550.0, 1150.0,
+            1040.0, 1220.0, 880.0, 2840.0, 3270.0, 2360.0, 4040.0, 4675.0, 3400.0, 3040.0, 3470.0,
+            2480.0, 4840.0, 5520.0, 3960.0, 6790.0, 7800.0, 5650.0, 5040.0, 5720.0, 4080.0, 640.0,
+            770.0, 560.0, 1060.0, 1250.0, 900.0, 1240.0, 1470.0, 1080.0, 2640.0, 3020.0, 2160.0,
+            3310.0, 3750.0, 2650.0, 3240.0, 3720.0, 2680.0, 4640.0, 5270.0, 3760.0, 5560.0, 6250.0,
+            4400.0, 5240.0, 5970.0, 4280.0,
+        ];
+
+        assert_eq!(filter_cpu, ans);
     }
 }
