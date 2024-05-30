@@ -117,34 +117,6 @@ fn convolution_descriptor(
     Ok(conv)
 }
 
-fn convolution_backward_filter_descriptor(
-    input: cudnnTensorDescriptor_t,
-    output: cudnnTensorDescriptor_t,
-    conv: cudnnConvolutionDescriptor_t,
-) -> Result<cudnnFilterDescriptor_t, ZenuCudnnError> {
-    let mut filter: cudnnFilterDescriptor_t = std::ptr::null_mut();
-    unsafe {
-        let status = cudnnCreateFilterDescriptor(&mut filter as *mut cudnnFilterDescriptor_t);
-        if status != cudnnStatus_t::CUDNN_STATUS_SUCCESS {
-            return Err(ZenuCudnnError::from(status));
-        }
-        let status = cudnnGetConvolutionBackwardFilterAlgorithm(
-            ZENU_CUDA_STATE.lock().unwrap().get_cudnn().as_ptr(),
-            input,
-            output,
-            conv,
-            filter,
-            cudnnConvolutionBwdFilterPreference_t::CUDNN_CONVOLUTION_BWD_FILTER_NO_WORKSPACE,
-            0,
-            &mut cudnnConvolutionBwdFilterAlgo_t::CUDNN_CONVOLUTION_BWD_FILTER_ALGO_0,
-        );
-        if status != cudnnStatus_t::CUDNN_STATUS_SUCCESS {
-            return Err(ZenuCudnnError::from(status));
-        }
-    }
-    Ok(filter)
-}
-
 fn convolution_algorithm(
     input: cudnnTensorDescriptor_t,
     filter: cudnnFilterDescriptor_t,
@@ -188,13 +160,14 @@ fn convolution_backward_data_algorithm(
     filter: cudnnFilterDescriptor_t,
     conv: cudnnConvolutionDescriptor_t,
     output: cudnnTensorDescriptor_t,
+    requested_algo_count: usize,
 ) -> Result<cudnnConvolutionBwdDataAlgo_t, ZenuCudnnError> {
     let state = ZENU_CUDA_STATE.lock().unwrap();
     let handle = state.get_cudnn();
     let mut returned_algo_count = 0;
     unsafe {
         let mut algorithm: Vec<cudnnConvolutionBwdDataAlgoPerf_t> = Vec::with_capacity(1);
-        for _ in 0..1 {
+        for _ in 0..requested_algo_count {
             algorithm.push(cudnnConvolutionBwdDataAlgoPerf_t::default());
         }
 
@@ -207,7 +180,7 @@ fn convolution_backward_data_algorithm(
             output,
             conv,
             input,
-            1,
+            requested_algo_count as i32,
             &mut returned_algo_count as *mut i32,
             algorithm.as_mut_ptr() as *mut cudnnConvolutionBwdDataAlgoPerf_t,
         );
@@ -453,7 +426,7 @@ impl ConvolutionBuilder {
 pub struct ConvolutionBackwardData {
     input: cudnnTensorDescriptor_t,
     filter: cudnnFilterDescriptor_t,
-    conv: cudnnConvolutionBwdDescriptor_t,
+    conv: cudnnConvolutionDescriptor_t,
     output: cudnnTensorDescriptor_t,
     algorithm: cudnnConvolutionBwdDataAlgo_t,
     workspace: Workspace,
@@ -574,12 +547,13 @@ impl ConvolutionBackwardDataBuilder {
         })
     }
 
-    pub fn algorithm(self) -> Result<Self, ZenuCudnnError> {
+    pub fn algorithm(self, requested_algo_count: usize) -> Result<Self, ZenuCudnnError> {
         let input = self.input.unwrap();
         let filter = self.filter.unwrap();
         let conv = self.conv.unwrap();
         let output = self.output.unwrap();
-        let algorithm = convolution_backward_data_algorithm(input, filter, conv, output)?;
+        let algorithm =
+            convolution_backward_data_algorithm(input, filter, conv, output, requested_algo_count)?;
         Ok(Self {
             algorithm: Some(algorithm),
             ..self
@@ -702,5 +676,38 @@ mod cudnn {
         ];
         let ans = ans.iter().map(|&x| x as f32).collect::<Vec<f32>>();
         assert_eq!(output_cpu, ans);
+    }
+
+    #[test]
+    fn bkwd_data() {
+        let n = 1;
+        let c = 3;
+        let h = 5;
+        let w = 5;
+        let k = 3;
+        let kh = 3;
+        let kw = 3;
+        let pad_h = 1;
+        let pad_w = 1;
+        let stride_h = 1;
+        let stride_w = 1;
+
+        // 畳み込み後の出力テンソルのサイズ
+        let out_h = (h + 2 * pad_h - kh) / stride_h + 1;
+        let out_w = (w + 2 * pad_w - kw) / stride_w + 1;
+
+        let conv = ConvolutionBackwardDataBuilder::default()
+            .input::<f32>(n, c, h, w, TensorFormat::NCHW)
+            .unwrap()
+            .filter::<f32>(k, c, kh, kw, TensorFormat::NCHW)
+            .unwrap()
+            .conv(pad_h, pad_w, stride_h, stride_w, 1, 1)
+            .unwrap()
+            .output::<f32>(n, k, out_h, out_w, TensorFormat::NCHW) // ここで出力テンソルのサイズを変更
+            .unwrap()
+            .algorithm(5)
+            .unwrap()
+            .build()
+            .unwrap();
     }
 }
