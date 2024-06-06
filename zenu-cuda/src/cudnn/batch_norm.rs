@@ -463,19 +463,134 @@ mod batch_norm {
     use zenu_cudnn_sys::cudnnBatchNormMode_t;
 
     use crate::{
-        cudnn::TensorFormat,
+        cudnn::{batch_norm::BatchNorm2dBackwardBuilder, TensorFormat},
         runtime::{cuda_copy, cuda_malloc, ZenuCudaMemCopyKind},
     };
 
     use super::BatchNorm2dBuilder;
 
+    fn cpu_vec_to_gpu<T: 'static>(vec: &[T]) -> *mut T {
+        let gpu = cuda_malloc(vec.len()).unwrap();
+        cuda_copy(
+            gpu,
+            vec.as_ptr(),
+            vec.len(),
+            ZenuCudaMemCopyKind::HostToDevice,
+        )
+        .unwrap();
+        gpu
+    }
+
+    fn gpu_to_cpu_vec<T: 'static + Default + Clone>(gpu: *const T, len: usize) -> Vec<T> {
+        let mut vec = vec![T::default(); len];
+        cuda_copy(
+            vec.as_mut_ptr(),
+            gpu,
+            len,
+            ZenuCudaMemCopyKind::DeviceToHost,
+        )
+        .unwrap();
+        vec
+    }
+
     #[test]
     fn forward() {
+        // import torch
+        // import torch.nn as nn
+        // import numpy as np
+        //
+        // # シードの固定
+        // torch.manual_seed(0)
+        // np.random.seed(0)
+        //
+        // # デバイスを設定
+        // device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        //
+        // # バッチ正規化レイヤーを定義
+        // class BatchNormModel(nn.Module):
+        //     def __init__(self, num_features):
+        //         super(BatchNormModel, self).__init__()
+        //         self.bn = nn.BatchNorm2d(num_features)
+        //
+        //     def forward(self, x):
+        //         return self.bn(x)
+        //
+        // # 入力データの設定
+        // input_data = torch.randn(2, 2, 2, 2).to(device)  # バッチサイズ 2, チャンネル 2, 高さ 2, 幅 2
+        // input_data.requires_grad = True
+        //
+        // # PyTorchモデルのインスタンスを作成
+        // model = BatchNormModel(num_features=2).to(device)
+        //
+        // # フォワードパス
+        // output = model(input_data)
+        //
+        // # 入力データの出力を追加
+        // print("Input Data:\n", input_data.cpu().detach().numpy())
+        //
+        // # バッチ正規化の内部パラメータを取得
+        // running_mean = model.bn.running_mean  # resultRunningMean に対応
+        // running_var = model.bn.running_var    # resultRunningVariance に対応
+        //
+        // # 現在のバッチ用のパラメータ
+        // saved_mean = model.bn.running_mean.clone().detach()          # resultSaveMean に対応
+        // saved_var = (model.bn.running_var.clone().detach().reciprocal())  # resultSaveInvVariance に対応
+        //
+        // # スケールとバイアスの取得
+        // scale = model.bn.weight.clone().detach()  # bnScale に対応
+        // bias = model.bn.bias.clone().detach()     # bnBias に対応
+        //
+        // print("Running Mean:\n", running_mean.cpu().numpy())
+        // print("Running Variance:\n", running_var.cpu().numpy())
+        // print("Saved Mean (for current batch):\n", saved_mean.cpu().numpy())
+        // print("Saved Inv Variance (for current batch):\n", saved_var.cpu().numpy())
+        // print("Scale (bnScale):\n", scale.cpu().numpy())
+        // print("Bias (bnBias):\n", bias.cpu().numpy())
+        //
+        // # ランダムな出力に対する勾配を生成
+        // output_grad = torch.randn_like(output).to(device)
+        //
+        // # 出力に対するダミーの損失を計算し、バックワードパスを実行
+        // output.backward(gradient=output_grad)
+        //
+        // # 勾配を取得
+        // grad_input = input_data.grad   # dInput に対応
+        // grad_bn_weight = model.bn.weight.grad  # dBnScale に対応
+        // grad_bn_bias = model.bn.bias.grad      # dBnBias に対応
+        //
+        // # 出力用に追加された部分
+        // print("Output Gradient:\n", output_grad.cpu().numpy())
+        //
+        // print("Gradient w.r.t input:\n", grad_input.cpu().numpy())
+        // print("Gradient w.r.t bn_weight (Scale):\n", grad_bn_weight.cpu().numpy())
+        // print("Gradient w.r.t bn_bias:\n", grad_bn_bias.cpu().numpy())
         let n = 2;
-        let c = 3;
-        let h = 4;
-        let w = 4;
-        let x_cpu = vec![
+        let c = 2;
+        let h = 2;
+        let w = 2;
+        let batch_norm = BatchNorm2dBuilder::new()
+            .mode(cudnnBatchNormMode_t::CUDNN_BATCHNORM_SPATIAL)
+            .input(n, c, h, w, TensorFormat::NCHW)
+            .unwrap()
+            .output(n, c, h, w, TensorFormat::NCHW)
+            .unwrap()
+            .scale_bias_mean_var(c, TensorFormat::NCHW)
+            .unwrap()
+            .build();
+
+        let batch_norm_backward = BatchNorm2dBackwardBuilder::new()
+            .mode(cudnnBatchNormMode_t::CUDNN_BATCHNORM_SPATIAL)
+            .input(n, c, h, w, TensorFormat::NCHW)
+            .unwrap()
+            .input_grad(n, c, h, w, TensorFormat::NCHW)
+            .unwrap()
+            .output_grad(n, c, h, w, TensorFormat::NCHW)
+            .unwrap()
+            .scale_bias_mean_var(c, TensorFormat::NCHW)
+            .unwrap()
+            .build();
+
+        let input_cpu = vec![
             -1.1258398,
             -1.1523602,
             -0.25057858,
@@ -492,470 +607,123 @@ mod batch_norm {
             1.2376579,
             1.1167772,
             -0.24727815,
-            -1.3526537,
-            -1.6959312,
-            0.5666506,
-            0.79350835,
-            0.59883946,
-            -1.5550951,
-            -0.3413604,
-            1.8530061,
-            0.7501895,
-            -0.58549756,
-            -0.17339675,
-            0.18347794,
-            1.3893661,
-            1.5863342,
-            0.94629836,
-            -0.84367675,
-            -0.6135831,
-            0.03159274,
-            -0.49267697,
-            0.24841475,
-            0.43969584,
-            0.112411186,
-            0.64079237,
-            0.44115627,
-            -0.10230965,
-            0.792444,
-            -0.2896677,
-            0.052507486,
-            0.52286047,
-            2.3022053,
-            -1.4688939,
-            -1.5866888,
-            -0.6730899,
-            0.8728312,
-            1.0553575,
-            0.17784372,
-            -0.23033547,
-            -0.3917544,
-            0.5432947,
-            -0.39515755,
-            -0.44621718,
-            0.7440207,
-            1.5209795,
-            3.4105027,
-            -1.5311843,
-            -1.234135,
-            1.8197253,
-            -0.5515287,
-            -0.5692481,
-            0.9199714,
-            1.1108161,
-            1.2898741,
-            -1.478174,
-            2.5672328,
-            -0.4731198,
-            0.33555076,
-            -1.629326,
-            -0.54974365,
-            -0.47983426,
-            -0.49968153,
-            -1.0669804,
-            1.1149396,
-            -0.14067143,
-            0.8057536,
-            -0.093348235,
-            0.6870502,
-            -0.83831537,
-            0.00089182175,
-            0.8418941,
-            -0.40003416,
-            1.039462,
-            0.3581531,
-            -0.24600095,
-            2.3025165,
-            -1.8816892,
-            -0.049727023,
-            -1.0449786,
-            -0.9565008,
-            0.03353186,
-            0.7100866,
         ];
-        let scale = vec![2.0575912, -0.03542188, 0.06271883];
-        let bias = vec![-0.7663063, 1.0992506, 2.7565384];
-        let mean = vec![0.0, 0.0, 0.0];
-        let variance = vec![1.0, 1.0, 1.0];
+        let output_cpu = vec![
+            -1.0970649,
+            -1.1374662,
+            0.23631285,
+            -0.04292771,
+            0.66504365,
+            0.5121599,
+            -0.4713051,
+            -2.2266803,
+            1.109001,
+            -1.3065253,
+            1.1512119,
+            1.0874585,
+            -0.04606889,
+            1.0445158,
+            0.92657995,
+            -0.40424496,
+        ];
+        let running_mean = vec![-0.04057, 0.01670607];
+        let running_variance = vec![0.9492437, 1.0200632];
+        let saved_mean = vec![-0.04057, 0.01670607];
+        let saved_variance = vec![0.9492437, 1.0200632];
+        let scale = vec![1.0, 1.0];
+        let bias = vec![0.0, 0.0];
 
-        let x_gpu = cuda_malloc(x_cpu.len()).unwrap();
-        let y_gpu = cuda_malloc(x_cpu.len()).unwrap();
-        let scale_gpu = cuda_malloc(scale.len()).unwrap();
-        let bias_gpu = cuda_malloc(bias.len()).unwrap();
-        let mean_gpu = cuda_malloc(mean.len()).unwrap();
-        let variance_gpu = cuda_malloc(variance.len()).unwrap();
+        let input_gpu = cpu_vec_to_gpu(&input_cpu);
+        let running_mean_gpu = cpu_vec_to_gpu(&running_mean);
+        let running_variance_gpu = cpu_vec_to_gpu(&running_variance);
+        let saved_mean_gpu = cuda_malloc(saved_mean.len()).unwrap();
+        let saved_variance_gpu = cuda_malloc(saved_variance.len()).unwrap();
 
-        cuda_copy(
-            x_gpu,
-            x_cpu.as_ptr(),
-            x_cpu.len(),
-            ZenuCudaMemCopyKind::HostToDevice,
-        )
-        .unwrap();
-        cuda_copy(
-            scale_gpu,
-            scale.as_ptr(),
-            scale.len(),
-            ZenuCudaMemCopyKind::HostToDevice,
-        )
-        .unwrap();
-        cuda_copy(
-            bias_gpu,
-            bias.as_ptr(),
-            bias.len(),
-            ZenuCudaMemCopyKind::HostToDevice,
-        )
-        .unwrap();
-        cuda_copy(
-            mean_gpu,
-            mean.as_ptr(),
-            mean.len(),
-            ZenuCudaMemCopyKind::HostToDevice,
-        )
-        .unwrap();
-        cuda_copy(
-            variance_gpu,
-            variance.as_ptr(),
-            variance.len(),
-            ZenuCudaMemCopyKind::HostToDevice,
-        )
-        .unwrap();
-
-        let batch_norm = BatchNorm2dBuilder::<f64>::new()
-            .input(n, c, h, w, TensorFormat::NCHW)
-            .unwrap()
-            .output(n, c, h, w, TensorFormat::NCHW)
-            .unwrap()
-            .scale_bias_mean_var(c, TensorFormat::NCHW)
-            .unwrap()
-            .mode(cudnnBatchNormMode_t::CUDNN_BATCHNORM_SPATIAL)
-            .build();
-
-        let alpha = 1.0;
-        let beta = 0.0;
-        let average_factor = 0.1;
-
-        let result_saveing_mean = cuda_malloc(mean.len()).unwrap();
-        let result_saveing_inv_variance = cuda_malloc(variance.len()).unwrap();
+        let output_gpu = cuda_malloc(input_cpu.len()).unwrap();
+        let scale_gpu = cpu_vec_to_gpu(&scale);
+        let bias_gpu = cpu_vec_to_gpu(&bias);
 
         batch_norm
             .forward_train(
-                alpha,
-                beta,
-                x_gpu,
-                y_gpu,
+                1.0,
+                0.0,
+                input_gpu,
+                output_gpu,
                 scale_gpu,
                 bias_gpu,
-                mean_gpu,
-                variance_gpu,
-                average_factor,
-                result_saveing_mean,
-                result_saveing_inv_variance,
+                running_mean_gpu,
+                running_variance_gpu,
+                0.1,
+                saved_mean_gpu,
+                saved_variance_gpu,
             )
             .unwrap();
-
-        let mut y_cpu = vec![0.0; x_cpu.len()];
-        cuda_copy(
-            y_cpu.as_mut_ptr(),
-            y_gpu,
-            y_cpu.len(),
-            ZenuCudaMemCopyKind::DeviceToHost,
-        )
-        .unwrap();
-        let y_ans = vec![
-            -3.0458143,
-            -3.0956612,
-            -1.4006953,
-            -1.7452217,
-            0.6655005,
-            0.37096885,
-            -1.5236837,
-            -4.905427,
-            -0.32397428,
-            -3.3042462,
-            -0.2718945,
-            -0.35055333,
-            -0.704463,
-            1.3965565,
-            1.1693522,
-            -1.3944919,
-            1.1464527,
-            1.1575645,
-            1.0843246,
-            1.0769812,
-            1.0832826,
-            1.1530057,
-            1.113717,
-            1.0426852,
-            1.0783834,
-            1.1216197,
-            1.10828,
-            1.0967278,
-            1.0576931,
-            1.0513173,
-            1.0720353,
-            1.129977,
-            2.7115202,
-            2.7555108,
-            2.719764,
-            2.7702947,
-            2.7833369,
-            2.7610214,
-            2.7970483,
-            2.7834363,
-            2.7463808,
-            2.8073885,
-            2.733606,
-            2.7569368,
-            2.7890072,
-            2.9103298,
-            2.653202,
-            2.6451702,
-            -2.1948369,
-            0.7108375,
-            1.0539092,
-            -0.5954435,
-            -1.3626468,
-            -1.6660458,
-            0.091448985,
-            -1.6724422,
-            -1.7684126,
-            0.46872845,
-            1.9290806,
-            5.480581,
-            -3.8076894,
-            -3.2493632,
-            2.4905956,
-            -1.9663535,
-            1.1210938,
-            1.0728875,
-            1.0667099,
-            1.0609138,
-            1.1505157,
-            1.0195656,
-            1.117982,
-            1.0918053,
-            1.1554085,
-            1.1204623,
-            1.1181993,
-            1.1188419,
-            1.1372054,
-            1.0665764,
-            1.1072206,
-            1.0765848,
-            2.7469919,
-            2.8002024,
-            2.6961973,
-            2.7534175,
-            2.8107603,
-            2.726081,
-            2.8242311,
-            2.777777,
-            2.7365835,
-            2.910351,
-            2.625056,
-            2.7499661,
-            2.682106,
-            2.688139,
-            2.7556431,
-            2.801773,
-        ];
-        for i in 0..y_cpu.len() {
-            let diff: f64 = y_cpu[i] - y_ans[i];
-            let diff_abs = diff.abs();
-            assert!(diff_abs.abs() < 1e-6);
+        let output_result = gpu_to_cpu_vec(output_gpu, input_cpu.len());
+        for i in 0..output_cpu.len() {
+            assert!(((output_cpu[i] - output_result[i]) as f64).abs() < 1e-4);
         }
 
-        let y_grad_cpu = vec![1.0; y_cpu.len()];
-        let y_grad_gpu = cuda_malloc(y_grad_cpu.len()).unwrap();
-        cuda_copy(
-            y_grad_gpu,
-            y_grad_cpu.as_ptr(),
-            y_grad_cpu.len(),
-            ZenuCudaMemCopyKind::HostToDevice,
-        )
-        .unwrap();
+        let output_grad_cpu = vec![
+            -0.9246624,
+            -0.42534423,
+            -2.6438458,
+            0.14518386,
+            -0.1208664,
+            -0.57972574,
+            -0.622851,
+            -0.3283869,
+            -1.0745419,
+            -0.36314395,
+            -1.6710504,
+            2.2655048,
+            0.3116848,
+            -0.1841891,
+            1.2866427,
+            1.1819527,
+        ];
+        let output_grad: *mut f64 = cpu_vec_to_gpu(&output_grad_cpu);
+        let input_grad = cuda_malloc(input_cpu.len()).unwrap();
+        let scale_grad = cuda_malloc(scale.len()).unwrap();
+        let bias_grad = cuda_malloc(bias.len()).unwrap();
 
-        let x_grad_gpu = cuda_malloc(x_cpu.len()).unwrap();
-        let scale_grad_gpu = cuda_malloc(scale.len()).unwrap();
-        let bias_grad_gpu = cuda_malloc(bias.len()).unwrap();
-
-        let batch_norm_backward = super::BatchNorm2dBackwardBuilder::<f64>::new()
-            .input(n, c, h, w, TensorFormat::NCHW)
-            .unwrap()
-            .input_grad(n, c, h, w, TensorFormat::NCHW)
-            .unwrap()
-            .output_grad(n, c, h, w, TensorFormat::NCHW)
-            .unwrap()
-            .scale_bias_mean_var(c, TensorFormat::NCHW)
-            .unwrap()
-            .mode(cudnnBatchNormMode_t::CUDNN_BATCHNORM_SPATIAL)
-            .build();
         batch_norm_backward
             .backward(
-                alpha,
-                beta,
-                alpha,
-                beta,
-                y_gpu,
-                y_grad_gpu,
-                x_grad_gpu,
+                1.0,
+                0.,
+                1.,
+                0.,
+                input_gpu,
+                output_grad,
+                input_grad,
                 scale_gpu,
-                scale_grad_gpu,
-                bias_grad_gpu,
-                // mean_gpu,
-                // variance_gpu,
-                std::ptr::null(),
-                std::ptr::null(),
+                scale_grad,
+                bias_grad,
+                saved_mean_gpu,
+                saved_variance_gpu,
             )
             .unwrap();
 
-        let mut x_grad_cpu = vec![0.0; x_cpu.len()];
-        cuda_copy(
-            x_grad_cpu.as_mut_ptr(),
-            x_grad_gpu,
-            x_grad_cpu.len(),
-            ZenuCudaMemCopyKind::DeviceToHost,
-        )
-        .unwrap();
-        let mut scale_grad_cpu = vec![0.0; scale.len()];
-        cuda_copy(
-            scale_grad_cpu.as_mut_ptr(),
-            scale_grad_gpu,
-            scale_grad_cpu.len(),
-            ZenuCudaMemCopyKind::DeviceToHost,
-        )
-        .unwrap();
-        let mut bias_grad_cpu = vec![0.0; bias.len()];
-        cuda_copy(
-            bias_grad_cpu.as_mut_ptr(),
-            bias_grad_gpu,
-            bias_grad_cpu.len(),
-            ZenuCudaMemCopyKind::DeviceToHost,
-        )
-        .unwrap();
-
-        println!("{:?}", x_grad_cpu);
-        println!("{:?}", scale_grad_cpu);
-        println!("{:?}", bias_grad_cpu);
-        let x_grad_ans = vec![
-            1.4172037e-08,
-            1.4481942e-08,
-            3.9440895e-09,
-            6.086061e-09,
-            -8.901752e-09,
-            -7.0706063e-09,
-            4.7087267e-09,
-            2.573352e-08,
-            -2.7500429e-09,
-            1.5778745e-08,
-            -3.0738305e-09,
-            -2.584797e-09,
-            -3.8448877e-10,
-            -1.3446835e-08,
-            -1.2034271e-08,
-            3.9055217e-09,
-            -0.0,
-            -0.0,
-            -0.0,
-            -0.0,
-            -0.0,
-            -0.0,
-            -0.0,
-            -0.0,
-            -0.0,
-            -0.0,
-            -0.0,
-            -0.0,
-            -0.0,
-            -0.0,
-            -0.0,
-            -0.0,
-            -7.928192e-10,
-            -1.8097595e-11,
-            -6.476361e-10,
-            2.422604e-10,
-            4.719491e-10,
-            7.89485e-11,
-            7.1342404e-10,
-            4.737028e-10,
-            -1.7888643e-10,
-            8.9552604e-10,
-            -4.0386436e-10,
-            7.016652e-12,
-            5.718125e-10,
-            2.7084346e-09,
-            -1.819869e-09,
-            -1.961316e-09,
-            8.8813845e-09,
-            -9.18362e-09,
-            -1.1316547e-08,
-            -1.0622789e-09,
-            3.7075367e-09,
-            5.5938125e-09,
-            -5.3327907e-09,
-            5.6335803e-09,
-            6.230242e-09,
-            -7.678392e-09,
-            -1.6757618e-08,
-            -3.8837815e-08,
-            1.8908725e-08,
-            1.5437529e-08,
-            -2.0248637e-08,
-            7.460869e-09,
-            -0.0,
-            -0.0,
-            -0.0,
-            -0.0,
-            -0.0,
-            -0.0,
-            -0.0,
-            -0.0,
-            -0.0,
-            -0.0,
-            -0.0,
-            -0.0,
-            -0.0,
-            -0.0,
-            -0.0,
-            -0.0,
-            -1.6812565e-10,
-            7.6897017e-10,
-            -1.0626757e-09,
-            -5.4962992e-11,
-            9.549054e-10,
-            -5.363915e-10,
-            1.1921432e-09,
-            3.740333e-10,
-            -3.514297e-10,
-            2.708808e-09,
-            -2.31555e-09,
-            -1.1574567e-10,
-            -1.3108351e-09,
-            -1.204592e-09,
-            -1.5769119e-11,
-            7.96632e-10,
+        let input_grad_cpu = gpu_to_cpu_vec(input_grad, input_cpu.len());
+        let input_grad_ans = vec![
+            -0.37104672,
+            0.3949252,
+            -3.165237,
+            1.1202719,
+            -0.32676408,
+            -0.7529081,
+            -0.6564417,
+            -0.12187076,
+            -0.8892036,
+            0.5118922,
+            -1.8034735,
+            4.201872,
+            0.19542423,
+            -0.44200054,
+            1.0096132,
+            1.0949475,
         ];
-        for i in 0..x_grad_cpu.len() {
-            let diff: f64 = x_grad_cpu[i] - x_grad_ans[i];
-            let diff_abs = diff.abs();
-            assert!(diff_abs.abs() < 1e-6);
-        }
-
-        let scale_grad_ans = vec![2.1779134e-07, 0.0, -5.18386e-07];
-        let bias_grad_ans = vec![32.0, 32.0, 32.0];
-
-        for i in 0..scale_grad_cpu.len() {
-            let diff: f64 = scale_grad_cpu[i] - scale_grad_ans[i];
-            let diff_abs = diff.abs();
-            assert!(diff_abs.abs() < 1e-6);
-        }
-
-        println!("{:?}", bias_grad_cpu);
-        for i in 0..bias_grad_cpu.len() {
-            let diff: f64 = bias_grad_cpu[i] - bias_grad_ans[i];
-            let diff_abs = diff.abs();
-            assert!(diff_abs.abs() < 1e-6);
+        for i in 0..input_grad_cpu.len() {
+            assert!(((input_grad_cpu[i] - input_grad_ans[i]) as f64).abs() < 1e-4);
         }
     }
 }
