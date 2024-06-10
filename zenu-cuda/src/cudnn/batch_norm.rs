@@ -21,6 +21,20 @@ pub struct BatchNorm2dBuilder<T> {
 }
 
 impl<T: 'static> BatchNorm2d<T> {
+    pub fn new(
+        input: cudnnTensorDescriptor_t,
+        output: cudnnTensorDescriptor_t,
+        scale_bias_mean_var: cudnnTensorDescriptor_t,
+        mode: cudnnBatchNormMode_t,
+    ) -> Self {
+        BatchNorm2d {
+            input,
+            output,
+            scale_bias_mean_var,
+            mode,
+            _phantom: std::marker::PhantomData,
+        }
+    }
     pub fn forward_train(
         &self,
         alpha: T,
@@ -136,7 +150,10 @@ impl<T: 'static> BatchNorm2dBuilder<T> {
         let scale_bias_mean_var = self
             .scale_bias_mean_var
             .expect("scale_bias_mean_var is required");
-        let mode = self.mode.expect("mode is required");
+        // let mode = self.mode.expect("mode is required");
+        let mode = self
+            .mode
+            .unwrap_or(cudnnBatchNormMode_t::CUDNN_BATCHNORM_SPATIAL);
         BatchNorm2d {
             input,
             output,
