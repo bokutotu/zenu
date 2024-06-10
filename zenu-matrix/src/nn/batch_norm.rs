@@ -1,12 +1,12 @@
 use crate::{
-    device::cpu::Cpu,
+    device::{cpu::Cpu, Device},
     dim::{DimDyn, DimTrait},
     matrix::{Matrix, Ref},
     num::Num,
 };
 
 #[cfg(feature = "nvidia")]
-use zenu_cuda::cudnn::batch_norm::*;
+use zenu_cuda::cudnn::{batch_norm::*, TensorFormat};
 
 #[cfg(feature = "nvidia")]
 use crate::device::nvidia::Nvidia;
@@ -83,6 +83,46 @@ fn batch_norm2d_backward_gpu<T: Num>(
     };
 }
 
+#[cfg(feature = "nvidia")]
+fn create_batch_norm_gpu<T: Num>(input: (usize, usize, usize, usize)) -> BatchNorm2d<T> {
+    let input = (
+        input.0.try_into().unwrap(),
+        input.1.try_into().unwrap(),
+        input.2.try_into().unwrap(),
+        input.3.try_into().unwrap(),
+    );
+    let batch_norm = BatchNorm2dBuilder::<T>::new()
+        .input(input.0, input.1, input.2, input.3, TensorFormat::NCHW)
+        .unwrap()
+        .output(input.0, input.1, input.2, input.3, TensorFormat::NCHW)
+        .unwrap()
+        .scale_bias_mean_var(input.1, TensorFormat::NCHW)
+        .unwrap()
+        .build();
+    batch_norm
+}
+
+#[cfg(feature = "nvidia")]
+fn create_batch_norm_backward_gpu<T: Num>(
+    input: (usize, usize, usize, usize),
+) -> BatchNorm2dBackward<T> {
+    let input = (
+        input.0.try_into().unwrap(),
+        input.1.try_into().unwrap(),
+        input.2.try_into().unwrap(),
+        input.3.try_into().unwrap(),
+    );
+    let batch_norm_backward = BatchNorm2dBackwardBuilder::<T>::new()
+        .input(input.0, input.1, input.2, input.3, TensorFormat::NCHW)
+        .unwrap()
+        .output(input.0, input.1, input.2, input.3, TensorFormat::NCHW)
+        .unwrap()
+        .scale_bias_mean_var(input.1, TensorFormat::NCHW)
+        .unwrap()
+        .build();
+    batch_norm_backward
+}
+
 fn batch_norm2d_forward_train_cpu<T: Num>(
     momentum: T,
     x: Matrix<Ref<&T>, DimDyn, Cpu>,
@@ -124,6 +164,79 @@ fn batch_norm2d_forward_train_cpu<T: Num>(
 
     saving_mean.copy_from(&x_mean);
     saving_inv_variance.copy_from(&inv_std);
+}
+
+pub trait BatchNormalization: Device {
+    fn forward_train<T: Num, B>(
+        momentum: T,
+        x: Matrix<Ref<&T>, DimDyn, Self>,
+        y: Matrix<Ref<&mut T>, DimDyn, Self>,
+        scale: Matrix<Ref<&T>, DimDyn, Self>,
+        bias: Matrix<Ref<&T>, DimDyn, Self>,
+        mean: Matrix<Ref<&mut T>, DimDyn, Self>,
+        variance: Matrix<Ref<&mut T>, DimDyn, Self>,
+        epsilon: f64,
+        saving_mean: Matrix<Ref<&mut T>, DimDyn, Self>,
+        saving_inv_variance: Matrix<Ref<&mut T>, DimDyn, Self>,
+        device_batch_norm: Option<B>,
+    );
+
+    fn backward<T: Num, B>(
+        momentum: T,
+        x: Matrix<Ref<&T>, DimDyn, Self>,
+        y_grad: Matrix<Ref<&mut T>, DimDyn, Self>,
+        x_grad: Matrix<Ref<&mut T>, DimDyn, Self>,
+        scale: Matrix<Ref<&T>, DimDyn, Self>,
+        scale_grad: Matrix<Ref<&mut T>, DimDyn, Self>,
+        bias_grad: Matrix<Ref<&mut T>, DimDyn, Self>,
+        saving_mean: Matrix<Ref<&T>, DimDyn, Self>,
+        saving_inv_variance: Matrix<Ref<&T>, DimDyn, Self>,
+        device_batch_norm_backward: Option<B>,
+    );
+}
+
+impl BatchNormalization for Cpu {
+    fn forward_train<T: Num, B>(
+        momentum: T,
+        x: Matrix<Ref<&T>, DimDyn, Self>,
+        y: Matrix<Ref<&mut T>, DimDyn, Self>,
+        scale: Matrix<Ref<&T>, DimDyn, Self>,
+        bias: Matrix<Ref<&T>, DimDyn, Self>,
+        mean: Matrix<Ref<&mut T>, DimDyn, Self>,
+        variance: Matrix<Ref<&mut T>, DimDyn, Self>,
+        epsilon: f64,
+        saving_mean: Matrix<Ref<&mut T>, DimDyn, Self>,
+        saving_inv_variance: Matrix<Ref<&mut T>, DimDyn, Self>,
+        _: Option<B>,
+    ) {
+        batch_norm2d_forward_train_cpu(
+            momentum,
+            x,
+            y,
+            scale,
+            bias,
+            mean,
+            variance,
+            epsilon,
+            saving_mean,
+            saving_inv_variance,
+        );
+    }
+
+    fn backward<T: Num, B>(
+        momentum: T,
+        x: Matrix<Ref<&T>, DimDyn, Self>,
+        y_grad: Matrix<Ref<&mut T>, DimDyn, Self>,
+        x_grad: Matrix<Ref<&mut T>, DimDyn, Self>,
+        scale: Matrix<Ref<&T>, DimDyn, Self>,
+        scale_grad: Matrix<Ref<&mut T>, DimDyn, Self>,
+        bias_grad: Matrix<Ref<&mut T>, DimDyn, Self>,
+        saving_mean: Matrix<Ref<&T>, DimDyn, Self>,
+        saving_inv_variance: Matrix<Ref<&T>, DimDyn, Self>,
+        _: Option<B>,
+    ) {
+        todo!();
+    }
 }
 
 #[cfg(test)]
@@ -190,11 +303,6 @@ mod batch_norm {
             savig_mean.to_ref_mut(),
             saving_inv_variance.to_ref_mut(),
         );
-
-        println!("{:?}", inputs.variance);
-        println!("{:?}", saving_inv_variance);
-        println!("{:?}", savig_mean);
-        panic!();
     }
 
     #[cfg(feature = "nvidia")]
@@ -225,10 +333,5 @@ mod batch_norm {
             1.,
             Some(batch_norm),
         );
-
-        println!("{:?}", inputs.variance);
-        println!("{:?}", saving_inv_variance);
-        println!("{:?}", savig_mean);
-        panic!();
     }
 }
