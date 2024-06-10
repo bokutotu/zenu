@@ -32,6 +32,8 @@ pub trait Num:
     fn size() -> usize {
         std::mem::size_of::<Self>()
     }
+    fn from_f32(f: f32) -> Self;
+    fn from_f64(f: f64) -> Self;
 }
 
 impl Num for f32 {
@@ -46,7 +48,16 @@ impl Num for f32 {
     fn from_usize(n: usize) -> f32 {
         n as f32
     }
+
+    fn from_f32(f: f32) -> Self {
+        f
+    }
+
+    fn from_f64(f: f64) -> Self {
+        f as f32
+    }
 }
+
 impl Num for f64 {
     fn is_f32() -> bool {
         false
@@ -58,5 +69,13 @@ impl Num for f64 {
 
     fn from_usize(n: usize) -> Self {
         n as f64
+    }
+
+    fn from_f32(f: f32) -> Self {
+        f as f64
+    }
+
+    fn from_f64(f: f64) -> Self {
+        f
     }
 }

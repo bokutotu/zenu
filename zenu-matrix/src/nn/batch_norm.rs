@@ -76,7 +76,7 @@ fn batch_norm2d_backward_gpu<T: Num>(
                 scale_grad.as_mut_ptr(),
                 bias_grad.as_mut_ptr(),
                 saving_mean.as_ptr(),
-                saving_variance.as_ptr(),
+                saving_inv_variance.as_ptr(),
             )
             .unwrap(),
         None => panic!("batch_norm_backward is None"),
@@ -92,26 +92,36 @@ fn batch_norm2d_forward_train_cpu<T: Num>(
     mean: Matrix<Ref<&mut T>, DimDyn, Cpu>,
     variance: Matrix<Ref<&mut T>, DimDyn, Cpu>,
     epsilon: f64,
-    mut saving_mean: Matrix<Ref<&mut T>, DimDyn, Cpu>,
-    mut saving_inv_variance: Matrix<Ref<&mut T>, DimDyn, Cpu>,
+    saving_mean: Matrix<Ref<&mut T>, DimDyn, Cpu>,
+    saving_inv_variance: Matrix<Ref<&mut T>, DimDyn, Cpu>,
 ) {
+    let epsilon = T::from_f64(epsilon);
     let x_transposed = x.transpose_by_index_new_matrix(&[0, 2, 3, 1]);
-    let x_transposed = x_transposed.reshape(&[
-        x_transposed.shape()[0],
-        x_transposed.shape()[1] * x_transposed.shape()[2] * x_transposed.shape()[3],
+    let x_reshaped = x_transposed.reshape(&[
+        x_transposed.shape()[0] * x_transposed.shape()[2] * x_transposed.shape()[3],
+        x_transposed.shape()[1],
     ]);
-    let x_mean = x_transposed.mean(Some(0), false);
-    let x_variance = x_transposed.variance(Some(0), false);
-    let inv_std = Matrix::<_, DimDyn, _>::ones(x_variance.shape()) / x_variance.sqrt();
-    let x_hat = (x_transposed - &x_mean) * &inv_std;
+
+    let num_elements = T::from_usize(x_reshaped.shape()[0]); // 行数を取得
+
+    let x_mean = x_reshaped.mean(Some(0), false);
+    let x_diff = &x_reshaped - &x_mean;
+    let x_diff_squared = &x_diff * &x_diff;
+    let x_variance = x_diff_squared.mean(Some(0), false) * num_elements / (num_elements - T::one());
+
+    let inv_std = Matrix::<_, DimDyn, _>::ones(x_variance.shape()) / (x_variance.sqrt() + epsilon);
+    let x_hat = &x_diff * &inv_std;
     let y_hat = x_hat * scale + bias;
-    let y_hat = y_hat.reshape(&[y_hat.shape()[0], x.shape()[2], x.shape()[3], x.shape()[0]]);
-    let y_hat = y_hat.transpose_by_index_new_matrix(&[3, 1, 2, 0]);
-    y.copy_from(&y_hat);
+    let y_reshaped = y_hat.reshape(&[x.shape()[0], x.shape()[2], x.shape()[3], x.shape()[1]]);
+    let y_transposed = y_reshaped.transpose_by_index_new_matrix(&[0, 3, 1, 2]);
+    y.copy_from(&y_transposed);
+
     let mean_t = &x_mean * (T::one() - momentum) + &mean * momentum;
     let variance_t = x_variance * (T::one() - momentum) + &variance * momentum;
+
     mean.copy_from(&mean_t);
     variance.copy_from(&variance_t);
+
     saving_mean.copy_from(&x_mean);
     saving_inv_variance.copy_from(&inv_std);
 }
@@ -122,10 +132,9 @@ mod batch_norm {
         device::{cpu::Cpu, Device},
         dim::DimDyn,
         matrix::{Matrix, Owned},
-        num::Num,
     };
 
-    use super::batch_norm2d_forward_train_cpu;
+    use super::*;
 
     #[cfg(feature = "nvidia")]
     use zenu_cuda::cudnn::{batch_norm::*, TensorFormat};
@@ -133,25 +142,27 @@ mod batch_norm {
     #[cfg(feature = "nvidia")]
     use crate::device::nvidia::Nvidia;
 
-    struct BatchNormInputs<T: Num, D: Device> {
-        x: Matrix<Owned<T>, DimDyn, D>,
-        y: Matrix<Owned<T>, DimDyn, D>,
-        scale: Matrix<Owned<T>, DimDyn, D>,
-        bias: Matrix<Owned<T>, DimDyn, D>,
-        mean: Matrix<Owned<T>, DimDyn, D>,
-        variance: Matrix<Owned<T>, DimDyn, D>,
+    struct BatchNormInputs<D: Device> {
+        x: Matrix<Owned<f32>, DimDyn, D>,
+        y: Matrix<Owned<f32>, DimDyn, D>,
+        scale: Matrix<Owned<f32>, DimDyn, D>,
+        bias: Matrix<Owned<f32>, DimDyn, D>,
+        mean: Matrix<Owned<f32>, DimDyn, D>,
+        variance: Matrix<Owned<f32>, DimDyn, D>,
     }
 
-    fn small_data<T: Num, D: Device>() -> BatchNormInputs<T, D> {
-        let x = Matrix::<Owned<T>, DimDyn, D>::from_vec(
-            vec![0., 1., 2., 3., 4., 5., 6., 7.],
-            vec![1, 2, 2, 2],
+    fn small_data<D: Device>() -> BatchNormInputs<D> {
+        let x = Matrix::<Owned<f32>, DimDyn, D>::from_vec(
+            vec![
+                0., 1., 2., 3., 4., 5., 6., 7., 0., 1., 2., 3., 4., 5., 6., 7.,
+            ],
+            &[2, 2, 2, 2],
         );
-        let mut y = Matrix::<Owned<T>, DimDyn, D>::zeros(x.shape());
-        let scale = Matrix::<Owned<T>, DimDyn, D>::from_vec(vec![1., 1.], vec![1, 2]);
-        let bias = Matrix::<Owned<T>, DimDyn, D>::from_vec(vec![0., 0.], vec![1, 2]);
-        let mut mean = Matrix::<Owned<T>, DimDyn, D>::zeros(vec![1, 2]);
-        let mut variance = Matrix::<Owned<T>, DimDyn, D>::zeros(vec![1, 2]);
+        let y = Matrix::<Owned<f32>, DimDyn, D>::zeros(x.shape());
+        let scale = Matrix::<Owned<f32>, DimDyn, D>::from_vec(vec![1., 1.], [2]);
+        let bias = Matrix::<Owned<f32>, DimDyn, D>::from_vec(vec![0., 0.], [2]);
+        let mean = Matrix::<Owned<f32>, DimDyn, D>::zeros([2]);
+        let variance = Matrix::<Owned<f32>, DimDyn, D>::zeros([2]);
         BatchNormInputs {
             x,
             y,
@@ -164,13 +175,13 @@ mod batch_norm {
 
     #[test]
     fn small_cpu() {
-        let mut inputs = small_data::<f32, Cpu>();
-        let mut savig_mean = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros(vec![0., 0.]);
-        let mut saving_inv_variance = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros(vec![0., 0.]);
+        let mut inputs = small_data::<Cpu>();
+        let mut savig_mean = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros(&[2]);
+        let mut saving_inv_variance = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros(&[2]);
         batch_norm2d_forward_train_cpu(
             0.0,
             inputs.x.to_ref(),
-            inputs.y.to_mut(),
+            inputs.y.to_ref_mut(),
             inputs.scale.to_ref(),
             inputs.bias.to_ref(),
             inputs.mean.to_ref_mut(),
@@ -180,43 +191,44 @@ mod batch_norm {
             saving_inv_variance.to_ref_mut(),
         );
 
-        println!("{:?}", inputs.y);
-        println!("{:?}", inputs.mean);
         println!("{:?}", inputs.variance);
+        println!("{:?}", saving_inv_variance);
+        println!("{:?}", savig_mean);
+        panic!();
     }
 
     #[cfg(feature = "nvidia")]
     #[test]
     fn small_gpu() {
-        let mut inputs = small_data::<f32, Nvidia>();
-        let mut savig_mean = Matrix::<Owned<f32>, DimDyn, Nvidia>::zeros(vec![0., 0.]);
-        let mut saving_inv_variance = Matrix::<Owned<f32>, DimDyn, Nvidia>::zeros(vec![0., 0.]);
+        let mut inputs = small_data::<Nvidia>();
+        let mut savig_mean = Matrix::<Owned<f32>, DimDyn, Nvidia>::zeros(&[2]);
+        let mut saving_inv_variance = Matrix::<Owned<f32>, DimDyn, Nvidia>::zeros(&[2]);
         let batch_norm = BatchNorm2dBuilder::<f32>::new()
             .input(2, 2, 2, 2, TensorFormat::NCHW)
             .unwrap()
             .output(2, 2, 2, 2, TensorFormat::NCHW)
             .unwrap()
-            .scale_bias(2, TensorFormat::NCHW)
+            .scale_bias_mean_var(2, TensorFormat::NCHW)
             .unwrap()
-            .build()
-            .unwrap();
+            .build();
 
         batch_norm2d_forward_train_gpu(
             0.0,
             inputs.x.to_ref(),
-            inputs.y.to_mut(),
+            inputs.y.to_ref_mut(),
             inputs.scale.to_ref(),
             inputs.bias.to_ref(),
             inputs.mean.to_ref_mut(),
             inputs.variance.to_ref_mut(),
             savig_mean.to_ref_mut(),
             saving_inv_variance.to_ref_mut(),
-            1e-5,
+            1.,
             Some(batch_norm),
         );
 
-        println!("{:?}", inputs.y);
-        println!("{:?}", inputs.mean);
         println!("{:?}", inputs.variance);
+        println!("{:?}", saving_inv_variance);
+        println!("{:?}", savig_mean);
+        panic!();
     }
 }
