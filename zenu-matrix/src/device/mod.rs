@@ -53,6 +53,7 @@ pub trait Device:
     + ReluOps
     + Gemm
     + PowOws
+    + Sized
     + 'static
 {
 }
