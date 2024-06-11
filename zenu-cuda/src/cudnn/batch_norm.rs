@@ -63,7 +63,7 @@ impl<T: 'static> BatchNorm2d<T> {
                 self.scale_bias_mean_var,
                 scale as *const T as *const std::ffi::c_void,
                 bias as *const T as *const std::ffi::c_void,
-                dbg!(expotential_average_factor),
+                expotential_average_factor,
                 estimated_mean as *mut std::ffi::c_void,
                 estimated_variance as *mut std::ffi::c_void,
                 1e-10,

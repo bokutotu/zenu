@@ -295,6 +295,8 @@ mod batch_norm {
         matrix::{Matrix, Owned},
     };
 
+    use zenu_test::*;
+
     use super::*;
 
     #[cfg(feature = "nvidia")]
@@ -318,7 +320,6 @@ mod batch_norm {
     fn small_data<D: Device>() -> BatchNormInputs<D> {
         let x = Matrix::<Owned<f32>, DimDyn, D>::from_vec(
             vec![
-                // 0., 1., 2., 3., 4., 5., 6., 7., 0., 1., 2., 3., 4., 5., 6., 7.,
                 -1.1258398,
                 -1.1523602,
                 -0.25057858,
@@ -338,13 +339,31 @@ mod batch_norm {
             ],
             &[2, 2, 2, 2],
         );
-        let running_mean = vec![-0.04057, 0.01670607];
-        let running_variance = vec![0.9492437, 1.0200632];
-        let saved_mean = vec![-0.04057, 0.01670607];
-        let saved_variance = vec![0.9492437, 1.0200632];
+        let y = vec![
+            -1.0970649,
+            -1.1374662,
+            0.23631285,
+            -0.04292771,
+            0.66504365,
+            0.5121599,
+            -0.4713051,
+            -2.2266803,
+            1.109001,
+            -1.3065253,
+            1.1512119,
+            1.0874585,
+            -0.04606889,
+            1.0445158,
+            0.92657995,
+            -0.40424496,
+        ];
+        let running_mean = vec![-0.36513, 0.15035464];
+        let running_variance = vec![0.4431935, 1.0805689];
+        let saved_mean = vec![-0.40570003, 0.16706072];
+        let saved_variance = vec![1.5234232, 0.97564316];
         let scale = vec![1.0, 1.0];
         let bias = vec![0.0, 0.0];
-        let y = Matrix::<Owned<f32>, DimDyn, D>::zeros(&[2, 2, 2, 2]);
+        let y = Matrix::<Owned<f32>, DimDyn, D>::from_vec(y, &[2, 2, 2, 2]);
         let mean = Matrix::<Owned<f32>, DimDyn, D>::from_vec(running_mean, &[2]);
         let variance = Matrix::<Owned<f32>, DimDyn, D>::from_vec(running_variance, &[2]);
         let scale = Matrix::<Owned<f32>, DimDyn, D>::from_vec(scale, &[2]);
@@ -365,31 +384,40 @@ mod batch_norm {
 
     #[test]
     fn small_cpu() {
-        let mut inputs = small_data::<Cpu>();
+        let inputs = small_data::<Cpu>();
+        let mut y_out = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros(inputs.y.shape());
+        let mut mean_out = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros(inputs.mean.shape());
+        let mut variance_out = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros(inputs.variance.shape());
+        let mut saved_mean_out =
+            Matrix::<Owned<f32>, DimDyn, Cpu>::zeros(inputs.saved_mean.shape());
+        let mut saved_variance_out =
+            Matrix::<Owned<f32>, DimDyn, Cpu>::zeros(inputs.saved_variance.shape());
         batch_norm2d_forward_train_cpu(
-            0.5,
+            0.1,
             inputs.x.to_ref(),
-            inputs.y.to_ref_mut(),
+            y_out.to_ref_mut(),
             inputs.scale.to_ref(),
             inputs.bias.to_ref(),
-            inputs.mean.to_ref_mut(),
-            inputs.variance.to_ref_mut(),
-            inputs.saved_mean.to_ref_mut(),
-            inputs.saved_variance.to_ref_mut(),
+            mean_out.to_ref_mut(),
+            variance_out.to_ref_mut(),
+            saved_mean_out.to_ref_mut(),
+            saved_variance_out.to_ref_mut(),
         );
 
-        println!("y {:?}", inputs.y);
-        println!("mean {:?}", inputs.mean);
-        println!("variance {:?}", inputs.variance);
-        println!("saved mean {:?}", inputs.saved_mean);
-        println!("saved variance {:?}", inputs.saved_variance);
-        // panic!();
+        assert_mat_eq_epsilon!(y_out.to_ref(), inputs.y.to_ref(), 2e-4);
+        assert_mat_eq_epsilon!(mean_out.to_ref(), inputs.mean.to_ref(), 2e-4);
+        assert_mat_eq_epsilon!(variance_out.to_ref(), inputs.variance.to_ref(), 2e-4);
+        assert_mat_eq_epsilon!(saved_mean_out.to_ref(), inputs.saved_mean.to_ref(), 2e-4);
+        assert_mat_eq_epsilon!(
+            saved_variance_out.to_ref(),
+            inputs.saved_variance.to_ref(),
+            2e-4
+        );
     }
 
     #[cfg(feature = "nvidia")]
     #[test]
     fn small_gpu() {
-        let mut inputs = small_data::<Nvidia>();
         let batch_norm = BatchNorm2dBuilder::<f32>::new()
             .input(2, 2, 2, 2, TensorFormat::NCHW)
             .unwrap()
@@ -399,24 +427,35 @@ mod batch_norm {
             .unwrap()
             .build();
 
+        let inputs = small_data::<Nvidia>();
+        let mut y_out = Matrix::<Owned<f32>, DimDyn, Nvidia>::zeros(inputs.y.shape());
+        let mut mean_out = Matrix::<Owned<f32>, DimDyn, Nvidia>::zeros(inputs.mean.shape());
+        let mut variance_out = Matrix::<Owned<f32>, DimDyn, Nvidia>::zeros(inputs.variance.shape());
+        let mut saved_mean_out =
+            Matrix::<Owned<f32>, DimDyn, Nvidia>::zeros(inputs.saved_mean.shape());
+        let mut saved_variance_out =
+            Matrix::<Owned<f32>, DimDyn, Nvidia>::zeros(inputs.saved_variance.shape());
         batch_norm2d_forward_train_gpu(
-            0.5,
+            0.1,
             inputs.x.to_ref(),
-            inputs.y.to_ref_mut(),
+            y_out.to_ref_mut(),
             inputs.scale.to_ref(),
             inputs.bias.to_ref(),
-            inputs.mean.to_ref_mut(),
-            inputs.variance.to_ref_mut(),
-            inputs.saved_mean.to_ref_mut(),
-            inputs.saved_variance.to_ref_mut(),
+            mean_out.to_ref_mut(),
+            variance_out.to_ref_mut(),
+            saved_mean_out.to_ref_mut(),
+            saved_variance_out.to_ref_mut(),
             Some(batch_norm),
         );
 
-        println!("y {:?}", inputs.y);
-        println!("mean {:?}", inputs.mean);
-        println!("variance {:?}", inputs.variance);
-        println!("saved mean {:?}", inputs.saved_mean);
-        println!("saved variance {:?}", inputs.saved_variance);
-        // panic!();
+        assert_mat_eq_epsilon!(y_out.to_ref(), inputs.y.to_ref(), 2e-4);
+        assert_mat_eq_epsilon!(mean_out.to_ref(), inputs.mean.to_ref(), 2e-4);
+        assert_mat_eq_epsilon!(variance_out.to_ref(), inputs.variance.to_ref(), 2e-4);
+        assert_mat_eq_epsilon!(saved_mean_out.to_ref(), inputs.saved_mean.to_ref(), 2e-4);
+        assert_mat_eq_epsilon!(
+            saved_variance_out.to_ref(),
+            inputs.saved_variance.to_ref(),
+            2e-4
+        );
     }
 }
