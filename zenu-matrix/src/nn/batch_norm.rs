@@ -25,9 +25,13 @@ fn batch_norm2d_forward_train_gpu<T: Num>(
     batch_norm: Option<BatchNorm2d<T>>,
 ) {
     let momentum = 1. - momentum;
+    let alpha = T::one() - T::from_f64(momentum);
+    let beta = T::from_f64(momentum);
     match batch_norm {
         Some(batch_norm) => batch_norm
             .forward_train(
+                // alpha,
+                // beta,
                 T::one(),
                 T::zero(),
                 x.as_ptr(),
@@ -143,13 +147,13 @@ fn batch_norm2d_forward_train_cpu<T: Num>(
 
     let x_mean = x_reshaped.mean(Some(0), false);
     let x_diff = &x_reshaped - &x_mean;
-    let x_diff_squared = &x_diff * &x_diff;
-    let x_variance = x_diff_squared.mean(Some(0), false) * num_elements / (num_elements - T::one());
+    let x_variance = x_reshaped.variance(Some(0), false);
+    let x_variance_unbiased = &x_variance * (num_elements / (num_elements - T::one()));
 
     let mean_t = &x_mean * (T::one() - momentum) + &mean * momentum;
-    let variance_t = x_variance * (T::one() - momentum) + &variance * momentum;
+    let variance_t = &x_variance_unbiased * (T::one() - momentum) + &variance * momentum;
 
-    let inv_var = Matrix::<_, DimDyn, _>::ones(variance_t.shape()) / (&variance_t + epsilon);
+    let inv_var = Matrix::<_, DimDyn, _>::ones(variance_t.shape()) / (&x_variance + epsilon);
     let inv_std = inv_var.sqrt();
 
     mean.copy_from(&mean_t);
@@ -363,7 +367,7 @@ mod batch_norm {
     fn small_cpu() {
         let mut inputs = small_data::<Cpu>();
         batch_norm2d_forward_train_cpu(
-            0.0,
+            0.5,
             inputs.x.to_ref(),
             inputs.y.to_ref_mut(),
             inputs.scale.to_ref(),
@@ -379,7 +383,7 @@ mod batch_norm {
         println!("variance {:?}", inputs.variance);
         println!("saved mean {:?}", inputs.saved_mean);
         println!("saved variance {:?}", inputs.saved_variance);
-        panic!();
+        // panic!();
     }
 
     #[cfg(feature = "nvidia")]
@@ -396,7 +400,7 @@ mod batch_norm {
             .build();
 
         batch_norm2d_forward_train_gpu(
-            0.0,
+            0.5,
             inputs.x.to_ref(),
             inputs.y.to_ref_mut(),
             inputs.scale.to_ref(),
@@ -413,6 +417,6 @@ mod batch_norm {
         println!("variance {:?}", inputs.variance);
         println!("saved mean {:?}", inputs.saved_mean);
         println!("saved variance {:?}", inputs.saved_variance);
-        panic!();
+        // panic!();
     }
 }
