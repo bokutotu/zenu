@@ -670,7 +670,7 @@ mod batch_norm {
                 bias_gpu,
                 running_mean_gpu,
                 running_variance_gpu,
-                0.1,
+                1.0,
                 saved_mean_gpu,
                 saved_variance_gpu,
             )
