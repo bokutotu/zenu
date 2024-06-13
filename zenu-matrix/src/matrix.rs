@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
 use crate::{
-    device::DeviceBase,
+    device::{Device, DeviceBase},
     dim::{cal_offset, default_stride, DimDyn, DimTrait, LessDimTrait},
     index::{IndexAxisTrait, SliceTrait},
     num::Num,
@@ -384,6 +384,15 @@ where
             shape: Dout::from(self.shape.slice()),
             stride: Dout::from(self.stride.slice()),
         }
+    }
+
+    pub fn new_matrix(&self) -> Matrix<Owned<R::Item>, S, D>
+    where
+        D: Device,
+    {
+        let mut owned = Matrix::zeros(self.shape());
+        owned.to_ref_mut().copy_from(self);
+        owned
     }
 }
 
