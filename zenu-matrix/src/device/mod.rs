@@ -1,4 +1,5 @@
 use crate::{
+    nn::batch_norm::BatchNormalization,
     num::Num,
     operation::{
         asum::Asum,
@@ -53,6 +54,7 @@ pub trait Device:
     + ReluOps
     + Gemm
     + PowOws
+    + BatchNormalization
     + Sized
     + 'static
 {

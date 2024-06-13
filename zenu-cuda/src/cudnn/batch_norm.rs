@@ -190,7 +190,7 @@ impl<T: 'static> BatchNorm2dBackward<T> {
         alpha_param_diff: T,
         beta_param_diff: T,
         x: *const T,
-        y_grad: *mut T,
+        y_grad: *const T,
         x_grad: *mut T,
         scale: *const T,
         scale_grad: *mut T,
@@ -319,7 +319,9 @@ impl<T: 'static> BatchNorm2dBackwardBuilder<T> {
         let scale_bias_mean_var = self
             .scale_bias_mean_var
             .expect("scale_bias_mean_var is required");
-        let mode = self.mode.expect("mode is required");
+        let mode = self
+            .mode
+            .unwrap_or(cudnnBatchNormMode_t::CUDNN_BATCHNORM_SPATIAL);
         BatchNorm2dBackward {
             input,
             input_grad,
@@ -679,7 +681,6 @@ mod batch_norm {
         for i in 0..output_cpu.len() {
             assert!(((output_cpu[i] - output_result[i]) as f64).abs() < 1e-4);
         }
-
         let output_grad_cpu = vec![
             -0.9246624,
             -0.42534423,
