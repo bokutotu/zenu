@@ -12,6 +12,7 @@ pub struct BatchNorm2d<T> {
     _phantom: std::marker::PhantomData<T>,
 }
 
+#[derive(Debug, Default)]
 pub struct BatchNorm2dBuilder<T> {
     input: Option<cudnnTensorDescriptor_t>,
     output: Option<cudnnTensorDescriptor_t>,
@@ -173,6 +174,7 @@ pub struct BatchNorm2dBackward<T> {
     _phantom: std::marker::PhantomData<T>,
 }
 
+#[derive(Debug, Default)]
 pub struct BatchNorm2dBackwardBuilder<T> {
     input: Option<cudnnTensorDescriptor_t>,
     input_grad: Option<cudnnTensorDescriptor_t>,
@@ -341,6 +343,7 @@ pub struct BatchNorm2dInference<T> {
     _phantom: std::marker::PhantomData<T>,
 }
 
+#[derive(Debug, Default)]
 pub struct BatchNorm2dInferenceBuilder<T> {
     input: Option<cudnnTensorDescriptor_t>,
     output: Option<cudnnTensorDescriptor_t>,
@@ -438,15 +441,8 @@ impl<T: 'static> BatchNorm2dInferenceBuilder<T> {
         })
     }
 
-    pub fn scale_bias_mean_var(
-        self,
-        n: i32,
-        c: i32,
-        h: i32,
-        w: i32,
-        format: TensorFormat,
-    ) -> Result<Self, ZenuCudnnError> {
-        let scale_bias_mean_var = tensor_descriptor_4d::<T>(n, c, h, w, format)?;
+    pub fn scale_bias_mean_var(self, c: i32, format: TensorFormat) -> Result<Self, ZenuCudnnError> {
+        let scale_bias_mean_var = tensor_descriptor_4d::<T>(1, c, 1, 1, format)?;
         Ok(Self {
             scale_bias_mean_var: Some(scale_bias_mean_var),
             ..self
@@ -466,7 +462,9 @@ impl<T: 'static> BatchNorm2dInferenceBuilder<T> {
         let scale_bias_mean_var = self
             .scale_bias_mean_var
             .expect("scale_bias_mean_var is required");
-        let mode = self.mode.expect("mode is required");
+        let mode = self
+            .mode
+            .unwrap_or(cudnnBatchNormMode_t::CUDNN_BATCHNORM_SPATIAL);
         BatchNorm2dInference {
             input,
             output,

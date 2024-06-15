@@ -43,6 +43,22 @@ impl<T: Num> BatchNorm2dBackwardConfig<T> {
     }
 }
 
+pub struct BatchNorm2dInferenceConfig<T> {
+    #[cfg(feature = "nvidia")]
+    pub device_batch_norm_inference: BatchNorm2dInference<T>,
+    _phantom: std::marker::PhantomData<T>,
+}
+
+impl<T: Num> BatchNorm2dInferenceConfig<T> {
+    pub fn new(dim: DimDyn) -> Self {
+        BatchNorm2dInferenceConfig::<T> {
+            #[cfg(feature = "nvidia")]
+            device_batch_norm_inference: create_batch_norm_inference_gpu::<T>(dim),
+            _phantom: std::marker::PhantomData,
+        }
+    }
+}
+
 #[cfg(feature = "nvidia")]
 fn create_batch_norm_gpu<T: Num>(input: DimDyn) -> BatchNorm2d<T> {
     let input = (
@@ -83,6 +99,25 @@ fn create_batch_norm_backward_gpu<T: Num>(input: DimDyn) -> BatchNorm2dBackward<
     batch_norm_backward
 }
 
+#[cfg(feature = "nvidia")]
+fn create_batch_norm_inference_gpu<T: Num>(input: DimDyn) -> BatchNorm2dInference<T> {
+    let input = (
+        input[0].try_into().unwrap(),
+        input[1].try_into().unwrap(),
+        input[2].try_into().unwrap(),
+        input[3].try_into().unwrap(),
+    );
+    let batch_norm_inference = BatchNorm2dInferenceBuilder::<T>::new()
+        .input(input.0, input.1, input.2, input.3, TensorFormat::NCHW)
+        .unwrap()
+        .output(input.0, input.1, input.2, input.3, TensorFormat::NCHW)
+        .unwrap()
+        .scale_bias_mean_var(input.1, TensorFormat::NCHW)
+        .unwrap()
+        .build();
+    batch_norm_inference
+}
+
 pub trait BatchNormalization: DeviceBase {
     fn batch_norm_2d_forward_train<T: Num>(
         momentum: f64,
@@ -107,6 +142,16 @@ pub trait BatchNormalization: DeviceBase {
         saving_mean: Option<Matrix<Ref<&T>, DimDyn, Self>>,
         saving_inv_variance: Option<Matrix<Ref<&T>, DimDyn, Self>>,
         device_batch_norm_backward: Option<BatchNorm2dBackwardConfig<T>>,
+    );
+
+    fn bach_norm_2d_forward_inference<T: Num>(
+        x: Matrix<Ref<&T>, DimDyn, Self>,
+        y: Matrix<Ref<&mut T>, DimDyn, Self>,
+        scale: Matrix<Ref<&T>, DimDyn, Self>,
+        bias: Matrix<Ref<&T>, DimDyn, Self>,
+        mean: Matrix<Ref<&T>, DimDyn, Self>,
+        variance: Matrix<Ref<&T>, DimDyn, Self>,
+        device_batch_norm_inference: Option<BatchNorm2dInferenceConfig<T>>,
     );
 }
 
@@ -191,6 +236,33 @@ impl BatchNormalization for Nvidia {
                 bias_grad.as_mut_ptr(),
                 saving_mean,
                 saving_inv_variance,
+            )
+            .unwrap();
+    }
+
+    fn bach_norm_2d_forward_inference<T: Num>(
+        x: Matrix<Ref<&T>, DimDyn, Self>,
+        y: Matrix<Ref<&mut T>, DimDyn, Self>,
+        scale: Matrix<Ref<&T>, DimDyn, Self>,
+        bias: Matrix<Ref<&T>, DimDyn, Self>,
+        mean: Matrix<Ref<&T>, DimDyn, Self>,
+        variance: Matrix<Ref<&T>, DimDyn, Self>,
+        device_batch_norm_inference: Option<BatchNorm2dInferenceConfig<T>>,
+    ) {
+        let batch_norm_inference = match device_batch_norm_inference {
+            Some(ref batch_norm_inference) => &batch_norm_inference.device_batch_norm_inference,
+            None => &create_batch_norm_inference_gpu::<T>(x.shape()),
+        };
+        batch_norm_inference
+            .forward_inference(
+                T::one(),
+                T::zero(),
+                x.as_ptr(),
+                y.as_mut_ptr(),
+                scale.as_ptr(),
+                bias.as_ptr(),
+                mean.as_ptr(),
+                variance.as_ptr(),
             )
             .unwrap();
     }
@@ -305,6 +377,35 @@ impl BatchNormalization for Cpu {
             x_grad_reshaped.reshape(&[x_shape[0], x_shape[2], x_shape[3], x_shape[1]]);
 
         x_grad.copy_from(&x_grad_transposed.transpose_by_index_new_matrix(&[0, 3, 1, 2]));
+    }
+
+    fn bach_norm_2d_forward_inference<T: Num>(
+        x: Matrix<Ref<&T>, DimDyn, Self>,
+        y: Matrix<Ref<&mut T>, DimDyn, Self>,
+        scale: Matrix<Ref<&T>, DimDyn, Self>,
+        bias: Matrix<Ref<&T>, DimDyn, Self>,
+        mean: Matrix<Ref<&T>, DimDyn, Self>,
+        variance: Matrix<Ref<&T>, DimDyn, Self>,
+        _: Option<BatchNorm2dInferenceConfig<T>>,
+    ) {
+        let epsilon = T::from_f64(1e-10);
+        let n = x.shape()[0] * x.shape()[2] * x.shape()[3];
+        let c = x.shape()[1];
+        let x_shape = x.shape();
+
+        // Transpose and reshape x and y_grad for easier manipulation
+        let x_transposed = x.transpose_by_index_new_matrix(&[0, 2, 3, 1]);
+        let x_reshaped = x_transposed.reshape(&[n, c]);
+
+        let mean = mean.to_ref();
+        let inv_std = Matrix::<_, DimDyn, _>::ones(variance.shape()) / (&variance + epsilon).sqrt();
+
+        let x_centered = &x_reshaped - mean;
+        let x_hat = &x_centered * &inv_std;
+
+        let y_tmp = &x_hat * &scale + &bias;
+        let y_transposed = y_tmp.reshape(&[x_shape[0], x_shape[2], x_shape[3], x_shape[1]]);
+        y.copy_from(&y_transposed.transpose_by_index_new_matrix(&[0, 3, 1, 2]));
     }
 }
 
@@ -540,4 +641,87 @@ mod batch_norm {
         assert_mat_eq_epsilon!(bias_grad.to_ref(), bias_grad_ans.to_ref(), 2e-4);
     }
     run_mat_test!(small_backward, small_backward_cpu, small_backward_gpu);
+
+    fn small_foward_inference<D: Device>() {
+        let inputs = small_forward_inference_data::<f32, D>();
+        let mut y_out = Matrix::<Owned<f32>, DimDyn, D>::zeros(inputs.y.shape());
+        let batch_norm_inference = BatchNorm2dInferenceConfig::<f32>::new(inputs.x.shape());
+        D::bach_norm_2d_forward_inference(
+            inputs.x.to_ref(),
+            y_out.to_ref_mut(),
+            inputs.scale.to_ref(),
+            inputs.bias.to_ref(),
+            inputs.mean.to_ref(),
+            inputs.variance.to_ref(),
+            Some(batch_norm_inference),
+        );
+
+        assert_mat_eq_epsilon!(y_out.to_ref(), inputs.y.to_ref(), 3e-3);
+    }
+    run_mat_test!(
+        small_foward_inference,
+        small_forward_inference_cpu,
+        small_forward_inference_gpu
+    );
+
+    #[derive(Debug)]
+    struct ForwardInputs<T: Num, D: Device> {
+        x: Matrix<Owned<T>, DimDyn, D>,
+        y: Matrix<Owned<T>, DimDyn, D>,
+        scale: Matrix<Owned<T>, DimDyn, D>,
+        bias: Matrix<Owned<T>, DimDyn, D>,
+        mean: Matrix<Owned<T>, DimDyn, D>,
+        variance: Matrix<Owned<T>, DimDyn, D>,
+    }
+
+    fn small_forward_inference_data<T: Num, D: Device>() -> ForwardInputs<T, D> {
+        let x = vec![
+            -1.1258398,
+            -1.1523602,
+            -0.25057858,
+            -0.4338788,
+            0.84871036,
+            0.69200915,
+            -0.31601277,
+            -2.1152194,
+            0.32227492,
+            -1.2633348,
+            0.3499832,
+            0.30813393,
+            0.11984151,
+            1.2376579,
+            1.1167772,
+            -0.24727815,
+        ];
+        let y = vec![
+            -0.6203, -0.5908, -1.5910, -1.3877, 3.3524, 2.9482, 0.3480, -4.2931, -2.2263, -0.4678,
+            -2.2570, -2.2106, 1.4723, 4.3557, 4.0439, 0.5253,
+        ];
+        let mean = vec![-0.7193, -0.4033];
+        let variance = vec![0.5966, 0.1820];
+        let scale = vec![-0.8567, 1.1006];
+        let bias = vec![-1.0712, 0.1227];
+
+        let x = x.into_iter().map(T::from_f64).collect();
+        let y = y.into_iter().map(T::from_f64).collect();
+        let mean = mean.into_iter().map(T::from_f64).collect();
+        let variance = variance.into_iter().map(T::from_f64).collect();
+        let scale = scale.into_iter().map(T::from_f64).collect();
+        let bias = bias.into_iter().map(T::from_f64).collect();
+
+        let x = Matrix::<Owned<T>, DimDyn, D>::from_vec(x, &[2, 2, 2, 2]);
+        let y = Matrix::<Owned<T>, DimDyn, D>::from_vec(y, &[2, 2, 2, 2]);
+        let mean = Matrix::<Owned<T>, DimDyn, D>::from_vec(mean, &[2]);
+        let variance = Matrix::<Owned<T>, DimDyn, D>::from_vec(variance, &[2]);
+        let scale = Matrix::<Owned<T>, DimDyn, D>::from_vec(scale, &[2]);
+        let bias = Matrix::<Owned<T>, DimDyn, D>::from_vec(bias, &[2]);
+        ForwardInputs {
+            x,
+            y,
+            scale,
+            bias,
+            mean,
+            variance,
+        }
+    }
 }
