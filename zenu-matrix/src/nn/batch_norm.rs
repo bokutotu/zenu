@@ -1,6 +1,6 @@
 use crate::{
     device::{cpu::Cpu, Device, DeviceBase},
-    dim::DimDyn,
+    dim::{DimDyn, DimTrait},
     matrix::{Matrix, Ref},
     num::Num,
 };
@@ -419,6 +419,31 @@ fn batch_norm_2d_shape_check(
     saving_mean: Option<DimDyn>,
     saving_inv_variance: Option<DimDyn>,
 ) -> Result<(), String> {
+    if scale.len() != 1 {
+        return Err("scale must be a vector".to_string());
+    }
+    if bias.len() != 1 {
+        return Err("bias must be a vector".to_string());
+    }
+    if mean.len() != 1 {
+        return Err("mean must be a vector".to_string());
+    }
+    if variance.len() != 1 {
+        return Err("variance must be a vector".to_string());
+    }
+    if let Some(saving_mean) = saving_mean {
+        if saving_mean.len() != 1 {
+            return Err("saving_mean must be a vector".to_string());
+        }
+    }
+    if let Some(saving_inv_variance) = saving_inv_variance {
+        if saving_inv_variance.len() != 1 {
+            return Err("saving_inv_variance must be a vector".to_string());
+        }
+    }
+    if x.len() != 4 {
+        return Err("x and y must have the same number of elements".to_string());
+    }
     if x != y {
         return Err("x and y must have the same shape".to_string());
     }
@@ -459,6 +484,25 @@ fn batch_norm_2d_backward_shape_check(
     saving_mean: Option<DimDyn>,
     saving_inv_variance: Option<DimDyn>,
 ) -> Result<(), String> {
+    if scale.len() != 1 {
+        return Err("scale must be a vector".to_string());
+    }
+    if bias_grad.len() != 1 {
+        return Err("bias_grad must be a vector".to_string());
+    }
+    if let Some(saving_mean) = saving_mean {
+        if saving_mean.len() != 1 {
+            return Err("saving_mean must be a vector".to_string());
+        }
+    }
+    if let Some(saving_inv_variance) = saving_inv_variance {
+        if saving_inv_variance.len() != 1 {
+            return Err("saving_inv_variance must be a vector".to_string());
+        }
+    }
+    if x.len() != 4 {
+        return Err("x and y_grad must have the same number of elements".to_string());
+    }
     if x != y_grad {
         return Err("x and y_grad must have the same shape".to_string());
     }
