@@ -1,5 +1,5 @@
 use crate::{
-    device::{cpu::Cpu, DeviceBase},
+    device::{cpu::Cpu, Device, DeviceBase},
     dim::DimDyn,
     matrix::{Matrix, Ref},
     num::Num,
@@ -407,6 +407,299 @@ impl BatchNormalization for Cpu {
         let y_transposed = y_tmp.reshape(&[x_shape[0], x_shape[2], x_shape[3], x_shape[1]]);
         y.copy_from(&y_transposed.transpose_by_index_new_matrix(&[0, 3, 1, 2]));
     }
+}
+
+fn batch_norm_2d_shape_check(
+    x: DimDyn,
+    y: DimDyn,
+    scale: DimDyn,
+    bias: DimDyn,
+    mean: DimDyn,
+    variance: DimDyn,
+    saving_mean: Option<DimDyn>,
+    saving_inv_variance: Option<DimDyn>,
+) -> Result<(), String> {
+    if x != y {
+        return Err("x and y must have the same shape".to_string());
+    }
+    if x[1] != scale[0] {
+        return Err("x and scale must have the same number of channels".to_string());
+    }
+    if x[1] != bias[0] {
+        return Err("x and bias must have the same number of channels".to_string());
+    }
+    if x[1] != mean[0] {
+        return Err("x and mean must have the same number of channels".to_string());
+    }
+    if x[1] != variance[0] {
+        return Err("x and variance must have the same number of channels".to_string());
+    }
+    if let Some(saving_mean) = saving_mean {
+        if x[1] != saving_mean[0] {
+            return Err("x and saving_mean must have the same number of channels".to_string());
+        }
+    }
+    if let Some(saving_inv_variance) = saving_inv_variance {
+        if x[1] != saving_inv_variance[0] {
+            return Err(
+                "x and saving_inv_variance must have the same number of channels".to_string(),
+            );
+        }
+    }
+    Ok(())
+}
+
+fn batch_norm_2d_backward_shape_check(
+    x: DimDyn,
+    y_grad: DimDyn,
+    x_grad: DimDyn,
+    scale: DimDyn,
+    scale_grad: DimDyn,
+    bias_grad: DimDyn,
+    saving_mean: Option<DimDyn>,
+    saving_inv_variance: Option<DimDyn>,
+) -> Result<(), String> {
+    if x != y_grad {
+        return Err("x and y_grad must have the same shape".to_string());
+    }
+    if x != x_grad {
+        return Err("x and x_grad must have the same shape".to_string());
+    }
+    if x[1] != scale[0] {
+        return Err("x and scale must have the same number of channels".to_string());
+    }
+    if x[1] != scale_grad[0] {
+        return Err("x and scale_grad must have the same number of channels".to_string());
+    }
+    if x[1] != bias_grad[0] {
+        return Err("x and bias_grad must have the same number of channels".to_string());
+    }
+    if let Some(saving_mean) = saving_mean {
+        if x[1] != saving_mean[0] {
+            return Err("x and saving_mean must have the same number of channels".to_string());
+        }
+    }
+    if let Some(saving_inv_variance) = saving_inv_variance {
+        if x[1] != saving_inv_variance[0] {
+            return Err(
+                "x and saving_inv_variance must have the same number of channels".to_string(),
+            );
+        }
+    }
+    Ok(())
+}
+
+pub fn try_batch_norm_2d_forward_trian<T: Num, D: Device>(
+    momentum: f64,
+    x: Matrix<Ref<&T>, DimDyn, D>,
+    y: Matrix<Ref<&mut T>, DimDyn, D>,
+    scale: Matrix<Ref<&T>, DimDyn, D>,
+    bias: Matrix<Ref<&T>, DimDyn, D>,
+    mean: Matrix<Ref<&mut T>, DimDyn, D>,
+    variance: Matrix<Ref<&mut T>, DimDyn, D>,
+    saving_mean: Option<Matrix<Ref<&mut T>, DimDyn, D>>,
+    saving_inv_variance: Option<Matrix<Ref<&mut T>, DimDyn, D>>,
+    device_batch_norm: Option<BatchNorm2dConfig<T>>,
+) -> Result<(), String> {
+    let x_shape = x.shape();
+    let y_shape = y.shape();
+    let scale_shape = scale.shape();
+    let bias_shape = bias.shape();
+    let mean_shape = mean.shape();
+    let variance_shape = variance.shape();
+    let saving_mean_shape = saving_mean.as_ref().map(|x| x.shape());
+    let saving_inv_variance_shape = saving_inv_variance.as_ref().map(|x| x.shape());
+
+    if let Err(e) = batch_norm_2d_shape_check(
+        x_shape,
+        y_shape,
+        scale_shape,
+        bias_shape,
+        mean_shape,
+        variance_shape,
+        saving_mean_shape,
+        saving_inv_variance_shape,
+    ) {
+        return Err(e);
+    }
+
+    D::batch_norm_2d_forward_train(
+        momentum,
+        x,
+        y,
+        scale,
+        bias,
+        mean,
+        variance,
+        saving_mean,
+        saving_inv_variance,
+        device_batch_norm,
+    );
+
+    Ok(())
+}
+
+pub fn try_batch_norm_2d_forward_inference<T: Num, D: Device>(
+    x: Matrix<Ref<&T>, DimDyn, D>,
+    y: Matrix<Ref<&mut T>, DimDyn, D>,
+    scale: Matrix<Ref<&T>, DimDyn, D>,
+    bias: Matrix<Ref<&T>, DimDyn, D>,
+    mean: Matrix<Ref<&T>, DimDyn, D>,
+    variance: Matrix<Ref<&T>, DimDyn, D>,
+    device_batch_norm_inference: Option<BatchNorm2dInferenceConfig<T>>,
+) -> Result<(), String> {
+    let x_shape = x.shape();
+    let y_shape = y.shape();
+    let scale_shape = scale.shape();
+    let bias_shape = bias.shape();
+    let mean_shape = mean.shape();
+    let variance_shape = variance.shape();
+
+    if let Err(e) = batch_norm_2d_shape_check(
+        x_shape,
+        y_shape,
+        scale_shape,
+        bias_shape,
+        mean_shape,
+        variance_shape,
+        None,
+        None,
+    ) {
+        return Err(e);
+    }
+
+    D::bach_norm_2d_forward_inference(
+        x,
+        y,
+        scale,
+        bias,
+        mean,
+        variance,
+        device_batch_norm_inference,
+    );
+
+    Ok(())
+}
+
+pub fn try_batch_norm_2d_backward<T: Num, D: Device>(
+    x: Matrix<Ref<&T>, DimDyn, D>,
+    y_grad: Matrix<Ref<&T>, DimDyn, D>,
+    x_grad: Matrix<Ref<&mut T>, DimDyn, D>,
+    scale: Matrix<Ref<&T>, DimDyn, D>,
+    scale_grad: Matrix<Ref<&mut T>, DimDyn, D>,
+    bias_grad: Matrix<Ref<&mut T>, DimDyn, D>,
+    saving_mean: Option<Matrix<Ref<&T>, DimDyn, D>>,
+    saving_inv_variance: Option<Matrix<Ref<&T>, DimDyn, D>>,
+    device_batch_norm_backward: Option<BatchNorm2dBackwardConfig<T>>,
+) -> Result<(), String> {
+    let x_shape = x.shape();
+    let y_grad_shape = y_grad.shape();
+    let x_grad_shape = x_grad.shape();
+    let scale_shape = scale.shape();
+    let scale_grad_shape = scale_grad.shape();
+    let bias_grad_shape = bias_grad.shape();
+    let saving_mean_shape = saving_mean.as_ref().map(|x| x.shape());
+    let saving_inv_variance_shape = saving_inv_variance.as_ref().map(|x| x.shape());
+
+    if let Err(e) = batch_norm_2d_backward_shape_check(
+        x_shape,
+        y_grad_shape,
+        x_grad_shape,
+        scale_shape,
+        scale_grad_shape,
+        bias_grad_shape,
+        saving_mean_shape,
+        saving_inv_variance_shape,
+    ) {
+        return Err(e);
+    }
+
+    D::batch_norm_2d_backward(
+        x,
+        y_grad,
+        x_grad,
+        scale,
+        scale_grad,
+        bias_grad,
+        saving_mean,
+        saving_inv_variance,
+        device_batch_norm_backward,
+    );
+
+    Ok(())
+}
+
+pub fn batch_norm_2d_forward_train<T: Num, D: Device>(
+    momentum: f64,
+    x: Matrix<Ref<&T>, DimDyn, D>,
+    y: Matrix<Ref<&mut T>, DimDyn, D>,
+    scale: Matrix<Ref<&T>, DimDyn, D>,
+    bias: Matrix<Ref<&T>, DimDyn, D>,
+    mean: Matrix<Ref<&mut T>, DimDyn, D>,
+    variance: Matrix<Ref<&mut T>, DimDyn, D>,
+    saving_mean: Option<Matrix<Ref<&mut T>, DimDyn, D>>,
+    saving_inv_variance: Option<Matrix<Ref<&mut T>, DimDyn, D>>,
+    device_batch_norm: Option<BatchNorm2dConfig<T>>,
+) {
+    try_batch_norm_2d_forward_trian(
+        momentum,
+        x,
+        y,
+        scale,
+        bias,
+        mean,
+        variance,
+        saving_mean,
+        saving_inv_variance,
+        device_batch_norm,
+    )
+    .unwrap();
+}
+
+pub fn batch_norm_2d_forward_inference<T: Num, D: Device>(
+    x: Matrix<Ref<&T>, DimDyn, D>,
+    y: Matrix<Ref<&mut T>, DimDyn, D>,
+    scale: Matrix<Ref<&T>, DimDyn, D>,
+    bias: Matrix<Ref<&T>, DimDyn, D>,
+    mean: Matrix<Ref<&T>, DimDyn, D>,
+    variance: Matrix<Ref<&T>, DimDyn, D>,
+    device_batch_norm_inference: Option<BatchNorm2dInferenceConfig<T>>,
+) {
+    try_batch_norm_2d_forward_inference(
+        x,
+        y,
+        scale,
+        bias,
+        mean,
+        variance,
+        device_batch_norm_inference,
+    )
+    .unwrap();
+}
+
+pub fn batch_norm_2d_backward<T: Num, D: Device>(
+    x: Matrix<Ref<&T>, DimDyn, D>,
+    y_grad: Matrix<Ref<&T>, DimDyn, D>,
+    x_grad: Matrix<Ref<&mut T>, DimDyn, D>,
+    scale: Matrix<Ref<&T>, DimDyn, D>,
+    scale_grad: Matrix<Ref<&mut T>, DimDyn, D>,
+    bias_grad: Matrix<Ref<&mut T>, DimDyn, D>,
+    saving_mean: Option<Matrix<Ref<&T>, DimDyn, D>>,
+    saving_inv_variance: Option<Matrix<Ref<&T>, DimDyn, D>>,
+    device_batch_norm_backward: Option<BatchNorm2dBackwardConfig<T>>,
+) {
+    try_batch_norm_2d_backward(
+        x,
+        y_grad,
+        x_grad,
+        scale,
+        scale_grad,
+        bias_grad,
+        saving_mean,
+        saving_inv_variance,
+        device_batch_norm_backward,
+    )
+    .unwrap();
 }
 
 #[cfg(test)]
