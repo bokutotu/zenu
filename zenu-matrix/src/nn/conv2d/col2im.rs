@@ -6,7 +6,7 @@ use crate::{
     slice_dynamic,
 };
 
-pub(crate) fn col2im<T: Num, D: Device>(
+pub(super) fn col2im<T: Num, D: Device>(
     col: Matrix<Ref<&T>, DimDyn, D>,
     img_shape: [usize; 4],
     kernel_size: (usize, usize),
