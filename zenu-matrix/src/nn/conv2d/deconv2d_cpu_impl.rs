@@ -76,7 +76,6 @@ pub(crate) fn deconv2d_inner<T: Num, D: Device>(
         padding,
     );
     if let Some(bias) = bias {
-        // result.add_assign(bias.to_ref());
         result += bias;
     }
     result

@@ -5,10 +5,11 @@ use crate::{
     num::Num,
 };
 
-pub mod col2im;
-pub mod conv2d_cpu_impl;
-pub mod deconv2d_cpu_impl;
-pub mod im2col;
+mod col2im;
+mod conv2d_bckwd_filter_cpu;
+mod conv2d_cpu_impl;
+mod deconv2d_cpu_impl;
+mod im2col;
 
 #[cfg(feature = "nvidia")]
 use zenu_cuda::cudnn::{conv::*, TensorFormat};
