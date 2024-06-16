@@ -357,108 +357,6 @@ impl Drop for ConvDescriptor {
     }
 }
 
-#[derive(Debug, Default, PartialEq, Eq, Hash)]
-pub struct ConvolutionBuilder {
-    input: Option<cudnnTensorDescriptor_t>,
-    filter: Option<cudnnFilterDescriptor_t>,
-    conv: Option<cudnnConvolutionDescriptor_t>,
-    output: Option<cudnnTensorDescriptor_t>,
-    algorithm: Option<cudnnConvolutionFwdAlgo_t>,
-}
-
-impl ConvolutionBuilder {
-    pub fn input<T: 'static>(
-        self,
-        n: i32,
-        c: i32,
-        h: i32,
-        w: i32,
-        format: TensorFormat,
-    ) -> Result<Self, ZenuCudnnError> {
-        let input = tensor_descriptor_4d::<T>(n, c, h, w, format)?;
-        Ok(Self {
-            input: Some(input),
-            ..self
-        })
-    }
-
-    pub fn filter<T: 'static>(
-        self,
-        k: i32,
-        c: i32,
-        h: i32,
-        w: i32,
-        format: TensorFormat,
-    ) -> Result<Self, ZenuCudnnError> {
-        let filter = filter_descriptor::<T>(k, c, h, w, format)?;
-        Ok(Self {
-            filter: Some(filter),
-            ..self
-        })
-    }
-
-    pub fn conv(
-        self,
-        pad_h: i32,
-        pad_w: i32,
-        stride_h: i32,
-        stride_w: i32,
-        dilation_h: i32,
-        dilation_w: i32,
-    ) -> Result<Self, ZenuCudnnError> {
-        let conv =
-            convolution_descriptor(pad_h, pad_w, stride_h, stride_w, dilation_h, dilation_w)?;
-        Ok(Self {
-            conv: Some(conv),
-            ..self
-        })
-    }
-
-    pub fn output<T: 'static>(
-        self,
-        n: i32,
-        c: i32,
-        h: i32,
-        w: i32,
-        format: TensorFormat,
-    ) -> Result<Self, ZenuCudnnError> {
-        let output = tensor_descriptor_4d::<T>(n, c, h, w, format)?;
-        Ok(Self {
-            output: Some(output),
-            ..self
-        })
-    }
-
-    pub fn algorithm(self, requested_algo_count: usize) -> Result<Self, ZenuCudnnError> {
-        let input = self.input.unwrap();
-        let filter = self.filter.unwrap();
-        let conv = self.conv.unwrap();
-        let output = self.output.unwrap();
-        let algorithm = convolution_algorithm(input, filter, conv, output, requested_algo_count)?;
-        Ok(Self {
-            algorithm: Some(algorithm),
-            ..self
-        })
-    }
-
-    pub fn build(self) -> Result<ConvDescriptor, ZenuCudnnError> {
-        let input = self.input.unwrap();
-        let filter = self.filter.unwrap();
-        let conv = self.conv.unwrap();
-        let output = self.output.unwrap();
-        let algorithm = self.algorithm.unwrap();
-        let workspace = convolution_workspace(input, filter, conv, output, algorithm)?;
-        Ok(ConvDescriptor {
-            input,
-            filter,
-            conv,
-            output,
-            algorithm,
-            workspace,
-        })
-    }
-}
-
 pub struct ConvolutionBackwardData {
     input: cudnnTensorDescriptor_t,
     filter: cudnnFilterDescriptor_t,
@@ -507,110 +405,6 @@ impl Drop for ConvolutionBackwardData {
             cudnnDestroyConvolutionDescriptor(self.conv);
             cudnnDestroyTensorDescriptor(self.output);
         }
-    }
-}
-
-#[derive(Debug, Default, PartialEq, Eq, Hash)]
-pub struct ConvolutionBackwardDataBuilder {
-    input: Option<cudnnTensorDescriptor_t>,
-    filter: Option<cudnnFilterDescriptor_t>,
-    conv: Option<cudnnConvolutionDescriptor_t>,
-    output: Option<cudnnTensorDescriptor_t>,
-    algorithm: Option<cudnnConvolutionBwdDataAlgo_t>,
-}
-
-impl ConvolutionBackwardDataBuilder {
-    pub fn input<T: 'static>(
-        self,
-        n: i32,
-        c: i32,
-        h: i32,
-        w: i32,
-        format: TensorFormat,
-    ) -> Result<Self, ZenuCudnnError> {
-        let input = tensor_descriptor_4d::<T>(n, c, h, w, format)?;
-        Ok(Self {
-            input: Some(input),
-            ..self
-        })
-    }
-
-    pub fn filter<T: 'static>(
-        self,
-        k: i32,
-        c: i32,
-        h: i32,
-        w: i32,
-        format: TensorFormat,
-    ) -> Result<Self, ZenuCudnnError> {
-        let filter = filter_descriptor::<T>(k, c, h, w, format)?;
-        Ok(Self {
-            filter: Some(filter),
-            ..self
-        })
-    }
-
-    pub fn conv(
-        self,
-        pad_h: i32,
-        pad_w: i32,
-        stride_h: i32,
-        stride_w: i32,
-        dilation_h: i32,
-        dilation_w: i32,
-    ) -> Result<Self, ZenuCudnnError> {
-        let conv =
-            convolution_descriptor(pad_h, pad_w, stride_h, stride_w, dilation_h, dilation_w)?;
-        Ok(Self {
-            conv: Some(conv),
-            ..self
-        })
-    }
-
-    pub fn output<T: 'static>(
-        self,
-        n: i32,
-        c: i32,
-        h: i32,
-        w: i32,
-        format: TensorFormat,
-    ) -> Result<Self, ZenuCudnnError> {
-        let output = tensor_descriptor_4d::<T>(n, c, h, w, format)?;
-        Ok(Self {
-            output: Some(output),
-            ..self
-        })
-    }
-
-    pub fn algorithm(self, requested_algo_count: usize) -> Result<Self, ZenuCudnnError> {
-        let input = self.input.unwrap();
-        let filter = self.filter.unwrap();
-        let conv = self.conv.unwrap();
-        let output = self.output.unwrap();
-        let algorithm =
-            convolution_backward_data_algorithm(input, filter, conv, output, requested_algo_count)?;
-        Ok(Self {
-            algorithm: Some(algorithm),
-            ..self
-        })
-    }
-
-    pub fn build(self) -> Result<ConvolutionBackwardData, ZenuCudnnError> {
-        let input = self.input.unwrap();
-        let filter = self.filter.unwrap();
-        let conv = self.conv.unwrap();
-        let output = self.output.unwrap();
-        let algorithm = self.algorithm.unwrap();
-        let workspace =
-            convolution_backward_data_workspace(input, filter, conv, output, algorithm)?;
-        Ok(ConvolutionBackwardData {
-            input,
-            filter,
-            conv,
-            output,
-            algorithm,
-            workspace,
-        })
     }
 }
 
@@ -665,114 +459,133 @@ impl Drop for ConvolutionBackwardFilter {
     }
 }
 
-#[derive(Debug, Default, PartialEq, Eq, Hash)]
-pub struct ConvolutionBackwardFilterBuilder {
-    input: Option<cudnnTensorDescriptor_t>,
-    filter: Option<cudnnFilterDescriptor_t>,
-    conv: Option<cudnnConvolutionDescriptor_t>,
-    output: Option<cudnnTensorDescriptor_t>,
-    algorithm: Option<cudnnConvolutionBwdFilterAlgo_t>,
+macro_rules! impl_convolution {
+    ($desc_name:ident, $algo:ident, $builder:ident, $algo_func:ident, $workspace:ident) => {
+        #[derive(Default)]
+        pub struct $builder {
+            input: Option<cudnnTensorDescriptor_t>,
+            filter: Option<cudnnFilterDescriptor_t>,
+            conv: Option<cudnnConvolutionDescriptor_t>,
+            output: Option<cudnnTensorDescriptor_t>,
+            algorithm: Option<$algo>,
+        }
+
+        impl $builder {
+            pub fn input<T: 'static>(
+                self,
+                n: i32,
+                c: i32,
+                h: i32,
+                w: i32,
+                format: TensorFormat,
+            ) -> Result<Self, ZenuCudnnError> {
+                let input = tensor_descriptor_4d::<T>(n, c, h, w, format)?;
+                Ok(Self {
+                    input: Some(input),
+                    ..self
+                })
+            }
+
+            pub fn filter<T: 'static>(
+                self,
+                k: i32,
+                c: i32,
+                h: i32,
+                w: i32,
+                format: TensorFormat,
+            ) -> Result<Self, ZenuCudnnError> {
+                let filter = filter_descriptor::<T>(k, c, h, w, format)?;
+                Ok(Self {
+                    filter: Some(filter),
+                    ..self
+                })
+            }
+
+            pub fn conv(
+                self,
+                pad_h: i32,
+                pad_w: i32,
+                stride_h: i32,
+                stride_w: i32,
+                dilation_h: i32,
+                dilation_w: i32,
+            ) -> Result<Self, ZenuCudnnError> {
+                let conv = convolution_descriptor(
+                    pad_h, pad_w, stride_h, stride_w, dilation_h, dilation_w,
+                )?;
+                Ok(Self {
+                    conv: Some(conv),
+                    ..self
+                })
+            }
+
+            pub fn output<T: 'static>(
+                self,
+                n: i32,
+                c: i32,
+                h: i32,
+                w: i32,
+                format: TensorFormat,
+            ) -> Result<Self, ZenuCudnnError> {
+                let output = tensor_descriptor_4d::<T>(n, c, h, w, format)?;
+                Ok(Self {
+                    output: Some(output),
+                    ..self
+                })
+            }
+
+            pub fn algorithm(self, requested_algo_count: usize) -> Result<Self, ZenuCudnnError> {
+                let input = self.input.unwrap();
+                let filter = self.filter.unwrap();
+                let conv = self.conv.unwrap();
+                let output = self.output.unwrap();
+                let algorithm = $algo_func(input, filter, conv, output, requested_algo_count)?;
+                Ok(Self {
+                    algorithm: Some(algorithm),
+                    ..self
+                })
+            }
+
+            pub fn build(self) -> Result<$desc_name, ZenuCudnnError> {
+                let input = self.input.unwrap();
+                let filter = self.filter.unwrap();
+                let conv = self.conv.unwrap();
+                let output = self.output.unwrap();
+                let algorithm = self.algorithm.unwrap();
+                let workspace = $workspace(input, filter, conv, output, algorithm)?;
+                Ok($desc_name {
+                    input,
+                    filter,
+                    conv,
+                    output,
+                    algorithm,
+                    workspace,
+                })
+            }
+        }
+    };
 }
-
-impl ConvolutionBackwardFilterBuilder {
-    pub fn input<T: 'static>(
-        self,
-        n: i32,
-        c: i32,
-        h: i32,
-        w: i32,
-        format: TensorFormat,
-    ) -> Result<Self, ZenuCudnnError> {
-        let input = tensor_descriptor_4d::<T>(n, c, h, w, format)?;
-        Ok(Self {
-            input: Some(input),
-            ..self
-        })
-    }
-
-    pub fn filter<T: 'static>(
-        self,
-        k: i32,
-        c: i32,
-        h: i32,
-        w: i32,
-        format: TensorFormat,
-    ) -> Result<Self, ZenuCudnnError> {
-        let filter = filter_descriptor::<T>(k, c, h, w, format)?;
-        Ok(Self {
-            filter: Some(filter),
-            ..self
-        })
-    }
-
-    pub fn conv(
-        self,
-        pad_h: i32,
-        pad_w: i32,
-        stride_h: i32,
-        stride_w: i32,
-        dilation_h: i32,
-        dilation_w: i32,
-    ) -> Result<Self, ZenuCudnnError> {
-        let conv =
-            convolution_descriptor(pad_h, pad_w, stride_h, stride_w, dilation_h, dilation_w)?;
-        Ok(Self {
-            conv: Some(conv),
-            ..self
-        })
-    }
-
-    pub fn output<T: 'static>(
-        self,
-        n: i32,
-        c: i32,
-        h: i32,
-        w: i32,
-        format: TensorFormat,
-    ) -> Result<Self, ZenuCudnnError> {
-        let output = tensor_descriptor_4d::<T>(n, c, h, w, format)?;
-        Ok(Self {
-            output: Some(output),
-            ..self
-        })
-    }
-
-    pub fn algorithm(self, requested_algo_count: usize) -> Result<Self, ZenuCudnnError> {
-        let input = self.input.unwrap();
-        let filter = self.filter.unwrap();
-        let conv = self.conv.unwrap();
-        let output = self.output.unwrap();
-        let algorithm = convolution_backward_filter_algorithm(
-            input,
-            filter,
-            conv,
-            output,
-            requested_algo_count,
-        )?;
-        Ok(Self {
-            algorithm: Some(algorithm),
-            ..self
-        })
-    }
-
-    pub fn build(self) -> Result<ConvolutionBackwardFilter, ZenuCudnnError> {
-        let input = self.input.unwrap();
-        let filter = self.filter.unwrap();
-        let conv = self.conv.unwrap();
-        let output = self.output.unwrap();
-        let algorithm = self.algorithm.unwrap();
-        let workspace =
-            convolution_backward_filter_workspace(input, filter, conv, output, algorithm)?;
-        Ok(ConvolutionBackwardFilter {
-            input,
-            filter,
-            conv,
-            output,
-            algorithm,
-            workspace,
-        })
-    }
-}
+impl_convolution!(
+    ConvDescriptor,
+    cudnnConvolutionFwdAlgo_t,
+    ConvolutionBuilder,
+    convolution_algorithm,
+    convolution_workspace
+);
+impl_convolution!(
+    ConvolutionBackwardData,
+    cudnnConvolutionBwdDataAlgo_t,
+    ConvolutionBackwardDataBuilder,
+    convolution_backward_data_algorithm,
+    convolution_backward_data_workspace
+);
+impl_convolution!(
+    ConvolutionBackwardFilter,
+    cudnnConvolutionBwdFilterAlgo_t,
+    ConvolutionBackwardFilterBuilder,
+    convolution_backward_filter_algorithm,
+    convolution_backward_filter_workspace
+);
 
 #[cfg(test)]
 mod cudnn {
