@@ -1,5 +1,5 @@
 use crate::{
-    device::DeviceBase,
+    device::{cpu::Cpu, DeviceBase},
     dim::DimDyn,
     matrix::{Matrix, Ref},
     num::Num,
@@ -16,6 +16,11 @@ use zenu_cuda::cudnn::{conv::*, TensorFormat};
 
 #[cfg(feature = "nvidia")]
 use crate::device::nvidia::Nvidia;
+
+use self::{
+    conv2d_bckwd_filter_cpu::conv2d_bckwd_fileter, conv2d_cpu_impl::conv2d_inner,
+    deconv2d_cpu_impl::deconv2d_inner,
+};
 
 pub struct Conv2dConfig<T: Num> {
     #[cfg(feature = "nvidia")]
@@ -305,4 +310,78 @@ pub trait Conv2d: DeviceBase {
         dilation_w: usize,
         config: Conv2dBckwdFilterConfig<T>,
     );
+}
+
+impl Conv2d for Cpu {
+    fn conv2d<T: Num>(
+        input: Matrix<Ref<&T>, DimDyn, Self>,
+        y: Matrix<Ref<&mut T>, DimDyn, Self>,
+        filter: Matrix<Ref<&T>, DimDyn, Self>,
+        pad_h: usize,
+        pad_w: usize,
+        stride_h: usize,
+        stride_w: usize,
+        dilation_h: usize,
+        dilation_w: usize,
+        _config: Conv2dConfig<T>,
+    ) {
+        if dilation_h != 1 || dilation_w != 1 {
+            todo!();
+        }
+        y.copy_from(&conv2d_inner(
+            input,
+            filter,
+            None,
+            (pad_h, pad_w),
+            (stride_h, stride_w),
+        ));
+    }
+
+    fn conv2d_bckwd_data<T: Num>(
+        dy: Matrix<Ref<&T>, DimDyn, Self>,
+        dx: Matrix<Ref<&mut T>, DimDyn, Self>,
+        filter: Matrix<Ref<&T>, DimDyn, Self>,
+        pad_h: usize,
+        pad_w: usize,
+        stride_h: usize,
+        stride_w: usize,
+        dilation_h: usize,
+        dilation_w: usize,
+        _config: Conv2dBckwdDataConfig<T>,
+    ) {
+        if dilation_h != 1 || dilation_w != 1 {
+            todo!();
+        }
+        dx.copy_from(&deconv2d_inner(
+            dy,
+            filter,
+            None,
+            (pad_h, pad_w),
+            (stride_h, stride_w),
+        ));
+    }
+
+    fn conv2d_bckwd_filter<T: Num>(
+        input: Matrix<Ref<&T>, DimDyn, Self>,
+        dy: Matrix<Ref<&T>, DimDyn, Self>,
+        df: Matrix<Ref<&mut T>, DimDyn, Self>,
+        pad_h: usize,
+        pad_w: usize,
+        stride_h: usize,
+        stride_w: usize,
+        dilation_h: usize,
+        dilation_w: usize,
+        _config: Conv2dBckwdFilterConfig<T>,
+    ) {
+        if dilation_h != 1 || dilation_w != 1 {
+            todo!();
+        }
+        df.copy_from(&conv2d_bckwd_fileter(
+            input,
+            df.to_ref(),
+            dy,
+            (pad_h, pad_w),
+            (stride_h, stride_w),
+        ));
+    }
 }
