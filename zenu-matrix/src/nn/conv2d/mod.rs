@@ -138,7 +138,7 @@ pub trait Conv2d: DeviceBase {
         stride_w: usize,
         dilation_h: usize,
         dilation_w: usize,
-        config: Conv2dConfig<T>,
+        config: Option<Conv2dConfig<T>>,
     );
 
     fn conv2d_bckwd_data<T: Num>(
@@ -151,7 +151,7 @@ pub trait Conv2d: DeviceBase {
         stride_w: usize,
         dilation_h: usize,
         dilation_w: usize,
-        config: Conv2dBckwdDataConfig<T>,
+        config: Option<Conv2dBckwdDataConfig<T>>,
     );
 
     fn conv2d_bckwd_filter<T: Num>(
@@ -164,7 +164,7 @@ pub trait Conv2d: DeviceBase {
         stride_w: usize,
         dilation_h: usize,
         dilation_w: usize,
-        config: Conv2dBckwdFilterConfig<T>,
+        config: Option<Conv2dBckwdFilterConfig<T>>,
     );
 }
 
@@ -179,7 +179,7 @@ impl Conv2d for Cpu {
         stride_w: usize,
         dilation_h: usize,
         dilation_w: usize,
-        _config: Conv2dConfig<T>,
+        _config: Option<Conv2dConfig<T>>,
     ) {
         if dilation_h != 1 || dilation_w != 1 {
             todo!();
@@ -203,7 +203,7 @@ impl Conv2d for Cpu {
         stride_w: usize,
         dilation_h: usize,
         dilation_w: usize,
-        _config: Conv2dBckwdDataConfig<T>,
+        _config: Option<Conv2dBckwdDataConfig<T>>,
     ) {
         if dilation_h != 1 || dilation_w != 1 {
             todo!();
@@ -227,7 +227,7 @@ impl Conv2d for Cpu {
         stride_w: usize,
         dilation_h: usize,
         dilation_w: usize,
-        _config: Conv2dBckwdFilterConfig<T>,
+        _config: Option<Conv2dBckwdFilterConfig<T>>,
     ) {
         if dilation_h != 1 || dilation_w != 1 {
             todo!();
@@ -239,5 +239,119 @@ impl Conv2d for Cpu {
             (pad_h, pad_w),
             (stride_h, stride_w),
         ));
+    }
+}
+
+#[cfg(feature = "nvidia")]
+impl Conv2d for Nvidia {
+    fn conv2d<T: Num>(
+        input: Matrix<Ref<&T>, DimDyn, Self>,
+        y: Matrix<Ref<&mut T>, DimDyn, Self>,
+        filter: Matrix<Ref<&T>, DimDyn, Self>,
+        pad_h: usize,
+        pad_w: usize,
+        stride_h: usize,
+        stride_w: usize,
+        dilation_h: usize,
+        dilation_w: usize,
+        config: Option<Conv2dConfig<T>>,
+    ) {
+        let config = match config {
+            Some(config) => config.conv,
+            None => create_conv_descriptor::<T>(
+                input.shape(),
+                y.shape(),
+                filter.shape(),
+                pad_h,
+                pad_w,
+                stride_h,
+                stride_w,
+                dilation_h,
+                dilation_w,
+                1,
+            ),
+        };
+
+        config.forward(
+            T::one(),
+            input.as_ptr(),
+            filter.as_ptr(),
+            T::zero(),
+            y.as_mut_ptr(),
+        )
+    }
+
+    fn conv2d_bckwd_data<T: Num>(
+        dy: Matrix<Ref<&T>, DimDyn, Self>,
+        dx: Matrix<Ref<&mut T>, DimDyn, Self>,
+        filter: Matrix<Ref<&T>, DimDyn, Self>,
+        pad_h: usize,
+        pad_w: usize,
+        stride_h: usize,
+        stride_w: usize,
+        dilation_h: usize,
+        dilation_w: usize,
+        config: Option<Conv2dBckwdDataConfig<T>>,
+    ) {
+        let config = match config {
+            Some(config) => config.conv,
+            None => create_conv_bckwd_data::<T>(
+                dy.shape(),
+                dx.shape(),
+                filter.shape(),
+                pad_h,
+                pad_w,
+                stride_h,
+                stride_w,
+                dilation_h,
+                dilation_w,
+                1,
+            ),
+        };
+
+        config.backward_data(
+            T::one(),
+            dy.as_ptr(),
+            filter.as_ptr(),
+            T::zero(),
+            dx.as_mut_ptr(),
+        )
+    }
+
+    fn conv2d_bckwd_filter<T: Num>(
+        input: Matrix<Ref<&T>, DimDyn, Self>,
+        dy: Matrix<Ref<&T>, DimDyn, Self>,
+        df: Matrix<Ref<&mut T>, DimDyn, Self>,
+        pad_h: usize,
+        pad_w: usize,
+        stride_h: usize,
+        stride_w: usize,
+        dilation_h: usize,
+        dilation_w: usize,
+        config: Option<Conv2dBckwdFilterConfig<T>>,
+    ) {
+        let config = match config {
+            Some(config) => config.conv,
+            None => create_conv_bckwd_filter::<T>(
+                input.shape(),
+                dy.shape(),
+                df.shape(),
+                pad_h,
+                pad_w,
+                stride_h,
+                stride_w,
+                dilation_h,
+                dilation_w,
+                1,
+            ),
+        };
+
+        config.backward_filter(
+            T::one(),
+            input.as_ptr(),
+            dy.as_ptr(),
+            T::zero(),
+            df.as_mut_ptr(),
+        )
     }
 }
