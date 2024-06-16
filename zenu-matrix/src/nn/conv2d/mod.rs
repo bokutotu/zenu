@@ -22,254 +22,110 @@ use self::{
     deconv2d_cpu_impl::deconv2d_inner,
 };
 
-pub struct Conv2dConfig<T: Num> {
-    #[cfg(feature = "nvidia")]
-    pub conv: ConvDescriptor,
-    _phantom: std::marker::PhantomData<T>,
-}
-
-#[cfg(feature = "nvidia")]
-fn create_conv_descriptor<T: Num>(
-    input: DimDyn,
-    output: DimDyn,
-    filter: DimDyn,
-    pad_h: usize,
-    pad_w: usize,
-    stride_h: usize,
-    stride_w: usize,
-    dilation_h: usize,
-    dilation_w: usize,
-    num_algo: usize,
-) -> ConvDescriptor {
-    ConvolutionBuilder::default()
-        .input::<T>(
-            input[0].try_into().unwrap(),
-            input[1].try_into().unwrap(),
-            input[2].try_into().unwrap(),
-            input[3].try_into().unwrap(),
-            TensorFormat::NHWC,
-        )
-        .unwrap()
-        .filter::<T>(
-            filter[0].try_into().unwrap(),
-            filter[1].try_into().unwrap(),
-            filter[2].try_into().unwrap(),
-            filter[3].try_into().unwrap(),
-            TensorFormat::NHWC,
-        )
-        .unwrap()
-        .output::<T>(
-            output[0].try_into().unwrap(),
-            output[1].try_into().unwrap(),
-            output[2].try_into().unwrap(),
-            output[3].try_into().unwrap(),
-            TensorFormat::NHWC,
-        )
-        .unwrap()
-        .conv(
-            pad_h.try_into().unwrap(),
-            pad_w.try_into().unwrap(),
-            stride_h.try_into().unwrap(),
-            stride_w.try_into().unwrap(),
-            dilation_h.try_into().unwrap(),
-            dilation_w.try_into().unwrap(),
-        )
-        .unwrap()
-        .algorithm(num_algo)
-        .unwrap()
-        .build()
-        .unwrap()
-}
-
-impl<T: Num> Conv2dConfig<T> {
-    pub fn new(
-        input: DimDyn,
-        output: DimDyn,
-        filter: DimDyn,
-        pad_h: usize,
-        pad_w: usize,
-        stride_h: usize,
-        stride_w: usize,
-        dilation_h: usize,
-        dilation_w: usize,
-        num_algo: usize,
-    ) -> Self {
-        Self {
+macro_rules! impl_conv_config {
+    ($name:ident, $inner:ident, $inner_builder:ident, $desc_create:ident) => {
+        pub struct $name<T: Num> {
             #[cfg(feature = "nvidia")]
-            conv: create_conv_descriptor::<T>(
-                input, output, filter, pad_h, pad_w, stride_h, stride_w, dilation_h, dilation_w,
-                num_algo,
-            ),
-            _phantom: std::marker::PhantomData,
+            pub conv: $inner,
+            _phantom: std::marker::PhantomData<T>,
         }
-    }
-}
 
-pub struct Conv2dBckwdDataConfig<T: Num> {
-    #[cfg(feature = "nvidia")]
-    pub conv: ConvolutionBackwardData,
-    _phantom: std::marker::PhantomData<T>,
-}
-
-#[cfg(feature = "nvidia")]
-fn create_conv_bckwd_data<T: Num>(
-    input: DimDyn,
-    output: DimDyn,
-    filter: DimDyn,
-    pad_h: usize,
-    pad_w: usize,
-    stride_h: usize,
-    stride_w: usize,
-    dilation_h: usize,
-    dilation_w: usize,
-    num_algo: usize,
-) -> ConvolutionBackwardData {
-    ConvolutionBackwardDataBuilder::default()
-        .input::<T>(
-            input[0].try_into().unwrap(),
-            input[1].try_into().unwrap(),
-            input[2].try_into().unwrap(),
-            input[3].try_into().unwrap(),
-            TensorFormat::NHWC,
-        )
-        .unwrap()
-        .filter::<T>(
-            filter[0].try_into().unwrap(),
-            filter[1].try_into().unwrap(),
-            filter[2].try_into().unwrap(),
-            filter[3].try_into().unwrap(),
-            TensorFormat::NHWC,
-        )
-        .unwrap()
-        .output::<T>(
-            output[0].try_into().unwrap(),
-            output[1].try_into().unwrap(),
-            output[2].try_into().unwrap(),
-            output[3].try_into().unwrap(),
-            TensorFormat::NHWC,
-        )
-        .unwrap()
-        .conv(
-            pad_h.try_into().unwrap(),
-            pad_w.try_into().unwrap(),
-            stride_h.try_into().unwrap(),
-            stride_w.try_into().unwrap(),
-            dilation_h.try_into().unwrap(),
-            dilation_w.try_into().unwrap(),
-        )
-        .unwrap()
-        .algorithm(num_algo)
-        .unwrap()
-        .build()
-        .unwrap()
-}
-
-impl<T: Num> Conv2dBckwdDataConfig<T> {
-    pub fn new(
-        input: DimDyn,
-        output: DimDyn,
-        filter: DimDyn,
-        pad_h: usize,
-        pad_w: usize,
-        stride_h: usize,
-        stride_w: usize,
-        dilation_h: usize,
-        dilation_w: usize,
-        num_algo: usize,
-    ) -> Self {
-        Self {
-            #[cfg(feature = "nvidia")]
-            conv: create_conv_bckwd_data::<T>(
-                input, output, filter, pad_h, pad_w, stride_h, stride_w, dilation_h, dilation_w,
-                num_algo,
-            ),
-            _phantom: std::marker::PhantomData,
+        #[cfg(feature = "nvidia")]
+        fn $desc_create<T: Num>(
+            input: DimDyn,
+            output: DimDyn,
+            filter: DimDyn,
+            pad_h: usize,
+            pad_w: usize,
+            stride_h: usize,
+            stride_w: usize,
+            dilation_h: usize,
+            dilation_w: usize,
+            num_algo: usize,
+        ) -> $inner {
+            $inner_builder::default()
+                .input::<T>(
+                    input[0].try_into().unwrap(),
+                    input[1].try_into().unwrap(),
+                    input[2].try_into().unwrap(),
+                    input[3].try_into().unwrap(),
+                    TensorFormat::NHWC,
+                )
+                .unwrap()
+                .filter::<T>(
+                    filter[0].try_into().unwrap(),
+                    filter[1].try_into().unwrap(),
+                    filter[2].try_into().unwrap(),
+                    filter[3].try_into().unwrap(),
+                    TensorFormat::NHWC,
+                )
+                .unwrap()
+                .output::<T>(
+                    output[0].try_into().unwrap(),
+                    output[1].try_into().unwrap(),
+                    output[2].try_into().unwrap(),
+                    output[3].try_into().unwrap(),
+                    TensorFormat::NHWC,
+                )
+                .unwrap()
+                .conv(
+                    pad_h.try_into().unwrap(),
+                    pad_w.try_into().unwrap(),
+                    stride_h.try_into().unwrap(),
+                    stride_w.try_into().unwrap(),
+                    dilation_h.try_into().unwrap(),
+                    dilation_w.try_into().unwrap(),
+                )
+                .unwrap()
+                .algorithm(num_algo)
+                .unwrap()
+                .build()
+                .unwrap()
         }
-    }
-}
 
-pub struct Conv2dBckwdFilterConfig<T: Num> {
-    #[cfg(feature = "nvidia")]
-    pub conv: ConvolutionBackwardFilter,
-    _phantom: std::marker::PhantomData<T>,
-}
-
-#[cfg(feature = "nvidia")]
-fn create_conv_bckwd_filter<T: Num>(
-    input: DimDyn,
-    output: DimDyn,
-    filter: DimDyn,
-    pad_h: usize,
-    pad_w: usize,
-    stride_h: usize,
-    stride_w: usize,
-    dilation_h: usize,
-    dilation_w: usize,
-    num_algo: usize,
-) -> ConvolutionBackwardFilter {
-    ConvolutionBackwardFilterBuilder::default()
-        .input::<T>(
-            input[0].try_into().unwrap(),
-            input[1].try_into().unwrap(),
-            input[2].try_into().unwrap(),
-            input[3].try_into().unwrap(),
-            TensorFormat::NHWC,
-        )
-        .unwrap()
-        .filter::<T>(
-            filter[0].try_into().unwrap(),
-            filter[1].try_into().unwrap(),
-            filter[2].try_into().unwrap(),
-            filter[3].try_into().unwrap(),
-            TensorFormat::NHWC,
-        )
-        .unwrap()
-        .output::<T>(
-            output[0].try_into().unwrap(),
-            output[1].try_into().unwrap(),
-            output[2].try_into().unwrap(),
-            output[3].try_into().unwrap(),
-            TensorFormat::NHWC,
-        )
-        .unwrap()
-        .conv(
-            pad_h.try_into().unwrap(),
-            pad_w.try_into().unwrap(),
-            stride_h.try_into().unwrap(),
-            stride_w.try_into().unwrap(),
-            dilation_h.try_into().unwrap(),
-            dilation_w.try_into().unwrap(),
-        )
-        .unwrap()
-        .algorithm(num_algo)
-        .unwrap()
-        .build()
-        .unwrap()
-}
-
-impl<T: Num> Conv2dBckwdFilterConfig<T> {
-    pub fn new(
-        input: DimDyn,
-        output: DimDyn,
-        filter: DimDyn,
-        pad_h: usize,
-        pad_w: usize,
-        stride_h: usize,
-        stride_w: usize,
-        dilation_h: usize,
-        dilation_w: usize,
-        num_algo: usize,
-    ) -> Self {
-        Self {
-            #[cfg(feature = "nvidia")]
-            conv: create_conv_bckwd_filter::<T>(
-                input, output, filter, pad_h, pad_w, stride_h, stride_w, dilation_h, dilation_w,
-                num_algo,
-            ),
-            _phantom: std::marker::PhantomData,
+        impl<T: Num> $name<T> {
+            pub fn new(
+                input: DimDyn,
+                output: DimDyn,
+                filter: DimDyn,
+                pad_h: usize,
+                pad_w: usize,
+                stride_h: usize,
+                stride_w: usize,
+                dilation_h: usize,
+                dilation_w: usize,
+                num_algo: usize,
+            ) -> Self {
+                Self {
+                    #[cfg(feature = "nvidia")]
+                    conv: $desc_create::<T>(
+                        input, output, filter, pad_h, pad_w, stride_h, stride_w, dilation_h,
+                        dilation_w, num_algo,
+                    ),
+                    _phantom: std::marker::PhantomData,
+                }
+            }
         }
-    }
+    };
 }
+impl_conv_config!(
+    Conv2dConfig,
+    ConvDescriptor,
+    ConvolutionBuilder,
+    create_conv_descriptor
+);
+impl_conv_config!(
+    Conv2dBckwdDataConfig,
+    ConvolutionBackwardData,
+    ConvolutionBackwardDataBuilder,
+    create_conv_bckwd_data
+);
+impl_conv_config!(
+    Conv2dBckwdFilterConfig,
+    ConvolutionBackwardFilter,
+    ConvolutionBackwardFilterBuilder,
+    create_conv_bckwd_filter
+);
 
 pub trait Conv2d: DeviceBase {
     fn conv2d<T: Num>(
