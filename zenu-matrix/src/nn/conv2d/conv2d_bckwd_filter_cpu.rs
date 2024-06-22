@@ -20,7 +20,7 @@ pub(super) fn conv2d_bckwd_fileter<T: Num, D: Device>(
 
     let gradient_output = gradient_output.transpose_swap_index_new_matrix(0, 1);
     let gradient_output_shape = gradient_output.shape();
-    let mut gradient_output = gradient_output.reshape([
+    let gradient_output = gradient_output.reshape([
         gradient_output_shape[0],
         gradient_output_shape[1] * gradient_output_shape[2] * gradient_output_shape[3],
     ]);
