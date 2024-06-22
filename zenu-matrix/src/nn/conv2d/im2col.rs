@@ -64,14 +64,12 @@ pub(super) fn im2col<T: Num, D: Device>(
         let j_lim = j + sh * oh;
         for i in 0..kw {
             let i_lim = i + sw * ow;
-            // {
             let col = col
                 .to_ref_mut()
                 .slice_mut_dyn(slice_dynamic!(.., .., j, i, .., ..));
             let im_ref = img.to_ref();
             let im_ref = im_ref.slice_dyn(slice_dynamic!(.., .., j..j_lim;sh, i..i_lim;sw));
             col.copy_from(&im_ref);
-            // }
         }
     }
 
