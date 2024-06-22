@@ -467,6 +467,7 @@ mod conv2d {
         device::Device,
         dim::DimDyn,
         matrix::{Matrix, Owned},
+        slice_dynamic,
     };
 
     use super::{conv2d_bckwd_data, conv2d_bckwd_filter, conv2d_forward};
@@ -491,19 +492,19 @@ mod conv2d {
     fn conv2d_test<D: Device>() {
         let test_case = small::<D>();
 
-        // let forward_pred = conv2d_forward(
-        //     test_case.input.to_ref(),
-        //     test_case.filter.to_ref(),
-        //     None,
-        //     test_case.pad_h,
-        //     test_case.pad_w,
-        //     test_case.stride_h,
-        //     test_case.stride_w,
-        //     test_case.dilation_h,
-        //     test_case.dilation_w,
-        //     None,
-        // );
-        // assert_mat_eq_epsilon!(forward_pred, test_case.expected, 1e-4);
+        let forward_pred = conv2d_forward(
+            test_case.input.to_ref(),
+            test_case.filter.to_ref(),
+            None,
+            test_case.pad_h,
+            test_case.pad_w,
+            test_case.stride_h,
+            test_case.stride_w,
+            test_case.dilation_h,
+            test_case.dilation_w,
+            None,
+        );
+        assert_mat_eq_epsilon!(forward_pred, test_case.expected, 1e-4);
 
         let input_grad = conv2d_bckwd_data(
             test_case.output_grad.to_ref(),
@@ -518,20 +519,19 @@ mod conv2d {
         );
         assert_mat_eq_epsilon!(input_grad, test_case.input_grad, 1e-4);
 
-        // let filter_grad = conv2d_bckwd_filter(
-        //     test_case.input.to_ref(),
-        //     test_case.output_grad.to_ref(),
-        //     test_case.pad_h,
-        //     test_case.pad_w,
-        //     test_case.stride_h,
-        //     test_case.stride_w,
-        //     test_case.dilation_h,
-        //     test_case.dilation_w,
-        //     test_case.filter.shape().clone(),
-        //     None,
-        // );
-
-        // assert_mat_eq_epsilon!(filter_grad, test_case.filter_grad, 1e-4);
+        let filter_grad = conv2d_bckwd_filter(
+            test_case.input.to_ref(),
+            test_case.output_grad.to_ref(),
+            test_case.pad_h,
+            test_case.pad_w,
+            test_case.stride_h,
+            test_case.stride_w,
+            test_case.dilation_h,
+            test_case.dilation_w,
+            test_case.filter.shape().clone(),
+            None,
+        );
+        assert_mat_eq_epsilon!(filter_grad, test_case.filter_grad, 1e-4);
     }
     run_mat_test!(conv2d_test, conv2d_test_cpu, conv2d_test_nvidia);
 

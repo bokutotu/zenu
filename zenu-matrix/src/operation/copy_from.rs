@@ -255,6 +255,9 @@ where
     D: DeviceBase + CopyBlas,
 {
     pub fn copy_from<R: Repr<Item = T>, SB: DimTrait>(&self, source: &Matrix<R, SB, D>) {
+        if self.shape().slice() != source.shape().slice() {
+            panic!("copy from self and source shape must be the same");
+        }
         copy(self.clone().into_dyn_dim(), source.to_ref().into_dyn_dim());
     }
 }
