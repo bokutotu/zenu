@@ -89,6 +89,7 @@ macro_rules! impl_conv_config {
         }
 
         impl<T: Num> $name<T> {
+            #[allow(unused_variables)]
             pub fn new(
                 input: DimDyn,
                 output: DimDyn,
@@ -467,11 +468,11 @@ mod conv2d {
         device::Device,
         dim::DimDyn,
         matrix::{Matrix, Owned},
-        slice_dynamic,
     };
 
     use super::{conv2d_bckwd_data, conv2d_bckwd_filter, conv2d_forward};
 
+    #[allow(dead_code)]
     struct Conv2dTestCase<D: Device> {
         input: Matrix<Owned<f32>, DimDyn, D>,
         filter: Matrix<Owned<f32>, DimDyn, D>,
