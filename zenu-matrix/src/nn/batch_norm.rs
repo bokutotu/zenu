@@ -132,7 +132,7 @@ pub trait BatchNormalization: DeviceBase {
         variance: Matrix<Ref<&mut T>, DimDyn, Self>,
         saving_mean: Option<Matrix<Ref<&mut T>, DimDyn, Self>>,
         saving_inv_variance: Option<Matrix<Ref<&mut T>, DimDyn, Self>>,
-        device_batch_norm: Option<BatchNorm2dConfig<T>>,
+        device_batch_norm: &Option<BatchNorm2dConfig<T>>,
     );
 
     fn batch_norm_2d_backward<T: Num>(
@@ -144,7 +144,7 @@ pub trait BatchNormalization: DeviceBase {
         bias_grad: Matrix<Ref<&mut T>, DimDyn, Self>,
         saving_mean: Option<Matrix<Ref<&T>, DimDyn, Self>>,
         saving_inv_variance: Option<Matrix<Ref<&T>, DimDyn, Self>>,
-        device_batch_norm_backward: Option<BatchNorm2dBackwardConfig<T>>,
+        device_batch_norm_backward: &Option<BatchNorm2dBackwardConfig<T>>,
     );
 
     fn bach_norm_2d_forward_inference<T: Num>(
@@ -154,7 +154,7 @@ pub trait BatchNormalization: DeviceBase {
         bias: Matrix<Ref<&T>, DimDyn, Self>,
         mean: Matrix<Ref<&T>, DimDyn, Self>,
         variance: Matrix<Ref<&T>, DimDyn, Self>,
-        device_batch_norm_inference: Option<BatchNorm2dInferenceConfig<T>>,
+        device_batch_norm_inference: &Option<BatchNorm2dInferenceConfig<T>>,
     );
 }
 
@@ -170,11 +170,11 @@ impl BatchNormalization for Nvidia {
         variance: Matrix<Ref<&mut T>, DimDyn, Self>,
         saving_mean: Option<Matrix<Ref<&mut T>, DimDyn, Self>>,
         saving_inv_variance: Option<Matrix<Ref<&mut T>, DimDyn, Self>>,
-        device_batch_norm: Option<BatchNorm2dConfig<T>>,
+        device_batch_norm: &Option<BatchNorm2dConfig<T>>,
     ) {
         let momentum = 1. - momentum;
         let batch_norm = match device_batch_norm {
-            Some(ref batch_norm) => &batch_norm.device_batch_norm,
+            Some(ref batch_norm) => batch_norm.device_batch_norm,
             None => &create_batch_norm_gpu::<T>(x.shape()),
         };
         let saving_mean = match saving_mean {
@@ -211,10 +211,10 @@ impl BatchNormalization for Nvidia {
         bias_grad: Matrix<Ref<&mut T>, DimDyn, Self>,
         saving_mean: Option<Matrix<Ref<&T>, DimDyn, Self>>,
         saving_inv_variance: Option<Matrix<Ref<&T>, DimDyn, Self>>,
-        device_batch_norm_backward: Option<BatchNorm2dBackwardConfig<T>>,
+        device_batch_norm_backward: &Option<BatchNorm2dBackwardConfig<T>>,
     ) {
         let batch_norm_backward = match device_batch_norm_backward {
-            Some(ref batch_norm_backward) => &batch_norm_backward.device_batch_norm_backward,
+            Some(ref batch_norm_backward) => batch_norm_backward.device_batch_norm_backward,
             None => &create_batch_norm_backward_gpu::<T>(x.shape()),
         };
         let saving_mean = match saving_mean {
@@ -250,10 +250,10 @@ impl BatchNormalization for Nvidia {
         bias: Matrix<Ref<&T>, DimDyn, Self>,
         mean: Matrix<Ref<&T>, DimDyn, Self>,
         variance: Matrix<Ref<&T>, DimDyn, Self>,
-        device_batch_norm_inference: Option<BatchNorm2dInferenceConfig<T>>,
+        device_batch_norm_inference: &Option<BatchNorm2dInferenceConfig<T>>,
     ) {
         let batch_norm_inference = match device_batch_norm_inference {
-            Some(ref batch_norm_inference) => &batch_norm_inference.device_batch_norm_inference,
+            Some(ref batch_norm_inference) => batch_norm_inference.device_batch_norm_inference,
             None => &create_batch_norm_inference_gpu::<T>(x.shape()),
         };
         batch_norm_inference
@@ -282,7 +282,7 @@ impl BatchNormalization for Cpu {
         variance: Matrix<Ref<&mut T>, DimDyn, Self>,
         saving_mean: Option<Matrix<Ref<&mut T>, DimDyn, Self>>,
         saving_inv_variance: Option<Matrix<Ref<&mut T>, DimDyn, Self>>,
-        _: Option<BatchNorm2dConfig<T>>,
+        _: &Option<BatchNorm2dConfig<T>>,
     ) {
         let momentum = T::from_f64(momentum);
         let epsilon = T::from_f64(1e-10);
@@ -330,7 +330,7 @@ impl BatchNormalization for Cpu {
         bias_grad: Matrix<Ref<&mut T>, DimDyn, Self>,
         saving_mean: Option<Matrix<Ref<&T>, DimDyn, Self>>,
         saving_inv_variance: Option<Matrix<Ref<&T>, DimDyn, Self>>,
-        _: Option<BatchNorm2dBackwardConfig<T>>,
+        _: &Option<BatchNorm2dBackwardConfig<T>>,
     ) {
         let epsilon = T::from_f64(1e-10);
         let n = x.shape()[0] * x.shape()[2] * x.shape()[3];
@@ -389,7 +389,7 @@ impl BatchNormalization for Cpu {
         bias: Matrix<Ref<&T>, DimDyn, Self>,
         mean: Matrix<Ref<&T>, DimDyn, Self>,
         variance: Matrix<Ref<&T>, DimDyn, Self>,
-        _: Option<BatchNorm2dInferenceConfig<T>>,
+        _: &Option<BatchNorm2dInferenceConfig<T>>,
     ) {
         let epsilon = T::from_f64(1e-10);
         let n = x.shape()[0] * x.shape()[2] * x.shape()[3];
@@ -546,7 +546,7 @@ pub fn try_batch_norm_2d_forward_trian<T: Num, D: Device>(
     variance: Matrix<Ref<&mut T>, DimDyn, D>,
     saving_mean: Option<Matrix<Ref<&mut T>, DimDyn, D>>,
     saving_inv_variance: Option<Matrix<Ref<&mut T>, DimDyn, D>>,
-    device_batch_norm: Option<BatchNorm2dConfig<T>>,
+    device_batch_norm: &Option<BatchNorm2dConfig<T>>,
 ) -> Result<(), String> {
     let x_shape = x.shape();
     let y_shape = y.shape();
@@ -593,7 +593,7 @@ pub fn try_batch_norm_2d_forward_inference<T: Num, D: Device>(
     bias: Matrix<Ref<&T>, DimDyn, D>,
     mean: Matrix<Ref<&T>, DimDyn, D>,
     variance: Matrix<Ref<&T>, DimDyn, D>,
-    device_batch_norm_inference: Option<BatchNorm2dInferenceConfig<T>>,
+    device_batch_norm_inference: &Option<BatchNorm2dInferenceConfig<T>>,
 ) -> Result<(), String> {
     let x_shape = x.shape();
     let y_shape = y.shape();
@@ -637,7 +637,7 @@ pub fn try_batch_norm_2d_backward<T: Num, D: Device>(
     bias_grad: Matrix<Ref<&mut T>, DimDyn, D>,
     saving_mean: Option<Matrix<Ref<&T>, DimDyn, D>>,
     saving_inv_variance: Option<Matrix<Ref<&T>, DimDyn, D>>,
-    device_batch_norm_backward: Option<BatchNorm2dBackwardConfig<T>>,
+    device_batch_norm_backward: &Option<BatchNorm2dBackwardConfig<T>>,
 ) -> Result<(), String> {
     let x_shape = x.shape();
     let y_grad_shape = y_grad.shape();
@@ -686,7 +686,7 @@ pub fn batch_norm_2d_forward_train<T: Num, D: Device>(
     variance: Matrix<Ref<&mut T>, DimDyn, D>,
     saving_mean: Option<Matrix<Ref<&mut T>, DimDyn, D>>,
     saving_inv_variance: Option<Matrix<Ref<&mut T>, DimDyn, D>>,
-    device_batch_norm: Option<BatchNorm2dConfig<T>>,
+    device_batch_norm: &Option<BatchNorm2dConfig<T>>,
 ) {
     try_batch_norm_2d_forward_trian(
         momentum,
@@ -710,7 +710,7 @@ pub fn batch_norm_2d_forward_inference<T: Num, D: Device>(
     bias: Matrix<Ref<&T>, DimDyn, D>,
     mean: Matrix<Ref<&T>, DimDyn, D>,
     variance: Matrix<Ref<&T>, DimDyn, D>,
-    device_batch_norm_inference: Option<BatchNorm2dInferenceConfig<T>>,
+    device_batch_norm_inference: &Option<BatchNorm2dInferenceConfig<T>>,
 ) {
     try_batch_norm_2d_forward_inference(
         x,
@@ -733,7 +733,7 @@ pub fn batch_norm_2d_backward<T: Num, D: Device>(
     bias_grad: Matrix<Ref<&mut T>, DimDyn, D>,
     saving_mean: Option<Matrix<Ref<&T>, DimDyn, D>>,
     saving_inv_variance: Option<Matrix<Ref<&T>, DimDyn, D>>,
-    device_batch_norm_backward: Option<BatchNorm2dBackwardConfig<T>>,
+    device_batch_norm_backward: &Option<BatchNorm2dBackwardConfig<T>>,
 ) {
     try_batch_norm_2d_backward(
         x,
@@ -857,7 +857,7 @@ mod batch_norm {
             variance_out.to_ref_mut(),
             Some(saved_mean_out.to_ref_mut()),
             Some(saved_variance_out.to_ref_mut()),
-            Some(batch_norm),
+            &Some(batch_norm),
         );
 
         assert_mat_eq_epsilon!(y_out.to_ref(), inputs.y.to_ref(), 2e-4);
@@ -950,7 +950,7 @@ mod batch_norm {
             bias_grad.to_ref_mut(),
             Some(inputs.saved_mean.to_ref()),
             Some(inputs.saved_variance.to_ref()),
-            Some(batch_norm_backward),
+            &Some(batch_norm_backward),
         );
 
         let x_grad_ans = vec![
@@ -993,7 +993,7 @@ mod batch_norm {
             inputs.bias.to_ref(),
             inputs.mean.to_ref(),
             inputs.variance.to_ref(),
-            Some(batch_norm_inference),
+            &Some(batch_norm_inference),
         );
 
         assert_mat_eq_epsilon!(y_out.to_ref(), inputs.y.to_ref(), 3e-3);
