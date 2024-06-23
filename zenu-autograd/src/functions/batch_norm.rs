@@ -157,6 +157,12 @@ impl<T: Num, D: Device> Function<T, D> for BatchNorm2dBkwd<T, D> {
     }
 }
 
+pub struct BatchNorm2dOut<T: Num, D: Device> {
+    pub y: VariableWeak<T, D>,
+    pub running_mean: VariableWeak<T, D>,
+    pub running_inv_var: VariableWeak<T, D>,
+}
+
 pub fn batch_norm_2d<T: Num, D: Device>(
     x: Variable<T, D>,
     scale: Variable<T, D>,
@@ -165,10 +171,10 @@ pub fn batch_norm_2d<T: Num, D: Device>(
     variance: Variable<T, D>,
     momentum: f64,
     config: BatchNorm2dAutoGradConfig<T>,
-) -> Variable<T, D> {
+) -> BatchNorm2dOut<T, D> {
     let y = zeros_like(&x);
     let running_mean = zeros_like(&mean);
-    let running_var = zeros_like(&variance);
+    let running_inv_var = zeros_like(&variance);
     let batch_norm = BatchNorm2d {
         momentum,
         x,
@@ -177,12 +183,16 @@ pub fn batch_norm_2d<T: Num, D: Device>(
         bias,
         mean,
         variance,
-        saving_mean: running_mean,
-        saving_inv_variance: running_var,
+        saving_mean: running_mean.clone(),
+        saving_inv_variance: running_inv_var.clone(),
         config,
     };
     batch_norm.forward();
-    y
+    BatchNorm2dOut {
+        y: y.downgrade(),
+        running_mean: running_mean.downgrade(),
+        running_inv_var: running_inv_var.downgrade(),
+    }
 }
 // use std::{cell::RefCell, rc::Rc};
 //
@@ -358,9 +368,7 @@ pub fn batch_norm_2d<T: Num, D: Device>(
 //         matrix::{Matrix, Owned},
 //     };
 //
-//     use crate::{no_train, set_train};
-//
-//     use super::batch_norm;
+//     use crate::{functions::batch_norm::batch_norm_2d, no_train, set_train};
 //
 //     // #[test]
 //     fn batch_norm_medium<D: Device>() {
@@ -379,7 +387,7 @@ pub fn batch_norm_2d<T: Num, D: Device>(
 //         let epsilon = crate::Variable::from(epsilon);
 //         let gamma = crate::Variable::from(gamma);
 //         let beta = crate::Variable::from(delta);
-//         let output = batch_norm(
+//         let output = batch_norm_2d(
 //             mean,
 //             var,
 //             decay,
