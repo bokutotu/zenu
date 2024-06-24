@@ -81,27 +81,18 @@ impl<T: Num, D: Device> Function<T, D> for BatchNorm2d<T, D> {
     }
 
     fn backward(&self) {
-        let x_grad = zeros_like(&self.x);
-        let scale_grad = zeros_like(&self.scale);
-        let bias_grad = zeros_like(&self.bias);
+        let grads = batch_norm_2d_bkwd(
+            self.x.clone(),
+            self.y.upgrade().unwrap().get_grad().unwrap(),
+            self.scale.clone(),
+            self.saving_mean.clone(),
+            self.saving_inv_variance.clone(),
+            self.config.clone(),
+        );
 
-        self.x.set_grad(x_grad.clone());
-        self.scale.set_grad(scale_grad.clone());
-        self.bias.set_grad(bias_grad.clone());
-
-        let batch_norm_bkwd = BatchNorm2dBkwd {
-            x: self.x.clone(),
-            y_grad: self.y.upgrade().unwrap(),
-            x_grad: self.x.get_grad().unwrap().downgrade(),
-            scale: self.scale.clone(),
-            scale_grad: self.scale.get_grad().unwrap().downgrade(),
-            bias_grad: self.bias.get_grad().unwrap().downgrade(),
-            saving_mean: self.saving_mean.clone(),
-            saving_inv_variance: self.saving_inv_variance.clone(),
-            config: self.config.clone(),
-        };
-
-        batch_norm_bkwd.forward();
+        self.x.set_grad(grads.x_grad);
+        self.scale.set_grad(grads.scale_grad);
+        self.bias.set_grad(grads.bias_grad);
     }
 
     fn get_inputs(&self) -> Vec<Variable<T, D>> {
@@ -137,7 +128,7 @@ impl<T: Num, D: Device> Function<T, D> for BatchNorm2dBkwd<T, D> {
             Some(self.saving_inv_variance.get_data().to_ref()),
             config_bkwd,
         )
-        .unwrap()
+        .unwrap();
     }
 
     fn backward(&self) {
@@ -148,19 +139,8 @@ impl<T: Num, D: Device> Function<T, D> for BatchNorm2dBkwd<T, D> {
     }
 
     fn get_inputs(&self) -> Vec<Variable<T, D>> {
-        vec![
-            self.x.clone(),
-            self.scale.clone(),
-            self.saving_mean.clone(),
-            self.saving_inv_variance.clone(),
-        ]
+        vec![self.x.clone(), self.scale.clone(), self.y_grad.clone()]
     }
-}
-
-pub struct BatchNorm2dOut<T: Num, D: Device> {
-    pub y: VariableWeak<T, D>,
-    pub running_mean: VariableWeak<T, D>,
-    pub running_inv_var: VariableWeak<T, D>,
 }
 
 pub fn batch_norm_2d<T: Num, D: Device>(
@@ -171,10 +151,10 @@ pub fn batch_norm_2d<T: Num, D: Device>(
     variance: Variable<T, D>,
     momentum: f64,
     config: BatchNorm2dAutoGradConfig<T>,
-) -> BatchNorm2dOut<T, D> {
+) -> Variable<T, D> {
     let y = zeros_like(&x);
-    let running_mean = zeros_like(&mean);
-    let running_inv_var = zeros_like(&variance);
+    let saving_mean = zeros_like(&mean);
+    let saving_inv_variance = zeros_like(&variance);
     let batch_norm = BatchNorm2d {
         momentum,
         x,
@@ -183,15 +163,107 @@ pub fn batch_norm_2d<T: Num, D: Device>(
         bias,
         mean,
         variance,
-        saving_mean: running_mean.clone(),
-        saving_inv_variance: running_inv_var.clone(),
+        saving_mean,
+        saving_inv_variance,
         config,
     };
     batch_norm.forward();
-    BatchNorm2dOut {
-        y: y.downgrade(),
-        running_mean: running_mean.downgrade(),
-        running_inv_var: running_inv_var.downgrade(),
+    y.set_creator(Rc::new(RefCell::new(Box::new(batch_norm))));
+    y
+}
+
+struct BatchNorm2dGradOut<T: Num, D: Device> {
+    x_grad: Variable<T, D>,
+    scale_grad: Variable<T, D>,
+    bias_grad: Variable<T, D>,
+}
+
+fn batch_norm_2d_bkwd<T: Num, D: Device>(
+    x: Variable<T, D>,
+    y_grad: Variable<T, D>,
+    scale: Variable<T, D>,
+    saving_mean: Variable<T, D>,
+    saving_inv_variance: Variable<T, D>,
+    config: BatchNorm2dAutoGradConfig<T>,
+) -> BatchNorm2dGradOut<T, D> {
+    let x_grad = zeros_like(&x);
+    let scale_grad = zeros_like(&scale);
+    let bias_grad = zeros_like(&scale);
+    let batch_norm_bkwd = BatchNorm2dBkwd {
+        x,
+        y_grad,
+        x_grad: x_grad.clone().downgrade(),
+        scale,
+        scale_grad: scale_grad.clone().downgrade(),
+        bias_grad: bias_grad.clone().downgrade(),
+        saving_mean,
+        saving_inv_variance,
+        config,
+    };
+
+    batch_norm_bkwd.forward();
+    let function: Rc<RefCell<Box<dyn Function<T, D>>>> =
+        Rc::new(RefCell::new(Box::new(batch_norm_bkwd)));
+    x_grad.set_creator(function.clone());
+    scale_grad.set_creator(function.clone());
+    bias_grad.set_creator(function);
+    BatchNorm2dGradOut {
+        x_grad,
+        scale_grad,
+        bias_grad,
+    }
+}
+
+#[cfg(test)]
+mod batch_norm_2d {
+    use zenu_matrix::{
+        device::Device,
+        dim::DimDyn,
+        matrix::{Matrix, Owned},
+    };
+
+    use crate::{creator::zeros::zeros_like, Variable};
+
+    use super::{batch_norm_2d, BatchNorm2dAutoGradConfig, BatchNorm2dOut};
+
+    struct TestConfig<D: Device> {
+        x: Matrix<Owned<f32>, DimDyn, D>,
+        x_grad: Matrix<Owned<f32>, DimDyn, D>,
+        y: Matrix<Owned<f32>, DimDyn, D>,
+        scale: Matrix<Owned<f32>, DimDyn, D>,
+        bias: Matrix<Owned<f32>, DimDyn, D>,
+        mean: Matrix<Owned<f32>, DimDyn, D>,
+        variance: Matrix<Owned<f32>, DimDyn, D>,
+        scale_grad: Matrix<Owned<f32>, DimDyn, D>,
+        bias_grad: Matrix<Owned<f32>, DimDyn, D>,
+        momentum: f64,
+        config: BatchNorm2dAutoGradConfig<f32>,
+    }
+
+    fn small_test<D: Device>() {
+        let test_case = small_test_case::<D>();
+
+        let x = Variable::new(test_case.x.to_ref());
+        let scale = Variable::new(test_case.scale.to_ref());
+        let bias = Variable::new(test_case.bias.to_ref());
+        let mean = Variable::new(test_case.mean.to_ref());
+        let variance = Variable::new(test_case.variance.to_ref());
+
+        let y = batch_norm_2d(
+            x,
+            scale,
+            bias,
+            mean,
+            variance,
+            test_case.momentum,
+            test_case.config,
+        );
+
+        y.backward();
+    }
+
+    fn small_test_case<D: Device>() -> TestConfig<D> {
+        todo!();
     }
 }
 // use std::{cell::RefCell, rc::Rc};
