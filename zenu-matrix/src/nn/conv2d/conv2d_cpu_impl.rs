@@ -8,20 +8,6 @@ use crate::{
 
 use super::im2col::{im2col, Im2ColRes};
 
-pub(super) fn conv2d_out_size(
-    img_shape: &[usize],
-    kernel_shape: &[usize],
-    padding: (usize, usize),
-    stride: (usize, usize),
-) -> [usize; 4] {
-    let (b, h, w) = (img_shape[0], img_shape[2], img_shape[3]);
-    let (oc, kh, kw) = (kernel_shape[0], kernel_shape[2], kernel_shape[3]);
-    let (ph, pw) = padding;
-    let (sh, sw) = stride;
-    let (h, w) = ((h + 2 * ph - kh) / sh + 1, (w + 2 * pw - kw) / sw + 1);
-    [b, oc, h, w]
-}
-
 pub(super) fn conv2d_inner<T: Num, D: Device>(
     img: Matrix<Ref<&T>, DimDyn, D>,
     kernel: Matrix<Ref<&T>, DimDyn, D>,
