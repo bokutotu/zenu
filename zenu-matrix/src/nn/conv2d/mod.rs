@@ -11,6 +11,11 @@ mod conv2d_cpu_impl;
 mod deconv2d_cpu_impl;
 mod im2col;
 
+use self::{
+    conv2d_bckwd_filter_cpu::conv2d_bckwd_fileter, conv2d_cpu_impl::conv2d_inner,
+    deconv2d_cpu_impl::deconv2d_inner,
+};
+
 #[cfg(feature = "nvidia")]
 use zenu_cuda::cudnn::{conv::*, TensorFormat};
 
@@ -31,11 +36,26 @@ pub fn conv2d_out_size(
     [b, oc, h, w]
 }
 
-use self::{
-    conv2d_bckwd_filter_cpu::conv2d_bckwd_fileter,
-    conv2d_cpu_impl::conv2d_inner,
-    deconv2d_cpu_impl::{deconv2d_inner, deconv2d_out_size},
-};
+pub(super) fn get_deconv_outsize_(size: usize, k: usize, s: usize, p: usize) -> usize {
+    s * (size - 1) + k - 2 * p
+}
+
+pub fn deconv2d_out_size(
+    img_shape: &[usize],
+    kernel_shape: &[usize],
+    padding: (usize, usize),
+    stride: (usize, usize),
+) -> [usize; 4] {
+    let (b, h, w) = (img_shape[0], img_shape[2], img_shape[3]);
+    let (ic, kh, kw) = (kernel_shape[1], kernel_shape[2], kernel_shape[3]);
+    let (ph, pw) = padding;
+    let (sh, sw) = stride;
+    let (h, w) = (
+        get_deconv_outsize_(h, kh, sh, ph),
+        get_deconv_outsize_(w, kw, sw, pw),
+    );
+    [b, ic, h, w]
+}
 
 macro_rules! impl_conv_config {
     ($name:ident, $inner:ident, $inner_builder:ident, $desc_create:ident) => {
