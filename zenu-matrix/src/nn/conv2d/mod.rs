@@ -17,6 +17,20 @@ use zenu_cuda::cudnn::{conv::*, TensorFormat};
 #[cfg(feature = "nvidia")]
 use crate::device::nvidia::Nvidia;
 
+pub fn conv2d_out_size(
+    img_shape: &[usize],
+    kernel_shape: &[usize],
+    padding: (usize, usize),
+    stride: (usize, usize),
+) -> [usize; 4] {
+    let (b, h, w) = (img_shape[0], img_shape[2], img_shape[3]);
+    let (oc, kh, kw) = (kernel_shape[0], kernel_shape[2], kernel_shape[3]);
+    let (ph, pw) = padding;
+    let (sh, sw) = stride;
+    let (h, w) = ((h + 2 * ph - kh) / sh + 1, (w + 2 * pw - kw) / sw + 1);
+    [b, oc, h, w]
+}
+
 use self::{
     conv2d_bckwd_filter_cpu::conv2d_bckwd_fileter,
     conv2d_cpu_impl::conv2d_inner,
@@ -374,7 +388,7 @@ pub fn conv2d_forward<T: Num, D: Device>(
     dilation_w: usize,
     config: Option<Conv2dConfig<T>>,
 ) -> Matrix<Owned<T>, DimDyn, D> {
-    let out_size = conv2d_cpu_impl::conv2d_out_size(
+    let out_size = conv2d_out_size(
         input.shape().slice(),
         filter.shape().slice(),
         (pad_h, pad_w),
