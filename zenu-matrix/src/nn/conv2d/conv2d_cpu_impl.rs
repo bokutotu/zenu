@@ -1,41 +1,20 @@
-use zenu_matrix::{
-    constructor::zeros::Zeros,
+use crate::{
+    device::Device,
     dim::{DimDyn, DimTrait},
-    matrix::{MatrixBase, ToViewMatrix, ToViewMutMatrix},
-    matrix_impl::{Matrix, OwnedMatrixDyn},
-    memory_impl::{OwnedMem, ViewMem},
+    matrix::{Matrix, Owned, Ref},
     num::Num,
-    operation::{
-        basic_operations::MatrixAddAssign,
-        mul::Gemm,
-        reshape::{Reshape, ReshapeNoAlloc},
-        transpose::TransposeInplace,
-    },
+    operation::mul::gemm,
 };
 
 use super::im2col::{im2col, Im2ColRes};
 
-pub(super) fn conv2d_out_size(
-    img_shape: &[usize],
-    kernel_shape: &[usize],
+pub(super) fn conv2d_inner<T: Num, D: Device>(
+    img: Matrix<Ref<&T>, DimDyn, D>,
+    kernel: Matrix<Ref<&T>, DimDyn, D>,
+    bias: Option<Matrix<Owned<T>, DimDyn, D>>,
     padding: (usize, usize),
     stride: (usize, usize),
-) -> [usize; 4] {
-    let (b, h, w) = (img_shape[0], img_shape[2], img_shape[3]);
-    let (oc, kh, kw) = (kernel_shape[0], kernel_shape[2], kernel_shape[3]);
-    let (ph, pw) = padding;
-    let (sh, sw) = stride;
-    let (h, w) = ((h + 2 * ph - kh) / sh + 1, (w + 2 * pw - kw) / sw + 1);
-    [b, oc, h, w]
-}
-
-pub(super) fn conv2d_inner<T: Num>(
-    img: Matrix<ViewMem<T>, DimDyn>,
-    kernel: Matrix<ViewMem<T>, DimDyn>,
-    bias: Option<Matrix<OwnedMem<T>, DimDyn>>,
-    padding: (usize, usize),
-    stride: (usize, usize),
-) -> Matrix<OwnedMem<T>, DimDyn> {
+) -> Matrix<Owned<T>, DimDyn, D> {
     let batch_size = img.shape()[0];
     let kernel_shape = kernel.shape();
     let kernel_h_w = (kernel_shape[2], kernel_shape[3]);
@@ -45,50 +24,57 @@ pub(super) fn conv2d_inner<T: Num>(
         kernel.shape()[0],
         kernel.shape().num_elm() / kernel.shape()[0],
     ]);
-    let mut result = OwnedMatrixDyn::zeros([kernel_shape[0], col.shape()[1]]);
-    result.to_view_mut().gemm(kernel, col.to_view());
+    // let mut result = Matrix::<_, DimDyn, _>::zeros([kernel_shape[0], col.shape()[1]]);
+    // result.to_ref_mut().gemm(kernel, col.to_ref());
+    let result = gemm(&kernel, &col, T::one(), T::zero());
     let mut result = result
-        .reshape([kernel_shape[0], batch_size, out_size.0 * out_size.1])
-        .transpose_swap_index_inplace(0, 1)
+        .reshape_no_alloc_owned([kernel_shape[0], batch_size, out_size.0 * out_size.1])
+        .transpose_swap_index_new_matrix(0, 1)
         .reshape_no_alloc_owned([batch_size, kernel_shape[0], out_size.0, out_size.1]);
     if let Some(bias) = bias {
-        result.add_assign(bias.to_view());
+        result += bias;
     }
     result
 }
 
 #[cfg(test)]
 mod conv2d {
-    use zenu_matrix::{
-        matrix::{OwnedMatrix, ToViewMatrix},
-        matrix_impl::OwnedMatrixDyn,
-        operation::asum::Asum,
+    use zenu_test::assert_mat_eq_epsilon;
+
+    use crate::{
+        device::cpu::Cpu,
+        dim::DimDyn,
+        matrix::{Matrix, Owned},
     };
 
     use super::conv2d_inner;
 
     #[test]
     fn conv2d_5x5im_3x3_kernel_0x0_pad_1x1_stride() {
-        let kernel =
-            OwnedMatrixDyn::from_vec(vec![1., 2., 3., 4., 5., 6., 7., 8., 9.], [1, 1, 3, 3]);
+        let kernel = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(
+            vec![1., 2., 3., 4., 5., 6., 7., 8., 9.],
+            [1, 1, 3, 3],
+        );
         let img = (1..26).map(|x| x as f32).collect::<Vec<f32>>();
-        let img = OwnedMatrixDyn::from_vec(img, [1, 1, 5, 5]);
-        let out = conv2d_inner(img.to_view(), kernel.to_view(), None, (0, 0), (1, 1));
-        let ans = OwnedMatrixDyn::from_vec(
+        let img = Matrix::<_, DimDyn, _>::from_vec(img, [1, 1, 5, 5]);
+        let out = conv2d_inner(img.to_ref(), kernel.to_ref(), None, (0, 0), (1, 1));
+        let ans = Matrix::<_, DimDyn, _>::from_vec(
             vec![411., 456., 501., 636., 681., 726., 861., 906., 951.],
             [1, 1, 3, 3],
         );
-        assert!((out - ans).asum() < 1e-6);
+        assert_mat_eq_epsilon!(out, ans, 1e-6);
     }
 
     #[test]
     fn conv2d_5x5xim_3x3_kernel_1x1_pad_1x1_stride() {
-        let kernel =
-            OwnedMatrixDyn::from_vec(vec![1., 2., 3., 4., 5., 6., 7., 8., 9.], [1, 1, 3, 3]);
+        let kernel = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(
+            vec![1., 2., 3., 4., 5., 6., 7., 8., 9.],
+            [1, 1, 3, 3],
+        );
         let img = (1..26).map(|x| x as f32).collect::<Vec<f32>>();
-        let img = OwnedMatrixDyn::from_vec(img, [1, 1, 5, 5]);
-        let out = conv2d_inner(img.to_view(), kernel.to_view(), None, (1, 1), (1, 1));
-        let ans = OwnedMatrixDyn::from_vec(
+        let img = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(img, [1, 1, 5, 5]);
+        let out = conv2d_inner(img.to_ref(), kernel.to_ref(), None, (1, 1), (1, 1));
+        let ans = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(
             vec![
                 128., 202., 241., 280., 184., 276., 411., 456., 501., 318., 441., 636., 681., 726.,
                 453., 606., 861., 906., 951., 588., 320., 436., 457., 478., 280.,
@@ -100,12 +86,14 @@ mod conv2d {
 
     #[test]
     fn conv2d_5x5im_3x3_kernel_1x1_pad_2x2_stride() {
-        let kernel =
-            OwnedMatrixDyn::from_vec(vec![1., 2., 3., 4., 5., 6., 7., 8., 9.], [1, 1, 3, 3]);
+        let kernel = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(
+            vec![1., 2., 3., 4., 5., 6., 7., 8., 9.],
+            [1, 1, 3, 3],
+        );
         let img = (1..26).map(|x| x as f32).collect::<Vec<f32>>();
-        let img = OwnedMatrixDyn::from_vec(img, [1, 1, 5, 5]);
-        let out = conv2d_inner(img.to_view(), kernel.to_view(), None, (1, 1), (2, 2));
-        let ans = OwnedMatrixDyn::from_vec(
+        let img = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(img, [1, 1, 5, 5]);
+        let out = conv2d_inner(img.to_ref(), kernel.to_ref(), None, (1, 1), (2, 2));
+        let ans = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(
             vec![128., 241., 184., 441., 681., 453., 320., 457., 280.],
             [1, 1, 3, 3],
         );
@@ -117,12 +105,12 @@ mod conv2d {
         let input = (1..=(5 * 5 * 3 * 2))
             .map(|x| x as f32)
             .collect::<Vec<f32>>();
-        let input = OwnedMatrixDyn::from_vec(input, [2, 3, 5, 5]);
+        let input = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(input, [2, 3, 5, 5]);
         let kernel = (1..=(3 * 3 * 3 * 4))
             .map(|x| x as f32)
             .collect::<Vec<f32>>();
-        let kernel = OwnedMatrixDyn::from_vec(kernel, [4, 3, 3, 3]);
-        let out = conv2d_inner(input.to_view(), kernel.to_view(), None, (1, 1), (1, 1));
+        let kernel = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(kernel, [4, 3, 3, 3]);
+        let out = conv2d_inner(input.to_ref(), kernel.to_ref(), None, (1, 1), (1, 1));
         let ans = vec![
             7416., 11010., 11289., 11568., 7608., 11106., 16434., 16812., 17190., 11268., 12411.,
             18324., 18702., 19080., 12483., 13716., 20214., 20592., 20970., 13698., 8712., 12792.,
@@ -145,7 +133,7 @@ mod conv2d {
             296748., 197649., 203148., 304443., 307008., 309573., 206154., 136080., 203898.,
             205581., 207264., 138000.,
         ];
-        let ans = OwnedMatrixDyn::from_vec(ans, [2, 4, 5, 5]);
+        let ans = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(ans, [2, 4, 5, 5]);
         assert!((out - ans).asum() < 1e-6);
     }
 }

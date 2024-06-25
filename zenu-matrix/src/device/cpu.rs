@@ -1,6 +1,6 @@
 use super::{Device, DeviceBase};
 
-#[derive(Copy, Clone, Default)]
+#[derive(Copy, Clone, Default, Debug)]
 pub struct Cpu;
 
 impl DeviceBase for Cpu {

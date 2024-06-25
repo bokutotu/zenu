@@ -1,20 +1,16 @@
 use std::{cell::RefCell, rc::Rc};
 
-use zenu_matrix::{
-    matrix::{MatrixBase, ToViewMatrix, ToViewMutMatrix},
-    num::Num,
-    operation::log::Log as L,
-};
+use zenu_matrix::{device::Device, num::Num};
 
 use crate::{creator::zeros::zeros_like, Function, Variable, VariableWeak};
 
-struct Log<T: Num> {
-    input: Variable<T>,
-    output: VariableWeak<T>,
+struct Log<T: Num, D: Device> {
+    input: Variable<T, D>,
+    output: VariableWeak<T, D>,
 }
 
-impl<T: Num> Log<T> {
-    pub fn new(input: Variable<T>, output: Variable<T>) -> Self {
+impl<T: Num, D: Device> Log<T, D> {
+    pub fn new(input: Variable<T, D>, output: Variable<T, D>) -> Self {
         assert_eq!(
             input.get_data().shape(),
             output.get_data().shape(),
@@ -25,15 +21,15 @@ impl<T: Num> Log<T> {
     }
 }
 
-impl<T: Num> Function<T> for Log<T> {
+impl<T: Num, D: Device> Function<T, D> for Log<T, D> {
     fn forward(&self) {
         let input = self.input.get_data();
         self.output
             .upgrade()
             .unwrap()
             .get_data_mut()
-            .to_view_mut()
-            .log(input.to_view());
+            .to_ref_mut()
+            .log_array(&input.to_ref());
     }
 
     fn backward(&self) {
@@ -41,12 +37,12 @@ impl<T: Num> Function<T> for Log<T> {
         self.input.set_grad(output / self.input.clone());
     }
 
-    fn get_inputs(&self) -> Vec<Variable<T>> {
+    fn get_inputs(&self) -> Vec<Variable<T, D>> {
         vec![self.input.clone()]
     }
 }
 
-pub fn log<T: Num>(x: Variable<T>) -> Variable<T> {
+pub fn log<T: Num, D: Device>(x: Variable<T, D>) -> Variable<T, D> {
     let output = zeros_like(&x);
     let log = Log::new(x, output.clone());
     log.forward();
@@ -56,18 +52,23 @@ pub fn log<T: Num>(x: Variable<T>) -> Variable<T> {
 
 #[cfg(test)]
 mod log {
-    use zenu_matrix::{matrix::OwnedMatrix, matrix_impl::OwnedMatrixDyn, operation::asum::Asum};
+
+    use zenu_matrix::{
+        device::Device,
+        dim::DimDyn,
+        matrix::{Matrix, Owned},
+    };
+    use zenu_test::{assert_val_eq, assert_val_eq_grad, run_test};
 
     use crate::creator::from_vec::from_vec;
 
     use super::log;
 
-    #[test]
-    fn log_1d() {
+    fn log_1d<D: Device>() {
         let x = from_vec(vec![1., 2., 3., 4.], [4]);
         let y = log(x.clone());
         y.backward();
-        let forward_ans = OwnedMatrixDyn::from_vec(
+        let forward_ans: Matrix<Owned<f64>, DimDyn, D> = Matrix::from_vec(
             vec![
                 0.,
                 0.6931471805599453,
@@ -76,12 +77,10 @@ mod log {
             ],
             [4],
         );
-        let forward_result = y.get_data();
-        let diff = forward_ans - forward_result;
-        assert!(diff.asum() < 1e-7);
-        let grad = x.get_grad().unwrap().get_data();
-        let grad_ans = OwnedMatrixDyn::from_vec(vec![1., 0.5, 1. / 3., 0.25], [4]);
-        let diff = grad_ans - grad;
-        assert!(diff.asum() < 1e-7);
+        let x_grad: Matrix<Owned<f64>, DimDyn, D> =
+            Matrix::from_vec(vec![1., 0.5, 1. / 3., 0.25], [4]);
+        assert_val_eq!(y, forward_ans, 1e-7);
+        assert_val_eq_grad!(x, x_grad, 1e-7);
     }
+    run_test!(log_1d, log_1d_cpu, log_1d_gpu);
 }

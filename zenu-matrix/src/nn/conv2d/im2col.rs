@@ -1,57 +1,49 @@
-use zenu_matrix::{
-    constructor::zeros::Zeros,
+use crate::{
+    device::Device,
     dim::DimDyn,
-    matrix::{MatrixBase, MatrixSliceDyn, MatrixSliceMutDyn, ToViewMutMatrix},
-    matrix_impl::{Matrix, OwnedMatrixDyn},
-    memory_impl::{OwnedMem, ViewMem},
+    matrix::{Matrix, Owned, Ref},
     num::Num,
-    operation::{
-        copy_from::CopyFrom,
-        reshape::{Reshape, ReshapeMut},
-        transpose::TransposeInplace,
-    },
     slice_dynamic,
 };
 
-fn padding<T: Num>(
-    input: Matrix<ViewMem<T>, DimDyn>,
-    padding: (usize, usize),
-) -> Matrix<OwnedMem<T>, DimDyn> {
-    let (padding_height, padding_width) = padding;
-    let (batch_size, in_channels, in_height, in_width) = (
-        input.shape()[0],
-        input.shape()[1],
-        input.shape()[2],
-        input.shape()[3],
-    );
-    let out_height = in_height + 2 * padding_height;
-    let out_width = in_width + 2 * padding_width;
+fn padding<T: Num, D: Device>(
+    input: Matrix<Ref<&T>, DimDyn, D>,
+    pad_h: usize,
+    pad_w: usize,
+) -> Matrix<Owned<T>, DimDyn, D> {
+    let batch_size = input.shape()[0];
+    let in_channel = input.shape()[1];
+    let in_height = input.shape()[2];
+    let in_width = input.shape()[3];
 
-    let mut output = OwnedMatrixDyn::zeros([batch_size, in_channels, out_height, out_width]);
-    let mut output_view_mut = output.to_view_mut();
+    let out_height = in_height + 2 * pad_h;
+    let out_width = in_width + 2 * pad_w;
 
-    let mut output_view_mut = output_view_mut.slice_mut_dyn(slice_dynamic!(
-        ..,
-        ..,
-        padding_height..padding_height + in_height,
-        padding_width..padding_width + in_width
-    ));
-    output_view_mut.copy_from(&input);
-
+    let mut output =
+        Matrix::<Owned<T>, DimDyn, D>::zeros([batch_size, in_channel, out_height, out_width]);
+    {
+        let sliced = output.to_ref_mut().slice_mut(slice_dynamic![
+            ..,
+            ..,
+            pad_h..pad_h + in_height,
+            pad_w..pad_w + in_width
+        ]);
+        sliced.copy_from(&input);
+    }
     output
 }
 
-pub(super) struct Im2ColRes<T: Num> {
-    pub(crate) col: Matrix<OwnedMem<T>, DimDyn>,
-    pub(crate) out_size: (usize, usize),
+pub(super) struct Im2ColRes<T: Num, D: Device> {
+    pub(super) col: Matrix<Owned<T>, DimDyn, D>,
+    pub(super) out_size: (usize, usize),
 }
 
-pub(super) fn im2col<T: Num>(
-    img: Matrix<ViewMem<T>, DimDyn>,
+pub(super) fn im2col<T: Num, D: Device>(
+    img: Matrix<Ref<&T>, DimDyn, D>,
     kernel_size: (usize, usize),
     stride: (usize, usize),
     pad: (usize, usize),
-) -> Im2ColRes<T> {
+) -> Im2ColRes<T, D> {
     let batch_size = img.shape()[0];
     let c = img.shape()[1];
     let h = img.shape()[2];
@@ -62,25 +54,28 @@ pub(super) fn im2col<T: Num>(
     let sw = stride.1;
     let ph = pad.0;
     let pw = pad.1;
-    let oh = (h - kh + 2 * ph) / sh + 1;
-    let ow = (w - kw + 2 * pw) / sw + 1;
+    let oh = (h + 2 * ph - kh) / sh + 1;
+    let ow = (w + 2 * pw - kw) / sw + 1;
 
-    let img = padding(img, pad);
-    let mut col = OwnedMatrixDyn::zeros([batch_size, c, kh, kw, oh, ow]);
+    let img = padding(img, pad.0, pad.1);
+    let mut col = Matrix::<Owned<T>, DimDyn, D>::zeros([batch_size, c, kh, kw, oh, ow]);
 
     for j in 0..kh {
         let j_lim = j + sh * oh;
         for i in 0..kw {
             let i_lim = i + sw * ow;
-            let mut col = col.slice_mut_dyn(slice_dynamic!(.., .., j, i, .., ..));
-            let img = img.slice_dyn(slice_dynamic!(.., .., j..j_lim;sh, i..i_lim;sw));
-            col.copy_from(&img);
+            let col = col
+                .to_ref_mut()
+                .slice_mut_dyn(slice_dynamic!(.., .., j, i, .., ..));
+            let im_ref = img.to_ref();
+            let im_ref = im_ref.slice_dyn(slice_dynamic!(.., .., j..j_lim;sh, i..i_lim;sw));
+            col.copy_from(&im_ref);
         }
     }
 
     let col = col.reshape_mut([batch_size, c * kh * kw, oh * ow]);
-    let col = col.transepose_by_index(&[1, 0, 2]);
-    let col = col.reshape_new_matrix([c * kh * kw, batch_size * oh * ow]);
+    let col = col.transpose_by_index_new_matrix(&[1, 0, 2]);
+    let col = col.reshape_no_alloc_owned([c * kh * kw, batch_size * oh * ow]);
     Im2ColRes {
         col,
         out_size: (oh, ow),
@@ -89,24 +84,50 @@ pub(super) fn im2col<T: Num>(
 
 #[cfg(test)]
 mod im2col {
-    use zenu_matrix::{
-        matrix::{OwnedMatrix, ToViewMatrix},
-        matrix_impl::OwnedMatrixDyn,
-        operation::{asum::Asum, transpose::Transpose},
+    use crate::{
+        device::cpu::Cpu,
+        dim::DimDyn,
+        matrix::{Matrix, Owned},
+        num::Num,
     };
 
-    use super::im2col;
+    use zenu_test::*;
 
-    #[test]
-    fn im2col_small() {
-        let input = OwnedMatrixDyn::from_vec(
+    macro_rules! test_im2col {
+        ($test_case_fn:ident, $test_name:ident) => {
+            #[test]
+            fn $test_name() {
+                let test_case = $test_case_fn();
+                let res = super::im2col(
+                    test_case.input.to_ref(),
+                    test_case.kernel_size,
+                    test_case.stride,
+                    test_case.pad,
+                );
+                assert_mat_eq_epsilon!(res.col, test_case.ans, 1e-6);
+            }
+        };
+    }
+    test_im2col!(small_test_case, small);
+    test_im2col!(medium_test_case, medium);
+
+    struct Im2ColTestCase<T: Num> {
+        input: Matrix<Owned<T>, DimDyn, Cpu>,
+        ans: Matrix<Owned<T>, DimDyn, Cpu>,
+        kernel_size: (usize, usize),
+        stride: (usize, usize),
+        pad: (usize, usize),
+    }
+
+    fn small_test_case() -> Im2ColTestCase<f32> {
+        let input = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(
             vec![
                 1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12., 13., 14., 15., 16.,
             ],
             [1, 1, 4, 4],
         );
-        let result = im2col(input.to_view(), (2, 2), (1, 1), (0, 0));
-        let mut ans = OwnedMatrixDyn::from_vec(
+
+        let mut ans = Matrix::from_vec(
             vec![
                 1., 2., 5., 6., 2., 3., 6., 7., 3., 4., 7., 8., 5., 6., 9., 10., 6., 7., 10., 11.,
                 7., 8., 11., 12., 9., 10., 13., 14., 10., 11., 14., 15., 11., 12., 15., 16.,
@@ -114,14 +135,17 @@ mod im2col {
             [9, 4],
         );
         ans.transpose();
-        assert!((ans - result.col).to_view().asum() < 1e-6);
+        Im2ColTestCase {
+            input,
+            ans,
+            kernel_size: (2, 2),
+            stride: (1, 1),
+            pad: (0, 0),
+        }
     }
 
-    #[test]
-    fn im2col_medium() {
+    fn medium_test_case() -> Im2ColTestCase<f32> {
         let input = (1..151).map(|x| x as f32).collect::<Vec<f32>>();
-        let input = OwnedMatrixDyn::from_vec(input, [2, 3, 5, 5]);
-        let result = im2col(input.to_view(), (3, 3), (1, 1), (1, 1));
         let ans = vec![
             0.0, 0.0, 0.0, 0.0, 1.0, 2.0, 0.0, 6.0, 7.0, 0.0, 0.0, 0.0, 0.0, 26.0, 27.0, 0.0, 31.0,
             32.0, 0.0, 0.0, 0.0, 0.0, 51.0, 52.0, 0.0, 56.0, 57.0, 0.0, 0.0, 0.0, 1.0, 2.0, 3.0,
@@ -219,8 +243,16 @@ mod im2col {
             119.0, 120.0, 0.0, 124.0, 125.0, 0.0, 0.0, 0.0, 0.0, 144.0, 145.0, 0.0, 149.0, 150.0,
             0.0, 0.0, 0.0, 0.0,
         ];
-        let mut ans = OwnedMatrixDyn::from_vec(ans, [50, 27]);
-        ans.transpose();
-        assert!((ans - result.col).to_view().asum() < 1e-6);
+
+        let input = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(input, [2, 3, 5, 5]);
+        let mut output = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(ans, [50, 27]);
+        output.transpose();
+        Im2ColTestCase {
+            input,
+            ans: output,
+            kernel_size: (3, 3),
+            stride: (1, 1),
+            pad: (1, 1),
+        }
     }
 }

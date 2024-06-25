@@ -1,5 +1,5 @@
 use crate::{
-    device::{cpu::Cpu, DeviceBase},
+    device::{cpu::Cpu, Device, DeviceBase},
     dim::{DimDyn, DimTrait},
     index::Index0D,
     matrix::{Matrix, Owned, Ref, Repr},
@@ -23,6 +23,16 @@ pub trait ClipOps {
         max: T,
     );
     fn clip_assign<T: Num>(input: *mut T, size: usize, stride: usize, min: T, max: T);
+    fn clip_backward<T: Num>(
+        input: *const T,
+        mask: *mut T,
+        max: T,
+        min: T,
+        size: usize,
+        stride_in: usize,
+        stride_out: usize,
+    );
+    fn clip_backward_assign<T: Num>(mask: *mut T, max: T, min: T, size: usize, stride: usize);
 }
 
 impl ClipOps for Cpu {
@@ -62,6 +72,41 @@ impl ClipOps for Cpu {
             input[i * stride] = x;
         }
     }
+
+    #[allow(clippy::not_unsafe_ptr_arg_deref)]
+    fn clip_backward<T: Num>(
+        input: *const T,
+        mask: *mut T,
+        max: T,
+        min: T,
+        size: usize,
+        stride_in: usize,
+        stride_out: usize,
+    ) {
+        let input = unsafe { std::slice::from_raw_parts(input, size * stride_in) };
+        let mask = unsafe { std::slice::from_raw_parts_mut(mask, size * stride_out) };
+        for i in 0..size {
+            let x = input[i * stride_in];
+            if x < min || x > max {
+                mask[i * stride_in] = T::zero();
+            } else {
+                mask[i * stride_in] = T::one();
+            }
+        }
+    }
+
+    #[allow(clippy::not_unsafe_ptr_arg_deref)]
+    fn clip_backward_assign<T: Num>(mask: *mut T, max: T, min: T, size: usize, stride: usize) {
+        let mask = unsafe { std::slice::from_raw_parts_mut(mask, size * stride) };
+        for i in 0..size {
+            let x = mask[i * stride];
+            if x < min || x > max {
+                mask[i * stride] = T::zero();
+            } else {
+                mask[i * stride] = T::one();
+            }
+        }
+    }
 }
 
 #[cfg(feature = "nvidia")]
@@ -80,6 +125,22 @@ impl ClipOps for Nvidia {
 
     fn clip_assign<T: Num>(input: *mut T, size: usize, stride: usize, min: T, max: T) {
         clip_assign(input, size, stride, min, max)
+    }
+
+    fn clip_backward<T: Num>(
+        input: *const T,
+        mask: *mut T,
+        max: T,
+        min: T,
+        size: usize,
+        stride_in: usize,
+        stride_out: usize,
+    ) {
+        clip_backward(input as *mut T, mask, max, min, size, stride_in, stride_out)
+    }
+
+    fn clip_backward_assign<T: Num>(mask: *mut T, max: T, min: T, size: usize, stride: usize) {
+        clip_backward_assign(mask, max, min, size, stride)
     }
 }
 
@@ -106,6 +167,31 @@ fn clip_assign_1d<T: Num, S: DimTrait, D: DeviceBase + ClipOps>(
     let stride = input.stride()[0];
     let input_ptr = input.as_mut_ptr();
     D::clip_assign(input_ptr, size, stride, min, max);
+}
+
+fn clip_backward_1d<T: Num, S: DimTrait, D: Device>(
+    input: &Matrix<Ref<&T>, S, D>,
+    mask: &Matrix<Ref<&mut T>, S, D>,
+    min: T,
+    max: T,
+) {
+    let size = input.shape()[0];
+    let stride_in = input.stride()[0];
+    let stride_out = mask.stride()[0];
+    let input_ptr = input.as_ptr();
+    let mask_ptr = mask.as_mut_ptr();
+    D::clip_backward(input_ptr, mask_ptr, max, min, size, stride_in, stride_out);
+}
+
+fn clip_backward_assign_1d<T: Num, S: DimTrait, D: Device>(
+    mask: &Matrix<Ref<&mut T>, S, D>,
+    min: T,
+    max: T,
+) {
+    let size = mask.shape()[0];
+    let stride = mask.stride()[0];
+    let mask_ptr = mask.as_mut_ptr();
+    D::clip_backward_assign(mask_ptr, max, min, size, stride);
 }
 
 fn clip_inner<T: Num, D: DeviceBase + ClipOps>(
@@ -146,7 +232,45 @@ fn clip_assign_inner<T: Num, D: DeviceBase + ClipOps>(
     }
 }
 
-impl<R: Repr, S: DimTrait, D: DeviceBase + ClipOps> Matrix<R, S, D> {
+fn clip_backward_inner<T: Num, D: Device>(
+    input: &Matrix<Ref<&T>, DimDyn, D>,
+    mask: &Matrix<Ref<&mut T>, DimDyn, D>,
+    min: T,
+    max: T,
+) {
+    if input.shape().len() == 1 {
+        clip_backward_1d(input, mask, min, max);
+    } else if input.shape().is_empty() {
+        unimplemented!();
+    } else {
+        for i in 0..(input.shape()[0]) {
+            clip_backward_inner(
+                &input.index_axis_dyn(Index0D::new(i)),
+                &mask.index_axis_mut_dyn(Index0D::new(i)),
+                min,
+                max,
+            );
+        }
+    }
+}
+
+fn clip_backward_assign_inner<T: Num, D: Device>(
+    mask: &Matrix<Ref<&mut T>, DimDyn, D>,
+    min: T,
+    max: T,
+) {
+    if mask.shape().len() == 1 {
+        clip_backward_assign_1d(mask, min, max);
+    } else if mask.shape().is_empty() {
+        unimplemented!();
+    } else {
+        for i in 0..(mask.shape()[0]) {
+            clip_backward_assign_inner(&mask.index_axis_mut(Index0D::new(i)), min, max);
+        }
+    }
+}
+
+impl<R: Repr, S: DimTrait, D: Device> Matrix<R, S, D> {
     pub fn clip(&self, min: R::Item, max: R::Item) -> Matrix<Owned<R::Item>, S, D> {
         let mut output = Matrix::<_, S, D>::zeros_like(self);
         let s_v = self.to_ref().into_dyn_dim();
@@ -155,11 +279,25 @@ impl<R: Repr, S: DimTrait, D: DeviceBase + ClipOps> Matrix<R, S, D> {
 
         output
     }
+
+    pub fn clip_backward_mask(&self, min: R::Item, max: R::Item) -> Matrix<Owned<R::Item>, S, D> {
+        let mut output = Matrix::<Owned<R::Item>, S, D>::zeros_like(self);
+        let s_v = self.to_ref().into_dyn_dim();
+        {
+            let mask_v = output.to_ref_mut().into_dyn_dim();
+            clip_backward_inner(&s_v, &mask_v, min, max);
+        }
+        output
+    }
 }
 
-impl<T: Num, D: DeviceBase + ClipOps> Matrix<Ref<&mut T>, DimDyn, D> {
+impl<T: Num, D: Device> Matrix<Ref<&mut T>, DimDyn, D> {
     pub fn clip_assign(&self, min: T, max: T) {
         clip_assign_inner(self, min, max);
+    }
+
+    pub fn clip_backward_assign_mask(&self, min: T, max: T) {
+        clip_backward_assign_inner(self, min, max);
     }
 }
 

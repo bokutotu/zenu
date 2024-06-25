@@ -35,6 +35,34 @@ __global__ void clip_double_assign(double* d_input, int size, int stride_in, dou
     }
 }
 
+__global__ void clip_backward_float(float* input, float* mask, float max, float min, int size, int stride_in, int stride_mask) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx < size) {
+        mask[idx * stride_mask] = (input[idx * stride_in] >= min && input[idx * stride_in] <= max) ? 1 : 0;
+    }
+}
+
+__global__ void clip_backward_double(double* input, double* mask, double max, double min, int size, int stride_in, int stride_mask) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx < size) {
+        mask[idx * stride_mask] = (input[idx * stride_in] >= min && input[idx * stride_in] <= max) ? 1 : 0;
+    }
+}
+
+__global__ void clip_backward_assign_float(float* mask, float max, float min, int size, int stride) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx < size) {
+        mask[idx * stride] = (mask[idx * stride] >= min && mask[idx * stride] <= max) ? 1 : 0;
+    }
+}
+
+__global__ void clip_backward_assign_double(double* mask, double max, double min, int size, int stride) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx < size) {
+        mask[idx * stride] = (mask[idx * stride] >= min && mask[idx * stride] <= max) ? 1 : 0;
+    }
+}
+
 #define CUDA_VEC_SCALAR_OP(op, func, assign_func, type)                                                                     \
 __global__ void vector_scalar_##func##_##type(type* vec, int size, int stride_v, type scalar, type* result, int stride_r) { \
     int idx = blockIdx.x * blockDim.x + threadIdx.x;                                                                        \
@@ -79,6 +107,48 @@ DEFINE_ARRAY_SCALAR_WRAPPER(double, mul)
 DEFINE_ARRAY_SCALAR_WRAPPER(float, div)
 DEFINE_ARRAY_SCALAR_WRAPPER(double, div)
 
+__global__ void array_powf(float* a, int size, int stride_a, float scalar, float* out, int stride_o) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx < size) {
+        out[idx * stride_o] = powf(a[idx * stride_a], scalar);
+    }
+}
+__global__ void array_powf_assign(float* a, int size, int stride, float scalar) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx < size) {
+        a[idx * stride] = powf(a[idx * stride], scalar);
+    }
+}
+__global__ void array_powd(double* a, int size, int stride_a, double scalar, double* out, int stride_o) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx < size) {
+        out[idx * stride_o] = pow(a[idx * stride_a], scalar);
+    }
+}
+__global__ void array_powd_assign(double* a, int size, int stride, double scalar) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx < size) {
+        a[idx * stride] = pow(a[idx * stride], scalar);
+    }
+}
+
+void array_pow_float(float *a, int size, int stride_a, float scalar, float *out, int stride_o) {
+    int gridSize = (size + BLOCK_SIZE - 1) / BLOCK_SIZE;
+    array_powf<<<gridSize, BLOCK_SIZE>>>(a, size, stride_a, scalar, out, stride_o);
+}
+void array_pow_assign_float(float *a, int size, int stride, float scalar) {
+    int gridSize = (size + BLOCK_SIZE - 1) / BLOCK_SIZE;
+    array_powf_assign<<<gridSize, BLOCK_SIZE>>>(a, size, stride, scalar);
+}
+void array_pow_double(double *a, int size, int stride_a, double scalar, double *out, int stride_o) {
+    int gridSize = (size + BLOCK_SIZE - 1) / BLOCK_SIZE;
+    array_powd<<<gridSize, BLOCK_SIZE>>>(a, size, stride_a, scalar, out, stride_o);
+}
+void array_pow_assign_double(double *a, int size, int stride, double scalar) {
+    int gridSize = (size + BLOCK_SIZE - 1) / BLOCK_SIZE;
+    array_powd_assign<<<gridSize, BLOCK_SIZE>>>(a, size, stride, scalar);
+}
+
 void array_clip_float(float *input, float* output, int size, int stride_in, int stride_out, float min_val, float max_val) {
     int gridSize = (size + BLOCK_SIZE - 1) / BLOCK_SIZE;
     clip_float<<<gridSize, BLOCK_SIZE>>>(input, output, size, stride_in, stride_out, min_val, max_val);
@@ -97,6 +167,26 @@ void array_clip_assign_float(float *input, int size, int stride_in, float min_va
 void array_clip_assign_double(double *input, int size, int stride_in, double min_val, double max_val) {
     int gridSize = (size + BLOCK_SIZE - 1) / BLOCK_SIZE;
     clip_double_assign<<<gridSize, BLOCK_SIZE>>>(input, size, stride_in, min_val, max_val);
+}
+
+void array_clip_backward_float(float *input, float *mask, float max, float min, int size, int stride_in, int stride_mask) {
+    int gridSize = (size + BLOCK_SIZE - 1) / BLOCK_SIZE;
+    clip_backward_float<<<gridSize, BLOCK_SIZE>>>(input, mask, max, min, size, stride_in, stride_mask);
+}
+
+void array_clip_backward_double(double *input, double *mask, double max, double min, int size, int stride_in, int stride_mask) {
+    int gridSize = (size + BLOCK_SIZE - 1) / BLOCK_SIZE;
+    clip_backward_double<<<gridSize, BLOCK_SIZE>>>(input, mask, max, min, size, stride_in, stride_mask);
+}
+
+void array_clip_backward_assign_float(float *mask, float max, float min, int size, int stride) {
+    int gridSize = (size + BLOCK_SIZE - 1) / BLOCK_SIZE;
+    clip_backward_assign_float<<<gridSize, BLOCK_SIZE>>>(mask, max, min, size, stride);
+}
+
+void array_clip_backward_assign_double(double *mask, double max, double min, int size, int stride) {
+    int gridSize = (size + BLOCK_SIZE - 1) / BLOCK_SIZE;
+    clip_backward_assign_double<<<gridSize, BLOCK_SIZE>>>(mask, max, min, size, stride);
 }
 
 #define CUDA_VEC_FUNC(func, type)                                                                                  \

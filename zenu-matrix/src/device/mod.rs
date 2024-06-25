@@ -1,10 +1,11 @@
 use crate::{
+    nn::{batch_norm::BatchNormalization, conv2d::Conv2d},
     num::Num,
     operation::{
         asum::Asum,
         basic_operations::{
             AbsOps, AcosOps, AddOps, AsinOps, AtanOps, CosOps, CoshOps, DivOps, ExpOps, LogOps,
-            MulOps, SinOps, SinhOps, SqrtOps, SubOps, TanOps, TanhOps,
+            MulOps, PowOws, SinOps, SinhOps, SqrtOps, SubOps, TanOps, TanhOps,
         },
         clip::ClipOps,
         copy_from::CopyBlas,
@@ -52,6 +53,10 @@ pub trait Device:
     + MaxIdx
     + ReluOps
     + Gemm
+    + PowOws
+    + BatchNormalization
+    + Conv2d
+    + Sized
     + 'static
 {
 }
