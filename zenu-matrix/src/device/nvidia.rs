@@ -1,7 +1,7 @@
 use super::{Device, DeviceBase};
 use crate::num::Num;
 
-#[derive(Copy, Clone, Default)]
+#[derive(Copy, Clone, Default, Debug)]
 pub struct Nvidia;
 
 impl DeviceBase for Nvidia {

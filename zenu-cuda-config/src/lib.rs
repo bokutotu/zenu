@@ -23,6 +23,7 @@ pub fn find_cuda() -> Vec<PathBuf> {
     let mut candidates = read_env();
     candidates.push(PathBuf::from("/opt/cuda"));
     candidates.push(PathBuf::from("/usr/local/cuda"));
+    candidates.push(PathBuf::from("/lib"));
     for e in glob("/usr/local/cuda-*").unwrap().flatten() {
         candidates.push(e);
     }
@@ -35,6 +36,7 @@ pub fn find_cuda() -> Vec<PathBuf> {
             valid_paths.push(lib.join("stubs"));
         }
         let base = base.join("targets/x86_64-linux");
+        let base = base.join("x86_64-linux");
         let header = base.join("include/cuda.h");
         if header.is_file() {
             valid_paths.push(base.join("lib"));

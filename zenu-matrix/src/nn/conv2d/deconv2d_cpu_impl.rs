@@ -1,16 +1,9 @@
-use zenu_matrix::{
-    constructor::zeros::Zeros,
+use crate::{
+    device::Device,
     dim::DimDyn,
-    matrix::{MatrixBase, ToViewMatrix, ToViewMutMatrix},
-    matrix_impl::{Matrix, OwnedMatrixDyn},
-    memory_impl::{OwnedMem, ViewMem},
+    matrix::{Matrix, Owned, Ref},
     num::Num,
-    operation::{
-        basic_operations::MatrixAddAssign,
-        mul::Gemm,
-        reshape::Reshape,
-        transpose::{Transpose, TransposeInplace},
-    },
+    operation::mul::matmul,
 };
 
 use super::col2im::col2im;
@@ -19,30 +12,30 @@ pub(super) fn get_deconv_outsize_(size: usize, k: usize, s: usize, p: usize) -> 
     s * (size - 1) + k - 2 * p
 }
 
-pub(super) fn deconv2d_out_size(
-    img_shape: &[usize],
-    kernel_shape: &[usize],
-    padding: (usize, usize),
-    stride: (usize, usize),
-) -> [usize; 4] {
-    let (b, h, w) = (img_shape[0], img_shape[2], img_shape[3]);
-    let (ic, kh, kw) = (kernel_shape[1], kernel_shape[2], kernel_shape[3]);
-    let (ph, pw) = padding;
-    let (sh, sw) = stride;
-    let (h, w) = (
-        get_deconv_outsize_(h, kh, sh, ph),
-        get_deconv_outsize_(w, kw, sw, pw),
-    );
-    [b, ic, h, w]
-}
+// pub(super) fn deconv2d_out_size(
+//     img_shape: &[usize],
+//     kernel_shape: &[usize],
+//     padding: (usize, usize),
+//     stride: (usize, usize),
+// ) -> [usize; 4] {
+//     let (b, h, w) = (img_shape[0], img_shape[2], img_shape[3]);
+//     let (ic, kh, kw) = (kernel_shape[1], kernel_shape[2], kernel_shape[3]);
+//     let (ph, pw) = padding;
+//     let (sh, sw) = stride;
+//     let (h, w) = (
+//         get_deconv_outsize_(h, kh, sh, ph),
+//         get_deconv_outsize_(w, kw, sw, pw),
+//     );
+//     [b, ic, h, w]
+// }
 
-pub(crate) fn deconv2d_inner<T: Num>(
-    img: Matrix<ViewMem<T>, DimDyn>,
-    kernel: Matrix<ViewMem<T>, DimDyn>,
-    bias: Option<Matrix<OwnedMem<T>, DimDyn>>,
+pub(crate) fn deconv2d_inner<T: Num, D: Device>(
+    img: Matrix<Ref<&T>, DimDyn, D>,
+    kernel: Matrix<Ref<&T>, DimDyn, D>,
+    bias: Option<Matrix<Ref<&T>, DimDyn, D>>,
     padding: (usize, usize),
     stride: (usize, usize),
-) -> Matrix<OwnedMem<T>, DimDyn> {
+) -> Matrix<Owned<T>, DimDyn, D> {
     let (batch_size, c, h, w) = (
         img.shape()[0],
         img.shape()[1],
@@ -64,37 +57,39 @@ pub(crate) fn deconv2d_inner<T: Num>(
         get_deconv_outsize_(w, kw, sw, pw),
     );
 
-    let img = img.transpose_by_index_inplace(&[1, 0, 2, 3]);
-    let img = img.reshape([c, batch_size * h * w]);
+    let img = img.transpose_by_index_new_matrix(&[1, 0, 2, 3]);
+    let img = img.reshape_no_alloc_owned([c, batch_size * h * w]);
 
     let mut kernel = kernel.reshape([oc, ic * kh * kw]);
     kernel.transpose();
 
-    let mut col = OwnedMatrixDyn::zeros([ic * kh * kw, batch_size * h * w]);
-    col.to_view_mut().gemm(kernel.to_view(), img.to_view());
+    let col = matmul(&kernel, &img);
 
     let col = col.reshape([ic, kh, kw, batch_size, h, w]);
-    let col = col.transpose_by_index_inplace(&[3, 0, 1, 2, 4, 5]);
+    let col = col.transpose_by_index_new_matrix(&[3, 0, 1, 2, 4, 5]);
 
     let mut result = col2im(
-        col.to_view(),
+        col.to_ref(),
         [batch_size, ic, out_h, out_w],
         (kh, kw),
         stride,
         padding,
     );
     if let Some(bias) = bias {
-        result.add_assign(bias.to_view());
+        result += bias;
     }
     result
 }
 
 #[cfg(test)]
 mod deconv2d {
-    use zenu_matrix::{
-        matrix::{OwnedMatrix, ToViewMatrix},
-        matrix_impl::OwnedMatrixDyn,
-        operation::asum::Asum,
+
+    use zenu_test::assert_mat_eq_epsilon;
+
+    use crate::{
+        device::cpu::Cpu,
+        dim::DimDyn,
+        matrix::{Matrix, Owned},
     };
 
     use super::deconv2d_inner;
@@ -102,10 +97,10 @@ mod deconv2d {
     #[test]
     fn deconv2d_3x5x5_img_3x3_kernel_2x2_stride_1x1_padding() {
         let input = (1..=150).map(|x| x as f32).collect::<Vec<f32>>();
-        let input = OwnedMatrixDyn::from_vec(input, [2, 3, 5, 5]);
+        let input = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(input, [2, 3, 5, 5]);
         let kernel = (1..=108).map(|x| x as f32).collect::<Vec<f32>>();
-        let kernel = OwnedMatrixDyn::from_vec(kernel, [3, 4, 3, 3]);
-        let output = deconv2d_inner(input.to_view(), kernel.to_view(), None, (1, 1), (2, 2));
+        let kernel = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(kernel, [3, 4, 3, 3]);
+        let output = deconv2d_inner(input.to_ref(), kernel.to_ref(), None, (1, 1), (2, 2));
         let ans = vec![
             4998, 10116, 5121, 10362, 5244, 10608, 5367, 10854, 5490, 10566, 21372, 10812, 21864,
             11058, 22356, 11304, 22848, 11550, 5613, 11346, 5736, 11592, 5859, 11838, 5982, 12084,
@@ -164,8 +159,9 @@ mod deconv2d {
         .into_iter()
         .map(|x| x as f32)
         .collect::<Vec<f32>>();
-        let ans = OwnedMatrixDyn::from_vec(ans, [2, 4, 9, 9]);
-        assert!((output - ans).asum() < 1e-6);
+        let ans = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(ans, [2, 4, 9, 9]);
+        // assert!((output - ans).asum() < 1e-6);
+        assert_mat_eq_epsilon!(ans, output, 1e-6);
     }
 
     #[test]
@@ -322,7 +318,7 @@ mod deconv2d {
             0.25454995036125183,
             0.2409011423587799,
         ];
-        let input = OwnedMatrixDyn::from_vec(input, [2, 3, 5, 5]);
+        let input = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(input, [2, 3, 5, 5]);
         let kernel = vec![
             1.1547038555145264,
             -0.10836013406515121,
@@ -433,7 +429,7 @@ mod deconv2d {
             -0.39101871848106384,
             -0.09957949072122574,
         ];
-        let kernel = OwnedMatrixDyn::from_vec(kernel, [3, 4, 3, 3]);
+        let kernel = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(kernel, [3, 4, 3, 3]);
         let ans = vec![
             1.678853988647461,
             0.2929646372795105,
@@ -636,8 +632,8 @@ mod deconv2d {
             7.557313442230225,
             -4.132973670959473,
         ];
-        let ans = OwnedMatrixDyn::from_vec(ans, [2, 4, 5, 5]);
-        let pred = deconv2d_inner(input.to_view(), kernel.to_view(), None, (1, 1), (1, 1));
-        assert!((pred - ans).asum() < 5e-5);
+        let ans = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(ans, [2, 4, 5, 5]);
+        let pred = deconv2d_inner(input.to_ref(), kernel.to_ref(), None, (1, 1), (1, 1));
+        assert_mat_eq_epsilon!(ans, pred, 1e-6);
     }
 }

@@ -16,7 +16,7 @@ use lazy_static::lazy_static;
 use zenu_matrix::{
     device::Device,
     dim::DimDyn,
-    matrix::{Matrix, Owned},
+    matrix::{Matrix, Owned, Repr},
     num::Num,
 };
 
@@ -249,7 +249,8 @@ impl<T: Num, D: Device> From<Matrix<Owned<T>, DimDyn, D>> for Variable<T, D> {
 }
 
 impl<T: Num, D: Device> Variable<T, D> {
-    pub fn new(data: Matrix<Owned<T>, DimDyn, D>) -> Self {
+    pub fn new<R: Repr<Item = T>>(data: Matrix<R, DimDyn, D>) -> Self {
+        let data = data.new_matrix();
         Variable {
             inner: Rc::new(RefCell::new(VariableInner::new(data))),
         }
@@ -359,6 +360,10 @@ impl<T: Num, D: Device> Variable<T, D> {
     pub fn get_all_trainable_variables(&self) -> Vec<Variable<T, D>> {
         self.inner.borrow().get_all_trainable_variables()
     }
+
+    pub fn get_shape(&self) -> DimDyn {
+        self.get_data().shape()
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -374,30 +379,30 @@ impl<T: Num, D: Device> VariableWeak<T, D> {
 
 impl<T: Num, D: Device> Debug for Variable<T, D> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let inner = self.get_data().clone();
-        write!(f, "Variable {{ data: {:?} }}", inner)?;
+        let inner = self.get_data();
+        write!(f, "Variable {{ data: \n{:?} }}", inner)?;
         Ok(())
     }
 }
 
 impl<T: Num, D: Device> Display for Variable<T, D> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let inner = self.get_data().clone();
-        write!(f, "Variable {{ data: {:?} }}", inner)?;
+        let inner = self.get_data();
+        write!(f, "Variable {{ data: \n{:?} }}", inner)?;
         Ok(())
     }
 }
 
 impl<T: Num, D: Device> Debug for VariableInner<T, D> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "VariableInner {{ data: {:?} }}", self.data)?;
+        write!(f, "VariableInner {{ data: \n{:?} }}", self.data)?;
         Ok(())
     }
 }
 
 impl<T: Num, D: Device> Display for VariableInner<T, D> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "VariableInner {{ data: {:?} }}", self.data)?;
+        write!(f, "VariableInner {{ data: \n{:?} }}", self.data)?;
         Ok(())
     }
 }

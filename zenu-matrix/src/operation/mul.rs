@@ -219,17 +219,34 @@ pub fn gemm_assign<T, D, RA, RB, SA, SB, SC>(
     SC: DimTrait,
 {
     if let Ok(()) = gemm_shape_check(a.shape_stride(), b.shape_stride(), c.shape_stride()) {
+        let transa = if a.shape_stride().is_transposed() {
+            BlasTrans::Ordinary
+        } else {
+            BlasTrans::None
+        };
+        let transb = if b.shape_stride().is_transposed() {
+            BlasTrans::Ordinary
+        } else {
+            BlasTrans::None
+        };
+        let get_lead_dim = |stride: &[usize], trans: BlasTrans| match trans {
+            BlasTrans::None => stride[0],
+            BlasTrans::Ordinary => stride[1],
+            _ => unreachable!(),
+        };
+        let lda = get_lead_dim(a.stride().slice(), transa);
+        let ldb = get_lead_dim(b.stride().slice(), transb);
         D::gemm_unchecked(
-            BlasTrans::None,
-            BlasTrans::None,
+            transa,
+            transb,
             c.shape()[0],
             c.shape()[1],
             a.shape()[1],
             alpha,
             a.as_ptr(),
-            a.stride()[0],
+            lda,
             b.as_ptr(),
-            b.stride()[0],
+            ldb,
             beta,
             c.as_mut_ptr(),
             c.stride()[0],
@@ -257,6 +274,21 @@ where
     let mut c = Matrix::<_, DimDyn, D>::zeros(c_shape);
     gemm_assign(a, b, &c.to_ref_mut(), alpha, beta);
     c
+}
+
+pub fn matmul<T, D, RA, RB, SA, SB>(
+    a: &Matrix<RA, SA, D>,
+    b: &Matrix<RB, SB, D>,
+) -> Matrix<Owned<T>, DimDyn, D>
+where
+    T: Num,
+    D: Device,
+    RA: Repr<Item = T>,
+    RB: Repr<Item = T>,
+    SA: DimTrait,
+    SB: DimTrait,
+{
+    gemm(a, b, T::one(), T::zero())
 }
 
 #[cfg(test)]

@@ -3,3 +3,4 @@ Cargo.lock
 *ccls*
 *bindings.rs
 .DS_Store
+.bash_history

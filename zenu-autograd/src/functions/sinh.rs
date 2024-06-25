@@ -64,25 +64,25 @@ mod sinh {
         let x = from_vec(vec![1., 2., 3., 4., 5., 6.], [6]);
         let y = sinh(x.clone());
         y.backward();
-        let y_ans: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(
+        let y_ans: Matrix<Owned<f64>, DimDyn, D> = Matrix::from_vec(
             vec![
-                1_f32.sinh(),
-                2_f32.sinh(),
-                3_f32.sinh(),
-                4_f32.sinh(),
-                5_f32.sinh(),
-                6_f32.sinh(),
+                1_f64.sinh(),
+                2_f64.sinh(),
+                3_f64.sinh(),
+                4_f64.sinh(),
+                5_f64.sinh(),
+                6_f64.sinh(),
             ],
             [6],
         );
-        let x_ans: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(
+        let x_ans: Matrix<Owned<f64>, DimDyn, D> = Matrix::from_vec(
             vec![
-                1_f32.cosh(),
-                2_f32.cosh(),
-                3_f32.cosh(),
-                4_f32.cosh(),
-                5_f32.cosh(),
-                6_f32.cosh(),
+                1_f64.cosh(),
+                2_f64.cosh(),
+                3_f64.cosh(),
+                4_f64.cosh(),
+                5_f64.cosh(),
+                6_f64.cosh(),
             ],
             [6],
         );
@@ -98,37 +98,37 @@ mod sinh {
         );
         let y = sinh(x.clone());
         y.backward();
-        let y_ans: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(
+        let y_ans: Matrix<Owned<f64>, DimDyn, D> = Matrix::from_vec(
             vec![
-                1_f32.sinh(),
-                2_f32.sinh(),
-                3_f32.sinh(),
-                4_f32.sinh(),
-                5_f32.sinh(),
-                6_f32.sinh(),
-                7_f32.sinh(),
-                8_f32.sinh(),
-                9_f32.sinh(),
-                10_f32.sinh(),
-                11_f32.sinh(),
-                12_f32.sinh(),
+                1_f64.sinh(),
+                2_f64.sinh(),
+                3_f64.sinh(),
+                4_f64.sinh(),
+                5_f64.sinh(),
+                6_f64.sinh(),
+                7_f64.sinh(),
+                8_f64.sinh(),
+                9_f64.sinh(),
+                10_f64.sinh(),
+                11_f64.sinh(),
+                12_f64.sinh(),
             ],
             [3, 4],
         );
-        let x_grad_ans: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(
+        let x_grad_ans: Matrix<Owned<f64>, DimDyn, D> = Matrix::from_vec(
             vec![
-                1_f32.cosh(),
-                2_f32.cosh(),
-                3_f32.cosh(),
-                4_f32.cosh(),
-                5_f32.cosh(),
-                6_f32.cosh(),
-                7_f32.cosh(),
-                8_f32.cosh(),
-                9_f32.cosh(),
-                10_f32.cosh(),
-                11_f32.cosh(),
-                12_f32.cosh(),
+                1_f64.cosh(),
+                2_f64.cosh(),
+                3_f64.cosh(),
+                4_f64.cosh(),
+                5_f64.cosh(),
+                6_f64.cosh(),
+                7_f64.cosh(),
+                8_f64.cosh(),
+                9_f64.cosh(),
+                10_f64.cosh(),
+                11_f64.cosh(),
+                12_f64.cosh(),
             ],
             [3, 4],
         );
