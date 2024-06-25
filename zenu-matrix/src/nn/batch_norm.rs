@@ -174,7 +174,7 @@ impl BatchNormalization for Nvidia {
     ) {
         let momentum = 1. - momentum;
         let batch_norm = match device_batch_norm {
-            Some(ref batch_norm) => batch_norm.device_batch_norm,
+            Some(ref batch_norm) => &batch_norm.device_batch_norm,
             None => &create_batch_norm_gpu::<T>(x.shape()),
         };
         let saving_mean = match saving_mean {
@@ -214,7 +214,7 @@ impl BatchNormalization for Nvidia {
         device_batch_norm_backward: &Option<BatchNorm2dBackwardConfig<T>>,
     ) {
         let batch_norm_backward = match device_batch_norm_backward {
-            Some(ref batch_norm_backward) => batch_norm_backward.device_batch_norm_backward,
+            Some(ref batch_norm_backward) => &batch_norm_backward.device_batch_norm_backward,
             None => &create_batch_norm_backward_gpu::<T>(x.shape()),
         };
         let saving_mean = match saving_mean {
@@ -253,7 +253,7 @@ impl BatchNormalization for Nvidia {
         device_batch_norm_inference: &Option<BatchNorm2dInferenceConfig<T>>,
     ) {
         let batch_norm_inference = match device_batch_norm_inference {
-            Some(ref batch_norm_inference) => batch_norm_inference.device_batch_norm_inference,
+            Some(ref batch_norm_inference) => &batch_norm_inference.device_batch_norm_inference,
             None => &create_batch_norm_inference_gpu::<T>(x.shape()),
         };
         batch_norm_inference

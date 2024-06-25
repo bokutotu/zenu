@@ -122,9 +122,9 @@ fn convolution_backward_data_algorithm(
         let state = cudnnGetConvolutionBackwardDataAlgorithm_v7(
             handle.as_ptr(),
             filter,
-            input,
-            conv,
             output,
+            conv,
+            input,
             requested_algo_count as i32,
             &mut returned_algo_count as *mut i32,
             algorithm.as_mut_ptr() as *mut cudnnConvolutionBwdDataAlgoPerf_t,
@@ -552,7 +552,7 @@ macro_rules! impl_convolution {
                 let conv = self.conv.unwrap();
                 let output = self.output.unwrap();
                 let algorithm = self.algorithm.unwrap();
-                let workspace = dbg!($workspace(input, filter, conv, output, algorithm))?;
+                let workspace = $workspace(input, filter, conv, output, algorithm)?;
                 Ok($desc_name {
                     input,
                     filter,
@@ -863,58 +863,39 @@ mod cudnn {
         assert_eq!(filter_cpu, ans);
     }
 
-    fn vec_to_cuda(v: Vec<f32>) -> *mut f32 {
-        let ptr = cuda_malloc::<f32>(v.len()).unwrap();
-        cuda_copy(ptr, v.as_ptr(), v.len(), ZenuCudaMemCopyKind::HostToDevice).unwrap();
-        ptr
-    }
+    // fn vec_to_cuda(v: Vec<f32>) -> *mut f32 {
+    //     let ptr = cuda_malloc::<f32>(v.len()).unwrap();
+    //     cuda_copy(ptr, v.as_ptr(), v.len(), ZenuCudaMemCopyKind::HostToDevice).unwrap();
+    //     ptr
+    // }
 
     #[test]
     fn hoge() {
-        // let input = vec![1.0; (2 * 4 * 5 * 5)];
-        // let input = vec_to_cuda(input);
-        // let conv_bkwd_data = ConvolutionBackwardDataBuilder::default()
-        //     .input::<f32>(2, 4, 5, 5, TensorFormat::NCHW)
-        //     .unwrap()
-        //     .filter::<f32>(3, 4, 3, 3, TensorFormat::NCHW)
-        //     .unwrap()
-        //     .conv(1, 1, 1, 1, 1, 1)
-        //     .unwrap()
-        //     .output::<f32>(2, 3, 5, 5, TensorFormat::NCHW)
-        //     .unwrap()
-        //     .algorithm(1)
-        //     .unwrap()
-        //     .build()
-        //     .unwrap();
-        let n = 2;
-        let c = 3;
-        let h = 5;
-        let w = 5;
-        let k = 4;
-        let kh = 3;
-        let kw = 3;
-        let pad_h = 1;
-        let pad_w = 1;
-        let stride_h = 1;
-        let stride_w = 1;
-
-        // 畳み込み後の出力テンソルのサイズ
-        let out_h = dbg!((h + 2 * pad_h - kh) / stride_h + 1);
-        let out_w = dbg!((w + 2 * pad_w - kw) / stride_w + 1);
-
-        let conv = ConvolutionBackwardDataBuilder::default()
-            .input::<f32>(n, c, out_h, out_w, TensorFormat::NCHW)
+        let _conv = ConvolutionBuilder::default()
+            .input::<f32>(2, 3, 5, 5, TensorFormat::NCHW) // 出力テンソル
             .unwrap()
-            .filter::<f32>(c, k, kh, kw, TensorFormat::NCHW)
+            .filter::<f32>(4, 3, 3, 3, TensorFormat::NCHW) // フィルター
             .unwrap()
-            .conv(pad_h, pad_w, stride_h, stride_w, 1, 1)
+            .conv(1, 1, 1, 1, 1, 1)
             .unwrap()
-            .output::<f32>(n, k, h, w, TensorFormat::NCHW) // ここで出力テンソルのサイズを変更
+            .output::<f32>(2, 4, 5, 5, TensorFormat::NCHW) // 入力テンソル
             .unwrap()
             .algorithm(5)
             .unwrap()
             .build()
             .unwrap();
-        panic!();
+        let _deconv = ConvolutionBackwardDataBuilder::default()
+            .input::<f32>(2, 3, 5, 5, TensorFormat::NCHW) // 出力テンソル
+            .unwrap()
+            .filter::<f32>(4, 3, 3, 3, TensorFormat::NCHW) // フィルター
+            .unwrap()
+            .conv(1, 1, 1, 1, 1, 1)
+            .unwrap()
+            .output::<f32>(2, 4, 5, 5, TensorFormat::NCHW) // 入力テンソル
+            .unwrap()
+            .algorithm(5)
+            .unwrap()
+            .build()
+            .unwrap();
     }
 }
