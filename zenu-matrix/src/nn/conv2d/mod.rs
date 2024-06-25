@@ -369,8 +369,8 @@ impl Conv2d for Nvidia {
         let config = match config {
             Some(config) => config.conv,
             None => create_conv_bckwd_filter::<T>(
-                dy.shape(),
                 input.shape(),
+                dy.shape(),
                 df.shape(),
                 pad_h,
                 pad_w,
@@ -549,7 +549,6 @@ mod conv2d {
         );
         assert_mat_eq_epsilon!(input_grad, test_case.input_grad, 1e-4);
 
-        println!("here");
         let filter_grad = conv2d_bckwd_filter(
             test_case.input.to_ref(),
             test_case.output_grad.to_ref(),
