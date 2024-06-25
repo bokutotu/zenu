@@ -863,12 +863,6 @@ mod cudnn {
         assert_eq!(filter_cpu, ans);
     }
 
-    // fn vec_to_cuda(v: Vec<f32>) -> *mut f32 {
-    //     let ptr = cuda_malloc::<f32>(v.len()).unwrap();
-    //     cuda_copy(ptr, v.as_ptr(), v.len(), ZenuCudaMemCopyKind::HostToDevice).unwrap();
-    //     ptr
-    // }
-
     #[test]
     fn hoge() {
         let _conv = ConvolutionBuilder::default()
