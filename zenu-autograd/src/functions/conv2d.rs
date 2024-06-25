@@ -310,6 +310,7 @@ mod conv2d {
         let output_ans = Matrix::<Owned<f32>, DimDyn, D>::from_vec(output_ans, [2, 4, 5, 5]);
         assert_val_eq!(output.clone(), output_ans, 1e-6);
 
+        println!("here");
         output.backward();
 
         let kernel_grad_ans = vec![

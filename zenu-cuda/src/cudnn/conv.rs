@@ -196,7 +196,7 @@ fn convolution_workspace(
             &mut workspace_size as *mut usize,
         );
         if status != cudnnStatus_t::CUDNN_STATUS_SUCCESS {
-            panic!("Failed to get convolution forward workspace size");
+            return Err(ZenuCudnnError::from(status));
         }
         Ok(Workspace::new(workspace_size))
     }
@@ -885,6 +885,19 @@ mod cudnn {
             .build()
             .unwrap();
         let _deconv = ConvolutionBackwardDataBuilder::default()
+            .input::<f32>(2, 3, 5, 5, TensorFormat::NCHW) // 出力テンソル
+            .unwrap()
+            .filter::<f32>(4, 3, 3, 3, TensorFormat::NCHW) // フィルター
+            .unwrap()
+            .conv(1, 1, 1, 1, 1, 1)
+            .unwrap()
+            .output::<f32>(2, 4, 5, 5, TensorFormat::NCHW) // 入力テンソル
+            .unwrap()
+            .algorithm(5)
+            .unwrap()
+            .build()
+            .unwrap();
+        let _bkwd_filter = ConvolutionBackwardFilterBuilder::default()
             .input::<f32>(2, 3, 5, 5, TensorFormat::NCHW) // 出力テンソル
             .unwrap()
             .filter::<f32>(4, 3, 3, 3, TensorFormat::NCHW) // フィルター
