@@ -69,6 +69,7 @@ impl<T: Num, D: Device> Layer<T, D> for BatchNorm2d<T, D> {
 }
 
 impl<T: Num, D: Device> BatchNorm2d<T, D> {
+    #[must_use]
     pub fn new(input_shape: DimDyn, momentum: f64) -> Self {
         let scale = ones([input_shape[1]]);
         let bias = zeros([input_shape[1]]);

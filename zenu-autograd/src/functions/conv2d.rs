@@ -65,15 +65,15 @@ impl<T: Num> Conv2dConfigs<T> {
         }
     }
 
-    pub fn get_conv2d_forward<'a>(&'a self) -> &'a Conv2dConfig<T> {
+    pub fn get_conv2d_forward(&self) -> &Conv2dConfig<T> {
         &self.inner.conv2d_forward
     }
 
-    pub fn get_deconv2d<'a>(&'a self) -> &'a Conv2dBckwdDataConfig<T> {
+    pub fn get_deconv2d(&self) -> &Conv2dBckwdDataConfig<T> {
         &self.inner.deconv2d
     }
 
-    pub fn get_conv2d_bkwdfilter<'a>(&'a self) -> &'a Conv2dBckwdFilterConfig<T> {
+    pub fn get_conv2d_bkwdfilter(&self) -> &Conv2dBckwdFilterConfig<T> {
         &self.inner.conv2d_bkwdfilter
     }
 }

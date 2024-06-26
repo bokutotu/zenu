@@ -53,11 +53,12 @@ impl<T: Num, D: Device> Layer<T, D> for Conv2d<T, D> {
         assert_eq!(filter_shape.len(), 4);
         assert_eq!(input_shape[1], filter_shape[1]);
         assert_eq!(input_shape[2], filter_shape[2]);
-        assert_eq!(filter_shape[0], bias_shape.map(|b| b[0]).unwrap_or(1));
+        assert_eq!(filter_shape[0], bias_shape.map_or(1, |b| b[0]));
     }
 }
 
 impl<T: Num, D: Device> Conv2d<T, D> {
+    #[must_use]
     pub fn new(
         input_channel: usize,
         output_channel: usize,
