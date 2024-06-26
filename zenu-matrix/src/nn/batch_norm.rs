@@ -122,6 +122,7 @@ fn create_batch_norm_inference_gpu<T: Num>(input: DimDyn) -> BatchNorm2dInferenc
 }
 
 pub trait BatchNormalization: DeviceBase {
+    #[allow(clippy::too_many_arguments)]
     fn batch_norm_2d_forward_train<T: Num>(
         momentum: f64,
         x: Matrix<Ref<&T>, DimDyn, Self>,
@@ -135,6 +136,7 @@ pub trait BatchNormalization: DeviceBase {
         device_batch_norm: &Option<BatchNorm2dConfig<T>>,
     );
 
+    #[allow(clippy::too_many_arguments)]
     fn batch_norm_2d_backward<T: Num>(
         x: Matrix<Ref<&T>, DimDyn, Self>,
         y_grad: Matrix<Ref<&T>, DimDyn, Self>,
@@ -290,7 +292,7 @@ impl BatchNormalization for Cpu {
         let n = x_shape[0] * x_shape[2] * x_shape[3];
         let c = x_shape[1];
         let x_transposed = x.transpose_by_index_new_matrix(&[0, 2, 3, 1]);
-        let x_reshaped = x_transposed.reshape(&[n, c]);
+        let x_reshaped = x_transposed.reshape([n, c]);
 
         let num_elements = T::from_usize(x_reshaped.shape()[0]);
 
@@ -317,7 +319,7 @@ impl BatchNormalization for Cpu {
 
         let x_normalized = &x_diff * &inv_std;
         let y_tmp = &x_normalized * &scale + &bias;
-        let y_transposed = y_tmp.reshape(&[x_shape[0], x_shape[2], x_shape[3], x_shape[1]]);
+        let y_transposed = y_tmp.reshape([x_shape[0], x_shape[2], x_shape[3], x_shape[1]]);
         y.copy_from(&y_transposed.transpose_by_index_new_matrix(&[0, 3, 1, 2]));
     }
 
@@ -339,10 +341,10 @@ impl BatchNormalization for Cpu {
 
         // Transpose and reshape x and y_grad for easier manipulation
         let x_transposed = x.transpose_by_index_new_matrix(&[0, 2, 3, 1]);
-        let x_reshaped = x_transposed.reshape(&[n, c]);
+        let x_reshaped = x_transposed.reshape([n, c]);
 
         let y_grad_transposed = y_grad.transpose_by_index_new_matrix(&[0, 2, 3, 1]);
-        let y_grad_reshaped = y_grad_transposed.reshape(&[n, c]);
+        let y_grad_reshaped = y_grad_transposed.reshape([n, c]);
 
         let mean = if let Some(ref mean_mat) = saving_mean {
             mean_mat.new_matrix()
@@ -377,7 +379,7 @@ impl BatchNormalization for Cpu {
         let x_grad_reshaped = term1 - term2 - term3;
 
         let x_grad_transposed =
-            x_grad_reshaped.reshape(&[x_shape[0], x_shape[2], x_shape[3], x_shape[1]]);
+            x_grad_reshaped.reshape([x_shape[0], x_shape[2], x_shape[3], x_shape[1]]);
 
         x_grad.copy_from(&x_grad_transposed.transpose_by_index_new_matrix(&[0, 3, 1, 2]));
     }
@@ -398,7 +400,7 @@ impl BatchNormalization for Cpu {
 
         // Transpose and reshape x and y_grad for easier manipulation
         let x_transposed = x.transpose_by_index_new_matrix(&[0, 2, 3, 1]);
-        let x_reshaped = x_transposed.reshape(&[n, c]);
+        let x_reshaped = x_transposed.reshape([n, c]);
 
         let mean = mean.to_ref();
         let inv_std = Matrix::<_, DimDyn, _>::ones(variance.shape()) / (&variance + epsilon).sqrt();
@@ -407,11 +409,12 @@ impl BatchNormalization for Cpu {
         let x_hat = &x_centered * &inv_std;
 
         let y_tmp = &x_hat * &scale + &bias;
-        let y_transposed = y_tmp.reshape(&[x_shape[0], x_shape[2], x_shape[3], x_shape[1]]);
+        let y_transposed = y_tmp.reshape([x_shape[0], x_shape[2], x_shape[3], x_shape[1]]);
         y.copy_from(&y_transposed.transpose_by_index_new_matrix(&[0, 3, 1, 2]));
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn batch_norm_2d_shape_check(
     x: DimDyn,
     y: DimDyn,
@@ -477,6 +480,7 @@ fn batch_norm_2d_shape_check(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 fn batch_norm_2d_backward_shape_check(
     x: DimDyn,
     y_grad: DimDyn,
@@ -536,6 +540,7 @@ fn batch_norm_2d_backward_shape_check(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn try_batch_norm_2d_forward_trian<T: Num, D: Device>(
     momentum: f64,
     x: Matrix<Ref<&T>, DimDyn, D>,
@@ -557,7 +562,7 @@ pub fn try_batch_norm_2d_forward_trian<T: Num, D: Device>(
     let saving_mean_shape = saving_mean.as_ref().map(|x| x.shape());
     let saving_inv_variance_shape = saving_inv_variance.as_ref().map(|x| x.shape());
 
-    if let Err(e) = batch_norm_2d_shape_check(
+    batch_norm_2d_shape_check(
         x_shape,
         y_shape,
         scale_shape,
@@ -566,9 +571,7 @@ pub fn try_batch_norm_2d_forward_trian<T: Num, D: Device>(
         variance_shape,
         saving_mean_shape,
         saving_inv_variance_shape,
-    ) {
-        return Err(e);
-    }
+    )?;
 
     D::batch_norm_2d_forward_train(
         momentum,
@@ -602,7 +605,7 @@ pub fn try_batch_norm_2d_forward_inference<T: Num, D: Device>(
     let mean_shape = mean.shape();
     let variance_shape = variance.shape();
 
-    if let Err(e) = batch_norm_2d_shape_check(
+    batch_norm_2d_shape_check(
         x_shape,
         y_shape,
         scale_shape,
@@ -611,9 +614,7 @@ pub fn try_batch_norm_2d_forward_inference<T: Num, D: Device>(
         variance_shape,
         None,
         None,
-    ) {
-        return Err(e);
-    }
+    )?;
 
     D::bach_norm_2d_forward_inference(
         x,
@@ -628,6 +629,7 @@ pub fn try_batch_norm_2d_forward_inference<T: Num, D: Device>(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn try_batch_norm_2d_backward<T: Num, D: Device>(
     x: Matrix<Ref<&T>, DimDyn, D>,
     y_grad: Matrix<Ref<&T>, DimDyn, D>,
@@ -648,7 +650,7 @@ pub fn try_batch_norm_2d_backward<T: Num, D: Device>(
     let saving_mean_shape = saving_mean.as_ref().map(|x| x.shape());
     let saving_inv_variance_shape = saving_inv_variance.as_ref().map(|x| x.shape());
 
-    if let Err(e) = batch_norm_2d_backward_shape_check(
+    batch_norm_2d_backward_shape_check(
         x_shape,
         y_grad_shape,
         x_grad_shape,
@@ -657,9 +659,7 @@ pub fn try_batch_norm_2d_backward<T: Num, D: Device>(
         bias_grad_shape,
         saving_mean_shape,
         saving_inv_variance_shape,
-    ) {
-        return Err(e);
-    }
+    )?;
 
     D::batch_norm_2d_backward(
         x,
@@ -676,6 +676,7 @@ pub fn try_batch_norm_2d_backward<T: Num, D: Device>(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn batch_norm_2d_forward_train<T: Num, D: Device>(
     momentum: f64,
     x: Matrix<Ref<&T>, DimDyn, D>,
@@ -724,6 +725,7 @@ pub fn batch_norm_2d_forward_inference<T: Num, D: Device>(
     .unwrap();
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn batch_norm_2d_backward<T: Num, D: Device>(
     x: Matrix<Ref<&T>, DimDyn, D>,
     y_grad: Matrix<Ref<&T>, DimDyn, D>,
