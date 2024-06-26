@@ -175,7 +175,7 @@ pub trait Conv2d: DeviceBase {
         stride_w: usize,
         dilation_h: usize,
         dilation_w: usize,
-        config: Option<Conv2dConfig<T>>,
+        config: Option<&Conv2dConfig<T>>,
     );
 
     #[allow(clippy::too_many_arguments)]
@@ -189,7 +189,7 @@ pub trait Conv2d: DeviceBase {
         stride_w: usize,
         dilation_h: usize,
         dilation_w: usize,
-        config: Option<Conv2dBckwdDataConfig<T>>,
+        config: Option<&Conv2dBckwdDataConfig<T>>,
     );
 
     #[allow(clippy::too_many_arguments)]
@@ -203,7 +203,7 @@ pub trait Conv2d: DeviceBase {
         stride_w: usize,
         dilation_h: usize,
         dilation_w: usize,
-        config: Option<Conv2dBckwdFilterConfig<T>>,
+        config: Option<&Conv2dBckwdFilterConfig<T>>,
     );
 }
 
@@ -218,7 +218,7 @@ impl Conv2d for Cpu {
         stride_w: usize,
         dilation_h: usize,
         dilation_w: usize,
-        _config: Option<Conv2dConfig<T>>,
+        _config: Option<&Conv2dConfig<T>>,
     ) {
         if dilation_h != 1 || dilation_w != 1 {
             todo!();
@@ -242,7 +242,7 @@ impl Conv2d for Cpu {
         stride_w: usize,
         dilation_h: usize,
         dilation_w: usize,
-        _config: Option<Conv2dBckwdDataConfig<T>>,
+        _config: Option<&Conv2dBckwdDataConfig<T>>,
     ) {
         if dilation_h != 1 || dilation_w != 1 {
             todo!();
@@ -266,7 +266,7 @@ impl Conv2d for Cpu {
         stride_w: usize,
         dilation_h: usize,
         dilation_w: usize,
-        _config: Option<Conv2dBckwdFilterConfig<T>>,
+        _config: Option<&Conv2dBckwdFilterConfig<T>>,
     ) {
         if dilation_h != 1 || dilation_w != 1 {
             todo!();
@@ -293,11 +293,11 @@ impl Conv2d for Nvidia {
         stride_w: usize,
         dilation_h: usize,
         dilation_w: usize,
-        config: Option<Conv2dConfig<T>>,
+        config: Option<&Conv2dConfig<T>>,
     ) {
         let config = match config {
-            Some(config) => config.conv,
-            None => create_conv_descriptor::<T>(
+            Some(config) => &config.conv,
+            None => &create_conv_descriptor::<T>(
                 input.shape(),
                 y.shape(),
                 filter.shape(),
@@ -330,11 +330,11 @@ impl Conv2d for Nvidia {
         stride_w: usize,
         dilation_h: usize,
         dilation_w: usize,
-        config: Option<Conv2dBckwdDataConfig<T>>,
+        config: Option<&Conv2dBckwdDataConfig<T>>,
     ) {
         let config = match config {
-            Some(config) => config.conv,
-            None => create_conv_bckwd_data::<T>(
+            Some(config) => &config.conv,
+            None => &create_conv_bckwd_data::<T>(
                 dx.shape(),
                 dy.shape(),
                 filter.shape(),
@@ -367,11 +367,11 @@ impl Conv2d for Nvidia {
         stride_w: usize,
         dilation_h: usize,
         dilation_w: usize,
-        config: Option<Conv2dBckwdFilterConfig<T>>,
+        config: Option<&Conv2dBckwdFilterConfig<T>>,
     ) {
         let config = match config {
-            Some(config) => config.conv,
-            None => create_conv_bckwd_filter::<T>(
+            Some(config) => &config.conv,
+            None => &create_conv_bckwd_filter::<T>(
                 input.shape(),
                 dy.shape(),
                 df.shape(),
@@ -406,7 +406,7 @@ pub fn conv2d_forward<T: Num, D: Device>(
     stride_w: usize,
     dilation_h: usize,
     dilation_w: usize,
-    config: Option<Conv2dConfig<T>>,
+    config: Option<&Conv2dConfig<T>>,
 ) -> Matrix<Owned<T>, DimDyn, D> {
     let out_size = conv2d_out_size(
         input.shape().slice(),
@@ -443,7 +443,7 @@ pub fn conv2d_bckwd_data<T: Num, D: Device>(
     stride_w: usize,
     dilation_h: usize,
     dilation_w: usize,
-    config: Option<Conv2dBckwdDataConfig<T>>,
+    config: Option<&Conv2dBckwdDataConfig<T>>,
 ) -> Matrix<Owned<T>, DimDyn, D> {
     let input_shape = deconv2d_out_size(
         dy.shape().slice(),
@@ -478,7 +478,7 @@ pub fn conv2d_bckwd_filter<T: Num, D: Device>(
     dilation_h: usize,
     dilation_w: usize,
     filter_shape: DimDyn,
-    config: Option<Conv2dBckwdFilterConfig<T>>,
+    config: Option<&Conv2dBckwdFilterConfig<T>>,
 ) -> Matrix<Owned<T>, DimDyn, D> {
     let mut df = Matrix::<Owned<T>, DimDyn, D>::zeros(filter_shape);
     D::conv2d_bckwd_filter(
