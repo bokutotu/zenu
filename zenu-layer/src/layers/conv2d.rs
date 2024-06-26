@@ -1,103 +1,98 @@
+use rand_distr::{Distribution, StandardNormal};
 use zenu_autograd::{
     creator::{rand::normal, zeros::zeros},
-    functions::conv2d::conv2d,
+    functions::conv2d::{conv2d, Conv2dConfigs},
     Variable,
 };
-use zenu_matrix::{device::Device, dim::DimTrait, matrix::MatrixBase, num::Num};
+use zenu_matrix::{device::Device, dim::DimTrait, nn::conv2d::conv2d_out_size, num::Num};
 
 use crate::Layer;
 
 pub struct Conv2d<T: Num, D: Device> {
-    in_channels: usize,
-    out_channels: usize,
-    kernel_size: (usize, usize),
+    filter: Variable<T, D>,
+    bias: Option<Variable<T, D>>,
+    config: Conv2dConfigs<T>,
     stride: (usize, usize),
     padding: (usize, usize),
-    bias: Option<Variable<T, D>>,
-    kernel: Option<Variable<T, D>>,
-}
-
-impl<T: Num, D: Device> Conv2d<T, D> {
-    #[must_use]
-    pub fn new(
-        in_channels: usize,
-        out_channels: usize,
-        kernel_size: (usize, usize),
-        stride: (usize, usize),
-        padding: (usize, usize),
-        bias: bool,
-    ) -> Self {
-        let bias = if bias {
-            Some(zeros([1, out_channels, 1, 1]))
-        } else {
-            None
-        };
-        Self {
-            in_channels,
-            out_channels,
-            kernel_size,
-            stride,
-            padding,
-            kernel: None,
-            bias,
-        }
-    }
-
-    #[must_use]
-    pub fn kernel(&self) -> Option<Variable<T, D>> {
-        self.kernel.clone()
-    }
 }
 
 impl<T: Num, D: Device> Layer<T, D> for Conv2d<T, D> {
-    fn init_parameters(&mut self, seed: Option<u64>)
-    where
-        rand_distr::StandardNormal: rand::prelude::Distribution<T>,
-    {
-        let kernel = normal(
-            T::zero(),
-            T::one(),
-            seed,
-            [
-                self.out_channels,
-                self.in_channels,
-                self.kernel_size.0,
-                self.kernel_size.1,
-            ],
-        );
-        kernel.set_name("conv2d_kernel");
-        self.kernel = Some(kernel);
-    }
-
     fn call(&self, input: Variable<T, D>) -> Variable<T, D> {
         self.shape_check(&input);
         conv2d(
             input,
-            self.kernel().unwrap(),
-            self.bias.clone(),
+            self.filter.clone(),
             self.stride,
             self.padding,
+            self.bias.clone(),
+            Some(self.config.clone()),
         )
     }
 
-    fn parameters(&self) -> Vec<Variable<T>> {
-        if self.bias.is_some() {
-            vec![self.kernel().unwrap(), self.bias.clone().unwrap()]
-        } else {
-            vec![self.kernel().unwrap()]
+    fn parameters(&self) -> Vec<Variable<T, D>> {
+        let mut params = vec![self.filter.clone()];
+        if let Some(bias) = &self.bias {
+            params.push(bias.clone());
+        }
+        params
+    }
+
+    fn load_parameters(&mut self, parameters: &[Variable<T, D>]) {
+        self.filter = parameters[0].clone();
+        if parameters.len() > 1 {
+            self.bias = Some(parameters[1].clone());
         }
     }
 
-    fn shape_check(&self, input: &Variable<T>) {
+    fn shape_check(&self, input: &Variable<T, D>) {
         let input_shape = input.get_data().shape();
-        assert_eq!(input_shape.len(), 4, "Input must be 4D tensor");
-        assert_eq!(
-            input_shape[1], self.in_channels,
-            "Input channel must be equal to in_channels"
-        );
-    }
+        let filter_shape = self.filter.get_data().shape();
+        let bias_shape = self.bias.as_ref().map(|b| b.get_data().shape());
 
-    fn load_parameters(&mut self, parameters: &[Variable<T>]) {
-        self.kernel = Some(parameters[0].clone());
+        assert_eq!(input_shape.len(), 4);
+        assert_eq!(filter_shape.len(), 4);
+        assert_eq!(input_shape[1], filter_shape[1]);
+        assert_eq!(input_shape[2], filter_shape[2]);
+        assert_eq!(filter_shape[0], bias_shape.map(|b| b[0]).unwrap_or(1));
+    }
+}
+
+impl<T: Num, D: Device> Conv2d<T, D> {
+    pub fn new(
+        input_channel: usize,
+        output_channel: usize,
+        input_image_size: (usize, usize),
+        kernel_size: (usize, usize),
+        stride: (usize, usize),
+        padding: (usize, usize),
+        bias: bool,
+    ) -> Self
+    where
+        StandardNormal: Distribution<T>,
+    {
+        let filter_shape = [output_channel, input_channel, kernel_size.0, kernel_size.1];
+        let input_shape = [1, input_channel, input_image_size.0, input_image_size.1];
+        let bias = if bias {
+            Some(zeros([output_channel]))
+        } else {
+            None
+        };
+        let filter = normal(T::zero(), T::one(), None, filter_shape);
+        let output_shape = conv2d_out_size(&input_shape, &filter_shape, padding, stride);
+        let config = Conv2dConfigs::new(
+            input_shape.into(),
+            output_shape.into(),
+            filter_shape.into(),
+            stride,
+            padding,
+            20,
+        );
+        Conv2d {
+            filter,
+            bias,
+            config,
+            stride,
+            padding,
+        }
     }
 }
