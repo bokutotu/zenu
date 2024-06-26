@@ -53,6 +53,7 @@ impl<T: Num, D: Device> Layer<T, D> for Linear<T, D> {
 }
 
 impl<T: Num, D: Device> Linear<T, D> {
+    #[must_use]
     pub fn new(in_features: usize, out_features: usize, use_bias: bool) -> Self
     where
         StandardNormal: Distribution<T>,
