@@ -36,6 +36,8 @@ impl<T: 'static> BatchNorm2d<T> {
             _phantom: std::marker::PhantomData,
         }
     }
+
+    #[allow(clippy::too_many_arguments)]
     pub fn forward_train(
         &self,
         alpha: T,
@@ -62,8 +64,8 @@ impl<T: 'static> BatchNorm2d<T> {
                 self.output,
                 y as *mut std::ffi::c_void,
                 self.scale_bias_mean_var,
-                scale as *const T as *const std::ffi::c_void,
-                bias as *const T as *const std::ffi::c_void,
+                scale as *const std::ffi::c_void,
+                bias as *const std::ffi::c_void,
                 expotential_average_factor,
                 estimated_mean as *mut std::ffi::c_void,
                 estimated_variance as *mut std::ffi::c_void,
@@ -185,6 +187,7 @@ pub struct BatchNorm2dBackwardBuilder<T> {
 }
 
 impl<T: 'static> BatchNorm2dBackward<T> {
+    #[allow(clippy::too_many_arguments)]
     pub fn backward(
         &self,
         alpha_data_grad: T,
@@ -353,6 +356,7 @@ pub struct BatchNorm2dInferenceBuilder<T> {
 }
 
 impl<T: 'static> BatchNorm2dInference<T> {
+    #[allow(clippy::too_many_arguments)]
     pub fn forward_inference(
         &self,
         alpha: T,
@@ -376,8 +380,8 @@ impl<T: 'static> BatchNorm2dInference<T> {
                 self.output,
                 y as *mut std::ffi::c_void,
                 self.scale_bias_mean_var,
-                scale as *const T as *const std::ffi::c_void,
-                bias as *const T as *const std::ffi::c_void,
+                scale as *const std::ffi::c_void,
+                bias as *const std::ffi::c_void,
                 estimated_mean as *const std::ffi::c_void,
                 estimated_variance as *const std::ffi::c_void,
                 1e-10,
