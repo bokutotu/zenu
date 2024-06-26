@@ -1,4 +1,4 @@
-// pub mod adam;
+pub mod adam;
 // pub mod adamw;
 pub mod sgd;
 
