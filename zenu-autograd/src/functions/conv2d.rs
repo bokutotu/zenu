@@ -268,14 +268,21 @@ pub fn conv2d<T: Num, D: Device>(
     bias: Option<Variable<T, D>>,
     config: Option<Conv2dConfigs<T>>,
 ) -> Variable<T, D> {
+    let output_shape = conv2d_out_size(
+        x.get_data().shape().slice(),
+        filter.get_data().shape().slice(),
+        padding,
+        stride,
+    );
+    let output_shape = DimDyn::from(&output_shape);
     let config = config.unwrap_or_else(|| {
         Conv2dConfigs::new(
             x.get_data().shape(),
-            filter.get_data().shape(),
+            output_shape,
             filter.get_data().shape(),
             stride,
             padding,
-            0,
+            1,
         )
     });
     let conv2d_y_size = conv2d_out_size(
@@ -424,7 +431,6 @@ mod conv2d {
         let output_ans = Matrix::<Owned<f32>, DimDyn, D>::from_vec(output_ans, [2, 4, 5, 5]);
         assert_val_eq!(output.clone(), output_ans, 1e-6);
 
-        println!("here");
         output.backward();
 
         let kernel_grad_ans = vec![

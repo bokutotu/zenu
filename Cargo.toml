@@ -1,7 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
-    "zenu",
+    # "zenu",
     "zenu-autograd", 
     "zenu-cublas-sys", 
     "zenu-cuda", 
