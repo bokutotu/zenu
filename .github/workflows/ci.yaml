@@ -21,6 +21,9 @@ jobs:
       - name: Run clippy on zenu-autograd
         run: cd zenu-autograd && cargo clippy --verbose
 
+      - name: Run clippy on zenu-layers
+        run: cd zenu-layers && cargo clippy --verbose
+
   fmt:
     runs-on: ubuntu-latest
     steps:
@@ -45,3 +48,6 @@ jobs:
           
       - name: Run tests on zenu-autograd
         run: cd zenu-autograd && cargo test --verbose
+
+      - name: Run tests on zenu-layers
+        run: cd zenu-layers && cargo test --verbose
