@@ -119,7 +119,7 @@ macro_rules! impl_conv_config {
         }
 
         impl<T: Num> $name<T> {
-            #[allow(unused_variables)]
+            #[allow(unused_variables, clippy::too_many_arguments)]
             pub fn new(
                 input: DimDyn,
                 output: DimDyn,
@@ -164,6 +164,7 @@ impl_conv_config!(
 );
 
 pub trait Conv2d: DeviceBase {
+    #[allow(clippy::too_many_arguments)]
     fn conv2d<T: Num>(
         input: Matrix<Ref<&T>, DimDyn, Self>,
         y: Matrix<Ref<&mut T>, DimDyn, Self>,
@@ -177,6 +178,7 @@ pub trait Conv2d: DeviceBase {
         config: Option<Conv2dConfig<T>>,
     );
 
+    #[allow(clippy::too_many_arguments)]
     fn conv2d_bckwd_data<T: Num>(
         dy: Matrix<Ref<&T>, DimDyn, Self>,
         dx: Matrix<Ref<&mut T>, DimDyn, Self>,
@@ -190,6 +192,7 @@ pub trait Conv2d: DeviceBase {
         config: Option<Conv2dBckwdDataConfig<T>>,
     );
 
+    #[allow(clippy::too_many_arguments)]
     fn conv2d_bckwd_filter<T: Num>(
         input: Matrix<Ref<&T>, DimDyn, Self>,
         dy: Matrix<Ref<&T>, DimDyn, Self>,
@@ -392,6 +395,7 @@ impl Conv2d for Nvidia {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn conv2d_forward<T: Num, D: Device>(
     input: Matrix<Ref<&T>, DimDyn, D>,
     filter: Matrix<Ref<&T>, DimDyn, D>,
@@ -429,6 +433,7 @@ pub fn conv2d_forward<T: Num, D: Device>(
     y
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn conv2d_bckwd_data<T: Num, D: Device>(
     dy: Matrix<Ref<&T>, DimDyn, D>,
     filter: Matrix<Ref<&T>, DimDyn, D>,
@@ -462,6 +467,7 @@ pub fn conv2d_bckwd_data<T: Num, D: Device>(
     dx
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn conv2d_bckwd_filter<T: Num, D: Device>(
     input: Matrix<Ref<&T>, DimDyn, D>,
     dy: Matrix<Ref<&T>, DimDyn, D>,
