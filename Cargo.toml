@@ -12,7 +12,7 @@ members = [
     "zenu-cuda-kernel-sys", 
     "zenu-cuda-runtime-sys", 
     "zenu-cudnn-sys",
-    # "zenu-layer",
+    "zenu-layer",
     "zenu-matrix", 
     "zenu-test", 
     # "zenu-optimizer"

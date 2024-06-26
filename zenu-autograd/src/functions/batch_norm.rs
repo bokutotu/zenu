@@ -21,9 +21,9 @@ pub struct BatchNorm2dInner<T: Num> {
 
 impl<T: Num> BatchNorm2dInner<T> {
     pub fn new(dim: DimDyn) -> Self {
-        let train = BatchNorm2dConfig::<T>::new(dim.clone());
-        let inference = BatchNorm2dInferenceConfig::<T>::new(dim.clone());
-        let bckwd = BatchNorm2dBackwardConfig::<T>::new(dim.clone());
+        let train = BatchNorm2dConfig::<T>::new(dim);
+        let inference = BatchNorm2dInferenceConfig::<T>::new(dim);
+        let bckwd = BatchNorm2dBackwardConfig::<T>::new(dim);
         Self {
             train: Some(train),
             inference: Some(inference),
@@ -84,7 +84,7 @@ impl<T: Num, D: Device> Function<T, D> for BatchNorm2d<T, D> {
                 self.variance.get_data_mut().to_ref_mut(),
                 Some(self.saving_mean.get_data_mut().to_ref_mut()),
                 Some(self.saving_inv_variance.get_data_mut().to_ref_mut()),
-                &config_train,
+                config_train,
             )
             .unwrap();
         } else {
@@ -96,7 +96,7 @@ impl<T: Num, D: Device> Function<T, D> for BatchNorm2d<T, D> {
                 self.bias.get_data().to_ref(),
                 self.mean.get_data().to_ref(),
                 self.variance.get_data().to_ref(),
-                &config_inference,
+                config_inference,
             )
             .unwrap();
         };

@@ -97,6 +97,7 @@ impl<T: Num, D: Device> Deref for FunctionQueueItem<T, D> {
 #[derive(Clone)]
 pub struct VariableInner<T: Num, D: Device> {
     data: Matrix<Owned<T>, DimDyn, D>,
+    #[allow(clippy::type_complexity)]
     creator: Option<Rc<RefCell<Box<dyn Function<T, D>>>>>,
     grad: Option<Variable<T, D>>,
     gen: usize,
@@ -269,6 +270,7 @@ impl<T: Num, D: Device> Variable<T, D> {
         self.inner.borrow_mut().set_creator(creator);
     }
 
+    #[allow(clippy::type_complexity)]
     pub fn get_creator(&self) -> Option<Rc<RefCell<Box<dyn Function<T, D>>>>> {
         self.inner.borrow().get_creator().clone()
     }
