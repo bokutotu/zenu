@@ -59,11 +59,11 @@ impl<T: Num, D: Device> Adam<T, D> {
     ) -> Self {
         let m = parameters
             .iter()
-            .map(|parameter| zeros_like(&parameter))
+            .map(|parameter| zeros_like(parameter))
             .collect();
         let v = parameters
             .iter()
-            .map(|parameter| zeros_like(&parameter))
+            .map(|parameter| zeros_like(parameter))
             .collect();
         Self {
             learning_rate,
