@@ -1,113 +1,87 @@
 use zenu_autograd::{
     creator::{ones::ones, zeros::zeros},
-    functions::batch_norm::batch_norm,
+    functions::batch_norm::{batch_norm_2d, BatchNorm2dAutoGradConfig},
     Variable,
 };
-use zenu_matrix::{matrix::MatrixBase, num::Num};
+use zenu_matrix::{
+    device::Device,
+    dim::{DimDyn, DimTrait},
+    num::Num,
+};
 
 use crate::Layer;
 
-#[derive(Debug)]
-pub struct BatchNorm<T: Num> {
-    mean: Option<Variable<T>>,
-    variance: Option<Variable<T>>,
-    decay: Variable<T>,
-    epsilon: Variable<T>,
-    inv_std: Option<Variable<T>>,
-    gamma: Option<Variable<T>>,
-    beta: Option<Variable<T>>,
-    shape: usize,
+pub struct BatchNorm2d<T: Num, D: Device> {
+    config: BatchNorm2dAutoGradConfig<T>,
+    momentum: f64,
+    scale: Variable<T, D>,
+    bias: Variable<T, D>,
+    mean: Variable<T, D>,
+    variance: Variable<T, D>,
 }
 
-impl<T: Num> BatchNorm<T> {
-    pub fn new(channels: usize, decay: T, epsilon: T) -> Self {
-        let decay = Variable::from(decay);
-        let epsilon = Variable::from(epsilon);
-        BatchNorm {
-            mean: None,
-            variance: None,
-            decay,
-            epsilon,
-            inv_std: None,
-            gamma: None,
-            beta: None,
-            shape: channels,
-        }
+impl<T: Num, D: Device> Layer<T, D> for BatchNorm2d<T, D> {
+    fn call(&self, input: Variable<T, D>) -> Variable<T, D> {
+        batch_norm_2d(
+            input,
+            self.scale.clone(),
+            self.bias.clone(),
+            self.mean.clone(),
+            self.variance.clone(),
+            self.momentum,
+            self.config.clone(),
+        )
+    }
+
+    fn parameters(&self) -> Vec<Variable<T, D>> {
+        vec![
+            self.scale.clone(),
+            self.bias.clone(),
+            self.mean.clone(),
+            self.variance.clone(),
+        ]
+    }
+
+    fn load_parameters(&mut self, parameters: &[Variable<T, D>]) {
+        self.scale = parameters[0].clone();
+        self.bias = parameters[1].clone();
+        self.mean = parameters[2].clone();
+        self.variance = parameters[3].clone();
+    }
+
+    fn shape_check(&self, input: &Variable<T, D>) {
+        let input_shape = input.get_data().shape();
+        let scale_shape = self.scale.get_data().shape();
+        let bias_shape = self.bias.get_data().shape();
+        let mean_shape = self.mean.get_data().shape();
+        let variance_shape = self.variance.get_data().shape();
+
+        assert_eq!(input_shape.len(), 4);
+        assert_eq!(scale_shape.len(), 1);
+        assert_eq!(bias_shape.len(), 1);
+        assert_eq!(mean_shape.len(), 1);
+        assert_eq!(variance_shape.len(), 1);
+        assert_eq!(scale_shape[0], input_shape[1]);
+        assert_eq!(bias_shape[0], input_shape[1]);
+        assert_eq!(mean_shape[0], input_shape[1]);
+        assert_eq!(variance_shape[0], input_shape[1]);
     }
 }
 
-impl<T: Num> Layer<T> for BatchNorm<T> {
-    fn init_parameters(&mut self, _seed: Option<u64>) {
-        let d = self.shape;
-        let mean = zeros([d]);
-        let variance = ones([d]);
-        let gamma = ones([d]);
-        let beta = zeros([d]);
-        self.mean = Some(mean);
-        self.variance = Some(variance);
-        self.gamma = Some(gamma);
-        self.beta = Some(beta);
-    }
-
-    fn call(&self, input: Variable<T>) -> Variable<T> {
-        self.shape_check(&input);
-        let mean = self.mean.clone().unwrap();
-        let variance = self.variance.clone().unwrap();
-        let decay = self.decay.clone();
-        let epsilon = self.epsilon.clone();
-        let gamma = self.gamma.clone().unwrap();
-        let beta = self.beta.clone().unwrap();
-        batch_norm(mean, variance, decay, epsilon, gamma, beta, input)
-    }
-
-    fn shape_check(&self, input: &Variable<T>) {
-        let channles = input.get_data().shape()[1];
-        assert_eq!(
-            channles, self.shape,
-            "Input shape is not compatible with the layer"
-        );
-    }
-
-    fn parameters(&self) -> Vec<Variable<T>> {
-        let mut parameters = Vec::new();
-        if let Some(mean) = &self.mean {
-            parameters.push(mean.clone());
-        } else {
-            panic!("Mean is not initialized");
+impl<T: Num, D: Device> BatchNorm2d<T, D> {
+    pub fn new(input_shape: DimDyn, momentum: f64) -> Self {
+        let scale = ones([input_shape[1]]);
+        let bias = zeros([input_shape[1]]);
+        let mean = zeros([input_shape[1]]);
+        let variance = ones([input_shape[1]]);
+        let config = BatchNorm2dAutoGradConfig::new(input_shape.slice());
+        Self {
+            config,
+            momentum,
+            scale,
+            bias,
+            mean,
+            variance,
         }
-        if let Some(variance) = &self.variance {
-            parameters.push(variance.clone());
-        } else {
-            panic!("Variance is not initialized");
-        }
-        parameters.push(self.decay.clone());
-        parameters.push(self.epsilon.clone());
-        if let Some(inv_std) = &self.inv_std {
-            parameters.push(inv_std.clone());
-        } else {
-            panic!("Inv_std is not initialized");
-        }
-        if let Some(gamma) = &self.gamma {
-            parameters.push(gamma.clone());
-        } else {
-            panic!("Gamma is not initialized");
-        }
-        if let Some(beta) = &self.beta {
-            parameters.push(beta.clone());
-        } else {
-            panic!("Beta is not initialized");
-        }
-        parameters
-    }
-
-    fn load_parameters(&mut self, parameters: &[Variable<T>]) {
-        let mut parameters = parameters.iter();
-        self.mean = Some(parameters.next().unwrap().clone());
-        self.variance = Some(parameters.next().unwrap().clone());
-        self.decay = parameters.next().unwrap().clone();
-        self.epsilon = parameters.next().unwrap().clone();
-        self.inv_std = Some(parameters.next().unwrap().clone());
-        self.gamma = Some(parameters.next().unwrap().clone());
-        self.beta = Some(parameters.next().unwrap().clone());
     }
 }
