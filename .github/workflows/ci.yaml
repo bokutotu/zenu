@@ -24,6 +24,9 @@ jobs:
       - name: Run clippy on zenu-layer
         run: cd zenu-layer && cargo clippy --verbose
 
+      - name: Run clippy on zenu-optimizer
+        run: cd zenu-optimizer && cargo clippy --verbose
+
   fmt:
     runs-on: ubuntu-latest
     steps:
@@ -51,3 +54,6 @@ jobs:
 
       - name: Run tests on zenu-layer
         run: cd zenu-layer && cargo test --verbose
+
+      - name: Run tests on zenu-optimizer
+        run: cd zenu-optimizer && cargo test --verbose
