@@ -64,19 +64,19 @@ use zenu_autograd::{
     functions::matmul::matmul,
     Variable,
 };
-use zenu_matrix::{dim::DimTrait, matrix::MatrixBase, num::Num};
+use zenu_matrix::{device::Device, num::Num};
 
 use crate::Layer;
 
 /// A linear layer in a neural network.
-pub struct Linear<T: Num> {
+pub struct Linear<T: Num, D: Device> {
     in_dim: usize,
     out_dim: usize,
-    weight: Option<Variable<T>>,
-    bias: Option<Variable<T>>,
+    weight: Option<Variable<T, D>>,
+    bias: Option<Variable<T, D>>,
 }
 
-impl<T: Num> Linear<T> {
+impl<T: Num, D: Device> Linear<T, D> {
     /// Creates a new linear layer with the specified input and output dimensions.
     ///
     /// # Arguments
