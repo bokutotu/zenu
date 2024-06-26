@@ -13,6 +13,9 @@ zenu-matrix = { path = "../zenu-matrix", version = "0.1.1" }
 zenu-autograd = { path = "../zenu-autograd", version = "0.1.1" }
 zenu-layer = { path = "../zenu-layer", version = "0.1.0" }
 
+[dev-dependencies]
+zenu-test = { path="../zenu-test/", version="*"}
+
 [lints]
 workspace = true
 
