@@ -41,12 +41,10 @@ impl<T: Num, D: Device> Layer<T, D> for Linear<T, D> {
     }
 
     fn shape_check(&self, input: &Variable<T, D>) {
-        // shape check for input and weight
         let input_shape = input.get_data().shape();
         let weight_shape = self.weight.get_data().shape();
         assert_eq!(input_shape[1], weight_shape[0]);
 
-        // shape check for bias
         if let Some(bias) = &self.bias {
             let bias_shape = bias.get_data().shape();
             assert_eq!(bias_shape[0], weight_shape[1]);
@@ -67,4 +65,46 @@ impl<T: Num, D: Device> Linear<T, D> {
         };
         Self { weight, bias }
     }
+}
+
+#[cfg(test)]
+mod linear {
+    use zenu_autograd::creator::rand::normal;
+    use zenu_matrix::{device::Device, dim::DimTrait, operation::mul::matmul};
+    use zenu_test::{assert_val_eq, run_test};
+
+    use crate::Layer;
+
+    use super::Linear;
+
+    fn with_bias<D: Device>() {
+        let layer = Linear::<f32, D>::new(3, 2, true);
+        let input = normal::<_, _, D>(0., 1., None, [5, 3]);
+        let output = layer.call(input.clone());
+        assert_eq!(output.get_data().shape().slice(), [5, 2]);
+
+        let parameters = layer.parameters();
+        let weight = parameters[0].clone();
+        let bias = parameters[1].clone();
+
+        let ans = matmul(&input.get_data().to_ref(), &weight.get_data().to_ref())
+            + bias.get_data().to_ref();
+
+        assert_val_eq!(output, ans, 1e-4);
+    }
+    run_test!(with_bias, with_bias_cpu, with_bias_gpu);
+
+    fn without_bias<D: Device>() {
+        let layer = Linear::<f32, D>::new(3, 2, false);
+        let input = normal::<_, _, D>(0., 1., None, [5, 3]);
+        let output = layer.call(input.clone());
+        assert_eq!(output.get_data().shape().slice(), [5, 2]);
+
+        let parameters = layer.parameters();
+        let weight = parameters[0].clone();
+
+        let ans = matmul(&input.get_data().to_ref(), &weight.get_data().to_ref());
+        assert_val_eq!(output, ans, 1e-4);
+    }
+    run_test!(without_bias, without_bias_cpu, without_bias_gpu);
 }
