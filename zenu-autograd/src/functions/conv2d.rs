@@ -2,14 +2,81 @@ use std::{cell::RefCell, rc::Rc};
 
 use zenu_matrix::{
     device::Device,
-    dim::DimTrait,
+    dim::{DimDyn, DimTrait},
     nn::conv2d::{
         conv2d_bckwd_data, conv2d_bckwd_filter, conv2d_forward, conv2d_out_size, deconv2d_out_size,
+        Conv2dBckwdDataConfig, Conv2dBckwdFilterConfig, Conv2dConfig,
     },
     num::Num,
 };
 
 use crate::{creator::zeros::zeros, Function, Variable, VariableWeak};
+
+pub struct Conv2dConfigsInner<T: Num> {
+    pub conv2d_forward: Conv2dConfig<T>,
+    pub deconv2d: Conv2dBckwdDataConfig<T>,
+    pub conv2d_bkwdfilter: Conv2dBckwdFilterConfig<T>,
+}
+
+impl<T: Num> Conv2dConfigsInner<T> {
+    pub fn new(
+        input: DimDyn,
+        output: DimDyn,
+        filter: DimDyn,
+        stride: (usize, usize),
+        padding: (usize, usize),
+        num_algo: usize,
+    ) -> Self {
+        let conv2d_forward = Conv2dConfig::new(
+            input, output, filter, padding.0, padding.1, stride.0, stride.1, 1, 1, num_algo,
+        );
+        let deconv2d = Conv2dBckwdDataConfig::new(
+            input, output, filter, padding.0, padding.1, stride.0, stride.1, 1, 1, num_algo,
+        );
+        let conv2d_bkwdfilter = Conv2dBckwdFilterConfig::new(
+            input, output, filter, padding.0, padding.1, stride.0, stride.1, 1, 1, num_algo,
+        );
+        Self {
+            conv2d_forward,
+            deconv2d,
+            conv2d_bkwdfilter,
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct Conv2dConfigs<T: Num> {
+    pub inner: Rc<Conv2dConfigsInner<T>>,
+}
+
+impl<T: Num> Conv2dConfigs<T> {
+    pub fn new(
+        input: DimDyn,
+        output: DimDyn,
+        filter: DimDyn,
+        stride: (usize, usize),
+        padding: (usize, usize),
+        num_algo: usize,
+    ) -> Self {
+        Self {
+            inner: Rc::new(Conv2dConfigsInner::new(
+                input, output, filter, stride, padding, num_algo,
+            )),
+        }
+    }
+
+    pub fn get_conv2d_forward(&self) -> &Conv2dConfig<T> {
+        &self.inner.conv2d_forward
+    }
+
+    pub fn get_deconv2d(&self) -> &Conv2dBckwdDataConfig<T> {
+        &self.inner.deconv2d
+    }
+
+    pub fn get_conv2d_bkwdfilter(&self) -> &Conv2dBckwdFilterConfig<T> {
+        &self.inner.conv2d_bkwdfilter
+    }
+}
 
 struct Conv2d<T: Num, D: Device> {
     x: Variable<T, D>,
@@ -17,6 +84,7 @@ struct Conv2d<T: Num, D: Device> {
     stride: (usize, usize),
     padding: (usize, usize),
     y: VariableWeak<T, D>,
+    config: Conv2dConfigs<T>,
 }
 
 struct Deconv2d<T: Num, D: Device> {
@@ -25,6 +93,7 @@ struct Deconv2d<T: Num, D: Device> {
     stride: (usize, usize),
     padding: (usize, usize),
     y: VariableWeak<T, D>,
+    config: Conv2dConfigs<T>,
 }
 
 struct Conv2dBackward<T: Num, D: Device> {
@@ -34,10 +103,12 @@ struct Conv2dBackward<T: Num, D: Device> {
     stride: (usize, usize),
     padding: (usize, usize),
     filter_grad: VariableWeak<T, D>,
+    config: Conv2dConfigs<T>,
 }
 
 impl<T: Num, D: Device> Function<T, D> for Conv2d<T, D> {
     fn forward(&self) {
+        let config = self.config.get_conv2d_forward();
         let y = conv2d_forward(
             self.x.get_data().to_ref(),
             self.filter.get_data().to_ref(),
@@ -50,7 +121,8 @@ impl<T: Num, D: Device> Function<T, D> for Conv2d<T, D> {
             // FIXME use dilated
             1,
             1,
-            None,
+            // FIXME
+            Some(config),
         );
         self.y
             .upgrade()
@@ -67,6 +139,7 @@ impl<T: Num, D: Device> Function<T, D> for Conv2d<T, D> {
             self.stride,
             self.padding,
             None,
+            Some(self.config.clone()),
         );
 
         let gfilter = conv2d_filter_grad(
@@ -75,6 +148,7 @@ impl<T: Num, D: Device> Function<T, D> for Conv2d<T, D> {
             self.stride,
             self.padding,
             self.filter.clone(),
+            Some(self.config.clone()),
         );
 
         self.x.set_grad(gx);
@@ -97,7 +171,7 @@ impl<T: Num, D: Device> Function<T, D> for Deconv2d<T, D> {
             self.stride.1,
             1,
             1,
-            None,
+            Some(self.config.clone().get_deconv2d()),
         );
 
         self.y
@@ -115,6 +189,7 @@ impl<T: Num, D: Device> Function<T, D> for Deconv2d<T, D> {
             self.stride,
             self.padding,
             None,
+            Some(self.config.clone()),
         );
 
         let gfilter = conv2d_filter_grad(
@@ -123,6 +198,7 @@ impl<T: Num, D: Device> Function<T, D> for Deconv2d<T, D> {
             self.stride,
             self.padding,
             self.filter.clone(),
+            Some(self.config.clone()),
         );
 
         self.x.set_grad(gx);
@@ -146,7 +222,7 @@ impl<T: Num, D: Device> Function<T, D> for Conv2dBackward<T, D> {
             1,
             1,
             self.filter.get_data().shape(),
-            None,
+            Some(self.config.clone().get_conv2d_bkwdfilter()),
         );
         self.filter_grad
             .upgrade()
@@ -163,6 +239,7 @@ impl<T: Num, D: Device> Function<T, D> for Conv2dBackward<T, D> {
             self.stride,
             self.padding,
             None,
+            Some(self.config.clone()),
         );
 
         let gfilter = conv2d(
@@ -171,6 +248,7 @@ impl<T: Num, D: Device> Function<T, D> for Conv2dBackward<T, D> {
             self.stride,
             self.padding,
             None,
+            Some(self.config.clone()),
         );
 
         self.x.set_grad(gx);
@@ -188,7 +266,18 @@ pub fn conv2d<T: Num, D: Device>(
     stride: (usize, usize),
     padding: (usize, usize),
     bias: Option<Variable<T, D>>,
+    config: Option<Conv2dConfigs<T>>,
 ) -> Variable<T, D> {
+    let config = config.unwrap_or_else(|| {
+        Conv2dConfigs::new(
+            x.get_data().shape(),
+            filter.get_data().shape(),
+            filter.get_data().shape(),
+            stride,
+            padding,
+            0,
+        )
+    });
     let conv2d_y_size = conv2d_out_size(
         x.get_data().shape().slice(),
         filter.get_data().shape().slice(),
@@ -202,6 +291,7 @@ pub fn conv2d<T: Num, D: Device>(
         stride,
         padding,
         y: y.clone().downgrade(),
+        config,
     };
     conv2d.forward();
     y.set_creator(Rc::new(RefCell::new(Box::new(conv2d))));
@@ -217,7 +307,18 @@ pub fn deconv2d<T: Num, D: Device>(
     stride: (usize, usize),
     padding: (usize, usize),
     bias: Option<Variable<T, D>>,
+    config: Option<Conv2dConfigs<T>>,
 ) -> Variable<T, D> {
+    let config = config.unwrap_or_else(|| {
+        Conv2dConfigs::new(
+            x.get_data().shape(),
+            filter.get_data().shape(),
+            filter.get_data().shape(),
+            stride,
+            padding,
+            0,
+        )
+    });
     let deconv2d_y_size = deconv2d_out_size(
         x.get_data().shape().slice(),
         filter.get_data().shape().slice(),
@@ -231,6 +332,7 @@ pub fn deconv2d<T: Num, D: Device>(
         stride,
         padding,
         y: y.clone().downgrade(),
+        config,
     };
     deconv2d.forward();
     y.set_creator(Rc::new(RefCell::new(Box::new(deconv2d))));
@@ -246,7 +348,18 @@ fn conv2d_filter_grad<T: Num, D: Device>(
     stride: (usize, usize),
     padding: (usize, usize),
     filter: Variable<T, D>,
+    config: Option<Conv2dConfigs<T>>,
 ) -> Variable<T, D> {
+    let config = config.unwrap_or_else(|| {
+        Conv2dConfigs::new(
+            x.get_data().shape(),
+            filter.get_data().shape(),
+            filter.get_data().shape(),
+            stride,
+            padding,
+            0,
+        )
+    });
     let filter_grad = zeros(filter.get_data().shape().slice());
     let conv2d_bkwd_filter = Conv2dBackward {
         y_grad,
@@ -255,6 +368,7 @@ fn conv2d_filter_grad<T: Num, D: Device>(
         stride,
         padding,
         filter_grad: filter_grad.clone().downgrade(),
+        config,
     };
     conv2d_bkwd_filter.forward();
     filter_grad.set_creator(Rc::new(RefCell::new(Box::new(conv2d_bkwd_filter))));
@@ -283,7 +397,7 @@ mod conv2d {
             .map(|x| x as f32)
             .collect::<Vec<f32>>();
         let image = from_vec(image, [2, 3, 5, 5]);
-        let output = conv2d(image.clone(), kernel.clone(), (1, 1), (1, 1), None);
+        let output = conv2d(image.clone(), kernel.clone(), (1, 1), (1, 1), None, None);
 
         let output_ans = vec![
             7416., 11010., 11289., 11568., 7608., 11106., 16434., 16812., 17190., 11268., 12411.,
