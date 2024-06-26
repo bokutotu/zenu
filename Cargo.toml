@@ -15,7 +15,7 @@ members = [
     "zenu-layer",
     "zenu-matrix", 
     "zenu-test", 
-    # "zenu-optimizer"
+    "zenu-optimizer"
 ]
 
 [workspace.lints.clippy]
