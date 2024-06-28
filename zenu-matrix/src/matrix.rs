@@ -1,7 +1,12 @@
 use std::marker::PhantomData;
 
+use serde::{
+    de::{Deserialize, Error as DeError, MapAccess, Visitor},
+    ser::*,
+};
+
 use crate::{
-    device::{Device, DeviceBase},
+    device::{cpu::Cpu, Device, DeviceBase},
     dim::{cal_offset, default_stride, DimDyn, DimTrait, LessDimTrait},
     index::{IndexAxisTrait, SliceTrait},
     num::Num,
@@ -394,6 +399,20 @@ where
         owned.to_ref_mut().copy_from(self);
         owned
     }
+
+    pub fn to<Dout: DeviceBase>(self) -> Matrix<Owned<R::Item>, S, Dout> {
+        let raw_ptr = self.ptr.ptr;
+        let len = self.ptr.len;
+
+        let device_ptr = Dout::clone_ptr(raw_ptr, len);
+        let device_ptr = Ptr::<Owned<R::Item>, Dout>::new(device_ptr, len, self.ptr.offset);
+
+        Matrix {
+            ptr: device_ptr,
+            shape: self.shape,
+            stride: self.stride,
+        }
+    }
 }
 
 impl<T, S, D> Matrix<Owned<T>, S, D>
@@ -522,6 +541,97 @@ where
         }
         let offset = cal_offset(index, self.stride());
         self.ptr.assign_item(offset, value);
+    }
+}
+
+impl<T, R, S, D> Serialize for Matrix<R, S, D>
+where
+    T: Num,
+    R: Repr<Item = T>,
+    S: DimTrait,
+    D: DeviceBase,
+{
+    fn serialize<Ser>(&self, serializer: Ser) -> Result<Ser::Ok, Ser::Error>
+    where
+        Ser: serde::Serializer,
+    {
+        let shape = self.shape();
+        let stride = self.stride();
+        let shape_slice = shape.slice();
+        let stride_slice = stride.slice();
+
+        let cpu_mat = self.to_ref().to::<Cpu>();
+        let cpu_mat_1d = cpu_mat.reshape([self.shape().num_elm()]);
+        let data = cpu_mat_1d.as_slice();
+
+        let data_type = std::any::type_name::<T>();
+
+        let mut seq = serializer.serialize_struct("Matrix", 4)?;
+        seq.serialize_field("shape", &shape_slice)?;
+        seq.serialize_field("stride", &stride_slice)?;
+        seq.serialize_field("data", &data)?;
+        seq.serialize_field("data_type", &data_type)?;
+
+        seq.end()
+    }
+}
+
+impl<'de, R, S, D> Deserialize<'de> for Matrix<R, S, D>
+where
+    R: Repr,
+    R::Item: Deserialize<'de> + Num,
+    S: DimTrait + Deserialize<'de>,
+    D: DeviceBase,
+{
+    fn deserialize<Des>(deserializer: Des) -> Result<Self, Des::Error>
+    where
+        Des: serde::Deserializer<'de>,
+    {
+        struct MatrixVisitor<R, S, D> {
+            _phantom: PhantomData<(R, S, D)>,
+        }
+
+        impl<'de, R, S, D> Visitor<'de> for MatrixVisitor<R, S, D>
+        where
+            R: Repr,
+            R::Item: Deserialize<'de> + Num,
+            S: DimTrait + Deserialize<'de>,
+            D: DeviceBase,
+        {
+            type Value = Matrix<R, S, D>;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("struct Matrix")
+            }
+
+            fn visit_map<V>(self, mut map: V) -> Result<Matrix<R, S, D>, V::Error>
+            where
+                V: MapAccess<'de>,
+            {
+                let shape: S = map.next_value()?;
+                let stride: S = map.next_value()?;
+                let data: Vec<R::Item> = map.next_value()?;
+                let _data_type: String = map.next_value()?;
+
+                let len = shape.num_elm();
+                if len != data.len() {
+                    return Err(DeError::custom("Invalid size"));
+                }
+
+                let ptr = Ptr::new(D::from_vec(data), len, 0);
+
+                Ok(Matrix { ptr, shape, stride })
+            }
+        }
+
+        const FIELDS: &[&str] = &["shape", "stride", "data", "data_type"];
+        deserializer.deserialize_struct(
+            "Matrix",
+            FIELDS,
+            MatrixVisitor {
+                _phantom: PhantomData,
+            },
+        )
     }
 }
 
