@@ -24,6 +24,7 @@ pub trait Num:
     + Float
     + SampleUniform
     + Serialize
+    + for<'de> serde::Deserialize<'de>
     + 'static
 {
     fn is_f32() -> bool;
