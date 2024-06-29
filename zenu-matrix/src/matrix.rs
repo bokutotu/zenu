@@ -1,7 +1,7 @@
 use std::{any::TypeId, marker::PhantomData};
 
 use crate::{
-    device::{cpu::Cpu, Device, DeviceBase},
+    device::{Device, DeviceBase},
     dim::{cal_offset, default_stride, DimDyn, DimTrait, LessDimTrait},
     index::{IndexAxisTrait, SliceTrait},
     num::Num,
@@ -112,6 +112,10 @@ where
             repr: PhantomData,
             device: PhantomData,
         }
+    }
+
+    pub(crate) fn len(&self) -> usize {
+        self.len
     }
 
     pub fn get_item(&self, offset: usize) -> R::Item {
@@ -279,20 +283,19 @@ where
         unsafe { self.ptr.ptr.add(self.offset()) }
     }
 
+    /// this code retunrs a slice of the matrix
+    /// WARNING: even if the matrix has offset, the slice will be created from the original pointer
     pub fn to_vec(&self) -> Vec<R::Item>
     where
         R::Item: Clone,
     {
-        if self.shape().len() <= 1 {
-            let num_elm = std::cmp::max(self.shape().num_elm(), 1);
-            let mut vec = Vec::with_capacity(num_elm);
-            for i in 0..num_elm {
-                vec.push(self.ptr.get_item(i).clone());
-            }
-            vec
-        } else {
-            panic!("Invalid shape");
+        let ptr_len = self.ptr.len();
+        let mut vec = Vec::with_capacity(ptr_len);
+        let non_offset_ptr = Ptr::<Ref<&R::Item>, D>::new(self.ptr.ptr, ptr_len, 0);
+        for i in 0..ptr_len {
+            vec.push(non_offset_ptr.get_item(i).clone());
         }
+        vec
     }
 
     pub fn into_dyn_dim(self) -> Matrix<R, DimDyn, D> {
