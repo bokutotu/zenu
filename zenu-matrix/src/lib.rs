@@ -12,8 +12,6 @@ pub mod operation;
 pub mod shape_stride;
 pub mod slice;
 
-#[cfg(feature = "nvidia")]
-mod gpu_method;
-
 mod impl_ops;
+mod impl_serde;
 mod matrix_format;

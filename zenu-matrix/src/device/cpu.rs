@@ -14,10 +14,12 @@ impl DeviceBase for Cpu {
     #[allow(clippy::not_unsafe_ptr_arg_deref)]
     fn clone_ptr<T>(ptr: *const T, len: usize) -> *mut T {
         let mut vec = Vec::with_capacity(len);
-        unsafe {
-            std::ptr::copy_nonoverlapping(ptr, vec.as_mut_ptr(), len);
+        for i in 0..len {
+            vec.push(unsafe { ptr.offset(i as isize).read() });
         }
-        vec.as_mut_ptr()
+        let ptr = vec.as_mut_ptr();
+        std::mem::forget(vec);
+        ptr
     }
 
     #[allow(clippy::not_unsafe_ptr_arg_deref)]

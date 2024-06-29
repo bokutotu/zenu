@@ -1,9 +1,4 @@
-use std::marker::PhantomData;
-
-use serde::{
-    de::{Deserialize, Error as DeError, MapAccess, Visitor},
-    ser::*,
-};
+use std::{any::TypeId, marker::PhantomData};
 
 use crate::{
     device::{cpu::Cpu, Device, DeviceBase},
@@ -13,6 +8,9 @@ use crate::{
     shape_stride::ShapeStride,
     slice::Slice,
 };
+
+#[cfg(feature = "nvidia")]
+use crate::device::nvidia::Nvidia;
 
 pub trait Repr: Default {
     type Item: Num;
@@ -131,6 +129,28 @@ where
             repr: PhantomData,
             device: PhantomData,
         }
+    }
+
+    fn to<Dout: DeviceBase>(&self) -> Ptr<Owned<R::Item>, Dout> {
+        let self_raw_ptr = self.ptr as *mut R::Item;
+        let len = self.len;
+
+        let ptr = match (TypeId::of::<D>(), TypeId::of::<Dout>()) {
+            (a, b) if a == b => Owned::clone_memory(self_raw_ptr, len, D::default()),
+            #[cfg(feature = "nvidia")]
+            (a, b) if a == TypeId::of::<Cpu>() && b == TypeId::of::<Nvidia>() => {
+                let ptr = zenu_cuda::runtime::copy_to_gpu(self_raw_ptr, len);
+                ptr
+            }
+            #[cfg(feature = "nvidia")]
+            (a, b) if a == TypeId::of::<Nvidia>() && b == TypeId::of::<Cpu>() => {
+                let ptr = zenu_cuda::runtime::copy_to_cpu(self_raw_ptr, len);
+                ptr
+            }
+            _ => unreachable!(),
+        };
+
+        Ptr::new(ptr, len, self.offset)
     }
 }
 
@@ -259,10 +279,17 @@ where
         unsafe { self.ptr.ptr.add(self.offset()) }
     }
 
-    pub fn as_slice(&self) -> &[R::Item] {
+    pub fn to_vec(&self) -> Vec<R::Item>
+    where
+        R::Item: Clone,
+    {
         if self.shape().len() <= 1 {
             let num_elm = std::cmp::max(self.shape().num_elm(), 1);
-            unsafe { std::slice::from_raw_parts(self.as_ptr(), num_elm) }
+            let mut vec = Vec::with_capacity(num_elm);
+            for i in 0..num_elm {
+                vec.push(self.ptr.get_item(i).clone());
+            }
+            vec
         } else {
             panic!("Invalid shape");
         }
@@ -399,20 +426,6 @@ where
         owned.to_ref_mut().copy_from(self);
         owned
     }
-
-    pub fn to<Dout: DeviceBase>(self) -> Matrix<Owned<R::Item>, S, Dout> {
-        let raw_ptr = self.ptr.ptr;
-        let len = self.ptr.len;
-
-        let device_ptr = Dout::clone_ptr(raw_ptr, len);
-        let device_ptr = Ptr::<Owned<R::Item>, Dout>::new(device_ptr, len, self.ptr.offset);
-
-        Matrix {
-            ptr: device_ptr,
-            shape: self.shape,
-            stride: self.stride,
-        }
-    }
 }
 
 impl<T, S, D> Matrix<Owned<T>, S, D>
@@ -449,6 +462,13 @@ where
             shape: self.shape,
             stride: self.stride,
         }
+    }
+
+    pub fn to<Dout: DeviceBase>(self) -> Matrix<Owned<T>, S, Dout> {
+        let shape = self.shape();
+        let stride = self.stride();
+        let ptr = self.ptr.to::<Dout>();
+        Matrix::new(ptr, shape, stride)
     }
 }
 
@@ -544,99 +564,10 @@ where
     }
 }
 
-impl<T, R, S, D> Serialize for Matrix<R, S, D>
-where
-    T: Num,
-    R: Repr<Item = T>,
-    S: DimTrait,
-    D: DeviceBase,
-{
-    fn serialize<Ser>(&self, serializer: Ser) -> Result<Ser::Ok, Ser::Error>
-    where
-        Ser: serde::Serializer,
-    {
-        let shape = self.shape();
-        let stride = self.stride();
-        let shape_slice = shape.slice();
-        let stride_slice = stride.slice();
-
-        let cpu_mat = self.to_ref().to::<Cpu>();
-        let cpu_mat_1d = cpu_mat.reshape([self.shape().num_elm()]);
-        let data = cpu_mat_1d.as_slice();
-
-        let data_type = std::any::type_name::<T>();
-
-        let mut seq = serializer.serialize_struct("Matrix", 4)?;
-        seq.serialize_field("shape", &shape_slice)?;
-        seq.serialize_field("stride", &stride_slice)?;
-        seq.serialize_field("data", &data)?;
-        seq.serialize_field("data_type", &data_type)?;
-
-        seq.end()
-    }
-}
-
-impl<'de, R, S, D> Deserialize<'de> for Matrix<R, S, D>
-where
-    R: Repr,
-    R::Item: Deserialize<'de> + Num,
-    S: DimTrait + Deserialize<'de>,
-    D: DeviceBase,
-{
-    fn deserialize<Des>(deserializer: Des) -> Result<Self, Des::Error>
-    where
-        Des: serde::Deserializer<'de>,
-    {
-        struct MatrixVisitor<R, S, D> {
-            _phantom: PhantomData<(R, S, D)>,
-        }
-
-        impl<'de, R, S, D> Visitor<'de> for MatrixVisitor<R, S, D>
-        where
-            R: Repr,
-            R::Item: Deserialize<'de> + Num,
-            S: DimTrait + Deserialize<'de>,
-            D: DeviceBase,
-        {
-            type Value = Matrix<R, S, D>;
-
-            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-                formatter.write_str("struct Matrix")
-            }
-
-            fn visit_map<V>(self, mut map: V) -> Result<Matrix<R, S, D>, V::Error>
-            where
-                V: MapAccess<'de>,
-            {
-                let shape: S = map.next_value()?;
-                let stride: S = map.next_value()?;
-                let data: Vec<R::Item> = map.next_value()?;
-                let _data_type: String = map.next_value()?;
-
-                let len = shape.num_elm();
-                if len != data.len() {
-                    return Err(DeError::custom("Invalid size"));
-                }
-
-                let ptr = Ptr::new(D::from_vec(data), len, 0);
-
-                Ok(Matrix { ptr, shape, stride })
-            }
-        }
-
-        const FIELDS: &[&str] = &["shape", "stride", "data", "data_type"];
-        deserializer.deserialize_struct(
-            "Matrix",
-            FIELDS,
-            MatrixVisitor {
-                _phantom: PhantomData,
-            },
-        )
-    }
-}
-
 #[cfg(test)]
 mod matrix {
+    use zenu_test::assert_mat_eq_epsilon;
+
     use crate::{
         device::DeviceBase,
         dim::{Dim1, Dim2, DimDyn, DimTrait},
