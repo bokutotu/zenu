@@ -1,6 +1,8 @@
+use serde::{Deserialize, Serialize};
+
 use super::{Device, DeviceBase};
 
-#[derive(Copy, Clone, Default, Debug)]
+#[derive(Copy, Clone, Default, Debug, Serialize, Deserialize)]
 pub struct Cpu;
 
 impl DeviceBase for Cpu {

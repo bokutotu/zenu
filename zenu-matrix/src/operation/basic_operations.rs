@@ -1048,6 +1048,36 @@ mod basic_ops {
         broad_cast_4x1x1x1_4x3x3x3::<crate::device::nvidia::Nvidia>();
     }
 
+    fn broadcast_add_1x4x1x1_3x4x5x5<D: Device>() {
+        let a = Matrix::<Owned<f32>, DimDyn, D>::from_vec(vec![1., 2., 3., 4.], [1, 4, 1, 1]);
+        let b = Matrix::<Owned<f32>, DimDyn, D>::zeros([3, 4, 5, 5]);
+        let mut ans = Matrix::<Owned<f32>, DimDyn, D>::zeros([3, 4, 5, 5]);
+        ans.to_ref_mut().add_array(&a, &b);
+        let one = vec![1; 4 * 5 * 5];
+        let two = vec![2; 4 * 5 * 5];
+        let three = vec![3; 4 * 5 * 5];
+        let four = vec![4; 4 * 5 * 5];
+        let mut result = Vec::new();
+        result.extend_from_slice(&one);
+        result.extend_from_slice(&two);
+        result.extend_from_slice(&three);
+        result.extend_from_slice(&four);
+        let result = result.into_iter().map(|x| x as f32).collect::<Vec<f32>>();
+        let result = Matrix::<Owned<f32>, DimDyn, D>::from_vec(result, [3, 4, 5, 5]);
+        let diff = ans - result;
+        let diff = diff.asum();
+        assert!(diff == 0.0);
+    }
+    #[test]
+    fn broadcast_add_1x4x1x1_3x4x5x5_cpu() {
+        broadcast_add_1x4x1x1_3x4x5x5::<crate::device::cpu::Cpu>();
+    }
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn broadcast_add_1x4x1x1_3x4x5x5_gpu() {
+        broadcast_add_1x4x1x1_3x4x5x5::<crate::device::nvidia::Nvidia>();
+    }
+
     fn sub_3d_scalar<D: Device>() {
         let a = vec![1., 2., 3., 4., 5., 6., 7., 8.];
         let a: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(a, [2, 2, 2]);

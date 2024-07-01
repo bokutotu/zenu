@@ -66,6 +66,7 @@ where
     let y = y.as_mut_ptr();
     D::copy_raw(n, x, incx, y, incy);
 }
+
 fn get_max_shape_idx_of_apply_blas(a: ShapeStride<DimDyn>, b: ShapeStride<DimDyn>) -> usize {
     let min_len = std::cmp::min(a.shape().len(), b.shape().len());
     let a_len = a.shape().len();

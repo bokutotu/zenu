@@ -13,6 +13,7 @@ use std::{
 
 use creator::ones::ones;
 use lazy_static::lazy_static;
+use serde::{Deserialize, Serialize};
 use zenu_matrix::{
     device::Device,
     dim::DimDyn,
@@ -103,6 +104,40 @@ pub struct VariableInner<T: Num, D: Device> {
     gen: usize,
     name: Option<String>,
     is_train: bool,
+}
+
+impl<T, D> Serialize for VariableInner<T, D>
+where
+    T: Num,
+    D: Device,
+{
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        self.data.serialize(serializer)
+    }
+}
+
+impl<'de, T, D> Deserialize<'de> for VariableInner<T, D>
+where
+    T: Num,
+    D: Device,
+{
+    fn deserialize<Ds>(deserializer: Ds) -> Result<Self, Ds::Error>
+    where
+        Ds: serde::Deserializer<'de>,
+    {
+        let data = Matrix::<Owned<T>, DimDyn, D>::deserialize(deserializer)?;
+        Ok(VariableInner {
+            data,
+            creator: None,
+            grad: None,
+            gen: 0,
+            name: None,
+            is_train: false,
+        })
+    }
 }
 
 impl<T: Num, D: Device> VariableInner<T, D> {
@@ -246,6 +281,35 @@ impl<T: Num, D: Device> From<T> for Variable<T, D> {
 impl<T: Num, D: Device> From<Matrix<Owned<T>, DimDyn, D>> for Variable<T, D> {
     fn from(data: Matrix<Owned<T>, DimDyn, D>) -> Self {
         Variable::new(data)
+    }
+}
+
+impl<T, D> Serialize for Variable<T, D>
+where
+    T: Num,
+    D: Device,
+{
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        self.inner.borrow().clone().serialize(serializer)
+    }
+}
+
+impl<'de, T, D> Deserialize<'de> for Variable<T, D>
+where
+    T: Num,
+    D: Device,
+{
+    fn deserialize<Ds>(deserializer: Ds) -> Result<Self, Ds::Error>
+    where
+        Ds: serde::Deserializer<'de>,
+    {
+        let inner = VariableInner::<T, D>::deserialize(deserializer)?;
+        Ok(Variable {
+            inner: Rc::new(RefCell::new(inner)),
+        })
     }
 }
 
