@@ -1,5 +1,6 @@
 use crate::Layer;
 use rand_distr::{Distribution, StandardNormal};
+use serde::{Deserialize, Serialize};
 use zenu_autograd::{
     creator::{rand::normal, zeros::zeros},
     functions::matmul::matmul,
@@ -8,6 +9,8 @@ use zenu_autograd::{
 use zenu_matrix::{device::Device, num::Num};
 
 pub struct Linear<T: Num, D: Device> {
+    in_features: usize,
+    out_features: usize,
     weight: Variable<T, D>,
     bias: Option<Variable<T, D>>,
 }
@@ -64,7 +67,12 @@ impl<T: Num, D: Device> Linear<T, D> {
         } else {
             None
         };
-        Self { weight, bias }
+        Self {
+            weight,
+            bias,
+            in_features,
+            out_features,
+        }
     }
 }
 
