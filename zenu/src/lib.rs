@@ -38,8 +38,6 @@ pub fn save_model<T: Num, D: Device, M: Model<T, D>, P: AsRef<Path>>(
         .into_iter()
         .map(|x| x.get_data().clone())
         .collect::<Vec<_>>();
-    // let save_json = serde_json::to_string(&parameters_mat).unwrap();
-    // std::fs::write(save_path, save_json).map_err(|_| "Failed to save model")?;
     Ok(())
 }
 

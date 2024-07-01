@@ -161,7 +161,6 @@ mod adam {
         // iter 2
         let input = from_vec::<f64, _, D>(vec![1.1], [1, 1]);
         let target = simple_function(input.clone(), ans_weight_1.clone(), ans_weight_2.clone());
-        dbg!(target.clone());
         adam_apply(
             &adam,
             simple_function,

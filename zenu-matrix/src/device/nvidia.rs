@@ -1,7 +1,8 @@
 use super::{Device, DeviceBase};
 use crate::num::Num;
+use serde::{Deserialize, Serialize};
 
-#[derive(Copy, Clone, Default, Debug)]
+#[derive(Copy, Clone, Default, Debug, Serialize, Deserialize)]
 pub struct Nvidia;
 
 impl DeviceBase for Nvidia {

@@ -4,7 +4,7 @@ use std::{
 };
 
 use rand_distr::{num_traits::Float, uniform::SampleUniform};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 pub trait Num:
     Default
@@ -24,7 +24,7 @@ pub trait Num:
     + Float
     + SampleUniform
     + Serialize
-    + for<'de> serde::Deserialize<'de>
+    + for<'de> Deserialize<'de>
     + 'static
 {
     fn is_f32() -> bool;
