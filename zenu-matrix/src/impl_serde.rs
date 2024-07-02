@@ -1,97 +1,215 @@
-use serde::{Deserialize, Serialize};
+use serde::{
+    de::{Deserialize, Visitor},
+    ser::{Serialize, SerializeStruct},
+};
 
 use crate::device::cpu::Cpu;
-use crate::device::DeviceBase;
+use crate::device::Device;
 use crate::dim::{DimDyn, DimTrait};
-use crate::matrix::{Matrix, Owned, Ptr};
+use crate::matrix::{Matrix, Owned, Ptr, Repr};
 use crate::num::Num;
 
-// 中間構造体
-#[derive(Serialize, Deserialize)]
-struct MatrixSerializeData<T> {
-    shape: Vec<usize>,
-    stride: Vec<usize>,
-    data: Vec<T>,
-    data_type: String,
-    ptr_offset: usize,
-}
-
-impl<T, D> Matrix<Owned<T>, DimDyn, D>
-where
-    T: Num,
-    D: DeviceBase,
-{
-    fn to_serialize_data(&self) -> MatrixSerializeData<T> {
+impl<R: Repr, D: Device> Serialize for Matrix<R, DimDyn, D> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
         let shape = self.shape().slice().to_vec();
         let stride = self.stride().slice().to_vec();
         let data = self
+            .new_matrix()
             .clone()
             .to::<Cpu>()
             .reshape([self.shape().num_elm()])
             .to_vec();
-        let data_type = std::any::type_name::<T>().to_string();
-
+        let data_type = std::any::type_name::<R::Item>().to_string();
         let ptr_offset = self.offset();
 
-        MatrixSerializeData {
-            shape,
-            stride,
-            data,
-            data_type,
-            ptr_offset,
-        }
+        let mut state = serializer.serialize_struct("Matrix", 5)?;
+
+        state.serialize_field("shape", &shape)?;
+        state.serialize_field("stride", &stride)?;
+        state.serialize_field("data", &data)?;
+        state.serialize_field("data_type", &data_type)?;
+        state.serialize_field("ptr_offset", &ptr_offset)?;
+
+        state.end()
     }
 }
 
-impl<T> Matrix<Owned<T>, DimDyn, Cpu>
-where
-    T: Num,
-{
-    fn from_serialize_data(data: MatrixSerializeData<T>) -> Result<Self, String> {
-        if std::any::type_name::<T>() != data.data_type {
-            return Err("Data type mismatch".to_string());
-        }
-
-        let shape = DimDyn::from(&data.shape as &[usize]);
-        let stride = DimDyn::from(&data.stride as &[usize]);
-
-        let mut data_cloned = data.data.clone();
-        let ptr =
-            Ptr::<Owned<T>, Cpu>::new(data_cloned.as_mut_ptr(), data.data.len(), data.ptr_offset);
-        std::mem::forget(data_cloned);
-
-        Ok(Matrix::new(ptr, shape, stride))
-    }
-}
-
-impl<T, D> Serialize for Matrix<Owned<T>, DimDyn, D>
-where
-    T: Num,
-    D: DeviceBase,
-{
-    fn serialize<Ser>(&self, serializer: Ser) -> Result<Ser::Ok, Ser::Error>
+impl<'de, T: Num, D: Device> Deserialize<'de> for Matrix<Owned<T>, DimDyn, D> {
+    fn deserialize<Ds>(deserializer: Ds) -> Result<Self, Ds::Error>
     where
-        Ser: serde::Serializer,
+        Ds: serde::Deserializer<'de>,
     {
-        self.to_serialize_data().serialize(serializer)
-    }
-}
+        enum Field {
+            Shape,
+            Stride,
+            Data,
+            DataType,
+            PtrOffset,
+        }
 
-impl<'de, T, D> Deserialize<'de> for Matrix<Owned<T>, DimDyn, D>
-where
-    T: Num,
-    D: DeviceBase,
-{
-    fn deserialize<De>(deserializer: De) -> Result<Self, De::Error>
-    where
-        De: serde::Deserializer<'de>,
-    {
-        let data = MatrixSerializeData::<T>::deserialize(deserializer)?;
-        let cpu_matrix =
-            Matrix::<Owned<T>, DimDyn, Cpu>::from_serialize_data(data).map_err(|e| {
-                serde::de::Error::custom(format!("Failed to deserialize matrix: {}", e))
-            })?;
-        Ok(cpu_matrix.to::<D>())
+        const FIELDS: &[&str] = &["shape", "stride", "data", "data_type", "ptr_offset"];
+
+        impl<'de> Deserialize<'de> for Field {
+            fn deserialize<D>(deserializer: D) -> Result<Field, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                struct FieldVisitor;
+
+                impl<'de> serde::de::Visitor<'de> for FieldVisitor {
+                    type Value = Field;
+
+                    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                        formatter
+                            .write_str("`shape`, `stride`, `data`, `data_type` or `ptr_offset`")
+                    }
+
+                    fn visit_str<E>(self, value: &str) -> Result<Field, E>
+                    where
+                        E: serde::de::Error,
+                    {
+                        match value {
+                            "shape" => Ok(Field::Shape),
+                            "stride" => Ok(Field::Stride),
+                            "data" => Ok(Field::Data),
+                            "data_type" => Ok(Field::DataType),
+                            "ptr_offset" => Ok(Field::PtrOffset),
+                            _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
+                        }
+                    }
+                }
+
+                deserializer.deserialize_identifier(FieldVisitor)
+            }
+        }
+
+        struct MatrixVisitor<T: Num, D: Device>(std::marker::PhantomData<(T, D)>);
+
+        impl<'de, T: Num, D: Device> Visitor<'de> for MatrixVisitor<T, D> {
+            type Value = Matrix<Owned<T>, DimDyn, D>;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("struct Matrix")
+            }
+
+            fn visit_map<V>(self, mut map: V) -> Result<Self::Value, V::Error>
+            where
+                V: serde::de::MapAccess<'de>,
+            {
+                let mut shape = None;
+                let mut stride = None;
+                let mut data = None;
+                let mut data_type = None;
+                let mut ptr_offset = None;
+
+                while let Some(key) = map.next_key()? {
+                    match key {
+                        Field::Shape => {
+                            if shape.is_some() {
+                                return Err(serde::de::Error::duplicate_field("shape"));
+                            }
+                            shape = Some(map.next_value()?);
+                        }
+                        Field::Stride => {
+                            if stride.is_some() {
+                                return Err(serde::de::Error::duplicate_field("stride"));
+                            }
+                            stride = Some(map.next_value()?);
+                        }
+                        Field::Data => {
+                            if data.is_some() {
+                                return Err(serde::de::Error::duplicate_field("data"));
+                            }
+                            data = Some(map.next_value()?);
+                        }
+                        Field::DataType => {
+                            if data_type.is_some() {
+                                return Err(serde::de::Error::duplicate_field("data_type"));
+                            }
+                            data_type = Some(map.next_value()?);
+                        }
+                        Field::PtrOffset => {
+                            if ptr_offset.is_some() {
+                                return Err(serde::de::Error::duplicate_field("ptr_offset"));
+                            }
+                            ptr_offset = Some(map.next_value()?);
+                        }
+                    }
+                }
+
+                let shape: Vec<usize> =
+                    shape.ok_or_else(|| serde::de::Error::missing_field("shape"))?;
+                let stride: Vec<usize> =
+                    stride.ok_or_else(|| serde::de::Error::missing_field("stride"))?;
+                let data: Vec<T> = data.ok_or_else(|| serde::de::Error::missing_field("data"))?;
+                let data_type: String =
+                    data_type.ok_or_else(|| serde::de::Error::missing_field("data_type"))?;
+                let ptr_offset =
+                    ptr_offset.ok_or_else(|| serde::de::Error::missing_field("ptr_offset"))?;
+
+                if std::any::type_name::<T>() != data_type {
+                    return Err(serde::de::Error::custom("Data type mismatch"));
+                }
+
+                let shape = DimDyn::from(&shape as &[usize]);
+                let stride = DimDyn::from(&stride as &[usize]);
+
+                let mut data_cloned = data.clone();
+                let ptr =
+                    Ptr::<Owned<T>, Cpu>::new(data_cloned.as_mut_ptr(), data.len(), ptr_offset);
+                std::mem::forget(data_cloned);
+
+                let mat = Matrix::new(ptr, shape, stride);
+                let mat_d: Matrix<Owned<T>, DimDyn, D> = mat.to();
+                Ok(mat_d)
+            }
+
+            fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+            where
+                A: serde::de::SeqAccess<'de>,
+            {
+                let shape: Vec<usize> = seq
+                    .next_element()?
+                    .ok_or_else(|| serde::de::Error::invalid_length(0, &""))?;
+                let stride: Vec<usize> = seq
+                    .next_element()?
+                    .ok_or_else(|| serde::de::Error::invalid_length(1, &""))?;
+                let data: Vec<T> = seq
+                    .next_element()?
+                    .ok_or_else(|| serde::de::Error::invalid_length(2, &""))?;
+                let data_type: String = seq
+                    .next_element()?
+                    .ok_or_else(|| serde::de::Error::invalid_length(3, &""))?;
+                let ptr_offset = seq
+                    .next_element()?
+                    .ok_or_else(|| serde::de::Error::invalid_length(4, &""))?;
+
+                if std::any::type_name::<T>() != data_type {
+                    return Err(serde::de::Error::custom("Data type mismatch"));
+                }
+
+                let shape = DimDyn::from(&shape as &[usize]);
+                let stride = DimDyn::from(&stride as &[usize]);
+
+                let mut data_cloned = data.clone();
+                let ptr =
+                    Ptr::<Owned<T>, Cpu>::new(data_cloned.as_mut_ptr(), data.len(), ptr_offset);
+                std::mem::forget(data_cloned);
+
+                let mat = Matrix::new(ptr, shape, stride);
+                let mat_d: Matrix<Owned<T>, DimDyn, D> = mat.to();
+                Ok(mat_d)
+            }
+        }
+
+        deserializer.deserialize_struct(
+            "Matrix",
+            FIELDS,
+            MatrixVisitor::<T, D>(std::marker::PhantomData),
+        )
     }
 }
 

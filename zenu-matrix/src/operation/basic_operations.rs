@@ -1053,19 +1053,19 @@ mod basic_ops {
         let b = Matrix::<Owned<f32>, DimDyn, D>::zeros([3, 4, 5, 5]);
         let mut ans = Matrix::<Owned<f32>, DimDyn, D>::zeros([3, 4, 5, 5]);
         ans.to_ref_mut().add_array(&a, &b);
-        let one = vec![1; 4 * 5 * 5];
-        let two = vec![2; 4 * 5 * 5];
-        let three = vec![3; 4 * 5 * 5];
-        let four = vec![4; 4 * 5 * 5];
+        let one = vec![1; 3 * 5 * 5];
+        let two = vec![2; 3 * 5 * 5];
+        let three = vec![3; 3 * 5 * 5];
+        let four = vec![4; 3 * 5 * 5];
         let mut result = Vec::new();
         result.extend_from_slice(&one);
         result.extend_from_slice(&two);
         result.extend_from_slice(&three);
         result.extend_from_slice(&four);
         let result = result.into_iter().map(|x| x as f32).collect::<Vec<f32>>();
-        let result = Matrix::<Owned<f32>, DimDyn, D>::from_vec(result, [3, 4, 5, 5]);
-        let diff = ans - result;
-        let diff = diff.asum();
+        let mut result = Matrix::<Owned<f32>, DimDyn, D>::from_vec(result, [4, 3, 5, 5]);
+        result.transpose_swap_index(0, 1);
+        let diff = (ans - result).asum();
         assert!(diff == 0.0);
     }
     #[test]

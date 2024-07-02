@@ -136,6 +136,9 @@ where
     }
 
     fn to<Dout: DeviceBase>(&self) -> Ptr<Owned<R::Item>, Dout> {
+        #[cfg(feature = "nvidia")]
+        use crate::device::cpu::Cpu;
+
         let self_raw_ptr = self.ptr as *mut R::Item;
         let len = self.len;
 
@@ -440,6 +443,11 @@ where
     pub fn from_vec<I: Into<S>>(vec: Vec<T>, shape: I) -> Self {
         let shape = shape.into();
         if vec.len() != shape.num_elm() {
+            println!(
+                "vec.len() = {}, shape.num_elm() = {}",
+                vec.len(),
+                shape.num_elm()
+            );
             panic!("Invalid size");
         }
 
