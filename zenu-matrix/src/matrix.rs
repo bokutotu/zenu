@@ -577,7 +577,6 @@ where
 
 #[cfg(test)]
 mod matrix {
-    use zenu_test::assert_mat_eq_epsilon;
 
     use crate::{
         device::DeviceBase,

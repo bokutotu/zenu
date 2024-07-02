@@ -24,7 +24,7 @@ pub trait Num:
     + Float
     + SampleUniform
     + Serialize
-    + for<'de> Deserialize<'de>
+    // + for<'de> Deserialize<'de>
     + 'static
 {
     fn is_f32() -> bool;
