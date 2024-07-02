@@ -28,15 +28,15 @@ impl<T: Num, D: Device> Layer<T, D> for Conv2d<T, D> {
             let input_shape = input.get_data().shape();
             let filter_shape = self.filter.get_data().shape();
             let output_shape = conv2d_out_size(
-                &input_shape.slice(),
-                &filter_shape.slice(),
+                input_shape.slice(),
+                filter_shape.slice(),
                 self.padding,
                 self.stride,
             );
             let config = Conv2dConfigs::new(
-                input_shape.into(),
+                input_shape,
                 output_shape.into(),
-                filter_shape.into(),
+                filter_shape,
                 self.stride,
                 self.padding,
                 20,

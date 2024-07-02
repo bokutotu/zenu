@@ -8,6 +8,8 @@ use zenu_autograd::{
 };
 use zenu_matrix::{device::Device, num::Num};
 
+#[derive(Serialize, Deserialize)]
+#[serde(bound(deserialize = "T: Deserialize<'de>, D: Device, Variable<T, D>: Deserialize<'de>,"))]
 pub struct Linear<T: Num, D: Device> {
     in_features: usize,
     out_features: usize,
@@ -68,10 +70,10 @@ impl<T: Num, D: Device> Linear<T, D> {
             None
         };
         Self {
-            weight,
-            bias,
             in_features,
             out_features,
+            weight,
+            bias,
         }
     }
 }
