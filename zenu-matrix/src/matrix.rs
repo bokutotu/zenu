@@ -139,7 +139,7 @@ where
         #[cfg(feature = "nvidia")]
         use crate::device::cpu::Cpu;
 
-        let self_raw_ptr = self.ptr as *mut R::Item;
+        let self_raw_ptr = self.ptr;
         let len = self.len;
 
         let ptr = match (TypeId::of::<D>(), TypeId::of::<Dout>()) {
@@ -296,7 +296,7 @@ where
         let mut vec = Vec::with_capacity(ptr_len);
         let non_offset_ptr = Ptr::<Ref<&R::Item>, D>::new(self.ptr.ptr, ptr_len, 0);
         for i in 0..ptr_len {
-            vec.push(non_offset_ptr.get_item(i).clone());
+            vec.push(non_offset_ptr.get_item(i));
         }
         vec
     }
@@ -443,12 +443,11 @@ where
     pub fn from_vec<I: Into<S>>(vec: Vec<T>, shape: I) -> Self {
         let shape = shape.into();
         if vec.len() != shape.num_elm() {
-            println!(
-                "vec.len() = {}, shape.num_elm() = {}",
+            panic!(
+                "Invalid Shape, vec.len() = {}, shape.num_elm() = {}",
                 vec.len(),
                 shape.num_elm()
             );
-            panic!("Invalid size");
         }
 
         let len = vec.len();

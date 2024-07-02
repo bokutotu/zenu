@@ -4,7 +4,7 @@ use std::{
 };
 
 use rand_distr::{num_traits::Float, uniform::SampleUniform};
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
 pub trait Num:
     Default

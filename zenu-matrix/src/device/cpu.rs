@@ -17,7 +17,7 @@ impl DeviceBase for Cpu {
     fn clone_ptr<T>(ptr: *const T, len: usize) -> *mut T {
         let mut vec = Vec::with_capacity(len);
         for i in 0..len {
-            vec.push(unsafe { ptr.offset(i as isize).read() });
+            vec.push(unsafe { ptr.add(i).read() });
         }
         let ptr = vec.as_mut_ptr();
         std::mem::forget(vec);
