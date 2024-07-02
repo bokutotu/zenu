@@ -37,7 +37,7 @@ impl<R: Repr, D: Device> Serialize for Matrix<R, DimDyn, D> {
     }
 }
 
-impl<'de, T: Num, D: Device> Deserialize<'de> for Matrix<Owned<T>, DimDyn, D> {
+impl<'de, T: Num + Deserialize<'de>, D: Device> Deserialize<'de> for Matrix<Owned<T>, DimDyn, D> {
     fn deserialize<Ds>(deserializer: Ds) -> Result<Self, Ds::Error>
     where
         Ds: serde::Deserializer<'de>,
@@ -88,7 +88,7 @@ impl<'de, T: Num, D: Device> Deserialize<'de> for Matrix<Owned<T>, DimDyn, D> {
 
         struct MatrixVisitor<T: Num, D: Device>(std::marker::PhantomData<(T, D)>);
 
-        impl<'de, T: Num, D: Device> Visitor<'de> for MatrixVisitor<T, D> {
+        impl<'de, T: Num + Deserialize<'de>, D: Device> Visitor<'de> for MatrixVisitor<T, D> {
             type Value = Matrix<Owned<T>, DimDyn, D>;
 
             fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {

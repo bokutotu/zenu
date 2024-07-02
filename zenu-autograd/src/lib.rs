@@ -121,7 +121,7 @@ where
 
 impl<'de, T, D> Deserialize<'de> for VariableInner<T, D>
 where
-    T: Num,
+    T: Num + Deserialize<'de>,
     D: Device,
 {
     fn deserialize<Ds>(deserializer: Ds) -> Result<Self, Ds::Error>
@@ -299,7 +299,7 @@ where
 
 impl<'de, T, D> Deserialize<'de> for Variable<T, D>
 where
-    T: Num,
+    T: Num + Deserialize<'de>,
     D: Device,
 {
     fn deserialize<Ds>(deserializer: Ds) -> Result<Self, Ds::Error>

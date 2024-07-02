@@ -11,7 +11,8 @@ use zenu_matrix::{device::Device, dim::DimTrait, nn::conv2d::conv2d_out_size, nu
 
 use crate::Layer;
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
+#[serde(bound(deserialize = "T: Deserialize<'de>, D: Device, Variable<T, D>: Deserialize<'de>,"))]
 pub struct Conv2d<T: Num, D: Device> {
     filter: Variable<T, D>,
     bias: Option<Variable<T, D>>,
@@ -19,144 +20,6 @@ pub struct Conv2d<T: Num, D: Device> {
     config: RefCell<Option<Conv2dConfigs<T>>>,
     stride: (usize, usize),
     padding: (usize, usize),
-}
-
-impl<'de, T: Num, D: Device> Deserialize<'de> for Conv2d<T, D> {
-    fn deserialize<Ds>(deserializer: Ds) -> Result<Self, Ds::Error>
-    where
-        Ds: serde::Deserializer<'de>,
-    {
-        const FIELDS: &[&str] = &["filter", "bias", "stride", "padding"];
-        enum Field {
-            Filter,
-            Bias,
-            Stride,
-            Padding,
-        }
-
-        impl<'de> Deserialize<'de> for Field {
-            fn deserialize<Ds>(deserializer: Ds) -> Result<Field, Ds::Error>
-            where
-                Ds: serde::Deserializer<'de>,
-            {
-                struct FieldVisitor;
-
-                impl<'de> serde::de::Visitor<'de> for FieldVisitor {
-                    type Value = Field;
-
-                    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-                        formatter.write_str("`filter` or `bias` or `stride` or `padding`")
-                    }
-
-                    fn visit_str<E>(self, value: &str) -> Result<Field, E>
-                    where
-                        E: serde::de::Error,
-                    {
-                        match value {
-                            "filter" => Ok(Field::Filter),
-                            "bias" => Ok(Field::Bias),
-                            "stride" => Ok(Field::Stride),
-                            "padding" => Ok(Field::Padding),
-                            _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
-                        }
-                    }
-                }
-
-                deserializer.deserialize_identifier(FieldVisitor)
-            }
-        }
-
-        struct Conv2dVisitor<T: Num, D: Device> {
-            marker: std::marker::PhantomData<Conv2d<T, D>>,
-        }
-
-        impl<'de, T: Num, D: Device> serde::de::Visitor<'de> for Conv2dVisitor<T, D> {
-            type Value = Conv2d<T, D>;
-
-            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-                formatter.write_str("struct Conv2d")
-            }
-
-            fn visit_seq<A>(self, mut seq: A) -> Result<Conv2d<T, D>, A::Error>
-            where
-                A: serde::de::SeqAccess<'de>,
-            {
-                let filter = seq
-                    .next_element()?
-                    .ok_or_else(|| serde::de::Error::invalid_length(0, &self))?;
-                let bias = seq.next_element()?;
-                let stride = seq
-                    .next_element()?
-                    .ok_or_else(|| serde::de::Error::invalid_length(2, &self))?;
-                let padding = seq
-                    .next_element()?
-                    .ok_or_else(|| serde::de::Error::invalid_length(2, &self))?;
-                Ok(Conv2d {
-                    filter,
-                    bias,
-                    config: RefCell::new(None),
-                    stride,
-                    padding,
-                })
-            }
-
-            fn visit_map<A>(self, mut map: A) -> Result<Conv2d<T, D>, A::Error>
-            where
-                A: serde::de::MapAccess<'de>,
-            {
-                let mut filter = None;
-                let mut bias = None;
-                let mut stride = None;
-                let mut padding = None;
-                while let Some(key) = map.next_key()? {
-                    match key {
-                        Field::Filter => {
-                            if filter.is_some() {
-                                return Err(serde::de::Error::duplicate_field("filter"));
-                            }
-                            filter = Some(map.next_value()?);
-                        }
-                        Field::Bias => {
-                            if bias.is_some() {
-                                return Err(serde::de::Error::duplicate_field("bias"));
-                            }
-                            bias = map.next_value()?;
-                        }
-                        Field::Stride => {
-                            if stride.is_some() {
-                                return Err(serde::de::Error::duplicate_field("stride"));
-                            }
-                            stride = Some(map.next_value()?);
-                        }
-                        Field::Padding => {
-                            if padding.is_some() {
-                                return Err(serde::de::Error::duplicate_field("padding"));
-                            }
-                            padding = Some(map.next_value()?);
-                        }
-                    }
-                }
-                let filter = filter.ok_or_else(|| serde::de::Error::missing_field("filter"))?;
-                let stride = stride.ok_or_else(|| serde::de::Error::missing_field("stride"))?;
-                let padding = padding.ok_or_else(|| serde::de::Error::missing_field("padding"))?;
-                Ok(Conv2d {
-                    filter,
-                    bias,
-                    config: RefCell::new(None),
-                    stride,
-                    padding,
-                })
-            }
-        }
-
-        deserializer.deserialize_struct(
-            "Conv2d",
-            FIELDS,
-            Conv2dVisitor::<T, D> {
-                marker: std::marker::PhantomData,
-            },
-        )
-    }
 }
 
 impl<T: Num, D: Device> Layer<T, D> for Conv2d<T, D> {
