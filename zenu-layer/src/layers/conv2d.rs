@@ -1,6 +1,7 @@
 use std::cell::RefCell;
 
 use rand_distr::{Distribution, StandardNormal};
+use serde::{Deserialize, Serialize};
 use zenu_autograd::{
     creator::{rand::normal, zeros::zeros},
     functions::conv2d::{conv2d, Conv2dConfigs},
@@ -8,15 +9,20 @@ use zenu_autograd::{
 };
 use zenu_matrix::{device::Device, dim::DimTrait, nn::conv2d::conv2d_out_size, num::Num};
 
-use crate::Module;
+use crate::{Module, StateDict};
 
+#[derive(Serialize, Deserialize)]
+#[serde(bound(deserialize = "T: Num + Deserialize<'de>"))]
 pub struct Conv2d<T: Num, D: Device> {
-    filter: Variable<T, D>,
-    bias: Option<Variable<T, D>>,
+    pub filter: Variable<T, D>,
+    pub bias: Option<Variable<T, D>>,
+    #[serde(skip)]
     config: RefCell<Option<Conv2dConfigs<T>>>,
     stride: (usize, usize),
     padding: (usize, usize),
 }
+
+impl<'de, T: Num + Deserialize<'de>, D: Device> StateDict<'de> for Conv2d<T, D> {}
 
 impl<T: Num, D: Device> Module<T, D> for Conv2d<T, D> {
     fn call(&self, input: Variable<T, D>) -> Variable<T, D> {
@@ -82,29 +88,25 @@ impl<T: Num, D: Device> Conv2d<T, D> {
 
 #[cfg(test)]
 mod conv2d {
+    use zenu_autograd::creator::rand::normal;
     use zenu_matrix::device::cpu::Cpu;
 
-    use zenu_test::assert_mat_eq_epsilon;
-
-    use crate::{layers::conv2d::Conv2d, Module};
+    use crate::{layers::conv2d::Conv2d, Module, StateDict};
 
     #[test]
     fn conv2d() {
-        let input = zenu_autograd::creator::rand::normal(0.0, 1.0, Some(42), &[2, 3, 5, 5]);
+        let input = normal::<f32, _, Cpu>(0.0, 1.0, Some(42), &[2, 3, 5, 5]);
         let conv2d = Conv2d::new(3, 4, (3, 3), (1, 1), (1, 1), true);
-        let output = conv2d.call(input);
+        let _output = conv2d.call(input);
 
-        let conv2d_params = conv2d.parameters();
+        let conv2d_params = conv2d.to_json();
 
         let conv_2d_json = serde_json::to_string(&conv2d).unwrap();
 
         let deserialized_conv2d: Conv2d<f32, Cpu> = serde_json::from_str(&conv_2d_json).unwrap();
 
-        let de_parames = deserialized_conv2d.parameters();
+        let de_parames = deserialized_conv2d.to_json();
 
-        assert_eq!(conv2d_params.len(), de_parames.len());
-        for (p1, p2) in conv2d_params.iter().zip(de_parames.iter()) {
-            assert_mat_eq_epsilon!(p1.get_data(), p2.get_data(), 1e-6);
-        }
+        assert_eq!(conv2d_params, de_parames);
     }
 }
