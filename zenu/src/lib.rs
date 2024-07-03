@@ -1,20 +1,17 @@
 pub mod dataset;
 pub mod dataset_loader;
 
-use std::path::Path;
-
-use zenu_autograd::{creator::zeros::zeros, Variable};
-use zenu_matrix::{
-    device::Device,
-    dim::DimDyn,
-    matrix::{Matrix, Owned},
-    num::Num,
+use std::{
+    fs::File,
+    io::{Read, Write},
+    path::Path,
 };
-use zenu_optimizer::Optimizer;
 
-pub trait Model<T: Num, D: Device> {
-    fn predict(&self, inputs: &[Variable<T, D>]) -> Variable<T, D>;
-}
+use serde::Deserialize;
+use zenu_autograd::Variable;
+use zenu_layer::StateDict;
+use zenu_matrix::{device::Device, num::Num};
+use zenu_optimizer::Optimizer;
 
 pub fn update_parameters<T: Num, D: Device, O: Optimizer<T, D>>(
     loss: Variable<T, D>,
@@ -26,90 +23,81 @@ pub fn update_parameters<T: Num, D: Device, O: Optimizer<T, D>>(
     loss.clear_grad();
 }
 
-pub fn save_model<T: Num, D: Device, M: Model<T, D>, P: AsRef<Path>>(
+pub fn save_model<'de, M: StateDict<'de>, P: AsRef<Path>>(
     model: M,
-    input_shape: &[usize],
     save_path: P,
 ) -> Result<(), &'static str> {
-    let zeros = zeros(input_shape);
-    let output = model.predict(&[zeros]);
-    let parameters = output.get_all_trainable_variables();
-    let parameters_mat = parameters
-        .into_iter()
-        .map(|x| x.get_data().clone())
-        .collect::<Vec<_>>();
+    let bin = model.to_bytes();
+    let mut file = File::create(save_path).map_err(|_| "Failed to save model")?;
+    file.write_all(&bin).map_err(|_| "Failed to save model")?;
     Ok(())
 }
 
-pub fn load_model<T, D: Device, M: Model<T, D>, P: AsRef<Path>>(
-    load_path: P,
-    model: &mut M,
-    input_shape: &[usize],
-) -> Result<(), &'static str>
+pub fn load_model_from_vec<'de, T, D: Device, M: StateDict<'de>, P: AsRef<Path>>(
+    bin: &'de [u8],
+) -> Result<M, &'static str>
 where
-    T: serde::de::DeserializeOwned + Num,
-    M: Model<T, D>,
+    T: Num + Deserialize<'de>,
     P: AsRef<Path>,
 {
-    let json = std::fs::read_to_string(load_path).map_err(|_| "Failed to load model")?;
-    // let parameters_mat: Vec<Matrix<Owned<T>, DimDyn, D>> = serde_json::from_str(&json).unwrap();
-    // let zeros = zeros(input_shape);
-    // let output = model.predict(&[zeros]);
-    // let parameters = output.get_all_trainable_variables();
-    // parameters
-    //     .into_iter()
-    //     .zip(parameters_mat)
-    //     .for_each(|(x, y)| x.get_data_mut().copy_from(&y));
-    Ok(())
+    let model = M::from_bytes(&bin);
+    Ok(model)
+}
+
+pub fn load_model<M: for<'de> StateDict<'de>, P: AsRef<Path>>(
+    save_path: P,
+) -> Result<M, &'static str> {
+    let mut file = File::open(save_path).map_err(|_| "Failed to load model")?;
+    let mut bin = Vec::new();
+    file.read_to_end(&mut bin)
+        .map_err(|_| "Failed to load model")?;
+
+    Ok(M::from_bytes(&bin))
 }
 
 #[cfg(test)]
 mod save_and_load_paramters {
-    use super::{load_model, save_model, Model};
-    use zenu_autograd::creator::rand;
-    use zenu_layer::{layers::linear::Linear, Module};
-    use zenu_matrix::device::Device;
+    use super::{load_model, save_model};
+    use serde::{Deserialize, Serialize};
+    use zenu_autograd::{creator::rand, Variable};
+    use zenu_layer::{layers::linear::Linear, Module, StateDict};
+    use zenu_matrix::device::cpu::Cpu;
 
-    // #[test]
-    fn save_and_load_parameters<D: Device>() {
-        struct TestModel<D: Device> {
-            layer1: Linear<f32, D>,
-            layer2: Linear<f32, D>,
+    #[test]
+    fn save_and_load_parameters() {
+        #[derive(Serialize, Deserialize)]
+        struct TestModel {
+            layer1: Linear<f32, Cpu>,
+            layer2: Linear<f32, Cpu>,
         }
 
-        impl<D: Device> Model<f32, D> for TestModel<D> {
-            fn predict(
-                &self,
-                inputs: &[zenu_autograd::Variable<f32, D>],
-            ) -> zenu_autograd::Variable<f32, D> {
-                let x = self.layer1.call(inputs[0].clone());
+        impl<'de> StateDict<'de> for TestModel {}
+
+        impl Module<f32, Cpu> for TestModel {
+            fn call(&self, inputs: Variable<f32, Cpu>) -> zenu_autograd::Variable<f32, Cpu> {
+                let x = self.layer1.call(inputs.clone());
                 self.layer2.call(x)
             }
         }
 
-        let mut model = TestModel::<D> {
+        let model = TestModel {
             layer1: Linear::new(2, 2, true),
             layer2: Linear::new(2, 2, true),
         };
 
-        let input_shape = [1, 2];
         let save_path = "test.json";
-        save_model(model, &input_shape, save_path).unwrap();
+        save_model(model, save_path).unwrap();
 
-        let mut model = TestModel::<D> {
-            layer1: Linear::new(2, 2, true),
-            layer2: Linear::new(2, 2, true),
-        };
-        load_model(save_path, &mut model, &input_shape).unwrap();
+        let model = load_model::<TestModel, _>(save_path).unwrap();
 
         let fake_input = rand::normal(1.0, 1.0, Some(42), &[1, 2]);
-        let original = model.predict(&[fake_input.clone()]);
-        let loaded = model.predict(&[fake_input]);
+        let original = model.call(fake_input.clone());
+        let loaded = model.call(fake_input);
 
-        // assert!(
-        //     (original.get_data() - loaded.get_data()).asum() < 1e-6,
-        //     "Failed to load parameters"
-        // );
+        assert!(
+            (original.get_data().to_ref() - loaded.get_data().to_ref()).asum() < 1e-6,
+            "Failed to load parameters"
+        );
 
         std::fs::remove_file(save_path).unwrap();
     }
