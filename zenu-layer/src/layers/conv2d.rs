@@ -1,7 +1,6 @@
 use std::cell::RefCell;
 
 use rand_distr::{Distribution, StandardNormal};
-use serde::{Deserialize, Serialize};
 use zenu_autograd::{
     creator::{rand::normal, zeros::zeros},
     functions::conv2d::{conv2d, Conv2dConfigs},
@@ -9,20 +8,17 @@ use zenu_autograd::{
 };
 use zenu_matrix::{device::Device, dim::DimTrait, nn::conv2d::conv2d_out_size, num::Num};
 
-use crate::Layer;
+use crate::Module;
 
-#[derive(Serialize, Deserialize)]
-#[serde(bound(deserialize = "T: Deserialize<'de>, D: Device, Variable<T, D>: Deserialize<'de>,"))]
 pub struct Conv2d<T: Num, D: Device> {
     filter: Variable<T, D>,
     bias: Option<Variable<T, D>>,
-    #[serde(skip)]
     config: RefCell<Option<Conv2dConfigs<T>>>,
     stride: (usize, usize),
     padding: (usize, usize),
 }
 
-impl<T: Num, D: Device> Layer<T, D> for Conv2d<T, D> {
+impl<T: Num, D: Device> Module<T, D> for Conv2d<T, D> {
     fn call(&self, input: Variable<T, D>) -> Variable<T, D> {
         if self.config.borrow().is_none() {
             let input_shape = input.get_data().shape();
@@ -43,7 +39,6 @@ impl<T: Num, D: Device> Layer<T, D> for Conv2d<T, D> {
             );
             *self.config.borrow_mut() = Some(config);
         }
-        self.shape_check(&input);
         conv2d(
             input,
             self.filter.clone(),
@@ -52,35 +47,6 @@ impl<T: Num, D: Device> Layer<T, D> for Conv2d<T, D> {
             self.bias.clone(),
             Some(self.config.borrow().as_ref().unwrap().clone()),
         )
-    }
-
-    fn parameters(&self) -> Vec<Variable<T, D>> {
-        let mut params = vec![self.filter.clone()];
-        if let Some(bias) = &self.bias {
-            params.push(bias.clone());
-        }
-        params
-    }
-
-    fn load_parameters(&mut self, parameters: &[Variable<T, D>]) {
-        self.filter = parameters[0].clone();
-        if parameters.len() > 1 {
-            self.bias = Some(parameters[1].clone());
-        }
-    }
-
-    fn shape_check(&self, input: &Variable<T, D>) {
-        let input_shape = input.get_data().shape();
-        let filter_shape = self.filter.get_data().shape();
-        let bias_shape = self.bias.as_ref().map(|b| b.get_data().shape());
-
-        assert_eq!(input_shape.len(), 4);
-        assert_eq!(filter_shape.len(), 4);
-        assert_eq!(input_shape[1], filter_shape[1]);
-        assert_eq!(
-            filter_shape[0],
-            bias_shape.map_or(filter_shape[1], |b| b[1])
-        );
     }
 }
 
@@ -120,7 +86,7 @@ mod conv2d {
 
     use zenu_test::assert_mat_eq_epsilon;
 
-    use crate::{layers::conv2d::Conv2d, Layer};
+    use crate::{layers::conv2d::Conv2d, Module};
 
     #[test]
     fn conv2d() {

@@ -1,6 +1,5 @@
-use crate::Layer;
+use crate::Module;
 use rand_distr::{Distribution, StandardNormal};
-use serde::{Deserialize, Serialize};
 use zenu_autograd::{
     creator::{rand::normal, zeros::zeros},
     functions::matmul::matmul,
@@ -8,8 +7,6 @@ use zenu_autograd::{
 };
 use zenu_matrix::{device::Device, num::Num};
 
-#[derive(Serialize, Deserialize)]
-#[serde(bound(deserialize = "T: Deserialize<'de>, D: Device, Variable<T, D>: Deserialize<'de>,"))]
 pub struct Linear<T: Num, D: Device> {
     in_features: usize,
     out_features: usize,
@@ -17,42 +14,13 @@ pub struct Linear<T: Num, D: Device> {
     bias: Option<Variable<T, D>>,
 }
 
-impl<T: Num, D: Device> Layer<T, D> for Linear<T, D> {
-    fn parameters(&self) -> Vec<Variable<T, D>> {
-        if let Some(bias) = &self.bias {
-            vec![self.weight.clone(), bias.clone()]
-        } else {
-            vec![self.weight.clone()]
-        }
-    }
-
-    fn load_parameters(&mut self, parameters: &[Variable<T, D>]) {
-        self.weight = parameters[0].clone();
-        if parameters.len() > 1 {
-            self.bias = Some(parameters[1].clone());
-        } else {
-            self.bias = None;
-        }
-    }
-
+impl<T: Num, D: Device> Module<T, D> for Linear<T, D> {
     fn call(&self, input: Variable<T, D>) -> Variable<T, D> {
-        self.shape_check(&input);
         let output = matmul(input, self.weight.clone());
         if let Some(bias) = &self.bias {
             output + bias.clone()
         } else {
             output
-        }
-    }
-
-    fn shape_check(&self, input: &Variable<T, D>) {
-        let input_shape = input.get_data().shape();
-        let weight_shape = self.weight.get_data().shape();
-        assert_eq!(input_shape[1], weight_shape[0]);
-
-        if let Some(bias) = &self.bias {
-            let bias_shape = bias.get_data().shape();
-            assert_eq!(bias_shape[0], weight_shape[1]);
         }
     }
 }
@@ -84,7 +52,7 @@ mod linear {
     use zenu_matrix::{device::Device, dim::DimTrait, operation::mul::matmul};
     use zenu_test::{assert_val_eq, run_test};
 
-    use crate::Layer;
+    use crate::Module;
 
     use super::Linear;
 

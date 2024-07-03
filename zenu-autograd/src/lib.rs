@@ -264,6 +264,20 @@ impl<T: Num, D: Device> VariableInner<T, D> {
         variables.dedup_by(|a, b| Rc::ptr_eq(&a.inner, &b.inner));
         variables
     }
+
+    fn to<DO: Device>(&self) -> VariableInner<T, DO> {
+        if self.grad.is_some() {
+            panic!("grad must be None");
+        }
+        VariableInner {
+            data: self.data.new_matrix().to(),
+            creator: None,
+            grad: None,
+            gen: 0,
+            name: self.name.clone(),
+            is_train: self.is_train,
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -429,6 +443,12 @@ impl<T: Num, D: Device> Variable<T, D> {
 
     pub fn get_shape(&self) -> DimDyn {
         self.get_data().shape()
+    }
+
+    pub fn to<DO: Device>(&self) -> Variable<T, DO> {
+        Variable {
+            inner: Rc::new(RefCell::new(self.inner.borrow().to())),
+        }
     }
 }
 

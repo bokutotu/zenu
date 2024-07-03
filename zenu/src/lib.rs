@@ -67,7 +67,7 @@ where
 mod save_and_load_paramters {
     use super::{load_model, save_model, Model};
     use zenu_autograd::creator::rand;
-    use zenu_layer::{layers::linear::Linear, Layer};
+    use zenu_layer::{layers::linear::Linear, Module};
     use zenu_matrix::device::Device;
 
     // #[test]
