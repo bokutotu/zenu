@@ -13,6 +13,7 @@ use zenu_matrix::{
 
 use crate::{creator::zeros::zeros_like, is_train, Function, Variable, VariableWeak};
 
+#[derive(Default)]
 pub struct BatchNorm2dInner<T: Num> {
     pub train: Option<BatchNorm2dConfig<T>>,
     pub inference: Option<BatchNorm2dInferenceConfig<T>>,
@@ -32,16 +33,30 @@ impl<T: Num> BatchNorm2dInner<T> {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct BatchNorm2dAutoGradConfig<T: Num> {
-    inner: Rc<BatchNorm2dInner<T>>,
+    inner: RefCell<Rc<BatchNorm2dInner<T>>>,
+    dim: RefCell<DimDyn>,
 }
 
 impl<T: Num> BatchNorm2dAutoGradConfig<T> {
     pub fn new(dim: &[usize]) -> Self {
         let dim = DimDyn::from(dim);
         let inner = Rc::new(BatchNorm2dInner::new(dim));
-        Self { inner }
+        Self {
+            inner: RefCell::new(inner),
+            dim: RefCell::new(dim),
+        }
+    }
+
+    pub fn update_shape(&self, dim: &[usize]) {
+        let dim = DimDyn::from(dim);
+        *self.inner.borrow_mut() = Rc::new(BatchNorm2dInner::new(dim));
+        self.dim.replace(dim);
+    }
+
+    pub fn get_shape(&self) -> DimDyn {
+        self.dim.borrow().clone()
     }
 }
 
@@ -73,7 +88,7 @@ struct BatchNorm2dBkwd<T: Num, D: Device> {
 impl<T: Num, D: Device> Function<T, D> for BatchNorm2d<T, D> {
     fn forward(&self) {
         if is_train() {
-            let config_train = &self.config.inner.as_ref().train;
+            let config_train = &self.config.inner.borrow().train;
             try_batch_norm_2d_forward_trian(
                 self.momentum,
                 self.x.get_data().to_ref(),
@@ -88,7 +103,7 @@ impl<T: Num, D: Device> Function<T, D> for BatchNorm2d<T, D> {
             )
             .unwrap();
         } else {
-            let config_inference = &self.config.inner.as_ref().inference;
+            let config_inference = &self.config.inner.borrow().inference;
             try_batch_norm_2d_forward_inference(
                 self.x.get_data().to_ref(),
                 self.y.upgrade().unwrap().get_data_mut().to_ref_mut(),
@@ -130,7 +145,7 @@ impl<T: Num, D: Device> Function<T, D> for BatchNorm2d<T, D> {
 
 impl<T: Num, D: Device> Function<T, D> for BatchNorm2dBkwd<T, D> {
     fn forward(&self) {
-        let config_bkwd = &self.config.inner.as_ref().bckwd;
+        let config_bkwd = &self.config.inner.borrow().bckwd;
         try_batch_norm_2d_backward(
             self.x.get_data().to_ref(),
             self.y_grad.get_data().to_ref(),
