@@ -61,7 +61,11 @@ mod save_and_load_paramters {
     use serde::{Deserialize, Serialize};
     use zenu_autograd::{creator::rand, Variable};
     use zenu_layer::{layers::linear::Linear, Module, StateDict};
-    use zenu_matrix::device::cpu::Cpu;
+    use zenu_matrix::{
+        device::{cpu::Cpu, Device},
+        num::Num,
+    };
+    use zenu_test::run_test;
 
     #[test]
     fn save_and_load_parameters() {
@@ -101,4 +105,35 @@ mod save_and_load_paramters {
 
         std::fs::remove_file(save_path).unwrap();
     }
+
+    #[derive(Serialize, Deserialize)]
+    #[serde(bound(deserialize = "T: Num + Deserialize<'de>, D: Device + Deserialize<'de>"))]
+    struct ConvNet<T: Num, D: Device> {
+        conv1: zenu_layer::layers::conv2d::Conv2d<T, D>,
+        conv2: zenu_layer::layers::conv2d::Conv2d<T, D>,
+        fc1: Linear<T, D>,
+        fc2: Linear<T, D>,
+    }
+
+    impl<'de, T: Num + Deserialize<'de>, D: Device + Deserialize<'de>> StateDict<'de>
+        for ConvNet<T, D>
+    {
+    }
+
+    fn hoge<D: Device + for<'de> Deserialize<'de>>() {
+        let model = ConvNet::<f32, D> {
+            conv1: zenu_layer::layers::conv2d::Conv2d::new(1, 20, (5, 5), (1, 1), (0, 0), true),
+            conv2: zenu_layer::layers::conv2d::Conv2d::new(20, 50, (5, 5), (1, 1), (0, 0), true),
+            fc1: Linear::new(4 * 4 * 50, 500, true),
+            fc2: Linear::new(500, 10, true),
+        };
+
+        let save_path = "test.json";
+        save_model(model, save_path).unwrap();
+
+        let _model = load_model::<ConvNet<f32, D>, _>(save_path).unwrap();
+
+        std::fs::remove_file(save_path).unwrap();
+    }
+    run_test!(hoge, hoge_cpu, hoge_nvidia);
 }
