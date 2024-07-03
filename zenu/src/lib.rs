@@ -33,14 +33,13 @@ pub fn save_model<'de, M: StateDict<'de>, P: AsRef<Path>>(
     Ok(())
 }
 
-pub fn load_model_from_vec<'de, T, D: Device, M: StateDict<'de>, P: AsRef<Path>>(
+pub fn load_model_from_vec<'de, T, D: Device, M: StateDict<'de>>(
     bin: &'de [u8],
 ) -> Result<M, &'static str>
 where
     T: Num + Deserialize<'de>,
-    P: AsRef<Path>,
 {
-    let model = M::from_bytes(&bin);
+    let model = M::from_bytes(bin);
     Ok(model)
 }
 

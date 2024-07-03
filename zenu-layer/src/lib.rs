@@ -13,6 +13,7 @@ pub trait StateDict<'de>: Serialize + Deserialize<'de> {
         serde_json::to_string(self).unwrap()
     }
 
+    #[allow(clippy::must_use_candidate)]
     fn from_json(json: &'de str) -> Self {
         serde_json::from_str(json).unwrap()
     }
@@ -21,6 +22,7 @@ pub trait StateDict<'de>: Serialize + Deserialize<'de> {
         bincode::serialize(self).unwrap()
     }
 
+    #[allow(clippy::must_use_candidate)]
     fn from_bytes(bytes: &'de [u8]) -> Self {
         bincode::deserialize(bytes).unwrap()
     }
