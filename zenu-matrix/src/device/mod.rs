@@ -1,4 +1,4 @@
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
 use crate::{
     nn::{batch_norm::BatchNormalization, conv2d::Conv2d},

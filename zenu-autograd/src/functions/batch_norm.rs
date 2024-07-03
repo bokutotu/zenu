@@ -56,7 +56,7 @@ impl<T: Num> BatchNorm2dAutoGradConfig<T> {
     }
 
     pub fn get_shape(&self) -> DimDyn {
-        self.dim.borrow().clone()
+        *self.dim.borrow()
     }
 }
 
