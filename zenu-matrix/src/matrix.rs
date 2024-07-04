@@ -258,6 +258,10 @@ where
         Matrix { ptr, shape, stride }
     }
 
+    pub(crate) unsafe fn ptr(&self) -> &Ptr<R, D> {
+        &self.ptr
+    }
+
     pub fn offset(&self) -> usize {
         self.ptr.offset
     }

@@ -59,6 +59,7 @@ impl Pool2dImpl for Cpu {
             col_shape[4],
             col_shape[5],
         ]);
+        todo!();
     }
 
     fn pool2d_backward<T: Num>(
