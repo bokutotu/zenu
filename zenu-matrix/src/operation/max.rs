@@ -20,20 +20,17 @@ pub trait MaxIdx: DeviceBase {
 
 impl MaxIdx for Cpu {
     fn max_idx<T: Num>(input: *const T, size: usize, stride: usize) -> usize {
-        extern crate openblas_src;
-        use cblas::*;
+        let tmep_v = unsafe { std::slice::from_raw_parts(input, size * stride) };
+        let mut max_idx = 0;
+        let mut max_val = tmep_v[0];
 
-        if TypeId::of::<T>() == TypeId::of::<f32>() {
-            let input = input as *const f32;
-            let input = unsafe { std::slice::from_raw_parts(input, size * stride) };
-            unsafe { isamax(size as i32, input, stride as i32) as usize }
-        } else if TypeId::of::<T>() == TypeId::of::<f64>() {
-            let input = input as *const f64;
-            let input = unsafe { std::slice::from_raw_parts(input, size * stride) };
-            unsafe { idamax(size as i32, input, stride as i32) as usize }
-        } else {
-            panic!("Unsupported type");
+        for i in 1..size {
+            if tmep_v[i * stride] > max_val {
+                max_val = tmep_v[i * stride];
+                max_idx = i;
+            }
         }
+        max_idx
     }
 }
 
