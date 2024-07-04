@@ -96,6 +96,42 @@ impl<T: Num, R: Repr<Item = T>, D: Device> Matrix<R, DimDyn, D> {
 
         output
     }
+
+    pub fn max_axis_idx(&self, axis: usize) -> Matrix<Owned<T>, DimDyn, D> {
+        if axis >= self.shape().len() {
+            panic!("max_axis: Axis out of bounds");
+        }
+
+        let mut output_shape = Vec::new();
+        for i in 0..self.shape().len() {
+            if i == axis {
+                continue;
+            }
+            output_shape.push(self.shape()[i]);
+        }
+
+        let output_shape = DimDyn::from(&output_shape as &[usize]);
+        let mut output = Matrix::<Owned<T>, DimDyn, D>::zeros(output_shape);
+
+        if axis == 0 {
+            let output_flatten = output.reshape_mut([output.shape().num_elm()]);
+            let s = self.reshape_new_matrix([self.shape()[0], output_shape.num_elm()]);
+            for i in 0..output_shape.num_elm() {
+                output_flatten.index_item_assign(
+                    &[i],
+                    T::from_usize(s.index_axis(Index::new(1, i)).max_idx()[0]),
+                );
+            }
+        } else {
+            for i in 0..self.shape()[0] {
+                let s = self.index_axis(Index::new(0, i));
+                let output = output.to_ref_mut().index_axis_mut(Index::new(0, i));
+                output.copy_from(&s.max_axis(axis - 1));
+            }
+        }
+
+        output
+    }
 }
 
 #[cfg(test)]
