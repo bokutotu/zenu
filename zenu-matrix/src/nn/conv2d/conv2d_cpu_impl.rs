@@ -6,7 +6,7 @@ use crate::{
     operation::mul::gemm,
 };
 
-use super::im2col::{im2col, Im2ColRes};
+use crate::nn::im2col::{im2col, Im2ColRes};
 
 pub(super) fn conv2d_inner<T: Num, D: Device>(
     img: Matrix<Ref<&T>, DimDyn, D>,
