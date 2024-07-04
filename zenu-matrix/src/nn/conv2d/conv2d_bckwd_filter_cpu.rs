@@ -2,11 +2,10 @@ use crate::{
     device::Device,
     dim::{DimDyn, DimTrait},
     matrix::{Matrix, Owned, Ref},
+    nn::im2col::{im2col, Im2ColRes},
     num::Num,
     operation::mul::matmul,
 };
-
-use super::im2col::{im2col, Im2ColRes};
 
 pub(super) fn conv2d_bckwd_fileter<T: Num, D: Device>(
     input: Matrix<Ref<&T>, DimDyn, D>,

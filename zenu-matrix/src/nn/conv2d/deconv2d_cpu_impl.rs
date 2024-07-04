@@ -6,7 +6,7 @@ use crate::{
     operation::mul::matmul,
 };
 
-use super::col2im::col2im;
+use crate::nn::col2im::col2im;
 
 pub(super) fn get_deconv_outsize_(size: usize, k: usize, s: usize, p: usize) -> usize {
     s * (size - 1) + k - 2 * p
