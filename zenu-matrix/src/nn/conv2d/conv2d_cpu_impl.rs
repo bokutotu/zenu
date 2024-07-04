@@ -18,7 +18,7 @@ pub(super) fn conv2d_inner<T: Num, D: Device>(
     let batch_size = img.shape()[0];
     let kernel_shape = kernel.shape();
     let kernel_h_w = (kernel_shape[2], kernel_shape[3]);
-    let Im2ColRes { col, out_size } = im2col(img, kernel_h_w, stride, padding);
+    let Im2ColRes { col, out_size } = im2col(img, kernel_h_w, stride, padding, true);
     // kenrnel shape is [out_channel, in_channel, kernel_h, kernel_w]
     let kernel = kernel.reshape([
         kernel.shape()[0],
