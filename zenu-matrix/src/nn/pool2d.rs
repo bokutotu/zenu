@@ -6,7 +6,7 @@ use crate::{
 };
 
 #[cfg(feature = "nvidia")]
-use zenu_cuda::cudnn::pooling::Pool2d;
+use zenu_cuda::cudnn::pooling::{Pool2d, PoolType};
 
 #[cfg(feature = "nvidia")]
 use crate::device::nvidia::Nvidia;
@@ -20,19 +20,37 @@ pub struct Pool2dConfig<T: Num> {
 }
 
 impl<T: Num> Pool2dConfig<T> {
-    pub fn new(kernel: (usize, usize), stride: (usize, usize), padding: (usize, usize), input_shape: (usize, usize)) -> Self {
+    pub fn new(
+        kernel: (usize, usize),
+        stride: (usize, usize),
+        padding: (usize, usize),
+        input_shape: (usize, usize, usize, usize),
+        output_shape: (usize, usize, usize, usize),
+    ) -> Self {
         Self {
-            #[cfg(feature="nvidia")]
-            Pool2d<T>::new(PoolType::Max, kernel.0, kernel.1, padding.0, padding.1)
+            #[cfg(feature = "nvidia")]
+            config: Pool2d::<T>::new(
+                PoolType::Max,
+                kernel.0,
+                kernel.1,
+                padding.0,
+                padding.1,
+                stride.0,
+                stride.1,
+                input_shape,
+                output_shape,
+            )
+            .unwrap(),
+            _phantom: std::marker::PhantomData,
         }
-    } 
+    }
 }
 
 pub trait Pool2dImpl: Device {
     fn pool2d<T: Num>(
         input: Matrix<Ref<&T>, DimDyn, Self>,
         output: Matrix<Ref<&mut T>, DimDyn, Self>,
-        kernel_shape: (usize, usize),
+        kernel: (usize, usize),
         stride: (usize, usize),
         padding: (usize, usize),
         config: &Pool2dConfig<T>,
@@ -54,12 +72,12 @@ impl Pool2dImpl for Cpu {
     fn pool2d<T: Num>(
         input: Matrix<Ref<&T>, DimDyn, Self>,
         output: Matrix<Ref<&mut T>, DimDyn, Self>,
-        kernel_shape: (usize, usize),
+        kernel: (usize, usize),
         stride: (usize, usize),
         padding: (usize, usize),
         _config: &Pool2dConfig<T>,
     ) -> Result<(), String> {
-        let Im2ColRes { col, .. } = im2col(input, kernel_shape, stride, padding, false);
+        let Im2ColRes { col, .. } = im2col(input, kernel, stride, padding, false);
         let col_shape = col.shape();
         let col = col.reshape_no_alloc_owned([
             col_shape[0],
@@ -68,6 +86,8 @@ impl Pool2dImpl for Cpu {
             col_shape[4],
             col_shape[5],
         ]);
+
+        println!("col {:?}", col);
         output.copy_from(&col.max_axis(2));
         Ok(())
     }
@@ -99,13 +119,15 @@ impl Pool2dImpl for Cpu {
 
 #[cfg(test)]
 mod pool2d {
+    use zenu_test::assert_mat_eq_epsilon;
+
     use crate::{
         device::cpu::Cpu,
         dim::DimDyn,
         matrix::{Matrix, Owned},
     };
 
-    use super::Pool2dImpl;
+    use super::{Pool2dConfig, Pool2dImpl};
 
     #[test]
     fn device_cpu_forward() {
@@ -196,13 +218,20 @@ mod pool2d {
 
         let mut result = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros(&[1, 3, 2, 2]);
 
+        let config = Pool2dConfig::new((3, 3), (2, 2), (0, 0), (1, 3, 5, 5), (1, 3, 2, 2));
+
+        println!("input {:?}", input);
+
         Cpu::pool2d(
             input.to_ref(),
             result.to_ref_mut(),
             (3, 3),
-            (0, 0),
             (2, 2),
-            config,
+            (0, 0),
+            &config,
         )
+        .unwrap();
+
+        assert_mat_eq_epsilon!(result, ans, 1e-6);
     }
 }
