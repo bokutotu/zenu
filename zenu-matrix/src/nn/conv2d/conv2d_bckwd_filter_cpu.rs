@@ -15,7 +15,7 @@ pub(super) fn conv2d_bckwd_fileter<T: Num, D: Device>(
     stride: (usize, usize),
 ) -> Matrix<Owned<T>, DimDyn, D> {
     let kernel_h_w = (kernel_shape[2], kernel_shape[3]);
-    let Im2ColRes { mut col, .. } = im2col(input, kernel_h_w, stride, padding);
+    let Im2ColRes { mut col, .. } = im2col(input, kernel_h_w, stride, padding, true);
 
     let gradient_output = gradient_output.transpose_swap_index_new_matrix(0, 1);
     let gradient_output_shape = gradient_output.shape();
