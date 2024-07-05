@@ -1,7 +1,8 @@
 use crate::{
     device::{cpu::Cpu, Device},
-    dim::DimDyn,
-    matrix::{Matrix, Ref},
+    dim::{DimDyn, DimTrait},
+    matrix::{Matrix, Owned, Ref},
+    nn::col2im::col2im,
     num::Num,
 };
 
@@ -20,6 +21,7 @@ pub struct Pool2dConfig<T: Num> {
 }
 
 impl<T: Num> Pool2dConfig<T> {
+    #[allow(unused_variables)]
     pub fn new(
         kernel: (usize, usize),
         stride: (usize, usize),
@@ -87,7 +89,6 @@ impl Pool2dImpl for Cpu {
             col_shape[5],
         ]);
 
-        println!("col {:?}", col);
         output.copy_from(&col.max_axis(2));
         Ok(())
     }
@@ -95,25 +96,36 @@ impl Pool2dImpl for Cpu {
     fn pool2d_backward<T: Num>(
         input: Matrix<Ref<&T>, DimDyn, Self>,
         input_grad: Matrix<Ref<&mut T>, DimDyn, Self>,
-        output: Matrix<Ref<&T>, DimDyn, Self>,
+        _output: Matrix<Ref<&T>, DimDyn, Self>,
         output_grad: Matrix<Ref<&T>, DimDyn, Self>,
         kernel_shape: (usize, usize),
         stride: (usize, usize),
         padding: (usize, usize),
-        config: &Pool2dConfig<T>,
+        _config: &Pool2dConfig<T>,
     ) {
-        // let Im2ColRes { col, .. } = im2col(input, kernel_shape, stride, padding, false);
-        // let max_idxs = col.max_axis_idx(2);
-        //
-        // // FIXME: MORE OPTIMIZE
-        // for batch_idx in input.shape()[0] {
-        //     for h_idx in input.shape()[2] {
-        //         for w_idx in input.shape()[3] {
-        //             let
-        //         }
-        //     }
-        // }
-        todo!()
+        let Im2ColRes { col, .. } = im2col(input, kernel_shape, stride, padding, false);
+        println!("col {:?}", col);
+        let max_idxs = col.max_axis_idx_ravel(2);
+        println!("max_idxs {:?}", max_idxs);
+
+        let mut gcol = Matrix::<Owned<T>, DimDyn, Self>::zeros(col.shape());
+
+        for idx in 0..max_idxs.len() {
+            let max_idx = max_idxs[idx];
+            let tmp = unsafe { output_grad.ptr().get_item(idx) };
+            if idx != 0 {
+                unsafe { gcol.to_ref_mut().ptr().assign_item(max_idx, tmp) };
+            }
+        }
+
+        let mut shape = [0; 4];
+        for i in 0..4 {
+            shape[i] = input_grad.shape()[i];
+        }
+
+        let col2im_tmp = col2im(gcol.to_ref(), shape, kernel_shape, stride, padding);
+        // println!("col2im_tmp {:?}", col2im_tmp);
+        input_grad.copy_from(&col2im_tmp);
     }
 }
 
@@ -220,8 +232,6 @@ mod pool2d {
 
         let config = Pool2dConfig::new((3, 3), (2, 2), (0, 0), (1, 3, 5, 5), (1, 3, 2, 2));
 
-        println!("input {:?}", input);
-
         Cpu::pool2d(
             input.to_ref(),
             result.to_ref_mut(),
@@ -232,6 +242,31 @@ mod pool2d {
         )
         .unwrap();
 
-        assert_mat_eq_epsilon!(result, ans, 1e-6);
+        assert_mat_eq_epsilon!(result.clone(), ans, 1e-6);
+
+        let output_grad = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros_like(&result);
+
+        let mut input_grad = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros_like(&input);
+
+        Cpu::pool2d_backward(
+            input.to_ref(),
+            input_grad.to_ref_mut(),
+            result.to_ref(),
+            output_grad.to_ref(),
+            (3, 3),
+            (2, 2),
+            (0, 0),
+            &config,
+        );
+        let input_grad_ans = vec![
+            0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 1.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0,
+        ];
+        let input_grad_ans =
+            Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(input_grad_ans, &[1, 3, 5, 5]);
+        assert_mat_eq_epsilon!(input_grad, input_grad_ans, 1e-6);
     }
 }

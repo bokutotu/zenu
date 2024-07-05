@@ -440,7 +440,7 @@ pub fn array_pow_assign<T: 'static>(input: *mut T, size: usize, stride: usize, s
     }
 }
 
-pub fn array_max_idx<T: 'static>(input: *mut T, size: usize, stride: usize) -> usize {
+pub fn array_max_idx<T: 'static>(input: *const T, size: usize, stride: usize) -> usize {
     let size = size as ::std::os::raw::c_int;
     let stride = stride as ::std::os::raw::c_int;
     let mut ans: i32 = 0;
