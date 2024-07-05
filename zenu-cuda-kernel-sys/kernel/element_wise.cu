@@ -114,10 +114,38 @@ void launch_find_max_index(T* d_data, int* d_result, int size, int stride) {
 template void launch_find_max_index<float>(float* d_data, int* d_result, int size, int stride);
 template void launch_find_max_index<double>(double* d_data, int* d_result, int size, int stride);
 
-void array_max_index_float(float* d_data, int* d_result, int size, int stride) {
+void array_max_idx_float(float *a, int size, int stride, int *out) {
+    float* d_data;
+    int* d_result;
+
+    cudaMalloc((void**)&d_data, size * stride * sizeof(float));
+    cudaMalloc((void**)&d_result, sizeof(int));
+
+    cudaMemcpy(d_data, a, size * stride * sizeof(float), cudaMemcpyHostToDevice);
+    cudaMemset(d_result, 0, sizeof(int));
+
     launch_find_max_index(d_data, d_result, size, stride);
+
+    cudaMemcpy(out, d_result, sizeof(int), cudaMemcpyDeviceToHost);
+
+    cudaFree(d_data);
+    cudaFree(d_result);
 }
 
-void array_max_index_double(double* d_data, int* d_result, int size, int stride) {
+void array_max_idx_double(double *a, int size, int stride, int *out) {
+    double* d_data;
+    int* d_result;
+
+    cudaMalloc((void**)&d_data, size * stride * sizeof(double));
+    cudaMalloc((void**)&d_result, sizeof(int));
+
+    cudaMemcpy(d_data, a, size * stride * sizeof(double), cudaMemcpyHostToDevice);
+    cudaMemset(d_result, 0, sizeof(int));
+
     launch_find_max_index(d_data, d_result, size, stride);
+
+    cudaMemcpy(out, d_result, sizeof(int), cudaMemcpyDeviceToHost);
+
+    cudaFree(d_data);
+    cudaFree(d_result);
 }
