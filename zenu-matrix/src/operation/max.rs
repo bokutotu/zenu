@@ -110,8 +110,7 @@ impl<T: Num, R: Repr<Item = T>, D: Device> Matrix<R, DimDyn, D> {
         if axis == 0 {
             let s = self.reshape_new_matrix([self.shape()[0], output_shape.num_elm()]);
             for i in 0..output_shape.num_elm() {
-                let idx = dbg!(s.index_axis(Index::new(1, i))).max_idx()[0];
-                println!("idx: {}", idx);
+                let idx = s.index_axis(Index::new(1, i)).max_idx()[0];
                 output.push(idx);
             }
         } else {
@@ -219,9 +218,9 @@ mod max_idx {
         let ans_1d = vec![2, 0, 2, 1, 2, 0, 1, 1];
         let ans_2d = vec![1, 3, 0, 1, 3, 0];
 
-        let result_0d = dbg!(input.max_axis_idx_ravel(0));
-        let result_1d = dbg!(input.max_axis_idx_ravel(1));
-        let result_2d = dbg!(input.max_axis_idx_ravel(2));
+        let result_0d = input.max_axis_idx_ravel(0);
+        let result_1d = input.max_axis_idx_ravel(1);
+        let result_2d = input.max_axis_idx_ravel(2);
 
         assert_eq!(result_0d, ans_0d);
         assert_eq!(result_1d, ans_1d);
