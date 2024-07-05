@@ -103,20 +103,37 @@ impl Pool2dImpl for Cpu {
         padding: (usize, usize),
         _config: &Pool2dConfig<T>,
     ) {
-        let Im2ColRes { col, .. } = im2col(input, kernel_shape, stride, padding, false);
-        println!("col {:?}", col);
-        let max_idxs = col.max_axis_idx_ravel(2);
-        println!("max_idxs {:?}", max_idxs);
+        let gy_shape = output_grad.shape();
+        let (kh, kw) = kernel_shape;
+        let n = gy_shape[0];
+        let c = gy_shape[1];
+        let oh = gy_shape[2];
+        let ow = gy_shape[3];
 
+        let Im2ColRes { col, .. } = im2col(input, kernel_shape, stride, padding, false);
+        let col_shape = col.shape();
         let mut gcol = Matrix::<Owned<T>, DimDyn, Self>::zeros(col.shape());
+        let col = col.reshape_no_alloc_owned([
+            col_shape[0],
+            col_shape[1],
+            col_shape[2] * col_shape[3],
+            col_shape[4],
+            col_shape[5],
+        ]);
+        let mut max_idxs = col.max_axis_idx_ravel(2);
+        for idx in 0..max_idxs.len() {
+            max_idxs[idx] += kernel_shape.0 * kernel_shape.1 * idx;
+        }
 
         for idx in 0..max_idxs.len() {
-            let max_idx = max_idxs[idx];
-            let tmp = unsafe { output_grad.ptr().get_item(idx) };
-            if idx != 0 {
-                unsafe { gcol.to_ref_mut().ptr().assign_item(max_idx, tmp) };
-            }
+            let max_id = max_idxs[idx];
+            let grad_val = unsafe { output_grad.ptr().get_item(idx) };
+            unsafe { gcol.to_ref_mut().ptr().assign_item(max_id, grad_val) };
         }
+
+        let gcol = gcol.reshape_no_alloc_owned([n, c, oh, ow, kh, kw]);
+        let gcol = gcol.transpose_swap_index_new_matrix(2, 4);
+        let gcol = gcol.transpose_swap_index_new_matrix(3, 5);
 
         let mut shape = [0; 4];
         for i in 0..4 {
@@ -124,7 +141,6 @@ impl Pool2dImpl for Cpu {
         }
 
         let col2im_tmp = col2im(gcol.to_ref(), shape, kernel_shape, stride, padding);
-        // println!("col2im_tmp {:?}", col2im_tmp);
         input_grad.copy_from(&col2im_tmp);
     }
 }
@@ -244,7 +260,7 @@ mod pool2d {
 
         assert_mat_eq_epsilon!(result.clone(), ans, 1e-6);
 
-        let output_grad = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros_like(&result);
+        let output_grad = Matrix::<Owned<f32>, DimDyn, Cpu>::ones_like(&result);
 
         let mut input_grad = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros_like(&input);
 
