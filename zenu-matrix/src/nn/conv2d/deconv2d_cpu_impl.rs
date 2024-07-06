@@ -6,28 +6,11 @@ use crate::{
     operation::mul::matmul,
 };
 
-use super::col2im::col2im;
+use crate::nn::col2im::col2im;
 
 pub(super) fn get_deconv_outsize_(size: usize, k: usize, s: usize, p: usize) -> usize {
     s * (size - 1) + k - 2 * p
 }
-
-// pub(super) fn deconv2d_out_size(
-//     img_shape: &[usize],
-//     kernel_shape: &[usize],
-//     padding: (usize, usize),
-//     stride: (usize, usize),
-// ) -> [usize; 4] {
-//     let (b, h, w) = (img_shape[0], img_shape[2], img_shape[3]);
-//     let (ic, kh, kw) = (kernel_shape[1], kernel_shape[2], kernel_shape[3]);
-//     let (ph, pw) = padding;
-//     let (sh, sw) = stride;
-//     let (h, w) = (
-//         get_deconv_outsize_(h, kh, sh, ph),
-//         get_deconv_outsize_(w, kw, sw, pw),
-//     );
-//     [b, ic, h, w]
-// }
 
 pub(crate) fn deconv2d_inner<T: Num, D: Device>(
     img: Matrix<Ref<&T>, DimDyn, D>,

@@ -1,12 +1,12 @@
 use zenu_cudnn_sys::{
-    cudnnCreatePoolingDescriptor, cudnnDestroyPoolingDescriptor, cudnnNanPropagation_t,
-    cudnnPoolingBackward, cudnnPoolingDescriptor_t, cudnnPoolingForward, cudnnPoolingMode_t,
-    cudnnSetPooling2dDescriptor, cudnnStatus_t, cudnnTensorDescriptor_t,
+    cudnnCreatePoolingDescriptor, cudnnDestroyPoolingDescriptor, cudnnDestroyTensorDescriptor,
+    cudnnNanPropagation_t, cudnnPoolingBackward, cudnnPoolingDescriptor_t, cudnnPoolingForward,
+    cudnnPoolingMode_t, cudnnSetPooling2dDescriptor, cudnnStatus_t, cudnnTensorDescriptor_t,
 };
 
 use crate::ZENU_CUDA_STATE;
 
-use super::error::ZenuCudnnError;
+use super::{error::ZenuCudnnError, tensor_descriptor_4d, TensorFormat};
 
 fn pooling_descriptor(
     mode: cudnnPoolingMode_t,
@@ -41,14 +41,19 @@ fn pooling_descriptor(
     Ok(pooling)
 }
 
-pub struct Pool2d {
+pub struct Pool2d<T> {
     pooling: cudnnPoolingDescriptor_t,
+    input_desc: cudnnTensorDescriptor_t,
+    output_desc: cudnnTensorDescriptor_t,
+    _marker: std::marker::PhantomData<T>,
 }
 
-impl Drop for Pool2d {
+impl<T> Drop for Pool2d<T> {
     fn drop(&mut self) {
         unsafe {
             cudnnDestroyPoolingDescriptor(self.pooling);
+            cudnnDestroyTensorDescriptor(self.input_desc);
+            cudnnDestroyTensorDescriptor(self.output_desc);
         }
     }
 }
@@ -73,7 +78,8 @@ impl From<PoolType> for cudnnPoolingMode_t {
     }
 }
 
-impl Pool2d {
+impl<T: 'static> Pool2d<T> {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         pool_type: PoolType,
         window_h: usize,
@@ -82,6 +88,8 @@ impl Pool2d {
         pad_w: usize,
         stride_h: usize,
         stride_w: usize,
+        input_shape: (usize, usize, usize, usize),
+        output_shape: (usize, usize, usize, usize),
     ) -> Result<Self, ZenuCudnnError> {
         let pooling = pooling_descriptor(
             pool_type.into(),
@@ -92,14 +100,31 @@ impl Pool2d {
             stride_h,
             stride_w,
         )?;
-        Ok(Self { pooling })
+        let input_desc = tensor_descriptor_4d::<T>(
+            input_shape.0.try_into().unwrap(),
+            input_shape.1.try_into().unwrap(),
+            input_shape.2.try_into().unwrap(),
+            input_shape.3.try_into().unwrap(),
+            TensorFormat::NCHW,
+        )?;
+        let output_desc = tensor_descriptor_4d::<T>(
+            output_shape.0.try_into().unwrap(),
+            output_shape.1.try_into().unwrap(),
+            output_shape.2.try_into().unwrap(),
+            output_shape.3.try_into().unwrap(),
+            TensorFormat::NCHW,
+        )?;
+        Ok(Self {
+            pooling,
+            input_desc,
+            output_desc,
+            _marker: std::marker::PhantomData,
+        })
     }
 
-    pub fn forward<T: 'static>(
+    pub fn forward(
         &self,
-        input_desc: cudnnTensorDescriptor_t,
         input: *const T,
-        output_desc: cudnnTensorDescriptor_t,
         output: *mut T,
         alpha: T,
         beta: T,
@@ -111,10 +136,10 @@ impl Pool2d {
                 handle.as_ptr(),
                 self.pooling as cudnnPoolingDescriptor_t,
                 &alpha as *const T as *const std::ffi::c_void,
-                input_desc,
+                self.input_desc,
                 input as *const std::ffi::c_void,
                 &beta as *const T as *const std::ffi::c_void,
-                output_desc,
+                self.output_desc,
                 output as *mut std::ffi::c_void,
             )
         };
@@ -124,15 +149,11 @@ impl Pool2d {
         Ok(())
     }
 
-    pub fn backward<T: 'static>(
+    pub fn backward(
         &self,
-        input_desc: cudnnTensorDescriptor_t,
         input: *const T,
-        input_grad_desc: cudnnTensorDescriptor_t,
         input_grad: *mut T,
-        output_desc: cudnnTensorDescriptor_t,
         output: *const T,
-        output_grad_desc: cudnnTensorDescriptor_t,
         output_grad: *const T,
         alpha: T,
         beta: T,
@@ -144,14 +165,14 @@ impl Pool2d {
                 handle.as_ptr(),
                 self.pooling as cudnnPoolingDescriptor_t,
                 &alpha as *const T as *const std::ffi::c_void,
-                output_desc,
+                self.output_desc,
                 output as *const std::ffi::c_void,
-                output_grad_desc,
+                self.output_desc,
                 output_grad as *const std::ffi::c_void,
-                input_desc,
+                self.input_desc,
                 input as *const std::ffi::c_void,
                 &beta as *const T as *const std::ffi::c_void,
-                input_grad_desc,
+                self.input_desc,
                 input_grad as *mut std::ffi::c_void,
             )
         };
@@ -165,10 +186,7 @@ impl Pool2d {
 
 #[cfg(test)]
 mod pool2d {
-    use crate::{
-        cudnn::{tensor_descriptor_4d, TensorFormat},
-        runtime::{cuda_copy, cuda_malloc, ZenuCudaMemCopyKind},
-    };
+    use crate::runtime::{cuda_copy, cuda_malloc, ZenuCudaMemCopyKind};
 
     use super::Pool2d;
 
@@ -256,21 +274,24 @@ mod pool2d {
             0.8728312, 1.0553575, 2.3803675, 0.6870502, 2.3025165,
         ];
 
-        let input_descrptor = tensor_descriptor_4d::<f32>(1, 3, 5, 5, TensorFormat::NCHW).unwrap();
-        let output_descrptor = tensor_descriptor_4d::<f32>(1, 3, 2, 2, TensorFormat::NCHW).unwrap();
-        let pool = Pool2d::new(super::PoolType::Max, 3, 3, 0, 0, 2, 2).unwrap();
+        // let input_descrptor = tensor_descriptor_4d::<f32>(1, 3, 5, 5, TensorFormat::NCHW).unwrap();
+        // let output_descrptor = tensor_descriptor_4d::<f32>(1, 3, 2, 2, TensorFormat::NCHW).unwrap();
+        let pool = Pool2d::<f32>::new(
+            super::PoolType::Max,
+            3,
+            3,
+            0,
+            0,
+            2,
+            2,
+            (1, 3, 5, 5),
+            (1, 3, 2, 2),
+        )
+        .unwrap();
         let input_gpu = vec_to_gpu(input.clone());
         let output_gpu = cuda_malloc::<f32>(output.len()).unwrap();
 
-        pool.forward(
-            input_descrptor,
-            input_gpu,
-            output_descrptor,
-            output_gpu,
-            1.0,
-            0.0,
-        )
-        .unwrap();
+        pool.forward(input_gpu, output_gpu, 1.0, 0.0).unwrap();
 
         let output_cudnn = gpu_to_vec(output_gpu, output.len());
         for (a, b) in output.iter().zip(output_cudnn.iter()) {
@@ -283,13 +304,9 @@ mod pool2d {
         let input_grad_gpu = cuda_malloc::<f32>(input.len()).unwrap();
 
         pool.backward(
-            input_descrptor,
             input_gpu,
-            input_descrptor,
             input_grad_gpu,
-            output_descrptor,
             output_gpu,
-            output_descrptor,
             output_grad_gpu,
             1.0,
             0.0,

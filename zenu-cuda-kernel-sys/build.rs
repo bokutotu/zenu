@@ -20,6 +20,7 @@ fn main() {
     cc::Build::new()
         .cuda(true)
         .flag("-cudart=shared")
+        .flag("--expt-relaxed-constexpr")
         .flag("-gencode")
         .flag("arch=compute_52,code=sm_52") // for (GTX 970, 980, 980 Ti, Titan X).
         .flag("-gencode")
