@@ -17,6 +17,7 @@ pub trait MaxIdx: DeviceBase {
 }
 
 impl MaxIdx for Cpu {
+    #[allow(clippy::not_unsafe_ptr_arg_deref)]
     fn max_idx<T: Num>(input: *const T, size: usize, stride: usize) -> usize {
         let tmep_v = unsafe { std::slice::from_raw_parts(input, size * stride) };
         let mut max_idx = 0;
@@ -76,7 +77,7 @@ impl<T: Num, R: Repr<Item = T>, D: Device> Matrix<R, DimDyn, D> {
             let output_flatten = output.reshape_mut([output.shape().num_elm()]);
             let s = self.reshape_new_matrix([self.shape()[0], output_shape.num_elm()]);
             for i in 0..output_shape.num_elm() {
-                output_flatten.index_item_assign(&[i], s.index_axis(Index::new(1, i)).max_item());
+                output_flatten.index_item_assign([i], s.index_axis(Index::new(1, i)).max_item());
             }
         } else {
             for i in 0..self.shape()[0] {
