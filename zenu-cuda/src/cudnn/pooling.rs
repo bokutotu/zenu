@@ -79,6 +79,7 @@ impl From<PoolType> for cudnnPoolingMode_t {
 }
 
 impl<T: 'static> Pool2d<T> {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         pool_type: PoolType,
         window_h: usize,

@@ -42,7 +42,7 @@ pub struct BatchNorm2dAutoGradConfig<T: Num> {
 impl<T: Num> BatchNorm2dAutoGradConfig<T> {
     pub fn new(dim: &[usize]) -> Self {
         let dim = DimDyn::from(dim);
-        let inner = BatchNorm2dInner::new(dim.clone());
+        let inner = BatchNorm2dInner::new(dim);
         Self {
             inner: Rc::new(RefCell::new(inner)),
             dim: RefCell::new(dim),

@@ -58,6 +58,7 @@ pub trait Pool2dImpl: DeviceBase {
         config: &Pool2dConfig<T>,
     ) -> Result<(), String>;
 
+    #[allow(clippy::too_many_arguments)]
     fn pool2d_backward<T: Num>(
         input: Matrix<Ref<&T>, DimDyn, Self>,
         input_grad: Matrix<Ref<&mut T>, DimDyn, Self>,
@@ -121,14 +122,13 @@ impl Pool2dImpl for Cpu {
             col_shape[5],
         ]);
         let mut max_idxs = col.max_axis_idx_ravel(2);
-        for idx in 0..max_idxs.len() {
-            max_idxs[idx] += kernel_shape.0 * kernel_shape.1 * idx;
+        for (idx, max_idx) in max_idxs.iter_mut().enumerate() {
+            *max_idx += kh * kw * idx;
         }
 
-        for idx in 0..max_idxs.len() {
-            let max_id = max_idxs[idx];
+        for (idx, max_id) in max_idxs.iter().enumerate() {
             let grad_val = unsafe { output_grad.ptr().get_item(idx) };
-            unsafe { gcol.to_ref_mut().ptr().assign_item(max_id, grad_val) };
+            unsafe { gcol.to_ref_mut().ptr().assign_item(*max_id, grad_val) };
         }
 
         let gcol = gcol.reshape_no_alloc_owned([n, c, oh, ow, kh, kw]);
@@ -136,8 +136,8 @@ impl Pool2dImpl for Cpu {
         let gcol = gcol.transpose_swap_index_new_matrix(3, 5);
 
         let mut shape = [0; 4];
-        for i in 0..4 {
-            shape[i] = input_grad.shape()[i];
+        for (i, itm) in input_grad.shape().slice().iter().enumerate() {
+            shape[i] = *itm;
         }
 
         let col2im_tmp = col2im(gcol.to_ref(), shape, kernel_shape, stride, padding);
@@ -215,7 +215,7 @@ pub fn max_pool_2d<T: Num, D: Device>(
         kernel,
         stride,
         padding,
-        &config,
+        config,
     )
     .expect("pool2d failed");
     output
@@ -239,7 +239,7 @@ pub fn max_pool_2d_grad<T: Num, D: Device>(
         kernel,
         stride,
         padding,
-        &config,
+        config,
     );
     input_grad
 }
