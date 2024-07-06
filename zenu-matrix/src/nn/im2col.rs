@@ -43,6 +43,7 @@ pub(super) fn im2col<T: Num, D: Device>(
     kernel_size: (usize, usize),
     stride: (usize, usize),
     pad: (usize, usize),
+    output_2d: bool,
 ) -> Im2ColRes<T, D> {
     let batch_size = img.shape()[0];
     let c = img.shape()[1];
@@ -73,12 +74,19 @@ pub(super) fn im2col<T: Num, D: Device>(
         }
     }
 
-    let col = col.reshape_mut([batch_size, c * kh * kw, oh * ow]);
-    let col = col.transpose_by_index_new_matrix(&[1, 0, 2]);
-    let col = col.reshape_no_alloc_owned([c * kh * kw, batch_size * oh * ow]);
-    Im2ColRes {
-        col,
-        out_size: (oh, ow),
+    if output_2d {
+        let col = col.reshape_mut([batch_size, c * kh * kw, oh * ow]);
+        let col = col.transpose_by_index_new_matrix(&[1, 0, 2]);
+        let col = col.reshape_no_alloc_owned([c * kh * kw, batch_size * oh * ow]);
+        Im2ColRes {
+            col,
+            out_size: (oh, ow),
+        }
+    } else {
+        Im2ColRes {
+            col,
+            out_size: (oh, ow),
+        }
     }
 }
 
@@ -103,6 +111,7 @@ mod im2col {
                     test_case.kernel_size,
                     test_case.stride,
                     test_case.pad,
+                    true,
                 );
                 assert_mat_eq_epsilon!(res.col, test_case.ans, 1e-6);
             }

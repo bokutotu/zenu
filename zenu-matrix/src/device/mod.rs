@@ -1,7 +1,7 @@
 use serde::Serialize;
 
 use crate::{
-    nn::{batch_norm::BatchNormalization, conv2d::Conv2d},
+    nn::{batch_norm::BatchNormalization, conv2d::Conv2d, pool2d::Pool2dImpl},
     num::Num,
     operation::{
         asum::Asum,
@@ -59,6 +59,7 @@ pub trait Device:
     + BatchNormalization
     + Conv2d
     + Sized
+    + Pool2dImpl
     + 'static
 {
 }

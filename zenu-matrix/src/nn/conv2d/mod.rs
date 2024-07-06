@@ -5,11 +5,9 @@ use crate::{
     num::Num,
 };
 
-mod col2im;
 mod conv2d_bckwd_filter_cpu;
 mod conv2d_cpu_impl;
 mod deconv2d_cpu_impl;
-mod im2col;
 
 use self::{
     conv2d_bckwd_filter_cpu::conv2d_bckwd_fileter, conv2d_cpu_impl::conv2d_inner,
