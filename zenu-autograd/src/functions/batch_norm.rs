@@ -35,23 +35,23 @@ impl<T: Num> BatchNorm2dInner<T> {
 
 #[derive(Clone, Default)]
 pub struct BatchNorm2dAutoGradConfig<T: Num> {
-    inner: RefCell<Rc<BatchNorm2dInner<T>>>,
+    inner: Rc<RefCell<BatchNorm2dInner<T>>>,
     dim: RefCell<DimDyn>,
 }
 
 impl<T: Num> BatchNorm2dAutoGradConfig<T> {
     pub fn new(dim: &[usize]) -> Self {
         let dim = DimDyn::from(dim);
-        let inner = Rc::new(BatchNorm2dInner::new(dim));
+        let inner = BatchNorm2dInner::new(dim.clone());
         Self {
-            inner: RefCell::new(inner),
+            inner: Rc::new(RefCell::new(inner)),
             dim: RefCell::new(dim),
         }
     }
 
     pub fn update_shape(&self, dim: &[usize]) {
         let dim = DimDyn::from(dim);
-        *self.inner.borrow_mut() = Rc::new(BatchNorm2dInner::new(dim));
+        *self.inner.borrow_mut() = BatchNorm2dInner::new(dim);
         self.dim.replace(dim);
     }
 

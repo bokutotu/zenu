@@ -186,6 +186,20 @@ impl Pool2dImpl for Nvidia {
     }
 }
 
+pub fn max_pool_2d_output_shape(
+    input_shape: &[usize],
+    kernel: (usize, usize),
+    stride: (usize, usize),
+    padding: (usize, usize),
+) -> [usize; 4] {
+    [
+        input_shape[0],
+        input_shape[1],
+        (input_shape[2] + 2 * padding.0 - kernel.0) / stride.0 + 1,
+        (input_shape[3] + 2 * padding.1 - kernel.1) / stride.1 + 1,
+    ]
+}
+
 pub fn max_pool_2d<T: Num, D: Device>(
     input: Matrix<Ref<&T>, DimDyn, D>,
     kernel: (usize, usize),
@@ -193,12 +207,7 @@ pub fn max_pool_2d<T: Num, D: Device>(
     padding: (usize, usize),
     config: &Pool2dConfig<T>,
 ) -> Matrix<Owned<T>, DimDyn, D> {
-    let output_shape = [
-        input.shape()[0],
-        input.shape()[1],
-        (input.shape()[2] + 2 * padding.0 - kernel.0) / stride.0 + 1,
-        (input.shape()[3] + 2 * padding.1 - kernel.1) / stride.1 + 1,
-    ];
+    let output_shape = max_pool_2d_output_shape(input.shape().slice(), kernel, stride, padding);
     let mut output = Matrix::<Owned<T>, DimDyn, D>::zeros(output_shape);
     D::pool2d(
         input.to_ref(),
@@ -245,7 +254,7 @@ mod pool2d {
         matrix::{Matrix, Owned},
     };
 
-    use super::{Pool2dConfig, Pool2dImpl};
+    use super::Pool2dConfig;
 
     fn device_forward<D: Device>() {
         let input = vec![

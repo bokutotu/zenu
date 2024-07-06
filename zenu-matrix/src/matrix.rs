@@ -118,10 +118,6 @@ where
         self.len
     }
 
-    pub(crate) fn offset(&self) -> usize {
-        self.offset
-    }
-
     pub fn get_item(&self, offset: usize) -> R::Item {
         if offset >= self.len {
             panic!("Index out of bounds");
