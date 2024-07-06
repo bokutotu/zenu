@@ -1,5 +1,3 @@
-use std::any::TypeId;
-
 use crate::{
     device::{cpu::Cpu, Device, DeviceBase},
     dim::{DimDyn, DimTrait},
