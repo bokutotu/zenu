@@ -1,5 +1,5 @@
 use crate::{
-    device::{cpu::Cpu, Device},
+    device::{cpu::Cpu, Device, DeviceBase},
     dim::{DimDyn, DimTrait},
     matrix::{Matrix, Owned, Ref},
     nn::col2im::col2im,
@@ -48,7 +48,7 @@ impl<T: Num> Pool2dConfig<T> {
     }
 }
 
-pub trait Pool2dImpl: Device {
+pub trait Pool2dImpl: DeviceBase {
     fn pool2d<T: Num>(
         input: Matrix<Ref<&T>, DimDyn, Self>,
         output: Matrix<Ref<&mut T>, DimDyn, Self>,
@@ -145,20 +145,109 @@ impl Pool2dImpl for Cpu {
     }
 }
 
+#[cfg(feature = "nvidia")]
+impl Pool2dImpl for Nvidia {
+    fn pool2d<T: Num>(
+        input: Matrix<Ref<&T>, DimDyn, Self>,
+        output: Matrix<Ref<&mut T>, DimDyn, Self>,
+        _kernel: (usize, usize),
+        _stride: (usize, usize),
+        _padding: (usize, usize),
+        config: &Pool2dConfig<T>,
+    ) -> Result<(), String> {
+        config
+            .config
+            .forward(input.as_ptr(), output.as_mut_ptr(), T::one(), T::zero())
+            .unwrap();
+        Ok(())
+    }
+
+    fn pool2d_backward<T: Num>(
+        input: Matrix<Ref<&T>, DimDyn, Self>,
+        input_grad: Matrix<Ref<&mut T>, DimDyn, Self>,
+        output: Matrix<Ref<&T>, DimDyn, Self>,
+        output_grad: Matrix<Ref<&T>, DimDyn, Self>,
+        _kernel_shape: (usize, usize),
+        _stride: (usize, usize),
+        _padding: (usize, usize),
+        config: &Pool2dConfig<T>,
+    ) {
+        config
+            .config
+            .backward(
+                input.as_ptr(),
+                input_grad.as_mut_ptr(),
+                output.as_ptr(),
+                output_grad.as_ptr(),
+                T::one(),
+                T::zero(),
+            )
+            .unwrap();
+    }
+}
+
+pub fn max_pool_2d<T: Num, D: Device>(
+    input: Matrix<Ref<&T>, DimDyn, D>,
+    kernel: (usize, usize),
+    stride: (usize, usize),
+    padding: (usize, usize),
+    config: &Pool2dConfig<T>,
+) -> Matrix<Owned<T>, DimDyn, D> {
+    let output_shape = [
+        input.shape()[0],
+        input.shape()[1],
+        (input.shape()[2] + 2 * padding.0 - kernel.0) / stride.0 + 1,
+        (input.shape()[3] + 2 * padding.1 - kernel.1) / stride.1 + 1,
+    ];
+    let mut output = Matrix::<Owned<T>, DimDyn, D>::zeros(output_shape);
+    D::pool2d(
+        input.to_ref(),
+        output.to_ref_mut(),
+        kernel,
+        stride,
+        padding,
+        &config,
+    )
+    .expect("pool2d failed");
+    output
+}
+
+pub fn max_pool_2d_grad<T: Num, D: Device>(
+    input: Matrix<Ref<&T>, DimDyn, D>,
+    output: Matrix<Ref<&T>, DimDyn, D>,
+    output_grad: Matrix<Ref<&T>, DimDyn, D>,
+    kernel: (usize, usize),
+    stride: (usize, usize),
+    padding: (usize, usize),
+    config: &Pool2dConfig<T>,
+) -> Matrix<Owned<T>, DimDyn, D> {
+    let mut input_grad = Matrix::<Owned<T>, DimDyn, D>::zeros(input.shape());
+    D::pool2d_backward(
+        input.to_ref(),
+        input_grad.to_ref_mut(),
+        output.to_ref(),
+        output_grad.to_ref(),
+        kernel,
+        stride,
+        padding,
+        &config,
+    );
+    input_grad
+}
+
 #[cfg(test)]
 mod pool2d {
-    use zenu_test::assert_mat_eq_epsilon;
+    use zenu_test::{assert_mat_eq_epsilon, run_mat_test};
 
     use crate::{
-        device::cpu::Cpu,
+        device::Device,
         dim::DimDyn,
         matrix::{Matrix, Owned},
     };
 
     use super::{Pool2dConfig, Pool2dImpl};
 
-    #[test]
-    fn device_cpu_forward() {
+    fn device_forward<D: Device>() {
         let input = vec![
             -1.1258398,
             -1.1523602,
@@ -241,14 +330,14 @@ mod pool2d {
             0.8728312, 1.0553575, 2.3803675, 0.6870502, 2.3025165,
         ];
 
-        let input = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(input, &[1, 3, 5, 5]);
-        let ans = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(output, &[1, 3, 2, 2]);
+        let input = Matrix::<Owned<f32>, DimDyn, D>::from_vec(input, &[1, 3, 5, 5]);
+        let ans = Matrix::<Owned<f32>, DimDyn, D>::from_vec(output, &[1, 3, 2, 2]);
 
-        let mut result = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros(&[1, 3, 2, 2]);
+        let mut result = Matrix::<Owned<f32>, DimDyn, D>::zeros(&[1, 3, 2, 2]);
 
         let config = Pool2dConfig::new((3, 3), (2, 2), (0, 0), (1, 3, 5, 5), (1, 3, 2, 2));
 
-        Cpu::pool2d(
+        D::pool2d(
             input.to_ref(),
             result.to_ref_mut(),
             (3, 3),
@@ -260,11 +349,11 @@ mod pool2d {
 
         assert_mat_eq_epsilon!(result.clone(), ans, 1e-6);
 
-        let output_grad = Matrix::<Owned<f32>, DimDyn, Cpu>::ones_like(&result);
+        let output_grad = Matrix::<Owned<f32>, DimDyn, D>::ones_like(&result);
 
-        let mut input_grad = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros_like(&input);
+        let mut input_grad = Matrix::<Owned<f32>, DimDyn, D>::zeros_like(&input);
 
-        Cpu::pool2d_backward(
+        D::pool2d_backward(
             input.to_ref(),
             input_grad.to_ref_mut(),
             result.to_ref(),
@@ -282,7 +371,8 @@ mod pool2d {
             0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0,
         ];
         let input_grad_ans =
-            Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(input_grad_ans, &[1, 3, 5, 5]);
+            Matrix::<Owned<f32>, DimDyn, D>::from_vec(input_grad_ans, &[1, 3, 5, 5]);
         assert_mat_eq_epsilon!(input_grad, input_grad_ans, 1e-6);
     }
+    run_mat_test!(device_forward, device_forward_cpu, device_forward_nvidia);
 }
