@@ -13,6 +13,11 @@ use zenu_layer::StateDict;
 use zenu_matrix::{device::Device, num::Num};
 use zenu_optimizer::Optimizer;
 
+pub use zenu_autograd;
+pub use zenu_layer;
+pub use zenu_matrix;
+pub use zenu_optimizer;
+
 pub fn update_parameters<T: Num, D: Device, O: Optimizer<T, D>>(
     loss: Variable<T, D>,
     optimizer: &O,
