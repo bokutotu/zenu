@@ -2,7 +2,6 @@ use crate::{
     device::Device,
     dim::{DimDyn, DimTrait},
     matrix::{Matrix, Ref, Repr},
-    matrix_iter::MatrixIter,
     num::Num,
 };
 
@@ -11,24 +10,16 @@ impl<T: Num, D: Device> Matrix<Ref<&mut T>, DimDyn, D> {
         if axis >= self.shape().len() {
             panic!("axis must be less than the number of dimensions");
         }
-        self.copy_from(source);
-        if self.shape().len() == 1 {
-            softmax_kernel(self.clone());
-        } else {
-            let s = self.clone();
-            s.map_axis_mut(axis, softmax_kernel);
+        if self.shape().slice() != source.shape().slice() {
+            panic!("softmax shape mismatch");
         }
-    }
-}
 
-fn softmax_kernel<T: Num, D: Device>(result: Matrix<Ref<&mut T>, DimDyn, D>) {
-    let max_item = result.max_item();
-    let mut max_diff = result.to_ref() - max_item;
-    // let exp = max_diff.exp();
-    max_diff.to_ref_mut().exp_assign();
-    let sum = max_diff.asum();
-    let t = max_diff / sum;
-    result.copy_from(&t.to_ref());
+        let max_diff = source.to_ref() - source.max_axis(axis, true);
+        let mut output = max_diff.exp();
+        let sum = output.to_ref().sum(axis, true);
+        output /= sum;
+        self.copy_from(&output.to_ref());
+    }
 }
 
 #[cfg(test)]

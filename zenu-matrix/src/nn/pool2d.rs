@@ -90,7 +90,7 @@ impl Pool2dImpl for Cpu {
             col_shape[5],
         ]);
 
-        output.copy_from(&col.max_axis(2));
+        output.copy_from(&col.max_axis(2, false));
         Ok(())
     }
 

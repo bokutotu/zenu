@@ -38,6 +38,10 @@ impl<T: Num, D: Device> Linear<T, D> {
         StandardNormal: Distribution<T>,
     {
         let weight = normal(T::zero(), T::one(), None, [in_features, out_features]);
+        weight
+            .get_data_mut()
+            .to_ref_mut()
+            .div_scalar_assign(T::from_usize(in_features).sqrt());
         let bias = if use_bias {
             let bias = zeros([out_features]);
             bias.set_name("linear.bias");
