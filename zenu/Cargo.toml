@@ -27,3 +27,5 @@ zenu-test = { path = "../zenu-test", version = "0.1.0" }
 [profile.bench]
 debug = true
 
+[features]
+nvidia = ["zenu-matrix/nvidia", "zenu-autograd/nvidia", "zenu-layer/nvidia", "zenu-optimizer/nvidia"]

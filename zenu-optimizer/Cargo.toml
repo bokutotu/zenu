@@ -22,3 +22,5 @@ workspace = true
 [profile.bench]
 debug = true
 
+[features]
+nvidia = ["zenu-matrix/nvidia", "zenu-autograd/nvidia", "zenu-layer/nvidia"]
