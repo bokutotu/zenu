@@ -38,10 +38,15 @@ impl<T: Num, D: Device> Linear<T, D> {
     {
         let weight = normal(T::zero(), T::one(), None, [in_features, out_features]);
         let bias = if use_bias {
-            Some(zeros([out_features]))
+            let bias = zeros([out_features]);
+            bias.set_is_train(true);
+            Some(bias)
         } else {
             None
         };
+
+        weight.set_is_train(true);
+
         Self {
             in_features,
             out_features,

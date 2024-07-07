@@ -46,6 +46,10 @@ impl<T: Num, D: Device> BatchNorm2d<T, D> {
         let bias = zeros([channels]);
         let mean = zeros([channels]);
         let variance = ones([channels]);
+
+        scale.set_is_train(true);
+        bias.set_is_train(true);
+
         let config = BatchNorm2dAutoGradConfig::default();
         Self {
             config,
