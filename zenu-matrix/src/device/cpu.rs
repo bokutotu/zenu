@@ -9,7 +9,7 @@ impl DeviceBase for Cpu {
     #[allow(clippy::not_unsafe_ptr_arg_deref)]
     fn drop_ptr<T>(ptr: *mut T, len: usize) {
         unsafe {
-            std::vec::Vec::from_raw_parts(ptr, 0, len);
+            let _ = std::vec::Vec::from_raw_parts(ptr, len, len);
         }
     }
 

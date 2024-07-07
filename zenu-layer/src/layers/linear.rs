@@ -23,6 +23,7 @@ impl<T: Num, D: Device> Module<T, D> for Linear<T, D> {
     fn call(&self, input: Variable<T, D>) -> Variable<T, D> {
         let output = matmul(input, self.weight.clone());
         if let Some(bias) = &self.bias {
+            output.set_name("linear.intermediate_output");
             output + bias.clone()
         } else {
             output
