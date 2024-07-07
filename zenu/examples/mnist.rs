@@ -1,17 +1,18 @@
 use serde::{Deserialize, Serialize};
+
 use zenu::{
+    autograd::{
+        creator::from_vec::from_vec,
+        functions::{activation::relu::relu, loss::cross_entropy::cross_entropy},
+        no_train, set_train, Variable,
+    },
     dataset::{train_val_split, DataLoader, Dataset},
     dataset_loader::mnist_dataset,
+    layer::{layers::linear::Linear, Module, StateDict},
+    matrix::device::{cpu::Cpu, Device},
+    optimizer::sgd::SGD,
     update_parameters,
 };
-use zenu_autograd::{
-    creator::from_vec::from_vec,
-    functions::{activation::relu::relu, loss::cross_entropy::cross_entropy},
-    no_train, set_train, Variable,
-};
-use zenu_layer::{layers::linear::Linear, Module, StateDict};
-use zenu_matrix::device::{cpu::Cpu, Device};
-use zenu_optimizer::sgd::SGD;
 
 #[derive(Serialize, Deserialize)]
 pub struct SimpleModel<D: Device> {
