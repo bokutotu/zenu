@@ -54,6 +54,16 @@ impl<T: Num, D: Device> Linear<T, D> {
             bias,
         }
     }
+
+    #[must_use]
+    pub fn to<Dout: Device>(self) -> Linear<T, Dout> {
+        Linear {
+            in_features: self.in_features,
+            out_features: self.out_features,
+            weight: self.weight.to(),
+            bias: self.bias.map(|b| b.to()),
+        }
+    }
 }
 
 #[cfg(test)]

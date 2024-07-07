@@ -89,6 +89,16 @@ impl<T: Num, D: Device> Conv2d<T, D> {
             padding,
         }
     }
+
+    pub fn to<Dout: Device>(self) -> Conv2d<T, Dout> {
+        Conv2d {
+            filter: self.filter.to(),
+            bias: self.bias.map(|b| b.to()),
+            config: RefCell::new(None),
+            stride: self.stride,
+            padding: self.padding,
+        }
+    }
 }
 
 #[cfg(test)]

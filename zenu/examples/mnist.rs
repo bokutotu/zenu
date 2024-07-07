@@ -7,7 +7,7 @@ use zenu::{
 use zenu_autograd::{
     creator::from_vec::from_vec,
     functions::{activation::relu::relu, loss::cross_entropy::cross_entropy, softmax::softmax},
-    Variable,
+    no_train, set_train, Variable,
 };
 use zenu_layer::{layers::linear::Linear, Module, StateDict};
 use zenu_matrix::device::{cpu::Cpu, Device};
@@ -76,6 +76,7 @@ fn main() {
     let optimizer = SGD::<f32, Cpu>::new(0.01);
 
     for num_epoch in 0..10 {
+        set_train();
         let mut train_dataloader = DataLoader::new(
             MnistDataset {
                 data: train.clone(),
@@ -93,14 +94,16 @@ fn main() {
             let target = batch[1].clone();
             let pred = model.call(input);
             let loss = cross_entropy(pred, target);
-            update_parameters(loss.clone(), &optimizer);
-            train_loss += loss.get_data().asum();
+            let loss_asum = loss.get_data().asum();
+            update_parameters(loss, &optimizer);
+            train_loss += loss_asum;
             num_iter += 1;
         }
         train_loss /= num_iter as f32;
 
         let val_loader = DataLoader::new(MnistDataset { data: val.clone() }, 16);
 
+        no_train();
         let mut val_loss = 0.0;
         let mut num_iter = 0;
         for batch in val_loader {
