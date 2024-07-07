@@ -237,32 +237,8 @@ impl<T: Num, D: Device> VariableInner<T, D> {
     }
 
     fn get_all_trainable_variables(&self) -> Vec<Variable<T, D>> {
-        let mut variables = Vec::new();
-        let mut seen_rc = HashSet::new();
-        let mut funcs: BinaryHeap<FunctionQueueItem<T, D>> = BinaryHeap::new();
-
-        funcs.push(self.creator.clone().unwrap().into());
-
-        while let Some(FunctionQueueItem { func, .. }) = funcs.pop() {
-            let inputs = func.borrow().get_inputs();
-            for input in inputs {
-                if let Some(creator) = input.get_creator() {
-                    if !seen_rc.contains(&creator.as_ptr()) {
-                        funcs.push(creator.clone().into());
-                        seen_rc.insert(creator.as_ptr());
-                    }
-                }
-            }
-            let inputs = func.borrow().get_inputs();
-            for input in inputs {
-                if input.get_is_train() {
-                    variables.push(input);
-                }
-            }
-        }
-
-        variables.dedup_by(|a, b| Rc::ptr_eq(&a.inner, &b.inner));
-        variables
+        let variables = self.get_all_variable();
+        variables.into_iter().filter(|v| v.get_is_train()).collect()
     }
 
     fn to<DO: Device>(&self) -> VariableInner<T, DO> {
