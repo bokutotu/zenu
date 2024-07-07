@@ -457,14 +457,12 @@ where
         let len = vec.len();
 
         let ptr = Ptr {
-            ptr: D::from_vec(vec.clone()),
+            ptr: D::from_vec(vec),
             len,
             offset: 0,
             repr: PhantomData,
             device: PhantomData,
         };
-
-        std::mem::forget(vec);
 
         let stride = default_stride(shape);
         Matrix { ptr, shape, stride }
