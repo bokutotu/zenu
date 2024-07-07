@@ -50,6 +50,11 @@ impl<T: Num, D: Device> BatchNorm2d<T, D> {
         scale.set_is_train(true);
         bias.set_is_train(true);
 
+        scale.set_name("batch_norm_2d.scale");
+        bias.set_name("batch_norm_2d.bias");
+        mean.set_name("batch_norm_2d.mean");
+        variance.set_name("batch_norm_2d.variance");
+
         let config = BatchNorm2dAutoGradConfig::default();
         Self {
             config,

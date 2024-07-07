@@ -73,6 +73,7 @@ impl<T: Num, D: Device> Conv2d<T, D> {
         let bias = if bias {
             let bias = zeros([1, output_channel, 1, 1]);
             bias.set_is_train(true);
+            bias.set_name("conv2d.bias");
             Some(bias)
         } else {
             None
@@ -80,6 +81,7 @@ impl<T: Num, D: Device> Conv2d<T, D> {
         let filter = normal(T::zero(), T::one(), None, filter_shape);
 
         filter.set_is_train(true);
+        filter.set_name("conv2d.filter");
 
         Conv2d {
             filter,
