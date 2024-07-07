@@ -60,4 +60,15 @@ impl<T: Num, D: Device> BatchNorm2d<T, D> {
             variance,
         }
     }
+
+    pub fn to<Dout: Device>(self) -> BatchNorm2d<T, Dout> {
+        BatchNorm2d {
+            config: self.config,
+            momentum: self.momentum,
+            scale: self.scale.to(),
+            bias: self.bias.to(),
+            mean: self.mean.to(),
+            variance: self.variance.to(),
+        }
+    }
 }
