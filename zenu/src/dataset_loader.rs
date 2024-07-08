@@ -59,16 +59,13 @@ fn download_and_extract_cifar10(save_dir: &str) -> Result<(), Box<dyn std::error
     let filename = "cifar-10-python.tar.gz";
     let save_path = Path::new(save_dir).join(filename);
 
-    // ファイルが既に存在するかチェック
     if save_path.exists() {
         println!("ファイルは既に存在します: {}", save_path.display());
     } else {
-        // ディレクトリが存在しない場合は作成
         if !Path::new(save_dir).exists() {
             fs::create_dir_all(save_dir)?;
         }
 
-        // wget コマンドを構築
         let output = Command::new("wget")
             .arg("-O") // 出力ファイル名を指定
             .arg(&save_path)
@@ -86,7 +83,6 @@ fn download_and_extract_cifar10(save_dir: &str) -> Result<(), Box<dyn std::error
         }
     }
 
-    // tar.gz ファイルを解凍
     let output = Command::new("tar")
         .arg("-xzf")
         .arg(&save_path)
@@ -96,8 +92,6 @@ fn download_and_extract_cifar10(save_dir: &str) -> Result<(), Box<dyn std::error
 
     if output.status.success() {
         println!("ファイルの解凍が完了しました");
-        // 解凍後に tar.gz ファイルを削除（オプション）
-        // fs::remove_file(&save_path)?;
         Ok(())
     } else {
         let error = String::from_utf8_lossy(&output.stderr);
