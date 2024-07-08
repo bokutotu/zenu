@@ -90,7 +90,7 @@ fn main() {
     let (train, test) = cifar10_dataset().unwrap();
     let (train, val) = train_val_split(&train, 0.8, true);
 
-    let test_dataloader = DataLoader::new(CiFar10Dataset { data: test }, 1);
+    let test_dataloader = DataLoader::new(CiFar10Dataset { data: test }, 512);
 
     let sgd = SGD::new(0.01);
     let model = ConvNet::new();
@@ -100,9 +100,9 @@ fn main() {
             CiFar10Dataset {
                 data: train.clone(),
             },
-            16,
+            512,
         );
-        let val_dataloader = DataLoader::new(CiFar10Dataset { data: val.clone() }, 16);
+        let val_dataloader = DataLoader::new(CiFar10Dataset { data: val.clone() }, 512);
 
         train_dataloader.shuffle();
 
