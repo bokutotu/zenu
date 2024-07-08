@@ -121,7 +121,7 @@ impl DimDyn {
     // selfとotherがadd, sub, mul, divで演算可能かを調べる
     // [10, 10, 1, 10]と[10, 1, 1, 10]は演算可能である
     // is_includeではfalseになるが演算可能なものを調べる
-    pub(crate) fn is_include_bradcast(&self, other: DimDyn) -> bool {
+    pub fn is_include_bradcast(&self, other: DimDyn) -> bool {
         if self.len() < other.len() {
             panic!("this is bug please make issue");
         }

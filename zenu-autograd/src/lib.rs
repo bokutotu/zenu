@@ -11,12 +11,13 @@ use std::{
     sync::Mutex,
 };
 
-use creator::ones::ones;
+use creator::{ones::ones, zeros::zeros_like};
+use functions::sum_to::sum_to;
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use zenu_matrix::{
     device::Device,
-    dim::DimDyn,
+    dim::{larger_shape, DimDyn, DimTrait},
     matrix::{Matrix, Owned, Repr},
     num::Num,
 };
@@ -310,6 +311,7 @@ impl<T: Num, D: Device> Variable<T, D> {
             inner: Rc::new(RefCell::new(VariableInner::new(data))),
         }
     }
+
     pub fn get_data<'a>(&'a self) -> Ref<'a, Matrix<Owned<T>, DimDyn, D>> {
         let reference: Ref<'a, VariableInner<T, D>> = self.inner.borrow();
         Ref::map(reference, |r| &r.data)
@@ -388,8 +390,16 @@ impl<T: Num, D: Device> Variable<T, D> {
         }
     }
 
-    pub fn set_grad(&self, grad: Variable<T, D>) {
-        if self.get_data().shape() != grad.get_data().shape() {
+    pub fn set_grad(&self, mut grad: Variable<T, D>) {
+        let self_shape = self.get_shape();
+        let grad_shape = grad.get_shape();
+        let larger_shape_ = larger_shape(self_shape, grad_shape);
+        if self_shape.slice() == grad_shape.slice() {
+        } else if self_shape.slice() == larger_shape_.slice() {
+            grad = zeros_like(self) + grad;
+        } else if grad_shape.slice() == larger_shape_.slice() {
+            grad = sum_to(grad, self_shape);
+        } else {
             panic!("shape of grad and data must be same");
         }
         let name = self.get_name().clone().unwrap_or_default();
