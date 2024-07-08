@@ -25,8 +25,8 @@ impl<'de, D: Device + Deserialize<'de>> StateDict<'de> for SimpleModel<D> {}
 impl<D: Device> SimpleModel<D> {
     pub fn new() -> Self {
         Self {
-            linear_1: Linear::new(28 * 28, 512, false),
-            linear_2: Linear::new(512, 10, false),
+            linear_1: Linear::new(28 * 28, 512, true),
+            linear_2: Linear::new(512, 10, true),
         }
     }
 }
