@@ -1,19 +1,19 @@
 use zenu::{
+    autograd::{
+        creator::from_vec::from_vec,
+        functions::{activation::relu::relu, flatten::flatten, loss::cross_entropy::cross_entropy},
+        no_train, set_train, Variable,
+    },
     dataset::{train_val_split, DataLoader, Dataset},
     dataset_loader::cifar10_dataset,
+    layer::{
+        layers::{batch_norm_2d::BatchNorm2d, conv2d::Conv2d, linear::Linear},
+        Module,
+    },
+    matrix::device::{cpu::Cpu, nvidia::Nvidia, Device},
+    optimizer::sgd::SGD,
     update_parameters,
 };
-use zenu_autograd::{
-    creator::from_vec::from_vec,
-    functions::{activation::relu::relu, flatten::flatten, loss::cross_entropy::cross_entropy},
-    no_train, set_train, Variable,
-};
-use zenu_layer::{
-    layers::{batch_norm_2d::BatchNorm2d, conv2d::Conv2d, linear::Linear},
-    Module,
-};
-use zenu_matrix::device::{cpu::Cpu, Device};
-use zenu_optimizer::sgd::SGD;
 
 struct ConvNet<D: Device> {
     conv1: Conv2d<f32, D>,
@@ -39,6 +39,17 @@ impl<D: Device> ConvNet<D> {
             batch_norm2,
             linear1,
             linear2,
+        }
+    }
+
+    fn to<Dout: Device>(self) -> ConvNet<Dout> {
+        ConvNet {
+            conv1: self.conv1.to(),
+            batch_norm1: self.batch_norm1.to(),
+            conv2: self.conv2.to(),
+            batch_norm2: self.batch_norm2.to(),
+            linear1: self.linear1.to(),
+            linear2: self.linear2.to(),
         }
     }
 }
@@ -93,7 +104,9 @@ fn main() {
     let test_dataloader = DataLoader::new(CiFar10Dataset { data: test }, 512);
 
     let sgd = SGD::new(0.01);
-    let model = ConvNet::new();
+    let model = ConvNet::<Cpu>::new();
+
+    let model = model.to::<Nvidia>();
 
     for epoch in 0..10 {
         let mut train_dataloader = DataLoader::new(
@@ -112,6 +125,8 @@ fn main() {
         for batch in train_dataloader {
             let x = batch[0].clone();
             let y = batch[1].clone();
+            let x = x.to::<Nvidia>();
+            let y = y.to::<Nvidia>();
             let output = model.call(x);
             let loss = cross_entropy(output, y);
             let loss_itm = loss.get_data().index_item([]);
@@ -127,6 +142,8 @@ fn main() {
         for batch in val_dataloader {
             let x = batch[0].clone();
             let y = batch[1].clone();
+            let x = x.to::<Nvidia>();
+            let y = y.to::<Nvidia>();
             let output = model.call(x);
             let loss = cross_entropy(output, y);
             epoch_loss_val += loss.get_data().index_item([]);
@@ -149,6 +166,8 @@ fn main() {
     for batch in test_dataloader {
         let x = batch[0].clone();
         let y = batch[1].clone();
+        let x = x.to::<Nvidia>();
+        let y = y.to::<Nvidia>();
         let output = model.call(x);
         let loss = cross_entropy(output.clone(), y.clone());
         test_loss += loss.get_data().index_item([]);
