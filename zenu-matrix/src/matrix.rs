@@ -436,6 +436,23 @@ where
         owned.to_ref_mut().copy_from(self);
         owned
     }
+
+    pub fn try_to_scalar(&self) -> Result<R::Item, ()> {
+        if self.shape().is_scalar() {
+            let scalr = self.ptr.get_item(0);
+            Ok(scalr)
+        } else {
+            Err(())
+        }
+    }
+
+    pub fn to_scalar(&self) -> R::Item {
+        if let Ok(scalar) = self.try_to_scalar() {
+            scalar
+        } else {
+            panic!("Matrix is not scalar");
+        }
+    }
 }
 
 impl<T, S, D> Matrix<Owned<T>, S, D>
