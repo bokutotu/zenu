@@ -3,7 +3,7 @@ use std::any::TypeId;
 
 use crate::{
     device::{cpu::Cpu, Device},
-    dim::DimTrait,
+    dim::{default_stride, DimTrait},
     index::Index0D,
     matrix::{Matrix, Ref, Repr},
     num::Num,
@@ -172,12 +172,15 @@ impl<T: Num, S: DimTrait, D: Device> Matrix<Ref<&mut T>, S, D> {
         }
 
         let len = self.shape().len();
+        let is_self_default_stride = self.shape_stride().is_default_stride();
+        let is_other_default_stride = other.shape_stride().is_default_stride();
+
         if len == 0 {
             D::relu(other.as_ptr(), self.as_mut_ptr(), alpha, 1, 1, 1);
-        } else if len == 1 {
+        } else if is_self_default_stride && is_other_default_stride {
             let num_elm = self.shape().num_elm();
-            let stride_self = self.stride()[0];
-            let stride_other = other.stride()[0];
+            let stride_self = self.stride()[len - 1];
+            let stride_other = other.stride()[len - 1];
             let self_ptr = self.as_mut_ptr();
             let other_ptr = other.as_ptr();
             D::relu(
@@ -206,12 +209,15 @@ impl<T: Num, S: DimTrait, D: Device> Matrix<Ref<&mut T>, S, D> {
         }
 
         let len = self.shape().len();
+        let is_self_default_stride = self.stride() == default_stride(self.shape());
+        let is_other_default_stride = other.stride() == default_stride(other.shape());
+
         if len == 0 {
             D::relu_backward_mask(other.as_ptr(), self.as_mut_ptr(), alpha, 1, 1, 1);
-        } else if len == 1 {
+        } else if is_self_default_stride && is_other_default_stride {
             let num_elm = self.shape().num_elm();
-            let stride_self = self.stride()[0];
-            let stride_other = other.stride()[0];
+            let stride_self = self.stride()[len - 1];
+            let stride_other = other.stride()[len - 1];
             let self_ptr = self.as_mut_ptr();
             let other_ptr = other.as_ptr();
             D::relu_backward_mask(

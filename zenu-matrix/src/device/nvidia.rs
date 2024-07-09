@@ -36,7 +36,7 @@ impl DeviceBase for Nvidia {
 
     fn zeros<T: Num>(len: usize) -> *mut T {
         let ptr = zenu_cuda::runtime::cuda_malloc(len).unwrap() as *mut T;
-        zenu_cuda::cublas::cublas_scal(len, T::zero(), ptr, 1);
+        zenu_cuda::cublas::cublas_scal(len, T::zero(), ptr, 1).unwrap();
         ptr
     }
 }
