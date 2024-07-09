@@ -1,5 +1,3 @@
-use std::any::TypeId;
-
 use serde::{Deserialize, Serialize};
 
 use crate::num::Num;
@@ -49,7 +47,6 @@ impl DeviceBase for Cpu {
     fn zeros<T: Num>(len: usize) -> *mut T {
         use cblas::*;
         let mut vec = Vec::with_capacity(len);
-        unsafe { vec.set_len(len) };
         let ptr = vec.as_mut_ptr();
         std::mem::forget(vec);
         if T::is_f32() {
