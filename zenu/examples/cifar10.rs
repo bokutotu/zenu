@@ -101,7 +101,7 @@ fn main() {
     let (train, test) = cifar10_dataset().unwrap();
     let (train, val) = train_val_split(&train, 0.8, true);
 
-    let test_dataloader = DataLoader::new(CiFar10Dataset { data: test }, 512);
+    let test_dataloader = DataLoader::new(CiFar10Dataset { data: test }, 1);
 
     let sgd = SGD::new(0.01);
     let model = ConvNet::<Cpu>::new();
@@ -115,7 +115,7 @@ fn main() {
             },
             512,
         );
-        let val_dataloader = DataLoader::new(CiFar10Dataset { data: val.clone() }, 512);
+        let val_dataloader = DataLoader::new(CiFar10Dataset { data: val.clone() }, 1);
 
         train_dataloader.shuffle();
 
@@ -125,6 +125,9 @@ fn main() {
         for batch in train_dataloader {
             let x = batch[0].clone();
             let y = batch[1].clone();
+            if x.get_shape()[0] != 512 {
+                continue;
+            }
             let x = x.to::<Nvidia>();
             let y = y.to::<Nvidia>();
             let output = model.call(x);
