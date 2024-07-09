@@ -81,3 +81,7 @@ impl<D: Device> Module<f32, D> for ResNet<D> {
         self.linear.call(x)
     }
 }
+
+fn main() {
+    println!("Hello, world!");
+}

@@ -38,6 +38,10 @@ pub trait DimTrait:
     }
 
     fn slice(&self) -> &[usize];
+
+    fn is_scalar(&self) -> bool {
+        self.len() == 0 || self.num_elm() == 1
+    }
 }
 
 pub trait LessDimTrait: DimTrait {
