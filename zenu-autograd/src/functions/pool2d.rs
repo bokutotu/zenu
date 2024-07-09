@@ -2,7 +2,7 @@ use std::{cell::RefCell, rc::Rc};
 
 use zenu_matrix::{
     device::Device,
-    dim::DimTrait,
+    dim::{DimDyn, DimTrait},
     nn::pool2d::{
         max_pool_2d as mat_forward, max_pool_2d_grad as mat_backward, max_pool_2d_output_shape,
         Pool2dConfig as C,
@@ -12,9 +12,39 @@ use zenu_matrix::{
 
 use crate::{creator::zeros::zeros, Function, Variable, VariableWeak};
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct MaxPool2dConfig<T: Num> {
-    pub config: Option<Rc<RefCell<C<T>>>>,
+    pub config: Rc<RefCell<Option<C<T>>>>,
+}
+
+impl<T: Num> MaxPool2dConfig<T> {
+    pub fn update(
+        &self,
+        input_shape: DimDyn,
+        kernel_size: (usize, usize),
+        stride: (usize, usize),
+        pad: (usize, usize),
+    ) {
+        let output_shape = max_pool_2d_output_shape(input_shape.slice(), kernel_size, stride, pad);
+        let input_shape = (
+            input_shape[0],
+            input_shape[1],
+            input_shape[2],
+            input_shape[3],
+        );
+        let output_shape = (
+            output_shape[0],
+            output_shape[1],
+            output_shape[2],
+            output_shape[3],
+        );
+        let config = C::new(kernel_size, stride, pad, input_shape, output_shape.into());
+        *self.config.borrow_mut() = Some(config);
+    }
+
+    pub fn is_none(&self) -> bool {
+        self.config.borrow().is_none()
+    }
 }
 
 struct MaxPool2d<T: Num, D: Device> {
@@ -43,8 +73,9 @@ where
     D: Device,
 {
     fn forward(&self) {
-        let config = self.config.config.clone().unwrap();
+        let config = self.config.config.clone();
         let config = config.borrow();
+        let config = config.as_ref().unwrap();
         self.output
             .upgrade()
             .unwrap()
@@ -69,7 +100,7 @@ where
             self.kernel_size,
             self.stride,
             self.pad,
-            Some(self.config.clone()),
+            self.config.clone(),
         );
         self.input.set_grad(input_grad);
     }
@@ -85,8 +116,9 @@ where
     D: Device,
 {
     fn forward(&self) {
-        let config = self.config.config.clone().unwrap();
+        let config = self.config.config.clone();
         let config = config.borrow();
+        let config = config.as_ref().unwrap();
         self.input_grad
             .upgrade()
             .unwrap()
@@ -117,35 +149,16 @@ pub fn max_pool_2d<T: Num, D: Device>(
     kernel_size: (usize, usize),
     stride: (usize, usize),
     pad: (usize, usize),
-    config: Option<MaxPool2dConfig<T>>,
+    config: MaxPool2dConfig<T>,
 ) -> Variable<T, D> {
     let output_shape =
         max_pool_2d_output_shape(input.get_shape().slice(), kernel_size, stride, pad);
-    let input_shape = input.get_shape();
-    let input_shape = input_shape.slice();
-    let input_shape = (
-        input_shape[0],
-        input_shape[1],
-        input_shape[2],
-        input_shape[3],
-    );
-    let output_shape_ = (
-        output_shape[0],
-        output_shape[1],
-        output_shape[2],
-        output_shape[3],
-    );
-    let config = config.unwrap_or_else(|| MaxPool2dConfig {
-        config: Some(Rc::new(RefCell::new(C::new(
-            kernel_size,
-            stride,
-            pad,
-            input_shape,
-            output_shape_,
-        )))),
-    });
 
     let output = zeros(output_shape);
+
+    if config.is_none() {
+        config.update(input.get_shape(), kernel_size, stride, pad);
+    }
 
     let function = MaxPool2d {
         config,
@@ -168,35 +181,8 @@ pub fn max_pool_2d_grad<T: Num, D: Device>(
     kernel_size: (usize, usize),
     stride: (usize, usize),
     pad: (usize, usize),
-    config: Option<MaxPool2dConfig<T>>,
+    config: MaxPool2dConfig<T>,
 ) -> Variable<T, D> {
-    let input_shape = input.get_shape();
-    let input_shape = input_shape.slice();
-    let input_shape = (
-        input_shape[0],
-        input_shape[1],
-        input_shape[2],
-        input_shape[3],
-    );
-    let output_shape = output.get_shape();
-    let output_shape = output_shape.slice();
-    let output_shape = (
-        output_shape[0],
-        output_shape[1],
-        output_shape[2],
-        output_shape[3],
-    );
-
-    let config = config.unwrap_or_else(|| MaxPool2dConfig {
-        config: Some(Rc::new(RefCell::new(C::new(
-            kernel_size,
-            stride,
-            pad,
-            input_shape,
-            output_shape,
-        )))),
-    });
-
     let input_grad = zeros(input.get_shape().slice());
 
     let function = MaxPool2dBkwd {
@@ -225,7 +211,7 @@ mod pool2d {
     };
     use zenu_test::{assert_val_eq, assert_val_eq_grad, run_test};
 
-    use crate::creator::from_vec::from_vec;
+    use crate::{creator::from_vec::from_vec, functions::pool2d::MaxPool2dConfig};
 
     use super::max_pool_2d;
 
@@ -308,7 +294,13 @@ mod pool2d {
             -1.8816892,
         ];
         let input = from_vec::<f32, _, D>(input, [1, 3, 5, 5]);
-        let output = max_pool_2d(input.clone(), (3, 3), (2, 2), (1, 1), None);
+        let output = max_pool_2d(
+            input.clone(),
+            (3, 3),
+            (2, 2),
+            (1, 1),
+            MaxPool2dConfig::default(),
+        );
         let forward_ans = vec![
             0.69200915, 0.32227492, 0.84871036, 0.69200915, 1.2376579, 1.2376579, 0.59883946,
             1.8530061, 1.8530061, 0.94629836, 1.3893661, 1.5863342, 0.94629836, 0.792444,
