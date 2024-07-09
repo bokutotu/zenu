@@ -18,7 +18,7 @@ use serde::{Deserialize, Serialize};
 use zenu_matrix::{
     device::Device,
     dim::{larger_shape, DimDyn, DimTrait},
-    matrix::{Matrix, Owned, Repr},
+    matrix::{Matrix, Owned},
     num::Num,
 };
 
@@ -305,8 +305,7 @@ where
 }
 
 impl<T: Num, D: Device> Variable<T, D> {
-    pub fn new<R: Repr<Item = T>>(data: Matrix<R, DimDyn, D>) -> Self {
-        let data = data.new_matrix();
+    pub fn new(data: Matrix<Owned<T>, DimDyn, D>) -> Self {
         Variable {
             inner: Rc::new(RefCell::new(VariableInner::new(data))),
         }

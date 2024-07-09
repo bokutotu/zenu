@@ -282,11 +282,11 @@ mod batch_norm_2d {
     fn small_test<D: Device>() {
         let test_case = small_test_case::<D>();
 
-        let x = Variable::new(test_case.x.to_ref());
-        let scale = Variable::new(test_case.scale.to_ref());
-        let bias = Variable::new(test_case.bias.to_ref());
-        let mean = Variable::new(test_case.mean.to_ref());
-        let variance = Variable::new(test_case.variance.to_ref());
+        let x = Variable::new(test_case.x.clone());
+        let scale = Variable::new(test_case.scale.clone());
+        let bias = Variable::new(test_case.bias.clone());
+        let mean = Variable::new(test_case.mean.clone());
+        let variance = Variable::new(test_case.variance.clone());
 
         let y = batch_norm_2d(
             x.clone(),
@@ -299,7 +299,7 @@ mod batch_norm_2d {
         );
 
         assert_val_eq!(y.clone(), test_case.y, 6e-4);
-        let hoge = y * Variable::new(test_case.y_grad.to_ref());
+        let hoge = y * Variable::new(test_case.y_grad.clone());
         hoge.backward();
         assert_val_eq_grad!(x, test_case.x_grad, 7e-4);
         assert_val_eq_grad!(scale, test_case.scale_grad, 6e-4);
