@@ -1,4 +1,8 @@
+use std::any::TypeId;
+
 use serde::{Deserialize, Serialize};
+
+use crate::num::Num;
 
 use super::{Device, DeviceBase};
 
@@ -39,6 +43,22 @@ impl DeviceBase for Cpu {
     fn from_vec<T>(vec: Vec<T>) -> *mut T {
         let ptr = vec.as_ptr() as *mut T;
         std::mem::forget(vec);
+        ptr
+    }
+
+    fn zeros<T: Num>(len: usize) -> *mut T {
+        use cblas::*;
+        let mut vec = Vec::with_capacity(len);
+        unsafe { vec.set_len(len) };
+        let ptr = vec.as_mut_ptr();
+        std::mem::forget(vec);
+        if T::is_f32() {
+            let slice = unsafe { std::slice::from_raw_parts_mut(ptr as *mut f32, len) };
+            unsafe { sscal(len as i32, 0.0, slice, 1) };
+        } else {
+            let slice = unsafe { std::slice::from_raw_parts_mut(ptr as *mut f64, len) };
+            unsafe { dscal(len as i32, 0.0, slice, 1) };
+        }
         ptr
     }
 }

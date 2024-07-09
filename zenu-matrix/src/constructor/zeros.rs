@@ -1,7 +1,7 @@
 use crate::{
     device::DeviceBase,
-    dim::DimTrait,
-    matrix::{Matrix, Owned, Repr},
+    dim::{default_stride, DimTrait},
+    matrix::{Matrix, Owned, Ptr, Repr},
     num::Num,
 };
 
@@ -13,9 +13,10 @@ where
 {
     pub fn zeros<I: Into<S>>(dim: I) -> Self {
         let dim = dim.into();
-        let data = vec![T::zero(); dim.num_elm()];
-        let vec = data.iter().map(|_| T::from_usize(0)).collect();
-        Self::from_vec(vec, dim)
+        let num_elm = dim.num_elm();
+        let ptr = D::zeros(num_elm);
+        let ptr = Ptr::new(ptr, num_elm, 0);
+        Matrix::new(ptr, dim, default_stride(dim))
     }
 
     pub fn zeros_like<R: Repr<Item = T>>(m: &Matrix<R, S, D>) -> Self {
