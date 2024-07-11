@@ -40,9 +40,39 @@ pub fn sum_to<T: Num, D: Device>(
     }
 
     let diff_len = source.shape().len() - target.shape().len();
-    if diff_len == 0 {
+    if source.shape().slice() == target.shape().slice() {
         let target = target;
         target.copy_from(&source);
+        return;
+    }
+
+    if diff_len == 0 {
+        let mut diff_axis = Vec::new();
+        for (idx, (s, t)) in source
+            .shape()
+            .slice()
+            .iter()
+            .zip(target.shape().slice().iter())
+            .enumerate()
+        {
+            if *s == *t {
+                continue;
+            } else if *t == 1 {
+                diff_axis.push(idx);
+            } else {
+                panic!("hoge");
+            }
+        }
+
+        let mut tmp = source.new_matrix();
+        for axis in diff_axis.into_iter() {
+            let tmp_sum = {
+                let tmp_ref = tmp.to_ref();
+                tmp_ref.sum(axis, true)
+            };
+            tmp = tmp_sum;
+        }
+        target.copy_from(&tmp);
         return;
     }
 

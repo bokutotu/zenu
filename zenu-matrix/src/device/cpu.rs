@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use crate::num::Num;
+
 use super::{Device, DeviceBase};
 
 #[derive(Copy, Clone, Default, Debug, Serialize, Deserialize)]
@@ -9,7 +11,7 @@ impl DeviceBase for Cpu {
     #[allow(clippy::not_unsafe_ptr_arg_deref)]
     fn drop_ptr<T>(ptr: *mut T, len: usize) {
         unsafe {
-            std::vec::Vec::from_raw_parts(ptr, 0, len);
+            let _ = std::vec::Vec::from_raw_parts(ptr, len, len);
         }
     }
 
@@ -39,6 +41,21 @@ impl DeviceBase for Cpu {
     fn from_vec<T>(vec: Vec<T>) -> *mut T {
         let ptr = vec.as_ptr() as *mut T;
         std::mem::forget(vec);
+        ptr
+    }
+
+    fn zeros<T: Num>(len: usize) -> *mut T {
+        use cblas::*;
+        let mut vec = Vec::with_capacity(len);
+        let ptr = vec.as_mut_ptr();
+        std::mem::forget(vec);
+        if T::is_f32() {
+            let slice = unsafe { std::slice::from_raw_parts_mut(ptr as *mut f32, len) };
+            unsafe { sscal(len as i32, 0.0, slice, 1) };
+        } else {
+            let slice = unsafe { std::slice::from_raw_parts_mut(ptr as *mut f64, len) };
+            unsafe { dscal(len as i32, 0.0, slice, 1) };
+        }
         ptr
     }
 }

@@ -57,7 +57,7 @@ impl<T: Num, R: Repr<Item = T>, D: Device> Matrix<R, DimDyn, D> {
     }
 
     /// selfはdefault stride
-    pub fn max_axis(&self, axis: usize) -> Matrix<Owned<T>, DimDyn, D> {
+    pub fn max_axis(&self, axis: usize, keep_dim: bool) -> Matrix<Owned<T>, DimDyn, D> {
         if axis >= self.shape().len() {
             panic!("max_axis: Axis out of bounds");
         }
@@ -83,10 +83,13 @@ impl<T: Num, R: Repr<Item = T>, D: Device> Matrix<R, DimDyn, D> {
             for i in 0..self.shape()[0] {
                 let s = self.index_axis(Index::new(0, i));
                 let output = output.to_ref_mut().index_axis_mut(Index::new(0, i));
-                output.copy_from(&s.max_axis(axis - 1));
+                output.copy_from(&s.max_axis(axis - 1, false));
             }
         }
 
+        if keep_dim {
+            output.add_axis(axis);
+        }
         output
     }
 
@@ -520,10 +523,10 @@ mod max_idx {
         let ans_2d = Matrix::<Owned<f32>, DimDyn, D>::from_vec(ans_2d, [2, 3, 5]);
         let ans_3d = Matrix::<Owned<f32>, DimDyn, D>::from_vec(ans_3d, [2, 3, 4]);
 
-        assert_mat_eq_epsilon!(input.max_axis(0), ans_0d, 1e-6);
-        assert_mat_eq_epsilon!(input.max_axis(1), ans_1d, 1e-6);
-        assert_mat_eq_epsilon!(input.max_axis(2), ans_2d, 1e-6);
-        assert_mat_eq_epsilon!(input.max_axis(3), ans_3d, 1e-6);
+        assert_mat_eq_epsilon!(input.max_axis(0, false), ans_0d, 1e-6);
+        assert_mat_eq_epsilon!(input.max_axis(1, false), ans_1d, 1e-6);
+        assert_mat_eq_epsilon!(input.max_axis(2, false), ans_2d, 1e-6);
+        assert_mat_eq_epsilon!(input.max_axis(3, false), ans_3d, 1e-6);
     }
     run_mat_test!(max_axis_4d, max_axis_4d_cpu, max_axis_4d_gpu);
     fn max_axis_4d_f64<D: Device>() {
@@ -819,10 +822,10 @@ mod max_idx {
         let ans_2d = Matrix::<Owned<f64>, DimDyn, D>::from_vec(ans_2d, [2, 3, 5]);
         let ans_3d = Matrix::<Owned<f64>, DimDyn, D>::from_vec(ans_3d, [2, 3, 4]);
 
-        assert_mat_eq_epsilon!(input.max_axis(0), ans_0d, 1e-6);
-        assert_mat_eq_epsilon!(input.max_axis(1), ans_1d, 1e-6);
-        assert_mat_eq_epsilon!(input.max_axis(2), ans_2d, 1e-6);
-        assert_mat_eq_epsilon!(input.max_axis(3), ans_3d, 1e-6);
+        assert_mat_eq_epsilon!(input.max_axis(0, false), ans_0d, 1e-6);
+        assert_mat_eq_epsilon!(input.max_axis(1, false), ans_1d, 1e-6);
+        assert_mat_eq_epsilon!(input.max_axis(2, false), ans_2d, 1e-6);
+        assert_mat_eq_epsilon!(input.max_axis(3, false), ans_3d, 1e-6);
     }
     run_mat_test!(max_axis_4d_f64, max_axis_4d_cpu_f64, max_axis_4d_gpu_f64);
 }

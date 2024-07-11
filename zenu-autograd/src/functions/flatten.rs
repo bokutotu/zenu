@@ -32,8 +32,9 @@ impl<T: Num, D: Device> Function<T, D> for Flatten<T, D> {
 
     fn backward(&self) {
         let output_grad = self.output.upgrade().unwrap().get_grad().unwrap();
-        self.input
-            .set_grad(reshape(output_grad, self.input.get_data().shape().slice()));
+        let input_shape = self.input.get_shape();
+        let input_grad = reshape(output_grad, input_shape.slice());
+        self.input.set_grad(input_grad);
     }
 
     fn get_inputs(&self) -> Vec<Variable<T, D>> {

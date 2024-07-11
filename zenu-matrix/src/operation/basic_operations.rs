@@ -1,6 +1,6 @@
 use crate::{
     device::{cpu::Cpu, DeviceBase},
-    dim::{larger_shape, smaller_shape, DimDyn, DimTrait},
+    dim::{default_stride, larger_shape, smaller_shape, DimDyn, DimTrait},
     index::Index0D,
     matrix::{Matrix, Owned, Ref, Repr},
     num::Num,
@@ -231,6 +231,9 @@ macro_rules! impl_basic_ops {
                     panic!("Matrix shape mismatch");
                 }
 
+                let is_default_stride = self.stride() == default_stride(self.shape()) && lhs.stride() == default_stride(lhs.shape());
+                let num_dim = self.shape().len();
+
                 if self.shape().is_empty() {
                     D::scalar(
                         self.as_mut_ptr(),
@@ -240,14 +243,14 @@ macro_rules! impl_basic_ops {
                         1,
                         1
                     );
-                } else if self.shape().len() == 1 {
+                } else if is_default_stride {
                     D::scalar(
                         self.as_mut_ptr(),
                         lhs.as_ptr(),
                         rhs,
                         self.shape().num_elm(),
-                        self.stride()[0],
-                        lhs.stride()[0]
+                        self.stride()[num_dim - 1],
+                        lhs.stride()[num_dim - 1]
                     );
                 } else {
                     let num_iter = self.shape()[0];
@@ -300,21 +303,24 @@ macro_rules! impl_basic_ops {
                     panic!("longer shape lhs or rhs is same shape to self\n self.shape = {:?}\n lhs.shape() = {:?} \n rhs.shape() = {:?}", self.shape(), lhs.shape(), rhs.shape());
                 }
 
-                if rhs.shape().is_empty() {
-                    self.$scalar_method(lhs, rhs.index_item(&[] as &[usize]));
+                if rhs.shape().is_scalar() {
+                    let rhs = rhs.to_scalar();
+                    self.$scalar_method(lhs, rhs);
                     return;
                 }
 
-                if lhs.shape().is_empty() {
-                    self.$scalar_method(rhs, lhs.index_item(&[] as &[usize]));
+                if lhs.shape().is_scalar() {
+                    let lhs = lhs.to_scalar();
+                    self.$scalar_method(rhs, lhs);
                     return;
                 }
 
                 if self.shape().is_empty() {
+                    let rhs_slice = rhs.index_item(&[] as &[usize]);
                     D::scalar(
                         self.as_mut_ptr(),
                         lhs.as_ptr(),
-                        unsafe { *rhs.as_ptr() },
+                        rhs_slice,
                         1,
                         1,
                         1,

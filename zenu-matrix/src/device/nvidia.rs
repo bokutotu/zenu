@@ -33,6 +33,12 @@ impl DeviceBase for Nvidia {
     fn from_vec<T: Num>(mut vec: Vec<T>) -> *mut T {
         zenu_cuda::runtime::copy_to_gpu(vec.as_mut_ptr(), vec.len())
     }
+
+    fn zeros<T: Num>(len: usize) -> *mut T {
+        let ptr = zenu_cuda::runtime::cuda_malloc(len).unwrap() as *mut T;
+        zenu_cuda::cublas::cublas_scal(len, T::zero(), ptr, 1).unwrap();
+        ptr
+    }
 }
 
 impl Device for Nvidia {}
