@@ -259,6 +259,44 @@ pub fn cublas_dot<T: 'static + Default>(
     }
 }
 
+pub fn cublas_scal<T: 'static>(
+    n: usize,
+    alpha: T,
+    x: *mut T,
+    incx: usize,
+) -> Result<(), ZenuCublasError> {
+    let context = ZENU_CUDA_STATE.lock().unwrap();
+    let cublas_context = context.get_cublas();
+    let err = if TypeId::of::<T>() == TypeId::of::<f32>() {
+        unsafe {
+            zenu_cublas_sys::cublasSscal_v2(
+                cublas_context.as_ptr(),
+                n as i32,
+                &alpha as *const T as *const f32,
+                x as *mut f32,
+                incx as i32,
+            )
+        }
+    } else if TypeId::of::<T>() == TypeId::of::<f64>() {
+        unsafe {
+            zenu_cublas_sys::cublasDscal_v2(
+                cublas_context.as_ptr(),
+                n as i32,
+                &alpha as *const T as *const f64,
+                x as *mut f64,
+                incx as i32,
+            )
+        }
+    } else {
+        panic!("Unsupported type");
+    };
+
+    match ZenuCublasError::from(err as u32) {
+        ZenuCublasError::CublasStatusSuccess => Ok(()),
+        err => Err(err),
+    }
+}
+
 #[cfg(test)]
 mod cublas {
     use crate::{

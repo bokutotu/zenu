@@ -23,6 +23,7 @@ impl<T: Num, D: Device> Module<T, D> for Linear<T, D> {
     fn call(&self, input: Variable<T, D>) -> Variable<T, D> {
         let output = matmul(input, self.weight.clone());
         if let Some(bias) = &self.bias {
+            output.set_name("linear.intermediate_output");
             output + bias.clone()
         } else {
             output
@@ -37,16 +38,37 @@ impl<T: Num, D: Device> Linear<T, D> {
         StandardNormal: Distribution<T>,
     {
         let weight = normal(T::zero(), T::one(), None, [in_features, out_features]);
+        weight
+            .get_data_mut()
+            .to_ref_mut()
+            .div_scalar_assign(T::from_usize(in_features).sqrt());
         let bias = if use_bias {
-            Some(zeros([out_features]))
+            let bias = zeros([out_features]);
+            bias.set_name("linear.bias");
+            bias.set_is_train(true);
+            Some(bias)
         } else {
             None
         };
+
+        weight.set_is_train(true);
+        weight.set_name("linear.weight");
+
         Self {
             in_features,
             out_features,
             weight,
             bias,
+        }
+    }
+
+    #[must_use]
+    pub fn to<Dout: Device>(self) -> Linear<T, Dout> {
+        Linear {
+            in_features: self.in_features,
+            out_features: self.out_features,
+            weight: self.weight.to(),
+            bias: self.bias.map(|b| b.to()),
         }
     }
 }

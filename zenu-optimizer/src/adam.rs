@@ -110,7 +110,6 @@ mod adam {
     ) {
         let output = forward_func(input.clone(), weight1.clone(), weight2.clone());
         let loss = mean_squared_error(target, output);
-        println!("{:?}", loss.clone());
         loss.backward();
         adam.update(&[weight1.clone(), weight2.clone()]);
         loss.clear_grad();

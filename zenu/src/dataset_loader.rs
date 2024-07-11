@@ -1,12 +1,12 @@
 use std::env;
 use std::fs;
 use std::fs::File;
-use std::io::Read;
 use std::io::Seek;
 use std::io::SeekFrom;
-use std::io::Write;
+use std::io::{Read, Write};
 use std::path::Path;
 use std::path::PathBuf;
+use std::process::Command;
 
 use flate2::read::GzDecoder;
 use reqwest::blocking::get;
@@ -48,9 +48,55 @@ pub fn mnist_dataset(
 pub fn cifar10_dataset(
 ) -> Result<(Vec<(Vec<u8>, u8)>, Vec<(Vec<u8>, u8)>), Box<dyn std::error::Error>> {
     let dataset_dir = create_dataset_dir("cifar10")?;
-    download_dataset(&Dataset::Cifar10, &dataset_dir)?;
+    download_and_extract_cifar10(&dataset_dir.to_str().unwrap())?;
+    let dataset_dir = dataset_dir.join("cifar-10-batches-py");
     let (train_data, _) = extract_image_label_pairs(&Dataset::Cifar10, &dataset_dir)?;
     Ok((train_data, Vec::new()))
+}
+
+fn download_and_extract_cifar10(save_dir: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let url = "https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz";
+    let filename = "cifar-10-python.tar.gz";
+    let save_path = Path::new(save_dir).join(filename);
+
+    if save_path.exists() {
+        println!("ファイルは既に存在します: {}", save_path.display());
+    } else {
+        if !Path::new(save_dir).exists() {
+            fs::create_dir_all(save_dir)?;
+        }
+
+        let output = Command::new("wget")
+            .arg("-O") // 出力ファイル名を指定
+            .arg(&save_path)
+            .arg(url)
+            .output()?;
+
+        if output.status.success() {
+            println!(
+                "ファイルのダウンロードが完了しました: {}",
+                save_path.display()
+            );
+        } else {
+            let error = String::from_utf8_lossy(&output.stderr);
+            return Err(format!("ダウンロード中にエラーが発生しました: {}", error).into());
+        }
+    }
+
+    let output = Command::new("tar")
+        .arg("-xzf")
+        .arg(&save_path)
+        .arg("-C")
+        .arg(save_dir)
+        .output()?;
+
+    if output.status.success() {
+        println!("ファイルの解凍が完了しました");
+        Ok(())
+    } else {
+        let error = String::from_utf8_lossy(&output.stderr);
+        Err(format!("解凍中にエラーが発生しました: {}", error).into())
+    }
 }
 
 fn download_dataset(
@@ -68,6 +114,7 @@ fn download_dataset(
         if !filepath.exists() {
             println!("Downloading: {}", url);
             let response = get(*url)?;
+            println!("response is {:?}", response.status());
             let mut file = File::create(&filepath)?;
             let content = response.bytes()?;
             file.write_all(&content)?;
@@ -123,6 +170,7 @@ fn extract_image_label_pairs(
     dataset: &Dataset,
     dataset_dir: &Path,
 ) -> Result<(Vec<(Vec<u8>, u8)>, Vec<(Vec<u8>, u8)>), Box<dyn std::error::Error>> {
+    println!("dataset_dir: {:?}", dataset_dir);
     match dataset {
         Dataset::Mnist => extract_mnist_image_label_pairs(dataset_dir),
         Dataset::Cifar10 => {
@@ -198,7 +246,7 @@ fn extract_cifar10_image_label_pairs(
     let mut data = Vec::new();
 
     for i in 1..=5 {
-        let file_path = dataset_dir.join(format!("data_batch_{}.bin", i));
+        let file_path = dataset_dir.join(format!("data_batch_{}", i));
         let mut file = File::open(file_path)?;
         let mut buffer = [0; 3073];
 

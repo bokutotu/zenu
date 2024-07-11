@@ -4,7 +4,7 @@ use zenu_matrix::{device::Device, num::Num};
 
 use crate::{creator::zeros::zeros, Function, Variable, VariableWeak};
 
-use super::{output_shape, sum_to::sum_to};
+use super::output_shape;
 
 struct Addition<T: Num, D: Device> {
     x: Variable<T, D>,
@@ -29,12 +29,10 @@ impl<T: Num, D: Device> Function<T, D> for Addition<T, D> {
     }
 
     fn backward(&self) {
-        let x_shape = self.x.get_data().shape();
-        let y_shape = self.y.get_data().shape();
         let output = self.output.upgrade().unwrap();
         let grad = output.get_grad().clone().unwrap();
-        self.x.set_grad(sum_to(grad.clone(), x_shape));
-        self.y.set_grad(sum_to(grad, y_shape));
+        self.x.set_grad(grad.clone());
+        self.y.set_grad(grad);
     }
 
     fn get_inputs(&self) -> Vec<Variable<T, D>> {

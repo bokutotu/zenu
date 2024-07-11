@@ -71,17 +71,34 @@ impl<T: Num, D: Device> Conv2d<T, D> {
     {
         let filter_shape = [output_channel, input_channel, kernel_size.0, kernel_size.1];
         let bias = if bias {
-            Some(zeros([1, output_channel, 1, 1]))
+            let bias = zeros([1, output_channel, 1, 1]);
+            bias.set_is_train(true);
+            bias.set_name("conv2d.bias");
+            Some(bias)
         } else {
             None
         };
         let filter = normal(T::zero(), T::one(), None, filter_shape);
+
+        filter.set_is_train(true);
+        filter.set_name("conv2d.filter");
+
         Conv2d {
             filter,
             bias,
             config: RefCell::new(None),
             stride,
             padding,
+        }
+    }
+
+    pub fn to<Dout: Device>(self) -> Conv2d<T, Dout> {
+        Conv2d {
+            filter: self.filter.to(),
+            bias: self.bias.map(|b| b.to()),
+            config: RefCell::new(None),
+            stride: self.stride,
+            padding: self.padding,
         }
     }
 }
