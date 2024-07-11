@@ -39,6 +39,10 @@ impl DeviceBase for Nvidia {
         zenu_cuda::cublas::cublas_scal(len, T::zero(), ptr, 1).unwrap();
         ptr
     }
+
+    fn alloc(num_bytes: usize) -> *mut u8 {
+        zenu_cuda::runtime::cuda_malloc_bytes(num_bytes).unwrap()
+    }
 }
 
 impl Device for Nvidia {}

@@ -15,3 +15,4 @@ pub mod slice;
 mod impl_ops;
 mod impl_serde;
 mod matrix_format;
+mod memory_pool;

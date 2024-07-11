@@ -58,6 +58,13 @@ impl DeviceBase for Cpu {
         }
         ptr
     }
+
+    fn alloc(num_bytes: usize) -> *mut u8 {
+        let vec: Vec<u8> = Vec::with_capacity(num_bytes);
+        let ptr = vec.as_ptr() as *mut u8;
+        std::mem::forget(vec);
+        ptr
+    }
 }
 
 impl Device for Cpu {}

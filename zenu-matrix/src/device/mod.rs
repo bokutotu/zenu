@@ -29,6 +29,7 @@ pub trait DeviceBase: Copy + Default + Serialize + 'static {
     fn get_item<T: Num>(ptr: *const T, offset: usize) -> T;
     fn from_vec<T: Num>(vec: Vec<T>) -> *mut T;
     fn zeros<T: Num>(len: usize) -> *mut T;
+    fn alloc(num_bytes: usize) -> *mut u8;
 }
 
 pub trait Device:
