@@ -7,7 +7,9 @@ use std::{ptr::NonNull, sync::Mutex};
 
 use cublas::cublas_error::ZenuCublasError;
 use once_cell::sync::Lazy;
+use runtime::{cuda_create_stream, set_up_mempool};
 use zenu_cublas_sys::{cublasContext, cublasCreate_v2, cublasDestroy_v2};
+use zenu_cuda_runtime_sys::{cudaMemPool_t, cudaStream_t};
 use zenu_cudnn_sys::{cudnnContext, cudnnCreate, cudnnDestroy};
 
 static ZENU_CUDA_STATE: Lazy<Mutex<ZenuCudaState>> = Lazy::new(|| Mutex::new(ZenuCudaState::new()));
@@ -15,6 +17,8 @@ static ZENU_CUDA_STATE: Lazy<Mutex<ZenuCudaState>> = Lazy::new(|| Mutex::new(Zen
 pub struct ZenuCudaState {
     cublas: NonNull<cublasContext>,
     cudnn: NonNull<cudnnContext>,
+    stream: cudaStream_t,
+    mem_pool: cudaMemPool_t,
 }
 
 unsafe impl Send for ZenuCudaState {}
@@ -54,7 +58,14 @@ impl ZenuCudaState {
     fn new() -> Self {
         let cublas = create_cublas_context().unwrap();
         let cudnn = create_cudnn_context().unwrap();
-        Self { cublas, cudnn }
+        let mem_pool = set_up_mempool().unwrap();
+        let stream = cuda_create_stream().unwrap();
+        Self {
+            cublas,
+            cudnn,
+            stream,
+            mem_pool,
+        }
     }
 
     pub fn get_cublas(&self) -> NonNull<cublasContext> {
@@ -63,6 +74,14 @@ impl ZenuCudaState {
 
     pub fn get_cudnn(&self) -> NonNull<cudnnContext> {
         self.cudnn
+    }
+
+    pub fn get_stream(&self) -> cudaStream_t {
+        self.stream
+    }
+
+    pub fn get_mem_pool(&self) -> cudaMemPool_t {
+        self.mem_pool
     }
 }
 
