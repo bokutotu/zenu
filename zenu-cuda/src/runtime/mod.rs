@@ -22,13 +22,18 @@ pub fn cuda_stream_sync() -> Result<(), ZenuCudaRuntimeError> {
 }
 
 pub fn cuda_malloc<T>(size: usize) -> Result<*mut T, ZenuCudaRuntimeError> {
+    let bytes = size * std::mem::size_of::<T>();
+    let ptr = cuda_malloc_bytes(bytes).map(|ptr| ptr as *mut T)?;
+    Ok(ptr as *mut T)
+}
+
+pub fn cuda_malloc_bytes(bytes: usize) -> Result<*mut u8, ZenuCudaRuntimeError> {
     let mut ptr = std::ptr::null_mut();
-    let size = size * std::mem::size_of::<T>();
     let stream = ZENU_CUDA_STATE.lock().unwrap().get_stream();
     let err = unsafe {
         cudaMallocAsync(
-            &mut ptr as *mut *mut T as *mut *mut std::ffi::c_void,
-            size,
+            &mut ptr as *mut *mut u8 as *mut *mut std::ffi::c_void,
+            bytes,
             stream,
         )
     } as cudaError as u32;
