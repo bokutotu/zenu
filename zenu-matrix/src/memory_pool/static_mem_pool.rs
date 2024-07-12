@@ -1,6 +1,10 @@
 use std::{
+    cell::RefCell,
     collections::{BTreeMap, HashMap},
-    ops::Bound::{Included, Unbounded},
+    ops::{
+        Bound::{Included, Unbounded},
+        Deref,
+    },
     rc::Rc,
 };
 
@@ -8,14 +12,14 @@ use super::static_buffer::StaticSizeBuffer;
 use crate::device::DeviceBase;
 
 #[derive(Clone)]
-struct RcBuffer<D: DeviceBase, const N: usize>(Rc<StaticSizeBuffer<D, N>>);
+struct RcBuffer<D: DeviceBase, const N: usize>(Rc<RefCell<StaticSizeBuffer<D, N>>>);
 
 #[derive(Default)]
 struct PtrBufferMap<D: DeviceBase, const N: usize>(HashMap<*mut u8, RcBuffer<D, N>>);
 
 impl<D: DeviceBase, const N: usize> PtrBufferMap<D, N> {
     fn insert(&mut self, buffer: RcBuffer<D, N>) {
-        let ptr = buffer.0.ptr();
+        let ptr = buffer.0.deref().borrow().ptr();
         self.0.insert(ptr, buffer);
     }
 
@@ -49,15 +53,15 @@ impl<D: DeviceBase, const N: usize> UnusedBytesPtrBufferMap<D, N> {
 
     fn get_unused_bytes_ptr_buffer(&mut self, unused_bytes: usize) -> RcBuffer<D, N> {
         let mut ptr_buffer_map = self.get_ptr_buffer_map(unused_bytes).unwrap();
-        let (_, next_ptr_buffer_map) = ptr_buffer_map.pop();
+        let (_, buffer) = ptr_buffer_map.pop();
         if !ptr_buffer_map.0.is_empty() {
             self.0.insert(unused_bytes, ptr_buffer_map).unwrap();
         }
-        next_ptr_buffer_map
+        buffer
     }
 
     fn insert(&mut self, buffer: RcBuffer<D, N>) {
-        let unused_bytes = buffer.0.get_unused_bytes();
+        let unused_bytes = buffer.0.deref().borrow().get_unused_bytes();
         // unused_bytesに対応するPtrBufferMapが存在しない場合、新たに作成する
         self.0.entry(unused_bytes).or_default().insert(buffer);
     }
@@ -70,7 +74,7 @@ struct StaticMemPool<D: DeviceBase, const N: usize> {
 }
 
 impl<D: DeviceBase, const N: usize> StaticMemPool<D, N> {
-    fn try_alloc(&mut self, bytes: usize) -> Result<*mut u8, ()> {
+    pub fn try_alloc(&mut self, bytes: usize) -> Result<*mut u8, ()> {
         if let Some(unused_bytes) = self
             .unused_bytes_ptr_buffer_map
             .smallest_unused_bytes_over_request(bytes)
@@ -78,11 +82,27 @@ impl<D: DeviceBase, const N: usize> StaticMemPool<D, N> {
             let buffer = self
                 .unused_bytes_ptr_buffer_map
                 .get_unused_bytes_ptr_buffer(unused_bytes);
-            let ptr = buffer.0.try_alloc(bytes)?;
+            let ptr = buffer.0.deref().borrow_mut().try_alloc(bytes)?;
             self.alloced_ptr_buffer_map.insert(ptr, buffer.clone());
             Ok(ptr)
         } else {
-            Err(())
+            let buffer = RcBuffer(Rc::new(RefCell::new(StaticSizeBuffer::new()?)));
+            let ptr = buffer.0.deref().borrow_mut().try_alloc(bytes)?;
+            self.alloced_ptr_buffer_map.insert(ptr, buffer.clone());
+            self.unused_bytes_ptr_buffer_map.insert(buffer);
+            Ok(ptr)
         }
+    }
+
+    pub fn free(&mut self, ptr: *mut u8) -> Result<(), ()> {
+        let buffer = self.alloced_ptr_buffer_map.remove(&ptr).ok_or(())?;
+        let unused_bytes = buffer.0.deref().borrow().get_unused_bytes();
+        buffer.0.deref().borrow_mut().try_free(ptr)?;
+        let _ = self
+            .unused_bytes_ptr_buffer_map
+            .get_ptr_buffer_map(unused_bytes)
+            .unwrap();
+        self.unused_bytes_ptr_buffer_map.insert(buffer);
+        Ok(())
     }
 }

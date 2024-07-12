@@ -59,11 +59,13 @@ impl DeviceBase for Cpu {
         ptr
     }
 
-    fn alloc(num_bytes: usize) -> *mut u8 {
-        let vec: Vec<u8> = Vec::with_capacity(num_bytes);
-        let ptr = vec.as_ptr() as *mut u8;
-        std::mem::forget(vec);
-        ptr
+    fn alloc(num_bytes: usize) -> Result<*mut u8, ()> {
+        let ptr = unsafe { libc::malloc(num_bytes) };
+        if ptr.is_null() {
+            Err(())
+        } else {
+            Ok(ptr as *mut u8)
+        }
     }
 }
 
