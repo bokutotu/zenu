@@ -50,18 +50,8 @@
 //!            v                         v                      v
 //!         [終了] <----------------------[ストリームに関連付け]
 //!
-use std::{
-    cell::RefCell,
-    collections::{BTreeMap, HashMap},
-    ops::Deref,
-    ptr::NonNull,
-    rc::Rc,
-};
-
-pub mod data_ptr;
-pub mod static_buffer;
-
-use crate::device::DeviceBase;
+mod data_ptr;
+mod static_buffer;
 
 // 2MB
 pub const SMALL_BUFFER_SIZE: usize = 2 * 1024 * 1024;

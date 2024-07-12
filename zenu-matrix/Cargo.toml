@@ -14,6 +14,7 @@ openblas-src = { version = "0.10.8", features = ["system", "cblas"] }
 rand = "0.8.5"
 rand_distr = "0.4.3"
 serde = { version = "1.0.197", features = ["derive"] }
+libc = "0.2"
 
 zenu-cuda = { path = "../zenu-cuda", optional = true, version = "0.1.0" }
 
