@@ -7,13 +7,13 @@ pub(super) struct DataPtr<D: DeviceBase> {
 }
 
 impl<D: DeviceBase> DataPtr<D> {
-    pub(super) fn new(bytes: usize) -> Self {
-        let ptr = D::alloc(bytes);
-        DataPtr {
+    pub(super) fn new(bytes: usize) -> Result<Self, ()> {
+        let ptr = D::alloc(bytes)?;
+        Ok(DataPtr {
             ptr,
             bytes,
             _marker: std::marker::PhantomData,
-        }
+        })
     }
 }
 

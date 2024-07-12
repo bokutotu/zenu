@@ -10,17 +10,14 @@ pub struct StaticSizeBuffer<D: DeviceBase, const N: usize> {
     used_buffer_range: BTreeMap<*mut u8, *mut u8>,
 }
 
-impl<D: DeviceBase, const N: usize> Default for StaticSizeBuffer<D, N> {
-    fn default() -> Self {
-        StaticSizeBuffer {
-            data: DataPtr::new(N),
-            // unused_bytes: N,
-            used_buffer_range: BTreeMap::new(),
-        }
-    }
-}
-
 impl<D: DeviceBase, const N: usize> StaticSizeBuffer<D, N> {
+    pub fn new() -> Result<Self, ()> {
+        Ok(StaticSizeBuffer {
+            data: DataPtr::new(N)?,
+            used_buffer_range: BTreeMap::new(),
+        })
+    }
+
     fn last_ptr(&self) -> Option<*mut u8> {
         self.used_buffer_range
             .last_key_value()
@@ -101,8 +98,8 @@ mod static_buffer {
         fn zeros<T: Num>(_len: usize) -> *mut T {
             todo!();
         }
-        fn alloc(_num_bytes: usize) -> *mut u8 {
-            0 as *mut u8
+        fn alloc(_num_bytes: usize) -> Result<*mut u8, ()> {
+            Ok(0 as *mut u8)
         }
         fn drop_ptr<T>(_ptr: *mut T, _len: usize) {}
         fn get_item<T: Num>(_ptr: *const T, _offset: usize) -> T {
@@ -121,7 +118,7 @@ mod static_buffer {
 
     #[test]
     fn too_large_alloc() {
-        let mut buffer = StaticSizeBuffer::<MockDeviceBase, 1024>::default();
+        let mut buffer = StaticSizeBuffer::<MockDeviceBase, 1024>::new().unwrap();
         let ptr = buffer.try_alloc(4000);
         assert_eq!(ptr, Err(()));
     }
@@ -129,7 +126,7 @@ mod static_buffer {
     // 領域を2回確保し、アドレスを確認する
     #[test]
     fn alloc_twice() {
-        let mut buffer = StaticSizeBuffer::<MockDeviceBase, BUF_LEN>::default();
+        let mut buffer = StaticSizeBuffer::<MockDeviceBase, BUF_LEN>::new().unwrap();
         let first_ptr = buffer.try_alloc(1024).unwrap();
         assert_eq!(first_ptr as usize, 0);
         let second_ptr = buffer.try_alloc(2048).unwrap();
@@ -145,7 +142,7 @@ mod static_buffer {
         *mut u8,
         *mut u8,
     ) {
-        let mut buffer = StaticSizeBuffer::<MockDeviceBase, BUF_LEN>::default();
+        let mut buffer = StaticSizeBuffer::<MockDeviceBase, BUF_LEN>::new().unwrap();
         let ptr1 = buffer.try_alloc(1 << 15).unwrap();
         let ptr2 = buffer.try_alloc(1 << 10).unwrap();
         let ptr3 = buffer.try_alloc(1 << 13).unwrap();

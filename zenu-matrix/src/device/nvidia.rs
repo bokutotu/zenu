@@ -40,8 +40,8 @@ impl DeviceBase for Nvidia {
         ptr
     }
 
-    fn alloc(num_bytes: usize) -> *mut u8 {
-        zenu_cuda::runtime::cuda_malloc_bytes(num_bytes).unwrap()
+    fn alloc(num_bytes: usize) -> Result<*mut u8, ()> {
+        zenu_cuda::runtime::cuda_malloc_bytes(num_bytes).map_err(|_| ())
     }
 }
 
