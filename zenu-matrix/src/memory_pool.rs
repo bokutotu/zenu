@@ -189,6 +189,26 @@ pub struct StaticMemoryPool<D: Device> {
     big_alloced_ptr: Rc<RefCell<HashMap<*mut u8, Rc<StaticDataPtr<D, BIG_POOL_SIZE>>>>>,
 }
 
+//// メモリプールの空きの中で、要求されたbytes分よりも大きく、かつ最小のStaticDataPtrを返す
+fn find_min_non_used_bytes<D: Device, const N: usize>(
+    pool: &Rc<RefCell<BTreeSet<Rc<StaticDataPtr<D, N>>>>>,
+    bytes: usize,
+) -> Option<Rc<StaticDataPtr<D, N>>>
+where
+    StaticDataPtr<D, N>: Eq + Ord,
+{
+    let pool = pool.borrow();
+    let mut iter = pool.iter();
+    let mut min_non_used_bytes = None;
+    while let Some(ptr) = iter.next() {
+        if ptr.non_used_bytes.borrow().deref() >= &bytes {
+            min_non_used_bytes = Some(ptr.clone());
+            break;
+        }
+    }
+    min_non_used_bytes
+}
+
 impl StaticMemoryPool<crate::device::cpu::Cpu> {
     fn small_pool_len(&self) -> usize {
         (*self.small_pool).borrow().len()
@@ -196,5 +216,13 @@ impl StaticMemoryPool<crate::device::cpu::Cpu> {
 
     fn big_pool_len(&self) -> usize {
         (*self.big_pool).borrow().len()
+    }
+
+    fn small_alloc(&self, bytes: usize) -> *mut u8 {
+        todo!();
+    }
+
+    fn big_alloc(&self, bytes: usize) -> *mut u8 {
+        todo!();
     }
 }
