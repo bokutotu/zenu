@@ -21,14 +21,14 @@ impl<D: DeviceBase, const N: usize> Default for StaticSizeBuffer<D, N> {
 }
 
 impl<D: DeviceBase, const N: usize> StaticSizeBuffer<D, N> {
-    fn last_ptr(&mut self) -> Option<*mut u8> {
+    fn last_ptr(&self) -> Option<*mut u8> {
         self.used_buffer_range
-            .last_entry()
-            .map(|entry| *entry.get())
+            .last_key_value()
+            .map(|(_, value)| *value)
     }
 
     // 確保するメモリの始点と終点を返す
-    fn start_end_ptr(&mut self, bytes: usize) -> (*mut u8, *mut u8) {
+    fn start_end_ptr(&self, bytes: usize) -> (*mut u8, *mut u8) {
         self.last_ptr()
             .map(|end| {
                 let start = unsafe { end.add(MIDDLE_BUFFER_SIZE) };
@@ -61,12 +61,12 @@ impl<D: DeviceBase, const N: usize> StaticSizeBuffer<D, N> {
         Ok(())
     }
 
-    pub fn get_used_bytes(&mut self) -> usize {
+    pub fn get_used_bytes(&self) -> usize {
         match self.last_ptr() {
             None => N,
             Some(last_ptr) => {
                 let last = unsafe { last_ptr.add(MIDDLE_BUFFER_SIZE) };
-                N - (last as usize - self.data.ptr as usize)
+                N - last as usize
             }
         }
     }
@@ -136,17 +136,43 @@ mod static_buffer {
         let mut buffer = StaticSizeBuffer::<MockDeviceBase, BUF_LEN>::default();
         let ptr1 = buffer.try_alloc(1 << 15).unwrap();
         let ptr2 = buffer.try_alloc(1 << 10).unwrap();
-        let ptr3 = buffer.try_alloc(1 << 20).unwrap();
+        let ptr3 = buffer.try_alloc(1 << 13).unwrap();
         (buffer, ptr1, ptr2, ptr3)
     }
 
     #[test]
     fn alloc_3() {
-        let (_, ptr1, ptr2, ptr3) = alloc_3_fragments();
-        let ptr2_: usize = 1 << 15 + MIDDLE_BUFFER_SIZE;
-        let ptr3_: usize = 1 << 15 + MIDDLE_BUFFER_SIZE + (1 << 10);
+        let (buffer, ptr1, ptr2, ptr3) = alloc_3_fragments();
+        let ptr2_: usize = (1 << 15 as usize) + MIDDLE_BUFFER_SIZE;
+        let ptr3_: usize = ptr2_ + (1 << 10 as usize) + MIDDLE_BUFFER_SIZE;
         assert_eq!(ptr1 as usize, 0);
         assert_eq!(ptr2 as usize, ptr2_);
         assert_eq!(ptr3 as usize, ptr3_);
+
+        let unused_bytes = buffer.get_used_bytes();
+        let ans = BUF_LEN
+            - 3 * MIDDLE_BUFFER_SIZE
+            - (1 << 15 as usize)
+            - (1 << 10 as usize)
+            - (1 << 13 as usize);
+        assert_eq!(ans, unused_bytes);
+    }
+
+    #[test]
+    fn alloc_3_123() {
+        let (mut buffer, ptr1, ptr2, ptr3) = alloc_3_fragments();
+        let init_unused_bytes = buffer.get_used_bytes();
+
+        buffer.try_free(ptr1).unwrap();
+        let num_bytes = buffer.get_used_bytes();
+        assert_eq!(init_unused_bytes, num_bytes);
+
+        buffer.try_free(ptr2).unwrap();
+        let num_bytes = buffer.get_used_bytes();
+        assert_eq!(init_unused_bytes, num_bytes);
+
+        buffer.try_free(ptr3).unwrap();
+        let num_bytes = buffer.get_used_bytes();
+        assert_eq!(BUF_LEN, num_bytes);
     }
 }
