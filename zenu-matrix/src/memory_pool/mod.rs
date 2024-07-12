@@ -52,6 +52,7 @@
 //!
 mod data_ptr;
 mod static_buffer;
+mod static_mem_pool;
 
 // 2MB
 pub const SMALL_BUFFER_SIZE: usize = 2 * 1024 * 1024;

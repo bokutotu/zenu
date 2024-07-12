@@ -3,7 +3,7 @@ use crate::device::DeviceBase;
 use super::{data_ptr::DataPtr, MIDDLE_BUFFER_SIZE};
 use std::collections::BTreeMap;
 
-pub(super) struct StaticSizeBuffer<D: DeviceBase, const N: usize> {
+pub struct StaticSizeBuffer<D: DeviceBase, const N: usize> {
     data: DataPtr<D>,
     // key is sttart address of used buffer
     // value is end address of used buffer
@@ -43,7 +43,7 @@ impl<D: DeviceBase, const N: usize> StaticSizeBuffer<D, N> {
     }
 
     pub fn try_alloc(&mut self, bytes: usize) -> Result<*mut u8, ()> {
-        if self.get_used_bytes() < bytes {
+        if self.get_unused_bytes() < bytes {
             return Err(());
         }
         let (start, end) = self.start_end_ptr(bytes);
@@ -61,7 +61,7 @@ impl<D: DeviceBase, const N: usize> StaticSizeBuffer<D, N> {
         Ok(())
     }
 
-    pub fn get_used_bytes(&self) -> usize {
+    pub fn get_unused_bytes(&self) -> usize {
         match self.last_ptr() {
             None => N,
             Some(last_ptr) => {
@@ -70,7 +70,19 @@ impl<D: DeviceBase, const N: usize> StaticSizeBuffer<D, N> {
             }
         }
     }
+
+    pub fn ptr(&self) -> *mut u8 {
+        self.data.ptr
+    }
 }
+
+impl<D: DeviceBase, const N: usize> PartialEq for StaticSizeBuffer<D, N> {
+    fn eq(&self, other: &Self) -> bool {
+        self.data.ptr == other.data.ptr
+    }
+}
+
+impl<D: DeviceBase, const N: usize> Eq for StaticSizeBuffer<D, N> {}
 
 #[cfg(test)]
 mod static_buffer {
@@ -149,7 +161,7 @@ mod static_buffer {
         assert_eq!(ptr2 as usize, ptr2_);
         assert_eq!(ptr3 as usize, ptr3_);
 
-        let unused_bytes = buffer.get_used_bytes();
+        let unused_bytes = buffer.get_unused_bytes();
         let ans = BUF_LEN
             - 3 * MIDDLE_BUFFER_SIZE
             - (1 << 15 as usize)
@@ -161,18 +173,18 @@ mod static_buffer {
     #[test]
     fn alloc_3_123() {
         let (mut buffer, ptr1, ptr2, ptr3) = alloc_3_fragments();
-        let init_unused_bytes = buffer.get_used_bytes();
+        let init_unused_bytes = buffer.get_unused_bytes();
 
         buffer.try_free(ptr1).unwrap();
-        let num_bytes = buffer.get_used_bytes();
+        let num_bytes = buffer.get_unused_bytes();
         assert_eq!(init_unused_bytes, num_bytes);
 
         buffer.try_free(ptr2).unwrap();
-        let num_bytes = buffer.get_used_bytes();
+        let num_bytes = buffer.get_unused_bytes();
         assert_eq!(init_unused_bytes, num_bytes);
 
         buffer.try_free(ptr3).unwrap();
-        let num_bytes = buffer.get_used_bytes();
+        let num_bytes = buffer.get_unused_bytes();
         assert_eq!(BUF_LEN, num_bytes);
     }
 
@@ -181,36 +193,36 @@ mod static_buffer {
         let (mut buffer, ptr1, ptr2, ptr3) = alloc_3_fragments();
 
         buffer.try_free(ptr3).unwrap();
-        let num_bytes = buffer.get_used_bytes();
+        let num_bytes = buffer.get_unused_bytes();
         let ans = BUF_LEN - ptr3 as usize;
         assert_eq!(ans, num_bytes);
 
         buffer.try_free(ptr2).unwrap();
-        let num_bytes = buffer.get_used_bytes();
+        let num_bytes = buffer.get_unused_bytes();
         let ans = BUF_LEN - ptr2 as usize;
         assert_eq!(ans, num_bytes);
 
         buffer.try_free(ptr1).unwrap();
-        let num_bytes = buffer.get_used_bytes();
+        let num_bytes = buffer.get_unused_bytes();
         assert_eq!(BUF_LEN, num_bytes);
     }
 
     #[test]
     fn alloc_3_231() {
         let (mut buffer, ptr1, ptr2, ptr3) = alloc_3_fragments();
-        let init_unused_bytes = buffer.get_used_bytes();
+        let init_unused_bytes = buffer.get_unused_bytes();
 
         buffer.try_free(ptr2).unwrap();
-        let num_bytes = buffer.get_used_bytes();
+        let num_bytes = buffer.get_unused_bytes();
         assert_eq!(init_unused_bytes, num_bytes);
 
         buffer.try_free(ptr3).unwrap();
-        let num_bytes = buffer.get_used_bytes();
+        let num_bytes = buffer.get_unused_bytes();
         let ans = BUF_LEN - ptr2 as usize;
         assert_eq!(ans, num_bytes);
 
         buffer.try_free(ptr1).unwrap();
-        let num_bytes = buffer.get_used_bytes();
+        let num_bytes = buffer.get_unused_bytes();
         assert_eq!(BUF_LEN, num_bytes);
     }
 }
