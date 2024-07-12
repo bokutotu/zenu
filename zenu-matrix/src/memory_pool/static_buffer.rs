@@ -175,4 +175,42 @@ mod static_buffer {
         let num_bytes = buffer.get_used_bytes();
         assert_eq!(BUF_LEN, num_bytes);
     }
+
+    #[test]
+    fn alloc_3_321() {
+        let (mut buffer, ptr1, ptr2, ptr3) = alloc_3_fragments();
+
+        buffer.try_free(ptr3).unwrap();
+        let num_bytes = buffer.get_used_bytes();
+        let ans = BUF_LEN - ptr3 as usize;
+        assert_eq!(ans, num_bytes);
+
+        buffer.try_free(ptr2).unwrap();
+        let num_bytes = buffer.get_used_bytes();
+        let ans = BUF_LEN - ptr2 as usize;
+        assert_eq!(ans, num_bytes);
+
+        buffer.try_free(ptr1).unwrap();
+        let num_bytes = buffer.get_used_bytes();
+        assert_eq!(BUF_LEN, num_bytes);
+    }
+
+    #[test]
+    fn alloc_3_231() {
+        let (mut buffer, ptr1, ptr2, ptr3) = alloc_3_fragments();
+        let init_unused_bytes = buffer.get_used_bytes();
+
+        buffer.try_free(ptr2).unwrap();
+        let num_bytes = buffer.get_used_bytes();
+        assert_eq!(init_unused_bytes, num_bytes);
+
+        buffer.try_free(ptr3).unwrap();
+        let num_bytes = buffer.get_used_bytes();
+        let ans = BUF_LEN - ptr2 as usize;
+        assert_eq!(ans, num_bytes);
+
+        buffer.try_free(ptr1).unwrap();
+        let num_bytes = buffer.get_used_bytes();
+        assert_eq!(BUF_LEN, num_bytes);
+    }
 }
