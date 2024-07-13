@@ -110,9 +110,9 @@ impl<D: DeviceBase, const N: usize> UnusedBytesPtrBufferMap<D, N> {
 #[derive(Default)]
 pub struct StaticMemPool<D: DeviceBase, const N: usize> {
     /// 未使用バイト数とそのバイト数を持つバッファのマップ
-    unused_bytes_ptr_buffer_map: UnusedBytesPtrBufferMap<D, N>,
+    pub unused_bytes_ptr_buffer_map: UnusedBytesPtrBufferMap<D, N>,
     /// 確保されたポインタとそのポインタを保持するバッファのマップ
-    alloced_ptr_buffer_map: HashMap<*mut u8, RcBuffer<D, N>>,
+    pub alloced_ptr_buffer_map: HashMap<*mut u8, RcBuffer<D, N>>,
 }
 
 impl<D: DeviceBase, const N: usize> StaticMemPool<D, N> {
@@ -126,6 +126,7 @@ impl<D: DeviceBase, const N: usize> StaticMemPool<D, N> {
                 .pop_unused_bytes_ptr_buffer(unused_bytes);
             let ptr = buffer.0.deref().borrow_mut().try_alloc(bytes)?;
             self.alloced_ptr_buffer_map.insert(ptr, buffer.clone());
+            self.unused_bytes_ptr_buffer_map.insert(buffer);
             Ok(ptr)
         } else {
             let buffer = RcBuffer(Rc::new(RefCell::new(StaticSizeBuffer::new()?)));
@@ -138,6 +139,7 @@ impl<D: DeviceBase, const N: usize> StaticMemPool<D, N> {
 
     pub fn free(&mut self, ptr: *mut u8) -> Result<(), ()> {
         let buffer = self.alloced_ptr_buffer_map.remove(&ptr).ok_or(())?;
+
         let unused_bytes = buffer.0.deref().borrow().get_unused_bytes();
         let _ = self
             .unused_bytes_ptr_buffer_map

@@ -62,6 +62,9 @@ impl<D: DeviceBase, const N: usize> StaticSizeBuffer<D, N> {
         match self.last_ptr() {
             None => N,
             Some(last_ptr) => {
+                if N - MIDDLE_BUFFER_SIZE <= (last_ptr as usize) && (last_ptr as usize) <= N {
+                    return 0;
+                }
                 let last = unsafe { last_ptr.add(MIDDLE_BUFFER_SIZE) };
                 N - last as usize
             }

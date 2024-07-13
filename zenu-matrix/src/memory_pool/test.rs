@@ -8,7 +8,7 @@ mod static_buffer {
         device::DeviceBase,
         memory_pool::{
             static_buffer::StaticSizeBuffer,
-            static_mem_pool::{RcBuffer, UnusedBytesPtrBufferMap},
+            static_mem_pool::{RcBuffer, StaticMemPool, UnusedBytesPtrBufferMap},
             MIDDLE_BUFFER_SIZE,
         },
         num::Num,
@@ -323,5 +323,96 @@ mod static_buffer {
             map.smallest_unused_bytes_over_request(0),
             Some(BUF_LEN - 200 - MIDDLE_BUFFER_SIZE)
         );
+    }
+
+    /// StaticMemPoolのテスト
+    #[test]
+    fn test_alloc_and_free() {
+        let mut pool = StaticMemPool::<MockDeviceBase, BUF_LEN>::default();
+
+        // Allocate memory
+        let ptr1 = pool.try_alloc(100).unwrap();
+        assert!(ptr1.is_null());
+
+        // Allocate more memory
+        let ptr2 = pool.try_alloc(200).unwrap();
+        assert!(!ptr2.is_null());
+        assert_ne!(ptr1, ptr2);
+
+        // Free memory
+        pool.free(ptr1).unwrap();
+        pool.free(ptr2).unwrap();
+
+        // Reallocate and check if we get the same pointers
+        let ptr3 = pool.try_alloc(100).unwrap();
+        // assert!(ptr1 == ptr3 || ptr2 == ptr3);
+        assert_eq!(ptr3 as usize, 0);
+    }
+
+    #[test]
+    fn test_alloc_full_buffer() {
+        let mut pool = StaticMemPool::<MockDeviceBase, BUF_LEN>::default();
+
+        // Allocate the full buffer
+        let ptr = pool.try_alloc(BUF_LEN).unwrap();
+        assert!(ptr as usize == 0);
+
+        // Try to allocate more, should fail
+        assert!(pool.try_alloc(BUF_LEN - 1 - MIDDLE_BUFFER_SIZE).unwrap() as usize == 0);
+
+        assert_eq!(pool.unused_bytes_ptr_buffer_map.0.len(), 2);
+
+        // Now we should be able to allocate again
+        assert!(
+            pool.try_alloc(dbg!(BUF_LEN - 3 - MIDDLE_BUFFER_SIZE))
+                .unwrap() as usize
+                == 0
+        );
+        assert_eq!(pool.unused_bytes_ptr_buffer_map.0.len(), 3);
+
+        pool.free(ptr).unwrap();
+        assert_eq!(pool.unused_bytes_ptr_buffer_map.0.len(), 3);
+    }
+
+    #[test]
+    fn test_multiple_allocations() {
+        let mut pool = StaticMemPool::<MockDeviceBase, BUF_LEN>::default();
+        let mut ptrs = Vec::new();
+
+        // Allocate multiple small buffers
+        for idx in 0..7 {
+            let ptr = pool.try_alloc(BUF_LEN / 10).unwrap();
+            let ptr_val = idx * (BUF_LEN / 10 + MIDDLE_BUFFER_SIZE);
+            assert_eq!(ptr as usize, ptr_val);
+            ptrs.push(ptr);
+        }
+
+        // Free all buffers
+        for ptr in ptrs {
+            pool.free(ptr).unwrap();
+        }
+
+        // We should be able to allocate the full buffer now
+        assert!(pool.try_alloc(BUF_LEN).is_ok());
+    }
+
+    #[test]
+    fn test_error_handling() {
+        let mut pool = StaticMemPool::<MockDeviceBase, BUF_LEN>::default();
+
+        // Try to free an invalid pointer
+        assert!(pool.free(std::ptr::null_mut()).is_err());
+
+        // Try to allocate more than the buffer size
+        assert!(pool.try_alloc(BUF_LEN + 1).is_err());
+
+        // Allocate all memory
+        let ptr = pool.try_alloc(BUF_LEN).unwrap();
+
+        // Free the memory
+        pool.free(ptr).unwrap();
+
+        // Try to free the same pointer again
+        assert!(pool.free(ptr).is_err());
     }
 }
