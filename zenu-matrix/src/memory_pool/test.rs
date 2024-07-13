@@ -285,4 +285,43 @@ mod static_buffer {
             Some(BUF_LEN - 100 - MIDDLE_BUFFER_SIZE)
         );
     }
+
+    #[test]
+    #[should_panic]
+    fn test_empty_map() {
+        let mut map = UnusedBytesPtrBufferMap::<MockDeviceBase, BUF_LEN>::default();
+
+        assert_eq!(map.smallest_unused_bytes_over_request(0), None);
+        map.pop_unused_bytes_ptr_buffer(BUF_LEN);
+    }
+
+    #[test]
+    fn test_different_unused_bytes() {
+        let mut map = UnusedBytesPtrBufferMap::<MockDeviceBase, BUF_LEN>::default();
+
+        let buffer1 = RcBuffer(Rc::new(RefCell::new(
+            StaticSizeBuffer::<MockDeviceBase, BUF_LEN>::new().unwrap(),
+        )));
+        let buffer2 = RcBuffer(Rc::new(RefCell::new(
+            StaticSizeBuffer::<MockDeviceBase, BUF_LEN>::new().unwrap(),
+        )));
+
+        buffer1.0.borrow_mut().try_alloc(100).unwrap();
+        buffer2.0.borrow_mut().try_alloc(200).unwrap();
+
+        map.insert(buffer1.clone());
+        map.insert(buffer2.clone());
+
+        assert_eq!(
+            map.smallest_unused_bytes_over_request(BUF_LEN - 150 - MIDDLE_BUFFER_SIZE),
+            Some(BUF_LEN - 100 - MIDDLE_BUFFER_SIZE)
+        );
+        let popped = map.pop_unused_bytes_ptr_buffer(BUF_LEN - 100 - MIDDLE_BUFFER_SIZE);
+        assert!(Rc::ptr_eq(&buffer1.0, &popped.0));
+
+        assert_eq!(
+            map.smallest_unused_bytes_over_request(0),
+            Some(BUF_LEN - 200 - MIDDLE_BUFFER_SIZE)
+        );
+    }
 }
