@@ -51,6 +51,8 @@
 //!         [終了] <----------------------[ストリームに関連付け]
 //!
 mod data_ptr;
+mod dynamic_buffer;
+mod dynamic_pool;
 mod static_buffer;
 mod static_mem_pool;
 mod test;

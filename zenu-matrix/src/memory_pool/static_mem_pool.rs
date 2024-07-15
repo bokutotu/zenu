@@ -116,6 +116,11 @@ pub struct StaticMemPool<D: DeviceBase, const N: usize> {
 }
 
 impl<D: DeviceBase, const N: usize> StaticMemPool<D, N> {
+    pub fn smallest_unused_bytes_over_request(&self, bytes: usize) -> Option<usize> {
+        self.unused_bytes_ptr_buffer_map
+            .smallest_unused_bytes_over_request(bytes)
+    }
+
     pub fn try_alloc(&mut self, bytes: usize) -> Result<*mut u8, ()> {
         if let Some(unused_bytes) = self
             .unused_bytes_ptr_buffer_map
