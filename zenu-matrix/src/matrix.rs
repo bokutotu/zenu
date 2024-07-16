@@ -461,30 +461,6 @@ where
     D: DeviceBase,
     S: DimTrait,
 {
-    pub fn from_vec<I: Into<S>>(vec: Vec<T>, shape: I) -> Self {
-        let shape = shape.into();
-        if vec.len() != shape.num_elm() {
-            panic!(
-                "Invalid Shape, vec.len() = {}, shape.num_elm() = {}",
-                vec.len(),
-                shape.num_elm()
-            );
-        }
-
-        let len = vec.len();
-
-        let ptr = Ptr {
-            ptr: D::from_vec(vec),
-            len,
-            offset: 0,
-            repr: PhantomData,
-            device: PhantomData,
-        };
-
-        let stride = default_stride(shape);
-        Matrix { ptr, shape, stride }
-    }
-
     pub fn to_ref_mut(&mut self) -> Matrix<Ref<&mut T>, S, D> {
         Matrix {
             ptr: self.ptr.to_ref_mut(),
