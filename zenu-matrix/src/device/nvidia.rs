@@ -1,5 +1,5 @@
 use super::{Device, DeviceBase};
-use crate::num::Num;
+use crate::{num::Num, ZENU_MATRIX_STATE};
 use serde::{Deserialize, Serialize};
 
 #[derive(Copy, Clone, Default, Debug, Serialize, Deserialize)]
@@ -10,8 +10,13 @@ impl DeviceBase for Nvidia {
         zenu_cuda::runtime::cuda_free(ptr as *mut std::ffi::c_void).unwrap();
     }
 
+    fn mem_pool_drop_ptr(ptr: *mut u8) -> Result<(), ()> {
+        let state = &ZENU_MATRIX_STATE;
+        state.nvidia_mem_pool.try_free(ptr)
+    }
+
     fn clone_ptr<T>(src: *const T, len: usize) -> *mut T {
-        let dst = zenu_cuda::runtime::cuda_malloc(len).unwrap() as *mut T;
+        let dst = Self::alloc(len).unwrap() as *mut T;
         zenu_cuda::runtime::cuda_copy(
             dst,
             src,
@@ -31,17 +36,31 @@ impl DeviceBase for Nvidia {
     }
 
     fn from_vec<T: Num>(mut vec: Vec<T>) -> *mut T {
-        zenu_cuda::runtime::copy_to_gpu(vec.as_mut_ptr(), vec.len())
+        let ptr = Self::alloc(vec.len() * std::mem::size_of::<T>()).unwrap() as *mut T;
+        zenu_cuda::runtime::cuda_copy(
+            ptr,
+            vec.as_mut_ptr(),
+            vec.len(),
+            zenu_cuda::runtime::ZenuCudaMemCopyKind::HostToDevice,
+        )
+        .unwrap();
+        ptr
     }
 
     fn zeros<T: Num>(len: usize) -> *mut T {
-        let ptr = zenu_cuda::runtime::cuda_malloc(len).unwrap() as *mut T;
+        let len = len * std::mem::size_of::<T>();
+        let ptr = Self::alloc(len).unwrap() as *mut T;
         zenu_cuda::cublas::cublas_scal(len, T::zero(), ptr, 1).unwrap();
         ptr
     }
 
     fn raw_alloc(num_bytes: usize) -> Result<*mut u8, ()> {
         zenu_cuda::runtime::cuda_malloc_bytes(num_bytes).map_err(|_| ())
+    }
+
+    fn mem_pool_alloc(num_bytes: usize) -> Result<*mut u8, ()> {
+        let state = &ZENU_MATRIX_STATE;
+        state.nvidia_mem_pool.try_alloc(num_bytes)
     }
 }
 
