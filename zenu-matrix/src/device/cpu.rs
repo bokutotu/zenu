@@ -46,9 +46,7 @@ impl DeviceBase for Cpu {
 
     fn zeros<T: Num>(len: usize) -> *mut T {
         use cblas::*;
-        let mut vec = Vec::with_capacity(len);
-        let ptr = vec.as_mut_ptr();
-        std::mem::forget(vec);
+        let ptr = Self::alloc(len * std::mem::size_of::<T>()).unwrap() as *mut T;
         if T::is_f32() {
             let slice = unsafe { std::slice::from_raw_parts_mut(ptr as *mut f32, len) };
             unsafe { sscal(len as i32, 0.0, slice, 1) };

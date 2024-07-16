@@ -50,6 +50,12 @@
 //!            v                         v                      v
 //!         [終了] <----------------------[ストリームに関連付け]
 //!
+
+use std::{cell::RefCell, ops::Deref, rc::Rc};
+
+use crate::device::DeviceBase;
+
+use self::{dynamic_pool::DynMemPool, static_mem_pool::StaticMemPool};
 mod data_ptr;
 mod dynamic_buffer;
 mod dynamic_pool;
@@ -65,3 +71,22 @@ pub const LARGE_BUFFER_SIZE: usize = 20 * 1024 * 1024;
 
 // 10kb ブッファをきりはりする際のバッファの真ん中にある空き領域のサイズ
 pub const MIDDLE_BUFFER_SIZE: usize = 10 * 1024;
+
+#[derive(Default)]
+pub struct MemPool<D: DeviceBase> {
+    small_pool: Rc<RefCell<StaticMemPool<D, SMALL_BUFFER_SIZE>>>,
+    large_pool: Rc<RefCell<StaticMemPool<D, LARGE_BUFFER_SIZE>>>,
+    dynamic_pool: Rc<RefCell<DynMemPool<D>>>,
+}
+
+impl<D: DeviceBase> MemPool<D> {
+    pub fn try_alloc(&self, bytes: usize) -> Result<*mut u8, ()> {
+        if bytes >= LARGE_BUFFER_SIZE {
+            self.dynamic_pool.deref().borrow_mut().try_alloc(bytes)
+        } else if bytes >= SMALL_BUFFER_SIZE {
+            self.large_pool.deref().borrow_mut().try_alloc(bytes)
+        } else {
+            self.small_pool.deref().borrow_mut().try_alloc(bytes)
+        }
+    }
+}
