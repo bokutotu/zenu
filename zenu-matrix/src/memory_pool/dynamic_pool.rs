@@ -1,8 +1,7 @@
 use std::{
-    cell::RefCell,
     collections::{BTreeMap, HashMap},
     ops::Bound::{Included, Unbounded},
-    rc::Rc,
+    sync::{Arc, Mutex},
 };
 
 use crate::device::DeviceBase;
@@ -11,8 +10,8 @@ use super::dynamic_buffer::DynBuffer;
 
 #[derive(Default)]
 pub struct DynMemPool<D: DeviceBase> {
-    used_buffers: HashMap<*mut u8, Rc<RefCell<DynBuffer<D>>>>,
-    unused_buffers: BTreeMap<usize, Vec<Rc<RefCell<DynBuffer<D>>>>>,
+    used_buffers: HashMap<*mut u8, Arc<Mutex<DynBuffer<D>>>>,
+    unused_buffers: BTreeMap<usize, Vec<Arc<Mutex<DynBuffer<D>>>>>,
 }
 
 impl<D: DeviceBase> DynMemPool<D> {
@@ -20,13 +19,13 @@ impl<D: DeviceBase> DynMemPool<D> {
         match self.unused_buffers.get_mut(&bytes) {
             Some(buffers) => {
                 let buffer = buffers.pop().unwrap();
-                let ptr = buffer.borrow().start_ptr();
+                let ptr = buffer.lock().unwrap().start_ptr();
                 self.used_buffers.insert(ptr, buffer);
                 Ok(ptr)
             }
             None => {
-                let buffer = Rc::new(RefCell::new(DynBuffer::new(bytes)?));
-                let ptr = buffer.borrow().start_ptr();
+                let buffer = Arc::new(Mutex::new(DynBuffer::new(bytes)?));
+                let ptr = buffer.lock().unwrap().start_ptr();
                 self.used_buffers.insert(ptr, buffer);
                 Ok(ptr)
             }
@@ -35,7 +34,7 @@ impl<D: DeviceBase> DynMemPool<D> {
 
     pub fn try_free(&mut self, ptr: *mut u8) -> Result<(), ()> {
         let buffer = self.used_buffers.remove(&ptr).ok_or(())?;
-        let bytes = buffer.borrow().bytes();
+        let bytes = buffer.lock().unwrap().bytes();
         self.unused_buffers
             .entry(bytes)
             .or_insert_with(Vec::new)
@@ -48,5 +47,9 @@ impl<D: DeviceBase> DynMemPool<D> {
             .range((Included(&bytes), Unbounded))
             .next()
             .map(|(unused_bytes, _)| *unused_bytes)
+    }
+
+    pub fn contains(&self, ptr: *mut u8) -> bool {
+        self.used_buffers.contains_key(&ptr)
     }
 }

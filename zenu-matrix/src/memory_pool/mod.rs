@@ -51,7 +51,7 @@
 //!         [終了] <----------------------[ストリームに関連付け]
 //!
 
-use std::{cell::RefCell, ops::Deref, rc::Rc};
+use std::sync::{Arc, Mutex};
 
 use crate::device::DeviceBase;
 
@@ -74,19 +74,38 @@ pub const MIDDLE_BUFFER_SIZE: usize = 10 * 1024;
 
 #[derive(Default)]
 pub struct MemPool<D: DeviceBase> {
-    small_pool: Rc<RefCell<StaticMemPool<D, SMALL_BUFFER_SIZE>>>,
-    large_pool: Rc<RefCell<StaticMemPool<D, LARGE_BUFFER_SIZE>>>,
-    dynamic_pool: Rc<RefCell<DynMemPool<D>>>,
+    small_pool: Arc<Mutex<StaticMemPool<D, SMALL_BUFFER_SIZE>>>,
+    large_pool: Arc<Mutex<StaticMemPool<D, LARGE_BUFFER_SIZE>>>,
+    dynamic_pool: Arc<Mutex<DynMemPool<D>>>,
 }
+
+unsafe impl<D: DeviceBase> Send for MemPool<D> {}
+unsafe impl<D: DeviceBase> Sync for MemPool<D> {}
 
 impl<D: DeviceBase> MemPool<D> {
     pub fn try_alloc(&self, bytes: usize) -> Result<*mut u8, ()> {
         if bytes >= LARGE_BUFFER_SIZE {
-            self.dynamic_pool.deref().borrow_mut().try_alloc(bytes)
+            self.dynamic_pool.lock().unwrap().try_alloc(bytes)
         } else if bytes >= SMALL_BUFFER_SIZE {
-            self.large_pool.deref().borrow_mut().try_alloc(bytes)
+            self.large_pool.lock().unwrap().try_alloc(bytes)
         } else {
-            self.small_pool.deref().borrow_mut().try_alloc(bytes)
+            self.small_pool.lock().unwrap().try_alloc(bytes)
         }
+    }
+
+    pub fn try_free(&self, ptr: *mut u8) -> Result<(), ()> {
+        let mut small_pool = self.small_pool.lock().unwrap();
+        let mut large_pool = self.large_pool.lock().unwrap();
+        let mut dynamic_pool = self.dynamic_pool.lock().unwrap();
+        if small_pool.contains(ptr) {
+            small_pool.try_free(ptr).unwrap();
+        } else if large_pool.contains(ptr) {
+            large_pool.try_free(ptr).unwrap();
+        } else if dynamic_pool.contains(ptr) {
+            dynamic_pool.try_free(ptr).unwrap();
+        } else {
+            return Err(());
+        }
+        Ok(())
     }
 }

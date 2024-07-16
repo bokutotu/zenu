@@ -50,6 +50,7 @@ mod concat {
         let a = Matrix::<Owned<f32>, DimDyn, D>::from_vec(vec![1., 2., 3.], [3]);
         let b = Matrix::<Owned<f32>, DimDyn, D>::from_vec(vec![4., 5., 6.], [3]);
         let c = Matrix::<Owned<f32>, DimDyn, D>::from_vec(vec![7., 8., 9.], [3]);
+
         let result = super::concat(&[a, b, c]);
 
         let ans = Matrix::<Owned<f32>, DimDyn, D>::from_vec(

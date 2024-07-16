@@ -15,7 +15,7 @@ use crate::device::nvidia::Nvidia;
 pub trait Repr: Default {
     type Item: Num;
 
-    fn drop_memory<D: DeviceBase>(ptr: *mut Self::Item, len: usize, _: D);
+    fn drop_memory<D: DeviceBase>(ptr: *mut Self::Item, _: D);
     fn clone_memory<D: DeviceBase>(ptr: *mut Self::Item, len: usize, _: D) -> *mut Self::Item;
 }
 
@@ -48,7 +48,7 @@ impl<A> Default for Ref<A> {
 impl<'a, T: Num> Repr for Ref<&'a T> {
     type Item = T;
 
-    fn drop_memory<D: DeviceBase>(_ptr: *mut Self::Item, _len: usize, _: D) {}
+    fn drop_memory<D: DeviceBase>(_ptr: *mut Self::Item, _: D) {}
     fn clone_memory<D: DeviceBase>(ptr: *mut Self::Item, _len: usize, _: D) -> *mut Self::Item {
         ptr
     }
@@ -57,7 +57,7 @@ impl<'a, T: Num> Repr for Ref<&'a T> {
 impl<'a, T: Num> Repr for Ref<&'a mut T> {
     type Item = T;
 
-    fn drop_memory<D: DeviceBase>(_ptr: *mut Self::Item, _len: usize, _: D) {}
+    fn drop_memory<D: DeviceBase>(_ptr: *mut Self::Item, _: D) {}
     fn clone_memory<D: DeviceBase>(ptr: *mut Self::Item, _len: usize, _: D) -> *mut Self::Item {
         ptr
     }
@@ -66,8 +66,8 @@ impl<'a, T: Num> Repr for Ref<&'a mut T> {
 impl<T: Num> Repr for Owned<T> {
     type Item = T;
 
-    fn drop_memory<D: DeviceBase>(ptr: *mut Self::Item, len: usize, _: D) {
-        D::drop_ptr(ptr, len);
+    fn drop_memory<D: DeviceBase>(ptr: *mut Self::Item, _: D) {
+        D::drop_ptr(ptr);
     }
 
     fn clone_memory<D: DeviceBase>(ptr: *mut Self::Item, len: usize, _: D) -> *mut Self::Item {
@@ -167,7 +167,7 @@ where
     D: DeviceBase,
 {
     fn drop(&mut self) {
-        R::drop_memory(self.ptr, self.len, D::default());
+        R::drop_memory(self.ptr, D::default());
     }
 }
 
