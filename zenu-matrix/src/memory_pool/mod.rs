@@ -84,12 +84,34 @@ unsafe impl<D: DeviceBase> Sync for MemPool<D> {}
 
 impl<D: DeviceBase> MemPool<D> {
     pub fn try_alloc(&self, bytes: usize) -> Result<*mut u8, ()> {
-        if bytes >= LARGE_BUFFER_SIZE {
-            self.dynamic_pool.lock().unwrap().try_alloc(bytes)
-        } else if bytes >= SMALL_BUFFER_SIZE {
-            self.large_pool.lock().unwrap().try_alloc(bytes)
+        let mut small_pool = self.small_pool.lock().unwrap();
+        let mut large_pool = self.large_pool.lock().unwrap();
+        let mut dynamic_pool = self.dynamic_pool.lock().unwrap();
+
+        let small_pool_smallest_unused_bytes_over_request = small_pool
+            .smallest_unused_bytes_over_request(bytes)
+            .unwrap_or(LARGE_BUFFER_SIZE);
+        let large_pool_smallest_unused_bytes_over_request = large_pool
+            .smallest_unused_bytes_over_request(bytes)
+            .unwrap_or(LARGE_BUFFER_SIZE);
+        let dynamic_pool_smallest_unused_bytes_over_request = dynamic_pool
+            .smallest_unused_bytes_over_request(bytes)
+            .unwrap_or(usize::MAX);
+
+        let smallest = std::cmp::min(
+            small_pool_smallest_unused_bytes_over_request,
+            std::cmp::min(
+                large_pool_smallest_unused_bytes_over_request,
+                dynamic_pool_smallest_unused_bytes_over_request,
+            ),
+        );
+
+        if smallest == small_pool_smallest_unused_bytes_over_request {
+            small_pool.try_alloc(bytes)
+        } else if smallest == large_pool_smallest_unused_bytes_over_request {
+            large_pool.try_alloc(bytes)
         } else {
-            self.small_pool.lock().unwrap().try_alloc(bytes)
+            dynamic_pool.try_alloc(bytes)
         }
     }
 

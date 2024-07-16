@@ -42,7 +42,7 @@ impl<D: DeviceBase> DynMemPool<D> {
         Ok(())
     }
 
-    fn smallest_unused_bytes_over_request(&self, bytes: usize) -> Option<usize> {
+    pub fn smallest_unused_bytes_over_request(&self, bytes: usize) -> Option<usize> {
         self.unused_buffers
             .range((Included(&bytes), Unbounded))
             .next()

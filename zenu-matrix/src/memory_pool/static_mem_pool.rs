@@ -20,14 +20,14 @@ impl<D: DeviceBase, const N: usize> PtrBufferMap<D, N> {
         self.0.insert(ptr, buffer);
     }
 
-    pub fn remove(&mut self, ptr: *mut u8) -> Option<ArcBuffer<D, N>> {
+    fn remove(&mut self, ptr: *mut u8) -> Option<ArcBuffer<D, N>> {
         self.0.remove(&ptr)
     }
 
     pub fn pop(&mut self) -> (*mut u8, ArcBuffer<D, N>) {
         let (ptr, _) = { &self.0.iter().next().unwrap() };
         let ptr = **ptr;
-        let buffer = self.0.remove(&ptr).unwrap();
+        let buffer = self.remove(ptr).unwrap();
         (ptr, buffer)
     }
 }
