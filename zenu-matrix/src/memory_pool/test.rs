@@ -371,7 +371,6 @@ mod static_buffer {
 
         assert_eq!(pool.unused_bytes_ptr_buffer_map.0.len(), 2);
 
-        // Now we should be able to allocate again
         assert!(pool.try_alloc(BUF_LEN - 3 - MIDDLE_BUFFER_SIZE).unwrap() as usize == 0);
         assert_eq!(pool.unused_bytes_ptr_buffer_map.0.len(), 3);
 
