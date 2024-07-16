@@ -1,5 +1,5 @@
 #[cfg(test)]
-mod static_buffer {
+mod mem_pool {
     use std::sync::{Arc, Mutex};
 
     use serde::Serialize;
