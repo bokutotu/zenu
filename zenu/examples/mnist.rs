@@ -78,7 +78,7 @@ fn main() {
 
     let optimizer = SGD::<f32, Cpu>::new(0.01);
 
-    for num_epoch in 0..2 {
+    for num_epoch in 0..20 {
         set_train();
         let mut train_dataloader = DataLoader::new(
             MnistDataset {

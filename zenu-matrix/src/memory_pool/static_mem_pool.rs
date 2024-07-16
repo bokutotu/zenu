@@ -11,6 +11,18 @@ use crate::device::DeviceBase;
 #[derive(Clone)]
 pub struct ArcBuffer<D: DeviceBase, const N: usize>(pub Arc<Mutex<StaticSizeBuffer<D, N>>>);
 
+impl<D: DeviceBase, const N: usize> ArcBuffer<D, N> {
+    fn ptr(&self) -> *mut u8 {
+        self.0.lock().unwrap().ptr()
+    }
+    fn try_free(&self, ptr: *mut u8) -> Result<(), ()> {
+        self.0.lock().unwrap().try_free(ptr)
+    }
+    fn get_unused_bytes(&self) -> usize {
+        self.0.lock().unwrap().get_unused_bytes()
+    }
+}
+
 #[derive(Default)]
 pub struct PtrBufferMap<D: DeviceBase, const N: usize>(pub HashMap<*mut u8, ArcBuffer<D, N>>);
 
@@ -49,7 +61,7 @@ impl<D: DeviceBase, const N: usize> UnusedBytesPtrBufferMap<D, N> {
             .map(|(unused_bytes, _)| *unused_bytes)
     }
 
-    fn _get_ptr_buffer_map(&mut self, unused_bytes: usize) -> Option<PtrBufferMap<D, N>> {
+    fn pop_ptr_buffer_map(&mut self, unused_bytes: usize) -> Option<PtrBufferMap<D, N>> {
         self.0.remove(&unused_bytes)
     }
 
@@ -57,12 +69,21 @@ impl<D: DeviceBase, const N: usize> UnusedBytesPtrBufferMap<D, N> {
     /// unused_bytesに対応するPtrBufferMapが存在しない場合、Noneを返す
     /// 返却されるArcBufferは、Selfからは削除される
     pub fn pop_unused_bytes_ptr_buffer(&mut self, unused_bytes: usize) -> ArcBuffer<D, N> {
-        let mut ptr_buffer_map = self._get_ptr_buffer_map(unused_bytes).unwrap();
+        let mut ptr_buffer_map = self.pop_ptr_buffer_map(unused_bytes).unwrap();
         let (_, buffer) = ptr_buffer_map.pop();
         if !ptr_buffer_map.0.is_empty() {
             self.0.insert(unused_bytes, ptr_buffer_map);
         }
         buffer
+    }
+
+    /// 未使用バイト数と先頭ポインタを持つバッファをUnusedBytesPtrBufferMapから削除
+    pub fn remove(&mut self, unused_bytes: usize, ptr: *mut u8) {
+        let map = self.0.get_mut(&unused_bytes).unwrap();
+        map.remove(ptr);
+        if map.0.is_empty() {
+            self.0.remove(&unused_bytes);
+        }
     }
 
     pub fn insert(&mut self, buffer: ArcBuffer<D, N>) {
@@ -112,16 +133,13 @@ pub struct StaticMemPool<D: DeviceBase, const N: usize> {
 }
 
 impl<D: DeviceBase, const N: usize> StaticMemPool<D, N> {
-    pub fn smallest_unused_bytes_over_request(&self, bytes: usize) -> Option<usize> {
+    fn smallest_unused_bytes_over_request(&self, bytes: usize) -> Option<usize> {
         self.unused_bytes_ptr_buffer_map
             .smallest_unused_bytes_over_request(bytes)
     }
 
     pub fn try_alloc(&mut self, bytes: usize) -> Result<*mut u8, ()> {
-        if let Some(unused_bytes) = self
-            .unused_bytes_ptr_buffer_map
-            .smallest_unused_bytes_over_request(bytes)
-        {
+        if let Some(unused_bytes) = self.smallest_unused_bytes_over_request(bytes) {
             let buffer = self
                 .unused_bytes_ptr_buffer_map
                 .pop_unused_bytes_ptr_buffer(unused_bytes);
@@ -140,12 +158,11 @@ impl<D: DeviceBase, const N: usize> StaticMemPool<D, N> {
 
     pub fn try_free(&mut self, ptr: *mut u8) -> Result<(), ()> {
         let buffer = self.alloced_ptr_buffer_map.remove(&ptr).ok_or(())?;
-
-        let unused_bytes = buffer.0.lock().unwrap().get_unused_bytes();
-        let _ = self
-            .unused_bytes_ptr_buffer_map
-            .pop_unused_bytes_ptr_buffer(unused_bytes);
-        buffer.0.lock().unwrap().try_free(ptr)?;
+        let start_ptr = buffer.ptr();
+        let unused_bytes = buffer.get_unused_bytes();
+        self.unused_bytes_ptr_buffer_map
+            .remove(unused_bytes, start_ptr);
+        buffer.try_free(ptr)?;
         self.unused_bytes_ptr_buffer_map.insert(buffer);
         Ok(())
     }
