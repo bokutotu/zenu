@@ -16,7 +16,8 @@ impl DeviceBase for Nvidia {
     }
 
     fn clone_ptr<T>(src: *const T, len: usize) -> *mut T {
-        let dst = Self::alloc(len).unwrap() as *mut T;
+        let bytes = len * std::mem::size_of::<T>();
+        let dst = Self::alloc(bytes).unwrap() as *mut T;
         zenu_cuda::runtime::cuda_copy(
             dst,
             src,
