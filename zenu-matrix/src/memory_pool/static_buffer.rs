@@ -59,14 +59,14 @@ impl<D: DeviceBase, const N: usize> StaticSizeBuffer<D, N> {
     }
 
     pub fn get_unused_bytes(&self) -> usize {
+        let alloced_last_ptr = self.data.ptr.wrapping_add(N);
         match self.last_ptr() {
             None => N,
             Some(last_ptr) => {
-                if N - MIDDLE_BUFFER_SIZE <= (last_ptr as usize) && (last_ptr as usize) <= N {
+                if (alloced_last_ptr as usize) <= (last_ptr as usize + MIDDLE_BUFFER_SIZE) {
                     return 0;
                 }
-                let last = unsafe { last_ptr.add(MIDDLE_BUFFER_SIZE) };
-                N - last as usize
+                alloced_last_ptr as usize - (last_ptr as usize + MIDDLE_BUFFER_SIZE)
             }
         }
     }

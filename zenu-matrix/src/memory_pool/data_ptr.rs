@@ -8,7 +8,7 @@ pub(super) struct DataPtr<D: DeviceBase> {
 
 impl<D: DeviceBase> DataPtr<D> {
     pub(super) fn new(bytes: usize) -> Result<Self, ()> {
-        let ptr = D::alloc(bytes)?;
+        let ptr = D::raw_alloc(bytes)?;
         Ok(DataPtr {
             ptr,
             bytes,
@@ -19,6 +19,6 @@ impl<D: DeviceBase> DataPtr<D> {
 
 impl<D: DeviceBase> Drop for DataPtr<D> {
     fn drop(&mut self) {
-        D::drop_ptr(self.ptr, self.bytes);
+        D::raw_drop_ptr(self.ptr);
     }
 }

@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 pub struct Nvidia;
 
 impl DeviceBase for Nvidia {
-    fn drop_ptr<T>(ptr: *mut T, _: usize) {
+    fn raw_drop_ptr<T>(ptr: *mut T) {
         zenu_cuda::runtime::cuda_free(ptr as *mut std::ffi::c_void).unwrap();
     }
 
@@ -40,7 +40,7 @@ impl DeviceBase for Nvidia {
         ptr
     }
 
-    fn alloc(num_bytes: usize) -> Result<*mut u8, ()> {
+    fn raw_alloc(num_bytes: usize) -> Result<*mut u8, ()> {
         zenu_cuda::runtime::cuda_malloc_bytes(num_bytes).map_err(|_| ())
     }
 }

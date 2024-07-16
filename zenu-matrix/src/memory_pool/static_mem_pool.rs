@@ -1,34 +1,30 @@
 //! bytesが固定のメモリプール
 use std::{
-    cell::RefCell,
     collections::{BTreeMap, HashMap},
-    ops::{
-        Bound::{Included, Unbounded},
-        Deref,
-    },
-    rc::Rc,
+    ops::Bound::{Included, Unbounded},
+    sync::{Arc, Mutex},
 };
 
 use super::static_buffer::StaticSizeBuffer;
 use crate::device::DeviceBase;
 
 #[derive(Clone)]
-pub struct RcBuffer<D: DeviceBase, const N: usize>(pub Rc<RefCell<StaticSizeBuffer<D, N>>>);
+pub struct ArcBuffer<D: DeviceBase, const N: usize>(pub Arc<Mutex<StaticSizeBuffer<D, N>>>);
 
 #[derive(Default)]
-pub struct PtrBufferMap<D: DeviceBase, const N: usize>(pub HashMap<*mut u8, RcBuffer<D, N>>);
+pub struct PtrBufferMap<D: DeviceBase, const N: usize>(pub HashMap<*mut u8, ArcBuffer<D, N>>);
 
 impl<D: DeviceBase, const N: usize> PtrBufferMap<D, N> {
-    pub fn insert(&mut self, buffer: RcBuffer<D, N>) {
-        let ptr = buffer.0.deref().borrow().ptr();
+    pub fn insert(&mut self, buffer: ArcBuffer<D, N>) {
+        let ptr = buffer.0.lock().unwrap().ptr();
         self.0.insert(ptr, buffer);
     }
 
-    pub fn remove(&mut self, ptr: *mut u8) -> Option<RcBuffer<D, N>> {
+    pub fn remove(&mut self, ptr: *mut u8) -> Option<ArcBuffer<D, N>> {
         self.0.remove(&ptr)
     }
 
-    pub fn pop(&mut self) -> (*mut u8, RcBuffer<D, N>) {
+    pub fn pop(&mut self) -> (*mut u8, ArcBuffer<D, N>) {
         let (ptr, _) = { &self.0.iter().next().unwrap() };
         let ptr = **ptr;
         let buffer = self.0.remove(&ptr).unwrap();
@@ -59,8 +55,8 @@ impl<D: DeviceBase, const N: usize> UnusedBytesPtrBufferMap<D, N> {
 
     /// 未使用バイト数がunused_bytesのバッファを取得
     /// unused_bytesに対応するPtrBufferMapが存在しない場合、Noneを返す
-    /// 返却されるRcBufferは、Selfからは削除される
-    pub fn pop_unused_bytes_ptr_buffer(&mut self, unused_bytes: usize) -> RcBuffer<D, N> {
+    /// 返却されるArcBufferは、Selfからは削除される
+    pub fn pop_unused_bytes_ptr_buffer(&mut self, unused_bytes: usize) -> ArcBuffer<D, N> {
         let mut ptr_buffer_map = self._get_ptr_buffer_map(unused_bytes).unwrap();
         let (_, buffer) = ptr_buffer_map.pop();
         if !ptr_buffer_map.0.is_empty() {
@@ -69,8 +65,8 @@ impl<D: DeviceBase, const N: usize> UnusedBytesPtrBufferMap<D, N> {
         buffer
     }
 
-    pub fn insert(&mut self, buffer: RcBuffer<D, N>) {
-        let unused_bytes = buffer.0.deref().borrow().get_unused_bytes();
+    pub fn insert(&mut self, buffer: ArcBuffer<D, N>) {
+        let unused_bytes = buffer.0.lock().unwrap().get_unused_bytes();
         // unused_bytesに対応するPtrBufferMapが存在しない場合、新たに作成する
         self.0.entry(unused_bytes).or_default().insert(buffer);
     }
@@ -112,7 +108,7 @@ pub struct StaticMemPool<D: DeviceBase, const N: usize> {
     /// 未使用バイト数とそのバイト数を持つバッファのマップ
     pub unused_bytes_ptr_buffer_map: UnusedBytesPtrBufferMap<D, N>,
     /// 確保されたポインタとそのポインタを保持するバッファのマップ
-    pub alloced_ptr_buffer_map: HashMap<*mut u8, RcBuffer<D, N>>,
+    pub alloced_ptr_buffer_map: HashMap<*mut u8, ArcBuffer<D, N>>,
 }
 
 impl<D: DeviceBase, const N: usize> StaticMemPool<D, N> {
@@ -129,28 +125,32 @@ impl<D: DeviceBase, const N: usize> StaticMemPool<D, N> {
             let buffer = self
                 .unused_bytes_ptr_buffer_map
                 .pop_unused_bytes_ptr_buffer(unused_bytes);
-            let ptr = buffer.0.deref().borrow_mut().try_alloc(bytes)?;
+            let ptr = buffer.0.lock().unwrap().try_alloc(bytes)?;
             self.alloced_ptr_buffer_map.insert(ptr, buffer.clone());
             self.unused_bytes_ptr_buffer_map.insert(buffer);
             Ok(ptr)
         } else {
-            let buffer = RcBuffer(Rc::new(RefCell::new(StaticSizeBuffer::new()?)));
-            let ptr = buffer.0.deref().borrow_mut().try_alloc(bytes)?;
+            let buffer = ArcBuffer(Arc::new(Mutex::new(StaticSizeBuffer::new()?)));
+            let ptr = buffer.0.lock().unwrap().try_alloc(bytes)?;
             self.alloced_ptr_buffer_map.insert(ptr, buffer.clone());
             self.unused_bytes_ptr_buffer_map.insert(buffer);
             Ok(ptr)
         }
     }
 
-    pub fn free(&mut self, ptr: *mut u8) -> Result<(), ()> {
+    pub fn try_free(&mut self, ptr: *mut u8) -> Result<(), ()> {
         let buffer = self.alloced_ptr_buffer_map.remove(&ptr).ok_or(())?;
 
-        let unused_bytes = buffer.0.deref().borrow().get_unused_bytes();
+        let unused_bytes = buffer.0.lock().unwrap().get_unused_bytes();
         let _ = self
             .unused_bytes_ptr_buffer_map
             .pop_unused_bytes_ptr_buffer(unused_bytes);
-        buffer.0.deref().borrow_mut().try_free(ptr)?;
+        buffer.0.lock().unwrap().try_free(ptr)?;
         self.unused_bytes_ptr_buffer_map.insert(buffer);
         Ok(())
+    }
+
+    pub fn contains(&self, ptr: *mut u8) -> bool {
+        self.alloced_ptr_buffer_map.contains_key(&ptr)
     }
 }

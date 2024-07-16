@@ -24,7 +24,23 @@ mod memory_pool;
 use device::nvidia::Nvidia;
 
 pub(crate) struct ZenuMatrixState {
+    pub(crate) use_mem_pool: bool,
     pub(crate) cpu_mem_pool: MemPool<Cpu>,
     #[cfg(feature = "nvidia")]
     pub(crate) nvidia_mem_pool: MemPool<Nvidia>,
 }
+
+impl Default for ZenuMatrixState {
+    fn default() -> Self {
+        let use_mem_pool = std::env::var("ZENU_USE_MEMPOOL").unwrap_or("1".to_string()) == "1";
+        ZenuMatrixState {
+            use_mem_pool,
+            cpu_mem_pool: MemPool::default(),
+            #[cfg(feature = "nvidia")]
+            nvidia_mem_pool: MemPool::default(),
+        }
+    }
+}
+
+pub(crate) static ZENU_MATRIX_STATE: once_cell::sync::Lazy<ZenuMatrixState> =
+    once_cell::sync::Lazy::new(|| ZenuMatrixState::default());

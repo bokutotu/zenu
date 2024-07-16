@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod static_buffer {
-    use std::{cell::RefCell, rc::Rc};
+    use std::sync::{Arc, Mutex};
 
     use serde::Serialize;
 
@@ -8,7 +8,7 @@ mod static_buffer {
         device::DeviceBase,
         memory_pool::{
             static_buffer::StaticSizeBuffer,
-            static_mem_pool::{RcBuffer, StaticMemPool, UnusedBytesPtrBufferMap},
+            static_mem_pool::{ArcBuffer, StaticMemPool, UnusedBytesPtrBufferMap},
             MIDDLE_BUFFER_SIZE,
         },
         num::Num,
@@ -24,7 +24,13 @@ mod static_buffer {
         fn alloc(_num_bytes: usize) -> Result<*mut u8, ()> {
             Ok(0 as *mut u8)
         }
-        fn drop_ptr<T>(_ptr: *mut T, _len: usize) {}
+        fn mem_pool_drop_ptr(_ptr: *mut u8) -> Result<(), ()> {
+            Ok(())
+        }
+        fn raw_drop_ptr<T>(_ptr: *mut T) {}
+        fn raw_alloc(_num_bytes: usize) -> Result<*mut u8, ()> {
+            Ok(0 as *mut u8)
+        }
         fn get_item<T: Num>(_ptr: *const T, _offset: usize) -> T {
             todo!();
         }
@@ -36,6 +42,9 @@ mod static_buffer {
         }
         fn assign_item<T: Num>(_ptr: *mut T, _offset: usize, _value: T) {
             todo!();
+        }
+        fn mem_pool_alloc(_num_bytes: usize) -> Result<*mut u8, ()> {
+            Ok(0 as *mut u8)
         }
     }
 
@@ -181,13 +190,13 @@ mod static_buffer {
     #[test]
     fn test_insert_and_get() {
         let mut map = UnusedBytesPtrBufferMap::<MockDeviceBase, BUF_LEN>::default();
-        let buffer = RcBuffer(Rc::new(RefCell::new(
+        let buffer = ArcBuffer(Arc::new(Mutex::new(
             StaticSizeBuffer::<MockDeviceBase, BUF_LEN>::new().unwrap(),
         )));
 
         map.insert(buffer.clone());
 
-        let unused_bytes = buffer.0.borrow().get_unused_bytes();
+        let unused_bytes = buffer.0.lock().unwrap().get_unused_bytes();
         assert_eq!(
             map.smallest_unused_bytes_over_request(unused_bytes - 1),
             Some(unused_bytes)
@@ -198,15 +207,15 @@ mod static_buffer {
     fn test_smallest_unused_bytes_over_request() {
         let mut map = UnusedBytesPtrBufferMap::<MockDeviceBase, BUF_LEN>::default();
 
-        let buffer1 = RcBuffer(Rc::new(RefCell::new(
+        let buffer1 = ArcBuffer(Arc::new(Mutex::new(
             StaticSizeBuffer::<MockDeviceBase, BUF_LEN>::new().unwrap(),
         )));
-        let buffer2 = RcBuffer(Rc::new(RefCell::new(
+        let buffer2 = ArcBuffer(Arc::new(Mutex::new(
             StaticSizeBuffer::<MockDeviceBase, BUF_LEN>::new().unwrap(),
         )));
 
-        buffer1.0.borrow_mut().try_alloc(100).unwrap();
-        buffer2.0.borrow_mut().try_alloc(200).unwrap();
+        buffer1.0.lock().unwrap().try_alloc(100).unwrap();
+        buffer2.0.lock().unwrap().try_alloc(200).unwrap();
 
         map.insert(buffer1.clone());
         map.insert(buffer2.clone());
@@ -226,15 +235,15 @@ mod static_buffer {
     fn test_pop_unused_bytes_ptr_buffer() {
         let mut map = UnusedBytesPtrBufferMap::<MockDeviceBase, BUF_LEN>::default();
 
-        let buffer = RcBuffer(Rc::new(RefCell::new(
+        let buffer = ArcBuffer(Arc::new(Mutex::new(
             StaticSizeBuffer::<MockDeviceBase, BUF_LEN>::new().unwrap(),
         )));
-        let unused_bytes = buffer.0.borrow().get_unused_bytes();
+        let unused_bytes = buffer.0.lock().unwrap().get_unused_bytes();
 
         map.insert(buffer.clone());
 
         let popped_buffer = map.pop_unused_bytes_ptr_buffer(unused_bytes);
-        assert!(Rc::ptr_eq(&buffer.0, &popped_buffer.0));
+        assert!(Arc::ptr_eq(&buffer.0, &popped_buffer.0));
 
         assert_eq!(map.smallest_unused_bytes_over_request(0), None);
     }
@@ -243,12 +252,12 @@ mod static_buffer {
     fn test_multiple_buffers_same_unused_bytes() {
         let mut map = UnusedBytesPtrBufferMap::<MockDeviceBase, BUF_LEN>::default();
 
-        let buffer1 = RcBuffer(Rc::new(RefCell::new(
+        let buffer1 = ArcBuffer(Arc::new(Mutex::new(
             StaticSizeBuffer::<MockDeviceBase, BUF_LEN>::new().unwrap(),
         )));
         let mut buffer2 = StaticSizeBuffer::<MockDeviceBase, BUF_LEN>::new().unwrap();
         buffer2.data.ptr = 1 as *mut u8;
-        let buffer2 = RcBuffer(Rc::new(RefCell::new(buffer2)));
+        let buffer2 = ArcBuffer(Arc::new(Mutex::new(buffer2)));
 
         map.insert(buffer1.clone());
         map.insert(buffer2.clone());
@@ -257,10 +266,10 @@ mod static_buffer {
         let popped_buffer2 = map.pop_unused_bytes_ptr_buffer(BUF_LEN);
 
         assert!(
-            (Rc::ptr_eq(&buffer1.0, &popped_buffer1.0)
-                && Rc::ptr_eq(&buffer2.0, &popped_buffer2.0))
-                || (Rc::ptr_eq(&buffer1.0, &popped_buffer2.0)
-                    && Rc::ptr_eq(&buffer2.0, &popped_buffer1.0))
+            (Arc::ptr_eq(&buffer1.0, &popped_buffer1.0)
+                && Arc::ptr_eq(&buffer2.0, &popped_buffer2.0))
+                || (Arc::ptr_eq(&buffer1.0, &popped_buffer2.0)
+                    && Arc::ptr_eq(&buffer2.0, &popped_buffer1.0))
         );
 
         assert_eq!(map.smallest_unused_bytes_over_request(0), None);
@@ -270,14 +279,14 @@ mod static_buffer {
     fn test_insert_after_pop() {
         let mut map = UnusedBytesPtrBufferMap::<MockDeviceBase, BUF_LEN>::default();
 
-        let buffer = RcBuffer(Rc::new(RefCell::new(
+        let buffer = ArcBuffer(Arc::new(Mutex::new(
             StaticSizeBuffer::<MockDeviceBase, BUF_LEN>::new().unwrap(),
         )));
 
         map.insert(buffer.clone());
         let popped_buffer = map.pop_unused_bytes_ptr_buffer(BUF_LEN);
 
-        popped_buffer.0.borrow_mut().try_alloc(100).unwrap();
+        popped_buffer.0.lock().unwrap().try_alloc(100).unwrap();
         map.insert(popped_buffer);
 
         assert_eq!(
@@ -299,15 +308,15 @@ mod static_buffer {
     fn test_different_unused_bytes() {
         let mut map = UnusedBytesPtrBufferMap::<MockDeviceBase, BUF_LEN>::default();
 
-        let buffer1 = RcBuffer(Rc::new(RefCell::new(
+        let buffer1 = ArcBuffer(Arc::new(Mutex::new(
             StaticSizeBuffer::<MockDeviceBase, BUF_LEN>::new().unwrap(),
         )));
-        let buffer2 = RcBuffer(Rc::new(RefCell::new(
+        let buffer2 = ArcBuffer(Arc::new(Mutex::new(
             StaticSizeBuffer::<MockDeviceBase, BUF_LEN>::new().unwrap(),
         )));
 
-        buffer1.0.borrow_mut().try_alloc(100).unwrap();
-        buffer2.0.borrow_mut().try_alloc(200).unwrap();
+        buffer1.0.lock().unwrap().try_alloc(100).unwrap();
+        buffer2.0.lock().unwrap().try_alloc(200).unwrap();
 
         map.insert(buffer1.clone());
         map.insert(buffer2.clone());
@@ -317,7 +326,7 @@ mod static_buffer {
             Some(BUF_LEN - 100 - MIDDLE_BUFFER_SIZE)
         );
         let popped = map.pop_unused_bytes_ptr_buffer(BUF_LEN - 100 - MIDDLE_BUFFER_SIZE);
-        assert!(Rc::ptr_eq(&buffer1.0, &popped.0));
+        assert!(Arc::ptr_eq(&buffer1.0, &popped.0));
 
         assert_eq!(
             map.smallest_unused_bytes_over_request(0),
@@ -340,8 +349,8 @@ mod static_buffer {
         assert_ne!(ptr1, ptr2);
 
         // Free memory
-        pool.free(ptr1).unwrap();
-        pool.free(ptr2).unwrap();
+        pool.try_free(ptr1).unwrap();
+        pool.try_free(ptr2).unwrap();
 
         // Reallocate and check if we get the same pointers
         let ptr3 = pool.try_alloc(100).unwrap();
@@ -363,14 +372,10 @@ mod static_buffer {
         assert_eq!(pool.unused_bytes_ptr_buffer_map.0.len(), 2);
 
         // Now we should be able to allocate again
-        assert!(
-            pool.try_alloc(dbg!(BUF_LEN - 3 - MIDDLE_BUFFER_SIZE))
-                .unwrap() as usize
-                == 0
-        );
+        assert!(pool.try_alloc(BUF_LEN - 3 - MIDDLE_BUFFER_SIZE).unwrap() as usize == 0);
         assert_eq!(pool.unused_bytes_ptr_buffer_map.0.len(), 3);
 
-        pool.free(ptr).unwrap();
+        pool.try_free(ptr).unwrap();
         assert_eq!(pool.unused_bytes_ptr_buffer_map.0.len(), 3);
     }
 
@@ -389,7 +394,7 @@ mod static_buffer {
 
         // Free all buffers
         for ptr in ptrs {
-            pool.free(ptr).unwrap();
+            pool.try_free(ptr).unwrap();
         }
 
         // We should be able to allocate the full buffer now
@@ -401,7 +406,7 @@ mod static_buffer {
         let mut pool = StaticMemPool::<MockDeviceBase, BUF_LEN>::default();
 
         // Try to free an invalid pointer
-        assert!(pool.free(std::ptr::null_mut()).is_err());
+        assert!(pool.try_free(std::ptr::null_mut()).is_err());
 
         // Try to allocate more than the buffer size
         assert!(pool.try_alloc(BUF_LEN + 1).is_err());
@@ -410,9 +415,9 @@ mod static_buffer {
         let ptr = pool.try_alloc(BUF_LEN).unwrap();
 
         // Free the memory
-        pool.free(ptr).unwrap();
+        pool.try_free(ptr).unwrap();
 
         // Try to free the same pointer again
-        assert!(pool.free(ptr).is_err());
+        assert!(pool.try_free(ptr).is_err());
     }
 }
