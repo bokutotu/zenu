@@ -10,10 +10,13 @@ use zenu::{
         layers::{batch_norm_2d::BatchNorm2d, conv2d::Conv2d, linear::Linear},
         Module,
     },
-    matrix::device::{cpu::Cpu, nvidia::Nvidia, Device},
+    matrix::device::{cpu::Cpu, Device},
     optimizer::sgd::SGD,
     update_parameters,
 };
+
+#[cfg(feature = "nvidia")]
+use zenu::matrix::device::nvidia::Nvidia;
 
 struct ConvNet<D: Device> {
     conv1: Conv2d<f32, D>,
@@ -42,6 +45,7 @@ impl<D: Device> ConvNet<D> {
         }
     }
 
+    #[cfg(feature = "nvidia")]
     fn to<Dout: Device>(self) -> ConvNet<Dout> {
         ConvNet {
             conv1: self.conv1.to(),
@@ -106,6 +110,7 @@ fn main() {
     let sgd = SGD::new(0.01);
     let model = ConvNet::<Cpu>::new();
 
+    #[cfg(feature = "nvidia")]
     let model = model.to::<Nvidia>();
 
     for epoch in 0..10 {
@@ -128,8 +133,11 @@ fn main() {
             if x.get_shape()[0] != 512 {
                 continue;
             }
-            let x = x.to::<Nvidia>();
-            let y = y.to::<Nvidia>();
+            #[cfg(feature = "nvidia")]
+            {
+                let x = x.to::<Nvidia>();
+                let y = y.to::<Nvidia>();
+            }
             let output = model.call(x);
             let loss = cross_entropy(output, y);
             let loss_itm = loss.get_data().index_item([]);
@@ -145,8 +153,11 @@ fn main() {
         for batch in val_dataloader {
             let x = batch[0].clone();
             let y = batch[1].clone();
-            let x = x.to::<Nvidia>();
-            let y = y.to::<Nvidia>();
+            #[cfg(feature = "nvidia")]
+            {
+                let x = x.to::<Nvidia>();
+                let y = y.to::<Nvidia>();
+            }
             let output = model.call(x);
             let loss = cross_entropy(output, y);
             epoch_loss_val += loss.get_data().index_item([]);
@@ -169,8 +180,11 @@ fn main() {
     for batch in test_dataloader {
         let x = batch[0].clone();
         let y = batch[1].clone();
-        let x = x.to::<Nvidia>();
-        let y = y.to::<Nvidia>();
+        #[cfg(feature = "nvidia")]
+        {
+            let x = x.to::<Nvidia>();
+            let y = y.to::<Nvidia>();
+        }
         let output = model.call(x);
         let loss = cross_entropy(output.clone(), y.clone());
         test_loss += loss.get_data().index_item([]);

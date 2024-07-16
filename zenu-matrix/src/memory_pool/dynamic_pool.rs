@@ -17,11 +17,6 @@ pub struct DynMemPool<D: DeviceBase> {
 
 impl<D: DeviceBase> DynMemPool<D> {
     pub fn try_alloc(&mut self, bytes: usize) -> Result<*mut u8, ()> {
-        // match self
-        //     .unused_buffers
-        //     .range_mut((Included(bytes), Unbounded))
-        //     .next()
-        // {
         match self.unused_buffers.get_mut(&bytes) {
             Some(buffers) => {
                 let buffer = buffers.pop().unwrap();

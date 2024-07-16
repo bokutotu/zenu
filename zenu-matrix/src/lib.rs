@@ -1,3 +1,6 @@
+use device::cpu::Cpu;
+use memory_pool::MemPool;
+
 pub mod concat;
 pub mod constructor;
 pub mod device;
@@ -16,3 +19,12 @@ mod impl_ops;
 mod impl_serde;
 mod matrix_format;
 mod memory_pool;
+
+#[cfg(feature = "nvidia")]
+use device::nvidia::Nvidia;
+
+pub(crate) struct ZenuMatrixState {
+    pub(crate) cpu_mem_pool: MemPool<Cpu>,
+    #[cfg(feature = "nvidia")]
+    pub(crate) nvidia_mem_pool: MemPool<Nvidia>,
+}
