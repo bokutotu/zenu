@@ -94,7 +94,7 @@ where
     R: Repr,
     D: DeviceBase,
 {
-    pub fn new(ptr: *mut R::Item, len: usize, offset: usize) -> Self {
+    pub(crate) fn new(ptr: *mut R::Item, len: usize, offset: usize) -> Self {
         Ptr {
             ptr,
             len,
@@ -254,7 +254,7 @@ where
     S: DimTrait,
     D: DeviceBase,
 {
-    pub fn new(ptr: Ptr<R, D>, shape: S, stride: S) -> Self {
+    pub(crate) fn new(ptr: Ptr<R, D>, shape: S, stride: S) -> Self {
         Matrix { ptr, shape, stride }
     }
 
