@@ -70,6 +70,23 @@ mod add {
     use crate::Variable;
 
     fn add<D: Device>() {
+        let x: Matrix<Owned<f32>, DimDyn, D> = Matrix::ones([5, 10]);
+        let y: Matrix<Owned<f32>, DimDyn, D> = Matrix::ones([2, 5, 10]);
+        let x_val = Variable::new(x);
+        let y_val = Variable::new(y);
+        let z = x_val.clone() + y_val.clone();
+        z.backward();
+        let ans: Matrix<Owned<f32>, DimDyn, D> = Matrix::ones([2, 5, 10]).to_ref() * 2.0;
+        assert_val_eq!(z, ans, 1e-6);
+
+        let x_grad_ans = Matrix::<_, DimDyn, _>::ones([5, 10]).to_ref() * 2.;
+        let y_grad_ans = Matrix::<_, DimDyn, _>::ones([2, 5, 10]);
+        assert_val_eq_grad!(x_val, x_grad_ans, 1e-6);
+        assert_val_eq_grad!(y_val, y_grad_ans, 1e-6);
+    }
+    run_test!(add, add_cpu, add_gpu);
+
+    fn add_2<D: Device>() {
         let x: Matrix<Owned<f32>, DimDyn, D> = Matrix::ones([100, 200]);
         let y: Matrix<Owned<f32>, DimDyn, D> = Matrix::ones([20, 100, 200]);
         let x_val = Variable::new(x);
@@ -84,5 +101,5 @@ mod add {
         assert_val_eq_grad!(x_val, x_grad_ans, 1e-6);
         assert_val_eq_grad!(y_val, y_grad_ans, 1e-6);
     }
-    run_test!(add, add_cpu, add_gpu);
+    run_test!(add_2, add_cpu_2, add_gpu_2);
 }

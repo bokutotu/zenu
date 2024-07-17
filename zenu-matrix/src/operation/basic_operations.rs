@@ -288,6 +288,7 @@ macro_rules! impl_basic_ops {
                 SL: DimTrait,
                 SR: DimTrait,
             {
+                println!("self shape: {:?} lhs shape {:?} rhs shape {:?}", self.as_ptr(),lhs.as_ptr(), rhs.as_ptr());
                 let larger_dim = larger_shape(lhs.shape(), rhs.shape());
                 let smaller_dim = smaller_shape(lhs.shape(), rhs.shape());
 
@@ -300,7 +301,8 @@ macro_rules! impl_basic_ops {
                     );
                 }
                 if self.shape().slice() != larger_dim.slice() && self.shape().slice() != smaller_dim.slice() {
-                    panic!("longer shape lhs or rhs is same shape to self\n self.shape = {:?}\n lhs.shape() = {:?} \n rhs.shape() = {:?}", self.shape(), lhs.shape(), rhs.shape());
+                    panic!("longer shape lhs or rhs is same shape to self\n self.shape = {:?}\n lhs.shape() = {:?} \n rhs.shape() = {:?}",
+                           self.shape(), lhs.shape(), rhs.shape());
                 }
 
                 if rhs.shape().is_scalar() {
@@ -356,6 +358,22 @@ macro_rules! impl_basic_ops {
                         self.stride()[0],
                         lhs.stride()[0],
                         rhs.stride()[0]
+                    );
+                } else if self.shape().slice() == rhs.shape().slice() &&
+                          self.shape().slice() == lhs.shape().slice() &&
+                          self.shape_stride().is_default_stride() &&
+                          rhs.shape_stride().is_default_stride() &&
+                          lhs.shape_stride().is_default_stride()
+                {
+                    let len_shape = self.shape().len();
+                    D::array_array(
+                        self.as_mut_ptr(),
+                        lhs.as_ptr(),
+                        rhs.as_ptr(),
+                        self.shape().num_elm(),
+                        self.stride()[len_shape - 1],
+                        lhs.stride()[len_shape - 1],
+                        rhs.stride()[len_shape - 1]
                     );
                 } else {
                     let num_iter = self.shape()[0];
@@ -415,6 +433,17 @@ macro_rules! impl_basic_ops {
                         self.stride()[0],
                         rhs.stride()[0]
                     );
+                } else if self.shape().slice() == rhs.shape().slice()
+                          && self.shape_stride().is_default_stride()
+                          && rhs.shape_stride().is_default_stride() {
+                    let len_shape = self.shape().len();
+                    D::array_assign(
+                        self.as_mut_ptr(),
+                        rhs.as_ptr(),
+                        self.shape().num_elm(),
+                        self.stride()[len_shape - 1],
+                        rhs.stride()[len_shape - 1]
+                    );
                 } else {
                     let num_iter = self.shape()[0];
                     let self_shape_len = self.shape().len();
@@ -426,7 +455,6 @@ macro_rules! impl_basic_ops {
                     }
                 }
             }
-
         }
     };
 }
