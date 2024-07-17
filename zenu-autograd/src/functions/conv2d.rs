@@ -10,7 +10,7 @@ use zenu_matrix::{
     num::Num,
 };
 
-use crate::{creator::zeros::zeros, Function, Variable, VariableWeak};
+use crate::{creator::alloc::alloc, Function, Variable, VariableWeak};
 
 pub struct Conv2dConfigsInner<T: Num> {
     pub conv2d_forward: Conv2dConfig<T>,
@@ -291,7 +291,7 @@ pub fn conv2d<T: Num, D: Device>(
         padding,
         stride,
     );
-    let y = zeros(conv2d_y_size);
+    let y = alloc(conv2d_y_size);
     let conv2d = Conv2d {
         x,
         filter,
@@ -332,7 +332,7 @@ pub fn deconv2d<T: Num, D: Device>(
         padding,
         stride,
     );
-    let y = zeros(deconv2d_y_size);
+    let y = alloc(deconv2d_y_size);
     let deconv2d = Deconv2d {
         x,
         filter,
@@ -367,7 +367,7 @@ fn conv2d_filter_grad<T: Num, D: Device>(
             0,
         )
     });
-    let filter_grad = zeros(filter.get_data().shape().slice());
+    let filter_grad = alloc(filter.get_data().shape().slice());
     let conv2d_bkwd_filter = Conv2dBackward {
         y_grad,
         x,

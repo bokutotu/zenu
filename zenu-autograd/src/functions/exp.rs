@@ -2,7 +2,7 @@ use std::{cell::RefCell, rc::Rc};
 
 use zenu_matrix::{device::Device, num::Num};
 
-use crate::{creator::zeros::zeros_like, Function, Variable, VariableWeak};
+use crate::{creator::alloc::alloc_like, Function, Variable, VariableWeak};
 
 struct Exp<T: Num, D: Device> {
     input: Variable<T, D>,
@@ -35,7 +35,7 @@ impl<T: Num, D: Device> Function<T, D> for Exp<T, D> {
 }
 
 pub fn exp<T: Num, D: Device>(input: Variable<T, D>) -> Variable<T, D> {
-    let output = zeros_like(&input);
+    let output = alloc_like(&input);
     let exp = Exp::new(input, output.clone());
     exp.forward();
     output.set_creator(Rc::new(RefCell::new(Box::new(exp))));

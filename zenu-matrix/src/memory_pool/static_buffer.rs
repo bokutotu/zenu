@@ -26,7 +26,8 @@ impl<D: DeviceBase, const N: usize> StaticSizeBuffer<D, N> {
 
     // 確保するメモリの始点と終点を返す
     fn start_end_ptr(&self, bytes: usize) -> (*mut u8, *mut u8) {
-        self.last_ptr()
+        let (start, end) = self
+            .last_ptr()
             .map(|end| {
                 let start = unsafe { end.add(MIDDLE_BUFFER_SIZE) };
                 let end = unsafe { start.add(bytes) };
@@ -36,14 +37,25 @@ impl<D: DeviceBase, const N: usize> StaticSizeBuffer<D, N> {
                 let start = self.data.ptr;
                 let end = unsafe { start.add(bytes) };
                 (start, end)
-            })
+            });
+        // 最初と最後のポインタが正しいかチェック
+        assert!(start >= self.data.ptr);
+        assert!(end <= unsafe { self.data.ptr.add(N) });
+        (start, end)
     }
 
     pub fn try_alloc(&mut self, bytes: usize) -> Result<*mut u8, ()> {
         if self.get_unused_bytes() < bytes {
             return Err(());
         }
-        let (start, end) = self.start_end_ptr(bytes);
+        let (mut start, mut end) = self.start_end_ptr(bytes);
+
+        if start as usize % 16 != 0 {
+            start = unsafe { start.sub(start as usize % 8) };
+        }
+        if end as usize % 16 != 0 {
+            end = unsafe { end.sub(end as usize % 8) };
+        }
 
         if start < self.data.ptr || end > unsafe { self.data.ptr.add(N) } {
             return Err(());

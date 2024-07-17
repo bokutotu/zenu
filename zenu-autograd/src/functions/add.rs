@@ -2,7 +2,7 @@ use std::{cell::RefCell, ops::Add, rc::Rc};
 
 use zenu_matrix::{device::Device, num::Num};
 
-use crate::{creator::zeros::zeros, Function, Variable, VariableWeak};
+use crate::{creator::alloc::alloc, Function, Variable, VariableWeak};
 
 use super::output_shape;
 
@@ -42,7 +42,7 @@ impl<T: Num, D: Device> Function<T, D> for Addition<T, D> {
 
 fn add<T: Num, D: Device>(x: Variable<T, D>, y: Variable<T, D>) -> Variable<T, D> {
     let output_shape = output_shape(&x, &y);
-    let output = zeros(output_shape);
+    let output = alloc(output_shape);
     let add = Addition::new(x, y, output.clone());
     add.forward();
     output.set_creator(Rc::new(RefCell::new(Box::new(add))));

@@ -2,7 +2,7 @@ use std::{cell::RefCell, rc::Rc};
 
 use zenu_matrix::{device::Device, num::Num};
 
-use crate::{creator::zeros::zeros_like, Function, Variable, VariableWeak};
+use crate::{creator::alloc::alloc_like, Function, Variable, VariableWeak};
 
 use super::sinh::sinh;
 
@@ -40,7 +40,7 @@ impl<T: Num, D: Device> Function<T, D> for CosH<T, D> {
 }
 
 pub fn cosh<T: Num, D: Device>(input: Variable<T, D>) -> Variable<T, D> {
-    let output = zeros_like(&input);
+    let output = alloc_like(&input);
     let cosh = CosH::new(input, output.clone());
     cosh.forward();
     output.set_creator(Rc::new(RefCell::new(Box::new(cosh))));

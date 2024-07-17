@@ -2,7 +2,7 @@ use std::{cell::RefCell, rc::Rc};
 
 use zenu_matrix::{device::Device, dim::DimTrait, num::Num};
 
-use crate::{creator::zeros::zeros, Function, Variable, VariableWeak};
+use crate::{creator::alloc::alloc, Function, Variable, VariableWeak};
 
 use super::reshape::reshape;
 
@@ -47,7 +47,7 @@ pub fn flatten<T: Num, D: Device>(input: Variable<T, D>) -> Variable<T, D> {
     let batch_size = input_shape[0];
     let num_elm = input_shape.num_elm();
     let output_shape = [batch_size, num_elm / batch_size];
-    let output = zeros(output_shape);
+    let output = alloc(output_shape);
     let flatten = Flatten::new(input, output.clone());
     flatten.forward();
     output.set_creator(Rc::new(RefCell::new(Box::new(flatten))));
