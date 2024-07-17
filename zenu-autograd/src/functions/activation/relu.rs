@@ -7,7 +7,7 @@ use zenu_matrix::{
     num::Num,
 };
 
-use crate::{creator::zeros::zeros, Function, Variable, VariableWeak};
+use crate::{creator::alloc::alloc, Function, Variable, VariableWeak};
 
 struct Relu<T: Num, D: Device> {
     input: Variable<T, D>,
@@ -36,7 +36,7 @@ impl<T: Num, D: Device> Function<T, D> for Relu<T, D> {
             let input = self.input.get_data();
             let output = self.output.upgrade().unwrap();
             let output_grad = output.get_grad().clone().unwrap();
-            let mut mask: Matrix<Owned<T>, DimDyn, D> = Matrix::zeros(input.shape());
+            let mut mask: Matrix<Owned<T>, DimDyn, D> = Matrix::alloc(input.shape());
             mask.to_ref_mut()
                 .relu_backward_mask(&input.to_ref(), T::zero());
             let mask = Variable::from(mask);
@@ -51,7 +51,7 @@ impl<T: Num, D: Device> Function<T, D> for Relu<T, D> {
 }
 
 pub fn relu<T: Num, D: Device>(input: Variable<T, D>) -> Variable<T, D> {
-    let output = zeros(input.get_shape());
+    let output = alloc(input.get_shape());
     let relu = Relu::new(input, output.clone());
     relu.forward();
     output.set_creator(Rc::new(RefCell::new(Box::new(relu))));

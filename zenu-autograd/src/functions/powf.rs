@@ -2,7 +2,7 @@ use std::{cell::RefCell, rc::Rc};
 
 use zenu_matrix::{device::Device, num::Num};
 
-use crate::{creator::zeros::zeros_like, Function, Variable, VariableWeak};
+use crate::{creator::alloc::alloc_like, Function, Variable, VariableWeak};
 
 struct Powf<T: Num, D: Device> {
     input: Variable<T, D>,
@@ -31,7 +31,7 @@ impl<T: Num, D: Device> Function<T, D> for Powf<T, D> {
 }
 
 pub fn powf<T: Num, D: Device>(x: Variable<T, D>, factor: T) -> Variable<T, D> {
-    let output = zeros_like(&x);
+    let output = alloc_like(&x);
     let output_weak = output.clone().downgrade();
     let powf = Powf {
         input: x,

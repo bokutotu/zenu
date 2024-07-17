@@ -2,7 +2,7 @@ use std::{cell::RefCell, rc::Rc};
 
 use zenu_matrix::{device::Device, num::Num};
 
-use crate::{creator::zeros::zeros, Function, Variable, VariableWeak};
+use crate::{creator::alloc::alloc, Function, Variable, VariableWeak};
 
 struct Clip<T: Num, D: Device> {
     min: T,
@@ -58,7 +58,7 @@ impl<T: Num, D: Device> Function<T, D> for Clip<T, D> {
 }
 
 pub fn clip<T: Num, D: Device>(input: Variable<T, D>, min: T, max: T) -> Variable<T, D> {
-    let output = zeros(input.get_shape());
+    let output = alloc(input.get_shape());
     let clip = Clip::new(min, max, input, output.clone());
     clip.forward();
     output.set_creator(Rc::new(RefCell::new(Box::new(clip))));

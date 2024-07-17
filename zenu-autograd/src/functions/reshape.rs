@@ -2,7 +2,7 @@ use std::{cell::RefCell, rc::Rc};
 
 use zenu_matrix::{device::Device, dim::DimTrait, num::Num};
 
-use crate::{creator::zeros::zeros, Function, Variable, VariableWeak};
+use crate::{creator::alloc::alloc, Function, Variable, VariableWeak};
 
 struct Reshape<T: Num, D: Device> {
     input: Variable<T, D>,
@@ -42,7 +42,7 @@ impl<T: Num, D: Device> Function<T, D> for Reshape<T, D> {
 }
 
 pub fn reshape<T: Num, D: Device>(input: Variable<T, D>, output_shape: &[usize]) -> Variable<T, D> {
-    let output = zeros(output_shape);
+    let output = alloc(output_shape);
     let reshape = Reshape::new(input, output.clone());
     reshape.forward();
     output.set_creator(Rc::new(RefCell::new(Box::new(reshape))));

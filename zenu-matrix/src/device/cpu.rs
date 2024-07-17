@@ -49,11 +49,12 @@ impl DeviceBase for Cpu {
     fn zeros<T: Num>(len: usize) -> *mut T {
         use cblas::*;
         let ptr = Self::alloc(len * std::mem::size_of::<T>()).unwrap() as *mut T;
+        println!("ptr deref: {:?}", unsafe { *ptr });
         if T::is_f32() {
-            let slice = unsafe { std::slice::from_raw_parts_mut(ptr as *mut f32, len) };
+            let slice = unsafe { std::slice::from_raw_parts_mut(ptr as *mut f32, 1) };
             unsafe { sscal(len as i32, 0.0, slice, 1) };
         } else {
-            let slice = unsafe { std::slice::from_raw_parts_mut(ptr as *mut f64, len) };
+            let slice = unsafe { std::slice::from_raw_parts_mut(ptr as *mut f64, 1) };
             unsafe { dscal(len as i32, 0.0, slice, 1) };
         }
         ptr

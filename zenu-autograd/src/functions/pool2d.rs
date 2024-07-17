@@ -10,7 +10,7 @@ use zenu_matrix::{
     num::Num,
 };
 
-use crate::{creator::zeros::zeros, Function, Variable, VariableWeak};
+use crate::{creator::alloc::alloc, Function, Variable, VariableWeak};
 
 #[derive(Clone, Default)]
 pub struct MaxPool2dConfig<T: Num> {
@@ -154,7 +154,7 @@ pub fn max_pool_2d<T: Num, D: Device>(
     let output_shape =
         max_pool_2d_output_shape(input.get_shape().slice(), kernel_size, stride, pad);
 
-    let output = zeros(output_shape);
+    let output = alloc(output_shape);
 
     if config.is_none() {
         config.update(input.get_shape(), kernel_size, stride, pad);
@@ -183,7 +183,7 @@ pub fn max_pool_2d_grad<T: Num, D: Device>(
     pad: (usize, usize),
     config: MaxPool2dConfig<T>,
 ) -> Variable<T, D> {
-    let input_grad = zeros(input.get_shape().slice());
+    let input_grad = alloc(input.get_shape().slice());
 
     let function = MaxPool2dBkwd {
         config,
