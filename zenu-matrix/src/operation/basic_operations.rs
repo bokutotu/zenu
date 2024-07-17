@@ -32,7 +32,17 @@ fn get_tmp_matrix<R: Repr, S: DimTrait, D: DeviceBase>(
 }
 
 macro_rules! impl_basic_op_trait {
-    ($name:ident, $cpu_method:ident, $cpu_assign_method:ident, $gpu_array:ident, $gpu_array_assign:ident, $gpu_scalar:ident, $gpu_scalar_assign:ident) => {
+    (
+        $name:ident,
+        $cpu_method:ident,
+        $cpu_assign_method:ident,
+        $gpu_array:ident,
+        $gpu_array_assign:ident,
+        $gpu_scalar:ident,
+        $gpu_scalar_assign:ident,
+        $gpu_scalar_ptr:ident,
+        $gpu_scalar_assign_ptr:ident
+    ) => {
         pub trait $name: DeviceBase {
             fn array_array<T: Num>(
                 to: *mut T,
@@ -62,6 +72,10 @@ macro_rules! impl_basic_op_trait {
             );
 
             fn scalar_assign<T: Num>(to: *mut T, rhs: T, num_elm: usize, to_stride: usize);
+
+            fn scalar_ptr<T: Num>(to: *mut T, rhs: *const T, scalar: *const T, to_stride: usize, rhs_stride: usize, num_elm: usize);
+
+            fn scalar_assign_ptr<T: Num>(to: *mut T, scalar: *const T, num_elm: usize, to_stride: usize);
         }
 
         impl$name for Cpu {
@@ -125,6 +139,24 @@ macro_rules! impl_basic_op_trait {
                     }
                 }
             }
+
+            #[allow(clippy::not_unsafe_ptr_arg_deref)]
+            fn scalar_ptr<T: Num>(to: *mut T, lhs: *const T, scalar: *const T, to_stride: usize, lhs_stride: usize, num_elm: usize) {
+                for i in 0..num_elm {
+                    unsafe {
+                        *to.add(i * to_stride) = T::$cpu_method(*lhs.add(i * lhs_stride), *scalar);
+                    }
+                }
+            }
+
+            #[allow(clippy::not_unsafe_ptr_arg_deref)]
+            fn scalar_assign_ptr<T: Num>(to: *mut T, scalar: *const T, num_elm: usize, to_stride: usize) {
+                for i in 0..num_elm {
+                    unsafe {
+                        T::$cpu_assign_method(&mut *to.add(i * to_stride), *scalar);
+                    }
+                }
+            }
         }
 
         #[cfg(feature = "nvidia")]
@@ -165,6 +197,14 @@ macro_rules! impl_basic_op_trait {
             fn scalar_assign<T: Num>(to: *mut T, rhs: T, num_elm: usize, to_stride: usize) {
                 $gpu_scalar_assign(to, rhs, num_elm, to_stride);
             }
+
+            fn scalar_ptr<T: Num>(to: *mut T, lhs: *const T, scalar: *const T, to_stride: usize, lhs_stride: usize, num_elm: usize) {
+                $gpu_scalar_ptr(to, lhs, scalar, num_elm, to_stride, lhs_stride);
+            }
+
+            fn scalar_assign_ptr<T: Num>(to: *mut T, scalar: *const T, num_elm: usize, to_stride: usize) {
+                $gpu_scalar_assign_ptr(to, scalar, num_elm, to_stride);
+            }
         }
     };
 }
@@ -175,7 +215,9 @@ impl_basic_op_trait!(
     array_add,
     array_array_add_assign,
     array_scalar_add,
-    array_scalar_add_assign
+    array_scalar_add_assign,
+    array_scalar_add_ptr,
+    array_scalar_add_assign_ptr
 );
 impl_basic_op_trait!(
     SubOps,
@@ -184,7 +226,9 @@ impl_basic_op_trait!(
     array_sub,
     array_array_sub_assign,
     array_scalar_sub,
-    array_scalar_sub_assign
+    array_scalar_sub_assign,
+    array_scalar_sub_ptr,
+    array_scalar_sub_assign_ptr
 );
 impl_basic_op_trait!(
     MulOps,
@@ -193,7 +237,9 @@ impl_basic_op_trait!(
     array_mul,
     array_array_mul_assign,
     array_scalar_mul,
-    array_scalar_mul_assign
+    array_scalar_mul_assign,
+    array_scalar_mul_ptr,
+    array_scalar_mul_assign_ptr
 );
 impl_basic_op_trait!(
     DivOps,
@@ -202,7 +248,9 @@ impl_basic_op_trait!(
     array_div,
     array_array_div_assign,
     array_scalar_div,
-    array_scalar_div_assign
+    array_scalar_div_assign,
+    array_scalar_div_ptr,
+    array_scalar_div_assign_ptr
 );
 
 /// 1dのMatrixを受け取る(これは入力側でチェック)
@@ -328,20 +376,20 @@ macro_rules! impl_basic_ops {
                     );
                 } else if self.shape().len() == 1 {
                     if is_1d_1(lhs.shape().slice()) {
-                        D::scalar(
+                        D::scalar_ptr(
                             self.as_mut_ptr(),
                             rhs.as_ptr(),
-                            lhs.index_item(&[0 as usize] as &[usize]),
+                            lhs.as_ptr(),
                             self.shape().num_elm(),
                             self.stride()[0],
                             rhs.stride()[0]
                         );
                         return;
                     } else if is_1d_1(rhs.shape().slice()) {
-                        D::scalar(
+                        D::scalar_ptr(
                             self.as_mut_ptr(),
                             lhs.as_ptr(),
-                            rhs.index_item(&[0 as usize] as &[usize]),
+                            rhs.as_ptr(),
                             self.shape().num_elm(),
                             self.stride()[0],
                             lhs.stride()[0]
