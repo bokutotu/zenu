@@ -412,7 +412,7 @@ pub fn conv2d_forward<T: Num, D: Device>(
         (pad_h, pad_w),
         (stride_h, stride_w),
     );
-    let mut y = Matrix::<Owned<T>, DimDyn, D>::zeros(out_size);
+    let mut y = Matrix::<Owned<T>, DimDyn, D>::alloc(out_size);
     D::conv2d(
         input,
         y.to_ref_mut(),
@@ -449,7 +449,7 @@ pub fn conv2d_bckwd_data<T: Num, D: Device>(
         (pad_h, pad_w),
         (stride_h, stride_w),
     );
-    let mut dx = Matrix::<Owned<T>, DimDyn, D>::zeros(input_shape);
+    let mut dx = Matrix::<Owned<T>, DimDyn, D>::alloc(input_shape);
     D::conv2d_bckwd_data(
         dy,
         dx.to_ref_mut(),
@@ -478,7 +478,7 @@ pub fn conv2d_bckwd_filter<T: Num, D: Device>(
     filter_shape: DimDyn,
     config: Option<&Conv2dBckwdFilterConfig<T>>,
 ) -> Matrix<Owned<T>, DimDyn, D> {
-    let mut df = Matrix::<Owned<T>, DimDyn, D>::zeros(filter_shape);
+    let mut df = Matrix::<Owned<T>, DimDyn, D>::alloc(filter_shape);
     D::conv2d_bckwd_filter(
         input,
         dy,

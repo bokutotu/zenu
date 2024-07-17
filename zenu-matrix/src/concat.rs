@@ -25,7 +25,7 @@ pub fn concat<T: Num, R: Repr<Item = T>, S: DimTrait, D: Device>(
         shape.push_dim(d);
     }
 
-    let mut result = Matrix::zeros(shape);
+    let mut result = Matrix::alloc(shape);
 
     for (i, m) in matrix.iter().enumerate() {
         let view = m.to_ref().into_dyn_dim();

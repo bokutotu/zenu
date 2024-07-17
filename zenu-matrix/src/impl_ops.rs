@@ -29,7 +29,7 @@ macro_rules! impl_arithmetic_ops {
             type Output = Matrix<Owned<T>, S, D>;
 
             fn $trait_method(self, rhs: T) -> Self::Output {
-                let mut owned = Matrix::zeros_like(&self);
+                let mut owned = Matrix::alloc_like(&self);
                 {
                     let mut ref_mut = owned.to_ref_mut();
                     call_on_self!(ref_mut, $scalr, &self, rhs);
@@ -42,7 +42,7 @@ macro_rules! impl_arithmetic_ops {
             type Output = Matrix<Owned<T>, S, D>;
 
             fn $trait_method(self, rhs: T) -> Self::Output {
-                let mut owned = Matrix::zeros_like(self);
+                let mut owned = Matrix::alloc_like(self);
                 {
                     let mut ref_mut = owned.to_ref_mut();
                     call_on_self!(ref_mut, $scalr, self, rhs);
@@ -71,7 +71,7 @@ macro_rules! impl_arithmetic_ops {
                 } else {
                     DimDyn::from(rhs.shape().slice())
                 };
-                let mut owned: Matrix<Owned<T>, DimDyn, D> = Matrix::zeros(larger.slice());
+                let mut owned: Matrix<Owned<T>, DimDyn, D> = Matrix::alloc(larger.slice());
                 {
                     let mut ref_mut = owned.to_ref_mut();
                     call_on_self!(ref_mut, $array, &self, &rhs);
@@ -99,7 +99,7 @@ macro_rules! impl_arithmetic_ops {
                 } else {
                     DimDyn::from(rhs.shape().slice())
                 };
-                let mut owned: Matrix<Owned<T>, DimDyn, D> = Matrix::zeros(larger.slice());
+                let mut owned: Matrix<Owned<T>, DimDyn, D> = Matrix::alloc(larger.slice());
                 {
                     let mut ref_mut = owned.to_ref_mut();
                     call_on_self!(ref_mut, $array, &self, &rhs);
@@ -126,7 +126,7 @@ macro_rules! impl_arithmetic_ops {
                 } else {
                     DimDyn::from(rhs.shape().slice())
                 };
-                let mut owned: Matrix<Owned<T>, DimDyn, D> = Matrix::zeros(larger.slice());
+                let mut owned: Matrix<Owned<T>, DimDyn, D> = Matrix::alloc(larger.slice());
                 {
                     let mut ref_mut = owned.to_ref_mut();
                     call_on_self!(ref_mut, $array, &self, &rhs);
@@ -154,7 +154,7 @@ macro_rules! impl_arithmetic_ops {
                 } else {
                     DimDyn::from(rhs.shape().slice())
                 };
-                let mut owned: Matrix<Owned<T>, DimDyn, D> = Matrix::zeros(larger.slice());
+                let mut owned: Matrix<Owned<T>, DimDyn, D> = Matrix::alloc(larger.slice());
                 {
                     let mut ref_mut = owned.to_ref_mut();
                     call_on_self!(ref_mut, $array, &self, &rhs);

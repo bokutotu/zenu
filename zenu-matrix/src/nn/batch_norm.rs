@@ -847,7 +847,7 @@ mod batch_norm {
         let mut variance_out = Matrix::<Owned<f32>, DimDyn, D>::zeros(inputs.variance.shape());
         let mut saved_mean_out = Matrix::<Owned<f32>, DimDyn, D>::zeros(inputs.saved_mean.shape());
         let mut saved_variance_out =
-            Matrix::<Owned<f32>, DimDyn, D>::zeros(inputs.saved_variance.shape());
+            Matrix::<Owned<f32>, DimDyn, D>::alloc(inputs.saved_variance.shape());
         let batch_norm = BatchNorm2dConfig::<f32>::new(inputs.x.shape());
         D::batch_norm_2d_forward_train(
             0.1,
