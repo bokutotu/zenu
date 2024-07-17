@@ -71,7 +71,7 @@ impl<T: Num, R: Repr<Item = T>, D: Device> Matrix<R, DimDyn, D> {
         }
 
         let output_shape = DimDyn::from(&output_shape as &[usize]);
-        let mut output = Matrix::<Owned<T>, DimDyn, D>::zeros(output_shape);
+        let mut output = Matrix::<Owned<T>, DimDyn, D>::alloc(output_shape);
 
         if axis == 0 {
             let output_flatten = output.reshape_mut([output.shape().num_elm()]);

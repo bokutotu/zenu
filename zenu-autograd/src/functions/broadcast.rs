@@ -2,7 +2,7 @@ use std::{cell::RefCell, rc::Rc};
 
 use zenu_matrix::{device::Device, dim::DimDyn, num::Num};
 
-use crate::{creator::zeros::zeros, Function, Variable, VariableWeak};
+use crate::{creator::alloc::alloc, Function, Variable, VariableWeak};
 
 use super::sum_to::sum_to;
 
@@ -42,7 +42,7 @@ impl<T: Num, D: Device> Function<T, D> for Broadcast<T, D> {
 }
 
 pub fn broadcast<T: Num, D: Device>(x: Variable<T, D>, shape: DimDyn) -> Variable<T, D> {
-    let output = zeros(shape);
+    let output = alloc(shape);
     let broadcast = Broadcast::new(x, output.clone());
     broadcast.forward();
     output.set_creator(Rc::new(RefCell::new(Box::new(broadcast))));

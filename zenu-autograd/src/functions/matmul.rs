@@ -7,7 +7,7 @@ use zenu_matrix::{
     operation::mul::gemm_assign,
 };
 
-use crate::{creator::zeros::zeros, Function, Variable, VariableWeak};
+use crate::{creator::alloc::alloc, Function, Variable, VariableWeak};
 
 use super::transpose::transpose;
 
@@ -56,7 +56,7 @@ impl<T: Num, D: Device> Function<T, D> for MatMul<T, D> {
 
 pub fn matmul<T: Num, D: Device>(x: Variable<T, D>, y: Variable<T, D>) -> Variable<T, D> {
     let output_shape = DimDyn::new(&[x.get_data().shape()[0], y.get_data().shape()[1]]);
-    let output = zeros(output_shape);
+    let output = alloc(output_shape);
     let matmul = MatMul::new(x, y, output.clone());
     matmul.forward();
     output.set_creator(Rc::new(RefCell::new(Box::new(matmul))));

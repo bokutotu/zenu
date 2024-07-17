@@ -48,7 +48,7 @@ pub fn mnist_dataset(
 pub fn cifar10_dataset(
 ) -> Result<(Vec<(Vec<u8>, u8)>, Vec<(Vec<u8>, u8)>), Box<dyn std::error::Error>> {
     let dataset_dir = create_dataset_dir("cifar10")?;
-    download_and_extract_cifar10(&dataset_dir.to_str().unwrap())?;
+    download_and_extract_cifar10(dataset_dir.to_str().unwrap())?;
     let dataset_dir = dataset_dir.join("cifar-10-batches-py");
     let (train_data, _) = extract_image_label_pairs(&Dataset::Cifar10, &dataset_dir)?;
     Ok((train_data, Vec::new()))

@@ -11,7 +11,7 @@ use zenu_matrix::{
     num::Num,
 };
 
-use crate::{creator::zeros::zeros_like, is_train, Function, Variable, VariableWeak};
+use crate::{creator::alloc::alloc_like, is_train, Function, Variable, VariableWeak};
 
 #[derive(Default)]
 pub struct BatchNorm2dInner<T: Num> {
@@ -189,9 +189,9 @@ pub fn batch_norm_2d<T: Num, D: Device>(
     momentum: f64,
     config: BatchNorm2dAutoGradConfig<T>,
 ) -> Variable<T, D> {
-    let y = zeros_like(&x);
-    let saving_mean = zeros_like(&mean);
-    let saving_inv_variance = zeros_like(&variance);
+    let y = alloc_like(&x);
+    let saving_mean = alloc_like(&mean);
+    let saving_inv_variance = alloc_like(&variance);
     let batch_norm = BatchNorm2d {
         momentum,
         x,
@@ -223,9 +223,9 @@ fn batch_norm_2d_bkwd<T: Num, D: Device>(
     saving_inv_variance: Variable<T, D>,
     config: BatchNorm2dAutoGradConfig<T>,
 ) -> BatchNorm2dGradOut<T, D> {
-    let x_grad = zeros_like(&x);
-    let scale_grad = zeros_like(&scale);
-    let bias_grad = zeros_like(&scale);
+    let x_grad = alloc_like(&x);
+    let scale_grad = alloc_like(&scale);
+    let bias_grad = alloc_like(&scale);
     let batch_norm_bkwd = BatchNorm2dBkwd {
         x,
         y_grad,

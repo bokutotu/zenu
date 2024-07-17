@@ -14,8 +14,7 @@ where
     pub fn ones<I: Into<S>>(dim: I) -> Self {
         let dim = dim.into();
         let data = vec![T::one(); dim.num_elm()];
-        let vec = data.iter().map(|_| T::from_usize(1)).collect();
-        Self::from_vec(vec, dim)
+        Self::from_vec(data, dim)
     }
 
     pub fn ones_like<R: Repr<Item = T>>(m: &Matrix<R, S, D>) -> Self {

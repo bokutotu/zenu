@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::num::Num;
+use crate::{num::Num, ZENU_MATRIX_STATE};
 
 use super::{Device, DeviceBase};
 
@@ -8,11 +8,13 @@ use super::{Device, DeviceBase};
 pub struct Cpu;
 
 impl DeviceBase for Cpu {
-    #[allow(clippy::not_unsafe_ptr_arg_deref)]
-    fn drop_ptr<T>(ptr: *mut T, len: usize) {
-        unsafe {
-            let _ = std::vec::Vec::from_raw_parts(ptr, len, len);
-        }
+    fn raw_drop_ptr<T>(ptr: *mut T) {
+        unsafe { libc::free(ptr as *mut libc::c_void) }
+    }
+
+    fn mem_pool_drop_ptr(ptr: *mut u8) -> Result<(), ()> {
+        let state = &ZENU_MATRIX_STATE;
+        state.cpu_mem_pool.try_free(ptr)
     }
 
     #[allow(clippy::not_unsafe_ptr_arg_deref)]
@@ -46,17 +48,29 @@ impl DeviceBase for Cpu {
 
     fn zeros<T: Num>(len: usize) -> *mut T {
         use cblas::*;
-        let mut vec = Vec::with_capacity(len);
-        let ptr = vec.as_mut_ptr();
-        std::mem::forget(vec);
+        let ptr = Self::alloc(len * std::mem::size_of::<T>()).unwrap() as *mut T;
         if T::is_f32() {
-            let slice = unsafe { std::slice::from_raw_parts_mut(ptr as *mut f32, len) };
+            let slice = unsafe { std::slice::from_raw_parts_mut(ptr as *mut f32, 1) };
             unsafe { sscal(len as i32, 0.0, slice, 1) };
         } else {
-            let slice = unsafe { std::slice::from_raw_parts_mut(ptr as *mut f64, len) };
+            let slice = unsafe { std::slice::from_raw_parts_mut(ptr as *mut f64, 1) };
             unsafe { dscal(len as i32, 0.0, slice, 1) };
         }
         ptr
+    }
+
+    fn raw_alloc(num_bytes: usize) -> Result<*mut u8, ()> {
+        let ptr = unsafe { libc::malloc(num_bytes) };
+        if ptr.is_null() {
+            Err(())
+        } else {
+            Ok(ptr as *mut u8)
+        }
+    }
+
+    fn mem_pool_alloc(num_bytes: usize) -> Result<*mut u8, ()> {
+        let state = &ZENU_MATRIX_STATE;
+        state.cpu_mem_pool.try_alloc(num_bytes)
     }
 }
 
