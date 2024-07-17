@@ -50,11 +50,11 @@ impl<D: DeviceBase, const N: usize> StaticSizeBuffer<D, N> {
         }
         let (mut start, mut end) = self.start_end_ptr(bytes);
 
-        if start as usize % 16 != 0 {
+        if start as usize % 8 != 0 {
             start = unsafe { start.sub(start as usize % 8) };
         }
-        if end as usize % 16 != 0 {
-            end = unsafe { end.sub(end as usize % 8) };
+        if end as usize % 8 != 0 {
+            end = unsafe { end.add(8 - end as usize % 8) };
         }
 
         if start < self.data.ptr || end > unsafe { self.data.ptr.add(N) } {
