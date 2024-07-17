@@ -20,6 +20,7 @@ pub struct MaxPool2d<T: Num> {
 impl<'de, T: Num + Deserialize<'de>> StateDict<'de> for MaxPool2d<T> {}
 
 impl<T: Num> MaxPool2d<T> {
+    #[must_use]
     pub fn new(kernel_size: (usize, usize), stride: (usize, usize), pad: (usize, usize)) -> Self {
         Self {
             stride,

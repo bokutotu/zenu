@@ -300,7 +300,8 @@ macro_rules! impl_basic_ops {
                     );
                 }
                 if self.shape().slice() != larger_dim.slice() && self.shape().slice() != smaller_dim.slice() {
-                    panic!("longer shape lhs or rhs is same shape to self\n self.shape = {:?}\n lhs.shape() = {:?} \n rhs.shape() = {:?}", self.shape(), lhs.shape(), rhs.shape());
+                    panic!("longer shape lhs or rhs is same shape to self\n self.shape = {:?}\n lhs.shape() = {:?} \n rhs.shape() = {:?}",
+                           self.shape(), lhs.shape(), rhs.shape());
                 }
 
                 if rhs.shape().is_scalar() {
@@ -356,6 +357,22 @@ macro_rules! impl_basic_ops {
                         self.stride()[0],
                         lhs.stride()[0],
                         rhs.stride()[0]
+                    );
+                } else if self.shape().slice() == rhs.shape().slice() &&
+                          self.shape().slice() == lhs.shape().slice() &&
+                          self.shape_stride().is_default_stride() &&
+                          rhs.shape_stride().is_default_stride() &&
+                          lhs.shape_stride().is_default_stride()
+                {
+                    let len_shape = self.shape().len();
+                    D::array_array(
+                        self.as_mut_ptr(),
+                        lhs.as_ptr(),
+                        rhs.as_ptr(),
+                        self.shape().num_elm(),
+                        self.stride()[len_shape - 1],
+                        lhs.stride()[len_shape - 1],
+                        rhs.stride()[len_shape - 1]
                     );
                 } else {
                     let num_iter = self.shape()[0];
@@ -415,6 +432,17 @@ macro_rules! impl_basic_ops {
                         self.stride()[0],
                         rhs.stride()[0]
                     );
+                } else if self.shape().slice() == rhs.shape().slice()
+                          && self.shape_stride().is_default_stride()
+                          && rhs.shape_stride().is_default_stride() {
+                    let len_shape = self.shape().len();
+                    D::array_assign(
+                        self.as_mut_ptr(),
+                        rhs.as_ptr(),
+                        self.shape().num_elm(),
+                        self.stride()[len_shape - 1],
+                        rhs.stride()[len_shape - 1]
+                    );
                 } else {
                     let num_iter = self.shape()[0];
                     let self_shape_len = self.shape().len();
@@ -426,7 +454,6 @@ macro_rules! impl_basic_ops {
                     }
                 }
             }
-
         }
     };
 }
@@ -608,7 +635,7 @@ macro_rules! impl_basic_ops_no_inputs {
 
         impl<T: Num, R: Repr<Item = T>, S: DimTrait, D: DeviceBase + $trait_name> Matrix<R, S, D> {
             pub fn $output(&self) -> Matrix<Owned<T>, S, D> {
-                let mut ans = Matrix::zeros(self.shape().clone());
+                let mut ans = Matrix::alloc(self.shape().clone());
                 ans.to_ref_mut().$method(self);
                 ans
             }
@@ -631,7 +658,7 @@ impl_basic_ops_no_inputs!(LogOps, log, log_array, log_assign);
 
 impl<R: Repr, S: DimTrait, D: DeviceBase + PowOws + CopyBlas> Matrix<R, S, D> {
     pub fn powf_array(&self, scalar: R::Item) -> Matrix<Owned<R::Item>, S, D> {
-        let mut powf = Matrix::zeros(self.shape());
+        let mut powf = Matrix::alloc(self.shape());
         powf.to_ref_mut().powf(self, scalar);
         powf
     }

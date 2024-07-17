@@ -2,7 +2,7 @@ use std::{cell::RefCell, rc::Rc};
 
 use zenu_matrix::{device::Device, num::Num};
 
-use crate::{creator::zeros::zeros, Function, Variable, VariableWeak};
+use crate::{creator::alloc::alloc, Function, Variable, VariableWeak};
 
 use super::sum::sum;
 
@@ -46,7 +46,7 @@ impl<T: Num, D: Device> Function<T, D> for SoftMax<T, D> {
 }
 
 pub fn softmax<T: Num, D: Device>(input: Variable<T, D>, axis: usize) -> Variable<T, D> {
-    let output = zeros(input.get_shape());
+    let output = alloc(input.get_shape());
     let softmax = SoftMax::new(input, output.clone().downgrade(), axis);
     softmax.forward();
     output.set_creator(Rc::new(RefCell::new(Box::new(softmax))));

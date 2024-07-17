@@ -15,7 +15,7 @@ use crate::device::nvidia::Nvidia;
 pub trait Repr: Default {
     type Item: Num;
 
-    fn drop_memory<D: DeviceBase>(ptr: *mut Self::Item, len: usize, _: D);
+    fn drop_memory<D: DeviceBase>(ptr: *mut Self::Item, _: D);
     fn clone_memory<D: DeviceBase>(ptr: *mut Self::Item, len: usize, _: D) -> *mut Self::Item;
 }
 
@@ -48,7 +48,7 @@ impl<A> Default for Ref<A> {
 impl<'a, T: Num> Repr for Ref<&'a T> {
     type Item = T;
 
-    fn drop_memory<D: DeviceBase>(_ptr: *mut Self::Item, _len: usize, _: D) {}
+    fn drop_memory<D: DeviceBase>(_ptr: *mut Self::Item, _: D) {}
     fn clone_memory<D: DeviceBase>(ptr: *mut Self::Item, _len: usize, _: D) -> *mut Self::Item {
         ptr
     }
@@ -57,7 +57,7 @@ impl<'a, T: Num> Repr for Ref<&'a T> {
 impl<'a, T: Num> Repr for Ref<&'a mut T> {
     type Item = T;
 
-    fn drop_memory<D: DeviceBase>(_ptr: *mut Self::Item, _len: usize, _: D) {}
+    fn drop_memory<D: DeviceBase>(_ptr: *mut Self::Item, _: D) {}
     fn clone_memory<D: DeviceBase>(ptr: *mut Self::Item, _len: usize, _: D) -> *mut Self::Item {
         ptr
     }
@@ -66,8 +66,8 @@ impl<'a, T: Num> Repr for Ref<&'a mut T> {
 impl<T: Num> Repr for Owned<T> {
     type Item = T;
 
-    fn drop_memory<D: DeviceBase>(ptr: *mut Self::Item, len: usize, _: D) {
-        D::drop_ptr(ptr, len);
+    fn drop_memory<D: DeviceBase>(ptr: *mut Self::Item, _: D) {
+        D::drop_ptr(ptr);
     }
 
     fn clone_memory<D: DeviceBase>(ptr: *mut Self::Item, len: usize, _: D) -> *mut Self::Item {
@@ -94,7 +94,7 @@ where
     R: Repr,
     D: DeviceBase,
 {
-    pub fn new(ptr: *mut R::Item, len: usize, offset: usize) -> Self {
+    pub(crate) fn new(ptr: *mut R::Item, len: usize, offset: usize) -> Self {
         Ptr {
             ptr,
             len,
@@ -167,7 +167,7 @@ where
     D: DeviceBase,
 {
     fn drop(&mut self) {
-        R::drop_memory(self.ptr, self.len, D::default());
+        R::drop_memory(self.ptr, D::default());
     }
 }
 
@@ -254,7 +254,7 @@ where
     S: DimTrait,
     D: DeviceBase,
 {
-    pub fn new(ptr: Ptr<R, D>, shape: S, stride: S) -> Self {
+    pub(crate) fn new(ptr: Ptr<R, D>, shape: S, stride: S) -> Self {
         Matrix { ptr, shape, stride }
     }
 
@@ -461,30 +461,6 @@ where
     D: DeviceBase,
     S: DimTrait,
 {
-    pub fn from_vec<I: Into<S>>(vec: Vec<T>, shape: I) -> Self {
-        let shape = shape.into();
-        if vec.len() != shape.num_elm() {
-            panic!(
-                "Invalid Shape, vec.len() = {}, shape.num_elm() = {}",
-                vec.len(),
-                shape.num_elm()
-            );
-        }
-
-        let len = vec.len();
-
-        let ptr = Ptr {
-            ptr: D::from_vec(vec),
-            len,
-            offset: 0,
-            repr: PhantomData,
-            device: PhantomData,
-        };
-
-        let stride = default_stride(shape);
-        Matrix { ptr, shape, stride }
-    }
-
     pub fn to_ref_mut(&mut self) -> Matrix<Ref<&mut T>, S, D> {
         Matrix {
             ptr: self.ptr.to_ref_mut(),

@@ -22,13 +22,18 @@ pub fn cuda_stream_sync() -> Result<(), ZenuCudaRuntimeError> {
 }
 
 pub fn cuda_malloc<T>(size: usize) -> Result<*mut T, ZenuCudaRuntimeError> {
+    let bytes = size * std::mem::size_of::<T>();
+    let ptr = cuda_malloc_bytes(bytes).map(|ptr| ptr as *mut T)?;
+    Ok(ptr)
+}
+
+pub fn cuda_malloc_bytes(bytes: usize) -> Result<*mut u8, ZenuCudaRuntimeError> {
     let mut ptr = std::ptr::null_mut();
-    let size = size * std::mem::size_of::<T>();
     let stream = ZENU_CUDA_STATE.lock().unwrap().get_stream();
     let err = unsafe {
         cudaMallocAsync(
-            &mut ptr as *mut *mut T as *mut *mut std::ffi::c_void,
-            size,
+            &mut ptr as *mut *mut u8 as *mut *mut std::ffi::c_void,
+            bytes,
             stream,
         )
     } as cudaError as u32;
@@ -118,14 +123,16 @@ pub fn cuda_create_stream() -> Result<cudaStream_t, ZenuCudaRuntimeError> {
 }
 
 pub fn cuda_create_pool_props() -> cudaMemPoolProps {
-    let mut props = cudaMemPoolProps::default();
-    props.allocType = cudaMemAllocationType::cudaMemAllocationTypePinned;
-    props.handleTypes = cudaMemAllocationHandleType::cudaMemHandleTypeNone;
-    let mut cuda_location = cudaMemLocation::default();
-    cuda_location.type_ = cudaMemLocationType::cudaMemLocationTypeDevice;
-    cuda_location.id = 0;
-    props.location = cuda_location;
-    props
+    let cuda_location = cudaMemLocation {
+        type_: cudaMemLocationType::cudaMemLocationTypeDevice,
+        id: 0,
+    };
+    zenu_cuda_runtime_sys::cudaMemPoolProps {
+        allocType: cudaMemAllocationType::cudaMemAllocationTypePinned,
+        handleTypes: cudaMemAllocationHandleType::cudaMemHandleTypeNone,
+        location: cuda_location,
+        ..Default::default()
+    }
 }
 
 pub struct MemoryInfo {
@@ -144,6 +151,7 @@ pub fn cuda_get_memory_info() -> Result<MemoryInfo, ZenuCudaRuntimeError> {
     }
 }
 
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn cuda_set_mem_pool(
     dev_id: usize,
     mempool: cudaMemPool_t,
@@ -157,6 +165,7 @@ pub fn cuda_set_mem_pool(
     }
 }
 
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn cuda_set_mem_pool_atribute_mem_max(
     mempool: cudaMemPool_t,
     poolsize: usize,

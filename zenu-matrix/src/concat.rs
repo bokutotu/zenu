@@ -25,7 +25,7 @@ pub fn concat<T: Num, R: Repr<Item = T>, S: DimTrait, D: Device>(
         shape.push_dim(d);
     }
 
-    let mut result = Matrix::zeros(shape);
+    let mut result = Matrix::alloc(shape);
 
     for (i, m) in matrix.iter().enumerate() {
         let view = m.to_ref().into_dyn_dim();
@@ -50,6 +50,7 @@ mod concat {
         let a = Matrix::<Owned<f32>, DimDyn, D>::from_vec(vec![1., 2., 3.], [3]);
         let b = Matrix::<Owned<f32>, DimDyn, D>::from_vec(vec![4., 5., 6.], [3]);
         let c = Matrix::<Owned<f32>, DimDyn, D>::from_vec(vec![7., 8., 9.], [3]);
+
         let result = super::concat(&[a, b, c]);
 
         let ans = Matrix::<Owned<f32>, DimDyn, D>::from_vec(

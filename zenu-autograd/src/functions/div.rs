@@ -2,7 +2,7 @@ use std::{cell::RefCell, ops::Div, rc::Rc};
 
 use zenu_matrix::{device::Device, num::Num};
 
-use crate::{creator::zeros::zeros, Function, Variable, VariableWeak};
+use crate::{creator::alloc::alloc, Function, Variable, VariableWeak};
 
 struct DivFunc<T: Num, D: Device> {
     x: Variable<T, D>,
@@ -46,7 +46,7 @@ impl<T: Num, D: Device> Function<T, D> for DivFunc<T, D> {
 
 pub fn div<T: Num, D: Device>(x: Variable<T, D>, y: Variable<T, D>) -> Variable<T, D> {
     let output_shape = super::output_shape(&x, &y);
-    let output = zeros(output_shape);
+    let output = alloc(output_shape);
     let div = DivFunc::new(x, y, output.clone());
     div.forward();
     output.set_creator(Rc::new(RefCell::new(Box::new(div))));

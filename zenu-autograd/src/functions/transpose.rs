@@ -7,7 +7,7 @@ use zenu_matrix::{
     num::Num,
 };
 
-use crate::{creator::zeros::zeros, Function, Variable, VariableWeak};
+use crate::{creator::alloc::alloc, Function, Variable, VariableWeak};
 
 struct Transpose<T: Num, D: Device> {
     x: Variable<T, D>,
@@ -25,7 +25,7 @@ impl<T: Num, D: Device> Function<T, D> for Transpose<T, D> {
     // FIXME: メモリを使いまわす
     fn forward(&self) {
         let x = self.x.get_data();
-        let mut out: Matrix<Owned<T>, DimDyn, D> = Matrix::zeros(x.shape());
+        let mut out: Matrix<Owned<T>, DimDyn, D> = Matrix::alloc(x.shape());
         out.to_ref_mut().copy_from(&x.to_ref());
         out.transpose();
         let output = self.output.upgrade().unwrap();
@@ -49,7 +49,7 @@ pub fn transpose<T: Num, D: Device>(x: Variable<T, D>) -> Variable<T, D> {
         panic!("Not implemented yet");
     }
     let output_shape = x.get_data().shape_stride().transpose().shape();
-    let output = zeros(output_shape);
+    let output = alloc(output_shape);
     let transpose = Transpose::new(x, output.clone());
     transpose.forward();
     output.set_creator(Rc::new(RefCell::new(Box::new(transpose))));
@@ -72,7 +72,7 @@ impl<T: Num, D: Device> TransposeByIndex<T, D> {
 impl<T: Num, D: Device> Function<T, D> for TransposeByIndex<T, D> {
     fn forward(&self) {
         let x = self.x.get_data();
-        let mut out: Matrix<Owned<T>, DimDyn, D> = Matrix::zeros(x.shape());
+        let mut out: Matrix<Owned<T>, DimDyn, D> = Matrix::alloc(x.shape());
         out.to_ref_mut().copy_from(&x.to_ref());
         let out = out.transpose_by_index_new_matrix(&self.index);
         let output = self.output.upgrade().unwrap();
@@ -103,7 +103,7 @@ pub fn transpose_by_index<T: Num, D: Device>(
     for i in 0..index.len() {
         output_shape[i] = input_shape[index[i]];
     }
-    let output = zeros(output_shape);
+    let output = alloc(output_shape);
     let transpose = TransposeByIndex::new(x, output.clone(), index);
     transpose.forward();
     output.set_creator(Rc::new(RefCell::new(Box::new(transpose))));

@@ -272,7 +272,7 @@ fn clip_backward_assign_inner<T: Num, D: Device>(
 
 impl<R: Repr, S: DimTrait, D: Device> Matrix<R, S, D> {
     pub fn clip(&self, min: R::Item, max: R::Item) -> Matrix<Owned<R::Item>, S, D> {
-        let mut output = Matrix::<_, S, D>::zeros_like(self);
+        let mut output = Matrix::<_, S, D>::alloc_like(self);
         let s_v = self.to_ref().into_dyn_dim();
 
         clip_inner(&s_v, &output.to_ref_mut().into_dyn_dim(), min, max);
@@ -281,7 +281,7 @@ impl<R: Repr, S: DimTrait, D: Device> Matrix<R, S, D> {
     }
 
     pub fn clip_backward_mask(&self, min: R::Item, max: R::Item) -> Matrix<Owned<R::Item>, S, D> {
-        let mut output = Matrix::<Owned<R::Item>, S, D>::zeros_like(self);
+        let mut output = Matrix::<Owned<R::Item>, S, D>::alloc_like(self);
         let s_v = self.to_ref().into_dyn_dim();
         {
             let mask_v = output.to_ref_mut().into_dyn_dim();
