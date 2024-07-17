@@ -5,7 +5,7 @@ use zenu_cuda_kernel_sys::*;
 pub mod activation;
 
 macro_rules! impl_array_scalar {
-    ($name:ident, $double_fn:ident, $float_fn:ident) => {
+    ($name:ident, $name_ptr:ident, $double_fn:ident, $float_fn:ident, $double_fn_ptr:ident, $float_fn_ptr:ident) => {
         pub fn $name<T: 'static>(
             out: *mut T,
             a: *const T,
@@ -29,31 +29,75 @@ macro_rules! impl_array_scalar {
                 unsafe { $double_fn(a, size, stride, scalar, out, out_stride) }
             }
         }
+
+        pub fn $name_ptr<T: 'static>(
+            out: *mut T,
+            a: *const T,
+            scalar: *const T,
+            size: usize,
+            out_stride: usize,
+            stride: usize,
+        ) {
+            let size = size as ::std::os::raw::c_int;
+            let stride = stride as ::std::os::raw::c_int;
+            let out_stride = out_stride as i32;
+            if TypeId::of::<T>() == TypeId::of::<f32>() {
+                let a = a as *mut f32;
+                let out = out as *mut f32;
+                let scalar = scalar as *mut f32;
+                unsafe { $float_fn_ptr(a, size, stride, scalar, out, out_stride) };
+            } else if TypeId::of::<T>() == TypeId::of::<f64>() {
+                let a = a as *mut f64;
+                let out = out as *mut f64;
+                let scalar = scalar as *mut f64;
+                unsafe { $double_fn_ptr(a, size, stride, scalar, out, out_stride) }
+            }
+        }
     };
 }
 impl_array_scalar!(
     array_scalar_add,
+    array_scalar_add_ptr,
     array_scalar_add_double,
-    array_scalar_add_float
+    array_scalar_add_float,
+    array_scalar_pointer_add_double,
+    array_scalar_pointer_add_float
 );
 impl_array_scalar!(
     array_scalar_sub,
+    array_scalar_sub_ptr,
     array_scalar_sub_double,
-    array_scalar_sub_float
+    array_scalar_sub_float,
+    array_scalar_pointer_sub_double,
+    array_scalar_pointer_sub_float
 );
 impl_array_scalar!(
     array_scalar_mul,
+    array_scalar_mul_ptr,
     array_scalar_mul_double,
-    array_scalar_mul_float
+    array_scalar_mul_float,
+    array_scalar_pointer_mul_double,
+    array_scalar_pointer_mul_float
 );
 impl_array_scalar!(
     array_scalar_div,
+    array_scalar_div_ptr,
     array_scalar_div_double,
-    array_scalar_div_float
+    array_scalar_div_float,
+    array_scalar_pointer_div_double,
+    array_scalar_pointer_div_float
 );
+
 macro_rules! impl_array_scalar_assign {
-    ($name:ident, $double_fn:ident, $float_fn:ident) => {
-        pub fn $name<T: 'static>(a: *mut T, scalar: T, size: usize, stride: usize) {
+    (
+        $name_scalar:ident, 
+        $name_scalar_ptr: ident, 
+        $double_fn:ident, 
+        $float_fn:ident, 
+        $double_pointer:ident, 
+        $float_pointer:ident
+    ) => {
+        pub fn $name_scalar<T: 'static>(a: *mut T, scalar: T, size: usize, stride: usize) {
             let size = size as ::std::os::raw::c_int;
             let stride = stride as ::std::os::raw::c_int;
             if TypeId::of::<T>() == TypeId::of::<f32>() {
@@ -66,27 +110,58 @@ macro_rules! impl_array_scalar_assign {
                 unsafe { $double_fn(a, size, stride, scalar) }
             }
         }
+
+        pub fn $name_scalar_ptr<T: 'static>(
+            a: *mut T,
+            scalar: *const T,
+            size: usize,
+            stride: usize,
+        ) {
+            let size = size as ::std::os::raw::c_int;
+            let stride = stride as ::std::os::raw::c_int;
+            if TypeId::of::<T>() == TypeId::of::<f32>() {
+                let a = a as *mut f32;
+                let scalar = scalar as *mut f32;
+                unsafe { $float_pointer(a, size, stride, scalar) };
+            } else if TypeId::of::<T>() == TypeId::of::<f64>() {
+                let a = a as *mut f64;
+                let scalar = scalar as *mut f64;
+                unsafe { $double_pointer(a, size, stride, scalar) }
+            }
+        }
     };
 }
 impl_array_scalar_assign!(
     array_scalar_add_assign,
+    array_scalar_add_assign_ptr,
     array_scalar_add_assign_double,
-    array_scalar_add_assign_float
+    array_scalar_add_assign_float,
+    array_scalar_pointer_add_assign_double,
+    array_scalar_pointer_add_assign_float
 );
 impl_array_scalar_assign!(
     array_scalar_sub_assign,
+    array_scalar_sub_assign_ptr,
     array_scalar_sub_assign_double,
-    array_scalar_sub_assign_float
+    array_scalar_sub_assign_float,
+    array_scalar_pointer_sub_assign_double,
+    array_scalar_pointer_sub_assign_float
 );
 impl_array_scalar_assign!(
     array_scalar_mul_assign,
+    array_scalar_mul_assign_ptr,
     array_scalar_mul_assign_double,
-    array_scalar_mul_assign_float
+    array_scalar_mul_assign_float,
+    array_scalar_pointer_mul_assign_double,
+    array_scalar_pointer_mul_assign_float
 );
 impl_array_scalar_assign!(
     array_scalar_div_assign,
+    array_scalar_div_assign_ptr,
     array_scalar_div_assign_double,
-    array_scalar_div_assign_float
+    array_scalar_div_assign_float,
+    array_scalar_pointer_div_assign_double,
+    array_scalar_pointer_div_assign_float
 );
 
 macro_rules! impl_arra_array {
