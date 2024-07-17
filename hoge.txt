@@ -1,0 +1,574 @@
+  kernel/array_array.cu:3:1: warning: multi-line comment [-Wcomment]
+      3 | // #define CUDA_VEC_VEC_OP(op, func, assign_func, type)                                                                                          \
+        | ^
+  kernel/array_array.cu:28:1: warning: multi-line comment [-Wcomment]
+     28 | // #define DEFINE_ARRAY_ARRAY_WRAPPER(type, op)                                                                                   \
+        | ^
+  kernel/array_array.cu:3:1: warning: multi-line comment [-Wcomment]
+      3 | // #define CUDA_VEC_VEC_OP(op, func, assign_func, type)                                                                                          \
+        | ^
+  kernel/array_array.cu:28:1: warning: multi-line comment [-Wcomment]
+     28 | // #define DEFINE_ARRAY_ARRAY_WRAPPER(type, op)                                                                                   \
+        | ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/detail/transform.inl(164): error: class "thrust::THRUST_200302_520_530_600_610_620_750_NS::iterator_system<strided_range<float>::iterator>" has no member "type"
+      typedef typename thrust::iterator_system<InputIterator1>::type System1;
+                                                                ^
+            detected during:
+              instantiation of "OutputIterator thrust::THRUST_200302_520_530_600_610_620_750_NS::transform(InputIterator1, InputIterator1, InputIterator2, OutputIterator, BinaryFunction) [with InputIterator1=strided_range<float>::iterator, InputIterator2=strided_range<float>::iterator, OutputIterator=strided_range<float>::iterator, BinaryFunction=Add<float>]" at line 110 of kernel/array_array.cu
+              instantiation of "void array_array_op(T *, int, T *, int, T *, int, int, Op) [with T=float, Op=Add<float>]" at line 123 of kernel/array_array.cu
+  
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/detail/transform.inl(165): error: class "thrust::THRUST_200302_520_530_600_610_620_750_NS::iterator_system<strided_range<float>::iterator>" has no member "type"
+      typedef typename thrust::iterator_system<InputIterator2>::type System2;
+                                                                ^
+            detected during:
+              instantiation of "OutputIterator thrust::THRUST_200302_520_530_600_610_620_750_NS::transform(InputIterator1, InputIterator1, InputIterator2, OutputIterator, BinaryFunction) [with InputIterator1=strided_range<float>::iterator, InputIterator2=strided_range<float>::iterator, OutputIterator=strided_range<float>::iterator, BinaryFunction=Add<float>]" at line 110 of kernel/array_array.cu
+              instantiation of "void array_array_op(T *, int, T *, int, T *, int, int, Op) [with T=float, Op=Add<float>]" at line 123 of kernel/array_array.cu
+  
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/detail/transform.inl(166): error: class "thrust::THRUST_200302_520_530_600_610_620_750_NS::iterator_system<strided_range<float>::iterator>" has no member "type"
+      typedef typename thrust::iterator_system<OutputIterator>::type System3;
+                                                                ^
+            detected during:
+              instantiation of "OutputIterator thrust::THRUST_200302_520_530_600_610_620_750_NS::transform(InputIterator1, InputIterator1, InputIterator2, OutputIterator, BinaryFunction) [with InputIterator1=strided_range<float>::iterator, InputIterator2=strided_range<float>::iterator, OutputIterator=strided_range<float>::iterator, BinaryFunction=Add<float>]" at line 110 of kernel/array_array.cu
+              instantiation of "void array_array_op(T *, int, T *, int, T *, int, int, Op) [with T=float, Op=Add<float>]" at line 123 of kernel/array_array.cu
+  
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/detail/transform.inl(172): error: no instance of overloaded function "select_system" matches the argument list
+              argument types are: (System1, System2, System3)
+      return thrust::transform(select_system(system1,system2,system3), first1, last1, first2, result, op);
+                               ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/system/detail/generic/select_system.inl(94): note #3322-D: number of parameters of function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::system::detail::generic::select_system(thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System> &)" does not match the call
+        select_system(thrust::execution_policy<System> &system)
+        ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/system/detail/generic/select_system.inl(105): note #3322-D: number of parameters of function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::system::detail::generic::select_system(thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System1> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System2> &)" does not match the call
+        &select_system(thrust::execution_policy<System1> &system1,
+         ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/system/detail/generic/select_system.inl(118): note #3327-D: candidate function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::system::detail::generic::select_system(thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System1> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System2> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System3> &)" failed deduction
+        &select_system(thrust::execution_policy<System1> &system1,
+         ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/system/detail/generic/select_system.inl(132): note #3322-D: number of parameters of function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::system::detail::generic::select_system(thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System1> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System2> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System3> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System4> &)" does not match the call
+        &select_system(thrust::execution_policy<System1> &system1,
+         ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/system/detail/generic/select_system.inl(147): note #3322-D: number of parameters of function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::system::detail::generic::select_system(thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System1> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System2> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System3> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System4> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System5> &)" does not match the call
+        &select_system(thrust::execution_policy<System1> &system1,
+         ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/system/detail/generic/select_system.inl(163): note #3322-D: number of parameters of function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::system::detail::generic::select_system(thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System1> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System2> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System3> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System4> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System5> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System6> &)" does not match the call
+        &select_system(thrust::execution_policy<System1> &system1,
+         ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/system/detail/generic/select_system.inl(176): note #3322-D: number of parameters of function "thrust::THRUST_200302_520_530_600_610_620_750_NS::system::detail::generic::select_system(thrust::THRUST_200302_520_530_600_610_620_750_NS::any_system_tag)" does not match the call
+    thrust::device_system_tag select_system(thrust::any_system_tag)
+                              ^
+            detected during:
+              instantiation of "OutputIterator thrust::THRUST_200302_520_530_600_610_620_750_NS::transform(InputIterator1, InputIterator1, InputIterator2, OutputIterator, BinaryFunction) [with InputIterator1=strided_range<float>::iterator, InputIterator2=strided_range<float>::iterator, OutputIterator=strided_range<float>::iterator, BinaryFunction=Add<float>]" at line 110 of kernel/array_array.cu
+              instantiation of "void array_array_op(T *, int, T *, int, T *, int, int, Op) [with T=float, Op=Add<float>]" at line 123 of kernel/array_array.cu
+  
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/detail/transform.inl(172): error: no instance of overloaded function "thrust::transform" matches the argument list
+              argument types are: (<error-type>, strided_range<float>::iterator, strided_range<float>::iterator, strided_range<float>::iterator, strided_range<float>::iterator, Add<float>)
+      return thrust::transform(select_system(system1,system2,system3), first1, last1, first2, result, op);
+             ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/detail/transform.inl(44): note #3322-D: number of parameters of function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::transform(const thrust::THRUST_200302_520_530_600_610_620_750_NS::detail::execution_policy_base<DerivedPolicy> &, InputIterator, InputIterator, OutputIterator, UnaryFunction)" does not match the call
+     OutputIterator transform(const thrust::detail::execution_policy_base<DerivedPolicy> &exec,
+                    ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/detail/transform.inl(135): note #3322-D: number of parameters of function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::transform(InputIterator, InputIterator, OutputIterator, UnaryFunction)" does not match the call
+      OutputIterator transform(InputIterator first,
+                     ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/detail/transform.inl(61): note #3327-D: candidate function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::transform(const thrust::THRUST_200302_520_530_600_610_620_750_NS::detail::execution_policy_base<DerivedPolicy> &, InputIterator1, InputIterator1, InputIterator2, OutputIterator, BinaryFunction)" failed deduction
+     OutputIterator transform(const thrust::detail::execution_policy_base<DerivedPolicy> &exec,
+                    ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/detail/transform.inl(156): note #3322-D: number of parameters of function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::transform(InputIterator1, InputIterator1, InputIterator2, OutputIterator, BinaryFunction)" does not match the call
+      OutputIterator transform(InputIterator1 first1,
+                     ^
+            detected during:
+              instantiation of "OutputIterator thrust::THRUST_200302_520_530_600_610_620_750_NS::transform(InputIterator1, InputIterator1, InputIterator2, OutputIterator, BinaryFunction) [with InputIterator1=strided_range<float>::iterator, InputIterator2=strided_range<float>::iterator, OutputIterator=strided_range<float>::iterator, BinaryFunction=Add<float>]" at line 110 of kernel/array_array.cu
+              instantiation of "void array_array_op(T *, int, T *, int, T *, int, int, Op) [with T=float, Op=Add<float>]" at line 123 of kernel/array_array.cu
+  
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/detail/transform.inl(164): error: class "thrust::THRUST_200302_520_530_600_610_620_750_NS::iterator_system<strided_range<float>::iterator>" has no member "type"
+      typedef typename thrust::iterator_system<InputIterator1>::type System1;
+                                                                ^
+            detected during:
+              instantiation of "OutputIterator thrust::THRUST_200302_520_530_600_610_620_750_NS::transform(InputIterator1, InputIterator1, InputIterator2, OutputIterator, BinaryFunction) [with InputIterator1=strided_range<float>::iterator, InputIterator2=strided_range<float>::iterator, OutputIterator=strided_range<float>::iterator, BinaryFunction=Subtract<float>]" at line 110 of kernel/array_array.cu
+              instantiation of "void array_array_op(T *, int, T *, int, T *, int, int, Op) [with T=float, Op=Subtract<float>]" at line 124 of kernel/array_array.cu
+  
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/detail/transform.inl(165): error: class "thrust::THRUST_200302_520_530_600_610_620_750_NS::iterator_system<strided_range<float>::iterator>" has no member "type"
+      typedef typename thrust::iterator_system<InputIterator2>::type System2;
+                                                                ^
+            detected during:
+              instantiation of "OutputIterator thrust::THRUST_200302_520_530_600_610_620_750_NS::transform(InputIterator1, InputIterator1, InputIterator2, OutputIterator, BinaryFunction) [with InputIterator1=strided_range<float>::iterator, InputIterator2=strided_range<float>::iterator, OutputIterator=strided_range<float>::iterator, BinaryFunction=Subtract<float>]" at line 110 of kernel/array_array.cu
+              instantiation of "void array_array_op(T *, int, T *, int, T *, int, int, Op) [with T=float, Op=Subtract<float>]" at line 124 of kernel/array_array.cu
+  
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/detail/transform.inl(166): error: class "thrust::THRUST_200302_520_530_600_610_620_750_NS::iterator_system<strided_range<float>::iterator>" has no member "type"
+      typedef typename thrust::iterator_system<OutputIterator>::type System3;
+                                                                ^
+            detected during:
+              instantiation of "OutputIterator thrust::THRUST_200302_520_530_600_610_620_750_NS::transform(InputIterator1, InputIterator1, InputIterator2, OutputIterator, BinaryFunction) [with InputIterator1=strided_range<float>::iterator, InputIterator2=strided_range<float>::iterator, OutputIterator=strided_range<float>::iterator, BinaryFunction=Subtract<float>]" at line 110 of kernel/array_array.cu
+              instantiation of "void array_array_op(T *, int, T *, int, T *, int, int, Op) [with T=float, Op=Subtract<float>]" at line 124 of kernel/array_array.cu
+  
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/detail/transform.inl(172): error: no instance of overloaded function "select_system" matches the argument list
+              argument types are: (System1, System2, System3)
+      return thrust::transform(select_system(system1,system2,system3), first1, last1, first2, result, op);
+                               ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/system/detail/generic/select_system.inl(94): note #3322-D: number of parameters of function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::system::detail::generic::select_system(thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System> &)" does not match the call
+        select_system(thrust::execution_policy<System> &system)
+        ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/system/detail/generic/select_system.inl(105): note #3322-D: number of parameters of function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::system::detail::generic::select_system(thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System1> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System2> &)" does not match the call
+        &select_system(thrust::execution_policy<System1> &system1,
+         ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/system/detail/generic/select_system.inl(118): note #3327-D: candidate function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::system::detail::generic::select_system(thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System1> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System2> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System3> &)" failed deduction
+        &select_system(thrust::execution_policy<System1> &system1,
+         ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/system/detail/generic/select_system.inl(132): note #3322-D: number of parameters of function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::system::detail::generic::select_system(thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System1> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System2> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System3> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System4> &)" does not match the call
+        &select_system(thrust::execution_policy<System1> &system1,
+         ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/system/detail/generic/select_system.inl(147): note #3322-D: number of parameters of function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::system::detail::generic::select_system(thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System1> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System2> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System3> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System4> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System5> &)" does not match the call
+        &select_system(thrust::execution_policy<System1> &system1,
+         ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/system/detail/generic/select_system.inl(163): note #3322-D: number of parameters of function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::system::detail::generic::select_system(thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System1> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System2> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System3> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System4> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System5> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System6> &)" does not match the call
+        &select_system(thrust::execution_policy<System1> &system1,
+         ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/system/detail/generic/select_system.inl(176): note #3322-D: number of parameters of function "thrust::THRUST_200302_520_530_600_610_620_750_NS::system::detail::generic::select_system(thrust::THRUST_200302_520_530_600_610_620_750_NS::any_system_tag)" does not match the call
+    thrust::device_system_tag select_system(thrust::any_system_tag)
+                              ^
+            detected during:
+              instantiation of "OutputIterator thrust::THRUST_200302_520_530_600_610_620_750_NS::transform(InputIterator1, InputIterator1, InputIterator2, OutputIterator, BinaryFunction) [with InputIterator1=strided_range<float>::iterator, InputIterator2=strided_range<float>::iterator, OutputIterator=strided_range<float>::iterator, BinaryFunction=Subtract<float>]" at line 110 of kernel/array_array.cu
+              instantiation of "void array_array_op(T *, int, T *, int, T *, int, int, Op) [with T=float, Op=Subtract<float>]" at line 124 of kernel/array_array.cu
+  
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/detail/transform.inl(172): error: no instance of overloaded function "thrust::transform" matches the argument list
+              argument types are: (<error-type>, strided_range<float>::iterator, strided_range<float>::iterator, strided_range<float>::iterator, strided_range<float>::iterator, Subtract<float>)
+      return thrust::transform(select_system(system1,system2,system3), first1, last1, first2, result, op);
+             ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/detail/transform.inl(44): note #3322-D: number of parameters of function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::transform(const thrust::THRUST_200302_520_530_600_610_620_750_NS::detail::execution_policy_base<DerivedPolicy> &, InputIterator, InputIterator, OutputIterator, UnaryFunction)" does not match the call
+     OutputIterator transform(const thrust::detail::execution_policy_base<DerivedPolicy> &exec,
+                    ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/detail/transform.inl(135): note #3322-D: number of parameters of function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::transform(InputIterator, InputIterator, OutputIterator, UnaryFunction)" does not match the call
+      OutputIterator transform(InputIterator first,
+                     ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/detail/transform.inl(61): note #3327-D: candidate function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::transform(const thrust::THRUST_200302_520_530_600_610_620_750_NS::detail::execution_policy_base<DerivedPolicy> &, InputIterator1, InputIterator1, InputIterator2, OutputIterator, BinaryFunction)" failed deduction
+     OutputIterator transform(const thrust::detail::execution_policy_base<DerivedPolicy> &exec,
+                    ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/detail/transform.inl(156): note #3322-D: number of parameters of function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::transform(InputIterator1, InputIterator1, InputIterator2, OutputIterator, BinaryFunction)" does not match the call
+      OutputIterator transform(InputIterator1 first1,
+                     ^
+            detected during:
+              instantiation of "OutputIterator thrust::THRUST_200302_520_530_600_610_620_750_NS::transform(InputIterator1, InputIterator1, InputIterator2, OutputIterator, BinaryFunction) [with InputIterator1=strided_range<float>::iterator, InputIterator2=strided_range<float>::iterator, OutputIterator=strided_range<float>::iterator, BinaryFunction=Subtract<float>]" at line 110 of kernel/array_array.cu
+              instantiation of "void array_array_op(T *, int, T *, int, T *, int, int, Op) [with T=float, Op=Subtract<float>]" at line 124 of kernel/array_array.cu
+  
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/detail/transform.inl(164): error: class "thrust::THRUST_200302_520_530_600_610_620_750_NS::iterator_system<strided_range<float>::iterator>" has no member "type"
+      typedef typename thrust::iterator_system<InputIterator1>::type System1;
+                                                                ^
+            detected during:
+              instantiation of "OutputIterator thrust::THRUST_200302_520_530_600_610_620_750_NS::transform(InputIterator1, InputIterator1, InputIterator2, OutputIterator, BinaryFunction) [with InputIterator1=strided_range<float>::iterator, InputIterator2=strided_range<float>::iterator, OutputIterator=strided_range<float>::iterator, BinaryFunction=Multiply<float>]" at line 110 of kernel/array_array.cu
+              instantiation of "void array_array_op(T *, int, T *, int, T *, int, int, Op) [with T=float, Op=Multiply<float>]" at line 125 of kernel/array_array.cu
+  
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/detail/transform.inl(165): error: class "thrust::THRUST_200302_520_530_600_610_620_750_NS::iterator_system<strided_range<float>::iterator>" has no member "type"
+      typedef typename thrust::iterator_system<InputIterator2>::type System2;
+                                                                ^
+            detected during:
+              instantiation of "OutputIterator thrust::THRUST_200302_520_530_600_610_620_750_NS::transform(InputIterator1, InputIterator1, InputIterator2, OutputIterator, BinaryFunction) [with InputIterator1=strided_range<float>::iterator, InputIterator2=strided_range<float>::iterator, OutputIterator=strided_range<float>::iterator, BinaryFunction=Multiply<float>]" at line 110 of kernel/array_array.cu
+              instantiation of "void array_array_op(T *, int, T *, int, T *, int, int, Op) [with T=float, Op=Multiply<float>]" at line 125 of kernel/array_array.cu
+  
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/detail/transform.inl(166): error: class "thrust::THRUST_200302_520_530_600_610_620_750_NS::iterator_system<strided_range<float>::iterator>" has no member "type"
+      typedef typename thrust::iterator_system<OutputIterator>::type System3;
+                                                                ^
+            detected during:
+              instantiation of "OutputIterator thrust::THRUST_200302_520_530_600_610_620_750_NS::transform(InputIterator1, InputIterator1, InputIterator2, OutputIterator, BinaryFunction) [with InputIterator1=strided_range<float>::iterator, InputIterator2=strided_range<float>::iterator, OutputIterator=strided_range<float>::iterator, BinaryFunction=Multiply<float>]" at line 110 of kernel/array_array.cu
+              instantiation of "void array_array_op(T *, int, T *, int, T *, int, int, Op) [with T=float, Op=Multiply<float>]" at line 125 of kernel/array_array.cu
+  
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/detail/transform.inl(172): error: no instance of overloaded function "select_system" matches the argument list
+              argument types are: (System1, System2, System3)
+      return thrust::transform(select_system(system1,system2,system3), first1, last1, first2, result, op);
+                               ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/system/detail/generic/select_system.inl(94): note #3322-D: number of parameters of function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::system::detail::generic::select_system(thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System> &)" does not match the call
+        select_system(thrust::execution_policy<System> &system)
+        ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/system/detail/generic/select_system.inl(105): note #3322-D: number of parameters of function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::system::detail::generic::select_system(thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System1> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System2> &)" does not match the call
+        &select_system(thrust::execution_policy<System1> &system1,
+         ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/system/detail/generic/select_system.inl(118): note #3327-D: candidate function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::system::detail::generic::select_system(thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System1> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System2> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System3> &)" failed deduction
+        &select_system(thrust::execution_policy<System1> &system1,
+         ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/system/detail/generic/select_system.inl(132): note #3322-D: number of parameters of function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::system::detail::generic::select_system(thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System1> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System2> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System3> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System4> &)" does not match the call
+        &select_system(thrust::execution_policy<System1> &system1,
+         ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/system/detail/generic/select_system.inl(147): note #3322-D: number of parameters of function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::system::detail::generic::select_system(thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System1> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System2> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System3> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System4> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System5> &)" does not match the call
+        &select_system(thrust::execution_policy<System1> &system1,
+         ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/system/detail/generic/select_system.inl(163): note #3322-D: number of parameters of function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::system::detail::generic::select_system(thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System1> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System2> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System3> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System4> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System5> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System6> &)" does not match the call
+        &select_system(thrust::execution_policy<System1> &system1,
+         ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/system/detail/generic/select_system.inl(176): note #3322-D: number of parameters of function "thrust::THRUST_200302_520_530_600_610_620_750_NS::system::detail::generic::select_system(thrust::THRUST_200302_520_530_600_610_620_750_NS::any_system_tag)" does not match the call
+    thrust::device_system_tag select_system(thrust::any_system_tag)
+                              ^
+            detected during:
+              instantiation of "OutputIterator thrust::THRUST_200302_520_530_600_610_620_750_NS::transform(InputIterator1, InputIterator1, InputIterator2, OutputIterator, BinaryFunction) [with InputIterator1=strided_range<float>::iterator, InputIterator2=strided_range<float>::iterator, OutputIterator=strided_range<float>::iterator, BinaryFunction=Multiply<float>]" at line 110 of kernel/array_array.cu
+              instantiation of "void array_array_op(T *, int, T *, int, T *, int, int, Op) [with T=float, Op=Multiply<float>]" at line 125 of kernel/array_array.cu
+  
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/detail/transform.inl(172): error: no instance of overloaded function "thrust::transform" matches the argument list
+              argument types are: (<error-type>, strided_range<float>::iterator, strided_range<float>::iterator, strided_range<float>::iterator, strided_range<float>::iterator, Multiply<float>)
+      return thrust::transform(select_system(system1,system2,system3), first1, last1, first2, result, op);
+             ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/detail/transform.inl(44): note #3322-D: number of parameters of function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::transform(const thrust::THRUST_200302_520_530_600_610_620_750_NS::detail::execution_policy_base<DerivedPolicy> &, InputIterator, InputIterator, OutputIterator, UnaryFunction)" does not match the call
+     OutputIterator transform(const thrust::detail::execution_policy_base<DerivedPolicy> &exec,
+                    ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/detail/transform.inl(135): note #3322-D: number of parameters of function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::transform(InputIterator, InputIterator, OutputIterator, UnaryFunction)" does not match the call
+      OutputIterator transform(InputIterator first,
+                     ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/detail/transform.inl(61): note #3327-D: candidate function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::transform(const thrust::THRUST_200302_520_530_600_610_620_750_NS::detail::execution_policy_base<DerivedPolicy> &, InputIterator1, InputIterator1, InputIterator2, OutputIterator, BinaryFunction)" failed deduction
+     OutputIterator transform(const thrust::detail::execution_policy_base<DerivedPolicy> &exec,
+                    ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/detail/transform.inl(156): note #3322-D: number of parameters of function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::transform(InputIterator1, InputIterator1, InputIterator2, OutputIterator, BinaryFunction)" does not match the call
+      OutputIterator transform(InputIterator1 first1,
+                     ^
+            detected during:
+              instantiation of "OutputIterator thrust::THRUST_200302_520_530_600_610_620_750_NS::transform(InputIterator1, InputIterator1, InputIterator2, OutputIterator, BinaryFunction) [with InputIterator1=strided_range<float>::iterator, InputIterator2=strided_range<float>::iterator, OutputIterator=strided_range<float>::iterator, BinaryFunction=Multiply<float>]" at line 110 of kernel/array_array.cu
+              instantiation of "void array_array_op(T *, int, T *, int, T *, int, int, Op) [with T=float, Op=Multiply<float>]" at line 125 of kernel/array_array.cu
+  
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/detail/transform.inl(164): error: class "thrust::THRUST_200302_520_530_600_610_620_750_NS::iterator_system<strided_range<float>::iterator>" has no member "type"
+      typedef typename thrust::iterator_system<InputIterator1>::type System1;
+                                                                ^
+            detected during:
+              instantiation of "OutputIterator thrust::THRUST_200302_520_530_600_610_620_750_NS::transform(InputIterator1, InputIterator1, InputIterator2, OutputIterator, BinaryFunction) [with InputIterator1=strided_range<float>::iterator, InputIterator2=strided_range<float>::iterator, OutputIterator=strided_range<float>::iterator, BinaryFunction=Divide<float>]" at line 110 of kernel/array_array.cu
+              instantiation of "void array_array_op(T *, int, T *, int, T *, int, int, Op) [with T=float, Op=Divide<float>]" at line 126 of kernel/array_array.cu
+  
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/detail/transform.inl(165): error: class "thrust::THRUST_200302_520_530_600_610_620_750_NS::iterator_system<strided_range<float>::iterator>" has no member "type"
+      typedef typename thrust::iterator_system<InputIterator2>::type System2;
+                                                                ^
+            detected during:
+              instantiation of "OutputIterator thrust::THRUST_200302_520_530_600_610_620_750_NS::transform(InputIterator1, InputIterator1, InputIterator2, OutputIterator, BinaryFunction) [with InputIterator1=strided_range<float>::iterator, InputIterator2=strided_range<float>::iterator, OutputIterator=strided_range<float>::iterator, BinaryFunction=Divide<float>]" at line 110 of kernel/array_array.cu
+              instantiation of "void array_array_op(T *, int, T *, int, T *, int, int, Op) [with T=float, Op=Divide<float>]" at line 126 of kernel/array_array.cu
+  
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/detail/transform.inl(166): error: class "thrust::THRUST_200302_520_530_600_610_620_750_NS::iterator_system<strided_range<float>::iterator>" has no member "type"
+      typedef typename thrust::iterator_system<OutputIterator>::type System3;
+                                                                ^
+            detected during:
+              instantiation of "OutputIterator thrust::THRUST_200302_520_530_600_610_620_750_NS::transform(InputIterator1, InputIterator1, InputIterator2, OutputIterator, BinaryFunction) [with InputIterator1=strided_range<float>::iterator, InputIterator2=strided_range<float>::iterator, OutputIterator=strided_range<float>::iterator, BinaryFunction=Divide<float>]" at line 110 of kernel/array_array.cu
+              instantiation of "void array_array_op(T *, int, T *, int, T *, int, int, Op) [with T=float, Op=Divide<float>]" at line 126 of kernel/array_array.cu
+  
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/detail/transform.inl(172): error: no instance of overloaded function "select_system" matches the argument list
+              argument types are: (System1, System2, System3)
+      return thrust::transform(select_system(system1,system2,system3), first1, last1, first2, result, op);
+                               ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/system/detail/generic/select_system.inl(94): note #3322-D: number of parameters of function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::system::detail::generic::select_system(thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System> &)" does not match the call
+        select_system(thrust::execution_policy<System> &system)
+        ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/system/detail/generic/select_system.inl(105): note #3322-D: number of parameters of function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::system::detail::generic::select_system(thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System1> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System2> &)" does not match the call
+        &select_system(thrust::execution_policy<System1> &system1,
+         ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/system/detail/generic/select_system.inl(118): note #3327-D: candidate function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::system::detail::generic::select_system(thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System1> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System2> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System3> &)" failed deduction
+        &select_system(thrust::execution_policy<System1> &system1,
+         ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/system/detail/generic/select_system.inl(132): note #3322-D: number of parameters of function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::system::detail::generic::select_system(thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System1> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System2> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System3> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System4> &)" does not match the call
+        &select_system(thrust::execution_policy<System1> &system1,
+         ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/system/detail/generic/select_system.inl(147): note #3322-D: number of parameters of function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::system::detail::generic::select_system(thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System1> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System2> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System3> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System4> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System5> &)" does not match the call
+        &select_system(thrust::execution_policy<System1> &system1,
+         ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/system/detail/generic/select_system.inl(163): note #3322-D: number of parameters of function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::system::detail::generic::select_system(thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System1> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System2> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System3> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System4> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System5> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System6> &)" does not match the call
+        &select_system(thrust::execution_policy<System1> &system1,
+         ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/system/detail/generic/select_system.inl(176): note #3322-D: number of parameters of function "thrust::THRUST_200302_520_530_600_610_620_750_NS::system::detail::generic::select_system(thrust::THRUST_200302_520_530_600_610_620_750_NS::any_system_tag)" does not match the call
+    thrust::device_system_tag select_system(thrust::any_system_tag)
+                              ^
+            detected during:
+              instantiation of "OutputIterator thrust::THRUST_200302_520_530_600_610_620_750_NS::transform(InputIterator1, InputIterator1, InputIterator2, OutputIterator, BinaryFunction) [with InputIterator1=strided_range<float>::iterator, InputIterator2=strided_range<float>::iterator, OutputIterator=strided_range<float>::iterator, BinaryFunction=Divide<float>]" at line 110 of kernel/array_array.cu
+              instantiation of "void array_array_op(T *, int, T *, int, T *, int, int, Op) [with T=float, Op=Divide<float>]" at line 126 of kernel/array_array.cu
+  
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/detail/transform.inl(172): error: no instance of overloaded function "thrust::transform" matches the argument list
+              argument types are: (<error-type>, strided_range<float>::iterator, strided_range<float>::iterator, strided_range<float>::iterator, strided_range<float>::iterator, Divide<float>)
+      return thrust::transform(select_system(system1,system2,system3), first1, last1, first2, result, op);
+             ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/detail/transform.inl(44): note #3322-D: number of parameters of function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::transform(const thrust::THRUST_200302_520_530_600_610_620_750_NS::detail::execution_policy_base<DerivedPolicy> &, InputIterator, InputIterator, OutputIterator, UnaryFunction)" does not match the call
+     OutputIterator transform(const thrust::detail::execution_policy_base<DerivedPolicy> &exec,
+                    ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/detail/transform.inl(135): note #3322-D: number of parameters of function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::transform(InputIterator, InputIterator, OutputIterator, UnaryFunction)" does not match the call
+      OutputIterator transform(InputIterator first,
+                     ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/detail/transform.inl(61): note #3327-D: candidate function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::transform(const thrust::THRUST_200302_520_530_600_610_620_750_NS::detail::execution_policy_base<DerivedPolicy> &, InputIterator1, InputIterator1, InputIterator2, OutputIterator, BinaryFunction)" failed deduction
+     OutputIterator transform(const thrust::detail::execution_policy_base<DerivedPolicy> &exec,
+                    ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/detail/transform.inl(156): note #3322-D: number of parameters of function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::transform(InputIterator1, InputIterator1, InputIterator2, OutputIterator, BinaryFunction)" does not match the call
+      OutputIterator transform(InputIterator1 first1,
+                     ^
+            detected during:
+              instantiation of "OutputIterator thrust::THRUST_200302_520_530_600_610_620_750_NS::transform(InputIterator1, InputIterator1, InputIterator2, OutputIterator, BinaryFunction) [with InputIterator1=strided_range<float>::iterator, InputIterator2=strided_range<float>::iterator, OutputIterator=strided_range<float>::iterator, BinaryFunction=Divide<float>]" at line 110 of kernel/array_array.cu
+              instantiation of "void array_array_op(T *, int, T *, int, T *, int, int, Op) [with T=float, Op=Divide<float>]" at line 126 of kernel/array_array.cu
+  
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/detail/transform.inl(164): error: class "thrust::THRUST_200302_520_530_600_610_620_750_NS::iterator_system<strided_range<double>::iterator>" has no member "type"
+      typedef typename thrust::iterator_system<InputIterator1>::type System1;
+                                                                ^
+            detected during:
+              instantiation of "OutputIterator thrust::THRUST_200302_520_530_600_610_620_750_NS::transform(InputIterator1, InputIterator1, InputIterator2, OutputIterator, BinaryFunction) [with InputIterator1=strided_range<double>::iterator, InputIterator2=strided_range<double>::iterator, OutputIterator=strided_range<double>::iterator, BinaryFunction=Add<double>]" at line 110 of kernel/array_array.cu
+              instantiation of "void array_array_op(T *, int, T *, int, T *, int, int, Op) [with T=double, Op=Add<double>]" at line 127 of kernel/array_array.cu
+  
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/detail/transform.inl(165): error: class "thrust::THRUST_200302_520_530_600_610_620_750_NS::iterator_system<strided_range<double>::iterator>" has no member "type"
+      typedef typename thrust::iterator_system<InputIterator2>::type System2;
+                                                                ^
+            detected during:
+              instantiation of "OutputIterator thrust::THRUST_200302_520_530_600_610_620_750_NS::transform(InputIterator1, InputIterator1, InputIterator2, OutputIterator, BinaryFunction) [with InputIterator1=strided_range<double>::iterator, InputIterator2=strided_range<double>::iterator, OutputIterator=strided_range<double>::iterator, BinaryFunction=Add<double>]" at line 110 of kernel/array_array.cu
+              instantiation of "void array_array_op(T *, int, T *, int, T *, int, int, Op) [with T=double, Op=Add<double>]" at line 127 of kernel/array_array.cu
+  
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/detail/transform.inl(166): error: class "thrust::THRUST_200302_520_530_600_610_620_750_NS::iterator_system<strided_range<double>::iterator>" has no member "type"
+      typedef typename thrust::iterator_system<OutputIterator>::type System3;
+                                                                ^
+            detected during:
+              instantiation of "OutputIterator thrust::THRUST_200302_520_530_600_610_620_750_NS::transform(InputIterator1, InputIterator1, InputIterator2, OutputIterator, BinaryFunction) [with InputIterator1=strided_range<double>::iterator, InputIterator2=strided_range<double>::iterator, OutputIterator=strided_range<double>::iterator, BinaryFunction=Add<double>]" at line 110 of kernel/array_array.cu
+              instantiation of "void array_array_op(T *, int, T *, int, T *, int, int, Op) [with T=double, Op=Add<double>]" at line 127 of kernel/array_array.cu
+  
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/detail/transform.inl(172): error: no instance of overloaded function "select_system" matches the argument list
+              argument types are: (System1, System2, System3)
+      return thrust::transform(select_system(system1,system2,system3), first1, last1, first2, result, op);
+                               ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/system/detail/generic/select_system.inl(94): note #3322-D: number of parameters of function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::system::detail::generic::select_system(thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System> &)" does not match the call
+        select_system(thrust::execution_policy<System> &system)
+        ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/system/detail/generic/select_system.inl(105): note #3322-D: number of parameters of function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::system::detail::generic::select_system(thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System1> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System2> &)" does not match the call
+        &select_system(thrust::execution_policy<System1> &system1,
+         ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/system/detail/generic/select_system.inl(118): note #3327-D: candidate function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::system::detail::generic::select_system(thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System1> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System2> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System3> &)" failed deduction
+        &select_system(thrust::execution_policy<System1> &system1,
+         ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/system/detail/generic/select_system.inl(132): note #3322-D: number of parameters of function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::system::detail::generic::select_system(thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System1> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System2> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System3> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System4> &)" does not match the call
+        &select_system(thrust::execution_policy<System1> &system1,
+         ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/system/detail/generic/select_system.inl(147): note #3322-D: number of parameters of function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::system::detail::generic::select_system(thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System1> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System2> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System3> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System4> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System5> &)" does not match the call
+        &select_system(thrust::execution_policy<System1> &system1,
+         ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/system/detail/generic/select_system.inl(163): note #3322-D: number of parameters of function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::system::detail::generic::select_system(thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System1> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System2> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System3> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System4> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System5> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System6> &)" does not match the call
+        &select_system(thrust::execution_policy<System1> &system1,
+         ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/system/detail/generic/select_system.inl(176): note #3322-D: number of parameters of function "thrust::THRUST_200302_520_530_600_610_620_750_NS::system::detail::generic::select_system(thrust::THRUST_200302_520_530_600_610_620_750_NS::any_system_tag)" does not match the call
+    thrust::device_system_tag select_system(thrust::any_system_tag)
+                              ^
+            detected during:
+              instantiation of "OutputIterator thrust::THRUST_200302_520_530_600_610_620_750_NS::transform(InputIterator1, InputIterator1, InputIterator2, OutputIterator, BinaryFunction) [with InputIterator1=strided_range<double>::iterator, InputIterator2=strided_range<double>::iterator, OutputIterator=strided_range<double>::iterator, BinaryFunction=Add<double>]" at line 110 of kernel/array_array.cu
+              instantiation of "void array_array_op(T *, int, T *, int, T *, int, int, Op) [with T=double, Op=Add<double>]" at line 127 of kernel/array_array.cu
+  
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/detail/transform.inl(172): error: no instance of overloaded function "thrust::transform" matches the argument list
+              argument types are: (<error-type>, strided_range<double>::iterator, strided_range<double>::iterator, strided_range<double>::iterator, strided_range<double>::iterator, Add<double>)
+      return thrust::transform(select_system(system1,system2,system3), first1, last1, first2, result, op);
+             ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/detail/transform.inl(44): note #3322-D: number of parameters of function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::transform(const thrust::THRUST_200302_520_530_600_610_620_750_NS::detail::execution_policy_base<DerivedPolicy> &, InputIterator, InputIterator, OutputIterator, UnaryFunction)" does not match the call
+     OutputIterator transform(const thrust::detail::execution_policy_base<DerivedPolicy> &exec,
+                    ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/detail/transform.inl(135): note #3322-D: number of parameters of function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::transform(InputIterator, InputIterator, OutputIterator, UnaryFunction)" does not match the call
+      OutputIterator transform(InputIterator first,
+                     ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/detail/transform.inl(61): note #3327-D: candidate function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::transform(const thrust::THRUST_200302_520_530_600_610_620_750_NS::detail::execution_policy_base<DerivedPolicy> &, InputIterator1, InputIterator1, InputIterator2, OutputIterator, BinaryFunction)" failed deduction
+     OutputIterator transform(const thrust::detail::execution_policy_base<DerivedPolicy> &exec,
+                    ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/detail/transform.inl(156): note #3322-D: number of parameters of function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::transform(InputIterator1, InputIterator1, InputIterator2, OutputIterator, BinaryFunction)" does not match the call
+      OutputIterator transform(InputIterator1 first1,
+                     ^
+            detected during:
+              instantiation of "OutputIterator thrust::THRUST_200302_520_530_600_610_620_750_NS::transform(InputIterator1, InputIterator1, InputIterator2, OutputIterator, BinaryFunction) [with InputIterator1=strided_range<double>::iterator, InputIterator2=strided_range<double>::iterator, OutputIterator=strided_range<double>::iterator, BinaryFunction=Add<double>]" at line 110 of kernel/array_array.cu
+              instantiation of "void array_array_op(T *, int, T *, int, T *, int, int, Op) [with T=double, Op=Add<double>]" at line 127 of kernel/array_array.cu
+  
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/detail/transform.inl(164): error: class "thrust::THRUST_200302_520_530_600_610_620_750_NS::iterator_system<strided_range<double>::iterator>" has no member "type"
+      typedef typename thrust::iterator_system<InputIterator1>::type System1;
+                                                                ^
+            detected during:
+              instantiation of "OutputIterator thrust::THRUST_200302_520_530_600_610_620_750_NS::transform(InputIterator1, InputIterator1, InputIterator2, OutputIterator, BinaryFunction) [with InputIterator1=strided_range<double>::iterator, InputIterator2=strided_range<double>::iterator, OutputIterator=strided_range<double>::iterator, BinaryFunction=Subtract<double>]" at line 110 of kernel/array_array.cu
+              instantiation of "void array_array_op(T *, int, T *, int, T *, int, int, Op) [with T=double, Op=Subtract<double>]" at line 128 of kernel/array_array.cu
+  
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/detail/transform.inl(165): error: class "thrust::THRUST_200302_520_530_600_610_620_750_NS::iterator_system<strided_range<double>::iterator>" has no member "type"
+      typedef typename thrust::iterator_system<InputIterator2>::type System2;
+                                                                ^
+            detected during:
+              instantiation of "OutputIterator thrust::THRUST_200302_520_530_600_610_620_750_NS::transform(InputIterator1, InputIterator1, InputIterator2, OutputIterator, BinaryFunction) [with InputIterator1=strided_range<double>::iterator, InputIterator2=strided_range<double>::iterator, OutputIterator=strided_range<double>::iterator, BinaryFunction=Subtract<double>]" at line 110 of kernel/array_array.cu
+              instantiation of "void array_array_op(T *, int, T *, int, T *, int, int, Op) [with T=double, Op=Subtract<double>]" at line 128 of kernel/array_array.cu
+  
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/detail/transform.inl(166): error: class "thrust::THRUST_200302_520_530_600_610_620_750_NS::iterator_system<strided_range<double>::iterator>" has no member "type"
+      typedef typename thrust::iterator_system<OutputIterator>::type System3;
+                                                                ^
+            detected during:
+              instantiation of "OutputIterator thrust::THRUST_200302_520_530_600_610_620_750_NS::transform(InputIterator1, InputIterator1, InputIterator2, OutputIterator, BinaryFunction) [with InputIterator1=strided_range<double>::iterator, InputIterator2=strided_range<double>::iterator, OutputIterator=strided_range<double>::iterator, BinaryFunction=Subtract<double>]" at line 110 of kernel/array_array.cu
+              instantiation of "void array_array_op(T *, int, T *, int, T *, int, int, Op) [with T=double, Op=Subtract<double>]" at line 128 of kernel/array_array.cu
+  
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/detail/transform.inl(172): error: no instance of overloaded function "select_system" matches the argument list
+              argument types are: (System1, System2, System3)
+      return thrust::transform(select_system(system1,system2,system3), first1, last1, first2, result, op);
+                               ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/system/detail/generic/select_system.inl(94): note #3322-D: number of parameters of function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::system::detail::generic::select_system(thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System> &)" does not match the call
+        select_system(thrust::execution_policy<System> &system)
+        ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/system/detail/generic/select_system.inl(105): note #3322-D: number of parameters of function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::system::detail::generic::select_system(thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System1> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System2> &)" does not match the call
+        &select_system(thrust::execution_policy<System1> &system1,
+         ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/system/detail/generic/select_system.inl(118): note #3327-D: candidate function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::system::detail::generic::select_system(thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System1> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System2> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System3> &)" failed deduction
+        &select_system(thrust::execution_policy<System1> &system1,
+         ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/system/detail/generic/select_system.inl(132): note #3322-D: number of parameters of function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::system::detail::generic::select_system(thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System1> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System2> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System3> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System4> &)" does not match the call
+        &select_system(thrust::execution_policy<System1> &system1,
+         ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/system/detail/generic/select_system.inl(147): note #3322-D: number of parameters of function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::system::detail::generic::select_system(thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System1> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System2> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System3> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System4> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System5> &)" does not match the call
+        &select_system(thrust::execution_policy<System1> &system1,
+         ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/system/detail/generic/select_system.inl(163): note #3322-D: number of parameters of function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::system::detail::generic::select_system(thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System1> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System2> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System3> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System4> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System5> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System6> &)" does not match the call
+        &select_system(thrust::execution_policy<System1> &system1,
+         ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/system/detail/generic/select_system.inl(176): note #3322-D: number of parameters of function "thrust::THRUST_200302_520_530_600_610_620_750_NS::system::detail::generic::select_system(thrust::THRUST_200302_520_530_600_610_620_750_NS::any_system_tag)" does not match the call
+    thrust::device_system_tag select_system(thrust::any_system_tag)
+                              ^
+            detected during:
+              instantiation of "OutputIterator thrust::THRUST_200302_520_530_600_610_620_750_NS::transform(InputIterator1, InputIterator1, InputIterator2, OutputIterator, BinaryFunction) [with InputIterator1=strided_range<double>::iterator, InputIterator2=strided_range<double>::iterator, OutputIterator=strided_range<double>::iterator, BinaryFunction=Subtract<double>]" at line 110 of kernel/array_array.cu
+              instantiation of "void array_array_op(T *, int, T *, int, T *, int, int, Op) [with T=double, Op=Subtract<double>]" at line 128 of kernel/array_array.cu
+  
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/detail/transform.inl(172): error: no instance of overloaded function "thrust::transform" matches the argument list
+              argument types are: (<error-type>, strided_range<double>::iterator, strided_range<double>::iterator, strided_range<double>::iterator, strided_range<double>::iterator, Subtract<double>)
+      return thrust::transform(select_system(system1,system2,system3), first1, last1, first2, result, op);
+             ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/detail/transform.inl(44): note #3322-D: number of parameters of function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::transform(const thrust::THRUST_200302_520_530_600_610_620_750_NS::detail::execution_policy_base<DerivedPolicy> &, InputIterator, InputIterator, OutputIterator, UnaryFunction)" does not match the call
+     OutputIterator transform(const thrust::detail::execution_policy_base<DerivedPolicy> &exec,
+                    ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/detail/transform.inl(135): note #3322-D: number of parameters of function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::transform(InputIterator, InputIterator, OutputIterator, UnaryFunction)" does not match the call
+      OutputIterator transform(InputIterator first,
+                     ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/detail/transform.inl(61): note #3327-D: candidate function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::transform(const thrust::THRUST_200302_520_530_600_610_620_750_NS::detail::execution_policy_base<DerivedPolicy> &, InputIterator1, InputIterator1, InputIterator2, OutputIterator, BinaryFunction)" failed deduction
+     OutputIterator transform(const thrust::detail::execution_policy_base<DerivedPolicy> &exec,
+                    ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/detail/transform.inl(156): note #3322-D: number of parameters of function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::transform(InputIterator1, InputIterator1, InputIterator2, OutputIterator, BinaryFunction)" does not match the call
+      OutputIterator transform(InputIterator1 first1,
+                     ^
+            detected during:
+              instantiation of "OutputIterator thrust::THRUST_200302_520_530_600_610_620_750_NS::transform(InputIterator1, InputIterator1, InputIterator2, OutputIterator, BinaryFunction) [with InputIterator1=strided_range<double>::iterator, InputIterator2=strided_range<double>::iterator, OutputIterator=strided_range<double>::iterator, BinaryFunction=Subtract<double>]" at line 110 of kernel/array_array.cu
+              instantiation of "void array_array_op(T *, int, T *, int, T *, int, int, Op) [with T=double, Op=Subtract<double>]" at line 128 of kernel/array_array.cu
+  
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/detail/transform.inl(164): error: class "thrust::THRUST_200302_520_530_600_610_620_750_NS::iterator_system<strided_range<double>::iterator>" has no member "type"
+      typedef typename thrust::iterator_system<InputIterator1>::type System1;
+                                                                ^
+            detected during:
+              instantiation of "OutputIterator thrust::THRUST_200302_520_530_600_610_620_750_NS::transform(InputIterator1, InputIterator1, InputIterator2, OutputIterator, BinaryFunction) [with InputIterator1=strided_range<double>::iterator, InputIterator2=strided_range<double>::iterator, OutputIterator=strided_range<double>::iterator, BinaryFunction=Multiply<double>]" at line 110 of kernel/array_array.cu
+              instantiation of "void array_array_op(T *, int, T *, int, T *, int, int, Op) [with T=double, Op=Multiply<double>]" at line 129 of kernel/array_array.cu
+  
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/detail/transform.inl(165): error: class "thrust::THRUST_200302_520_530_600_610_620_750_NS::iterator_system<strided_range<double>::iterator>" has no member "type"
+      typedef typename thrust::iterator_system<InputIterator2>::type System2;
+                                                                ^
+            detected during:
+              instantiation of "OutputIterator thrust::THRUST_200302_520_530_600_610_620_750_NS::transform(InputIterator1, InputIterator1, InputIterator2, OutputIterator, BinaryFunction) [with InputIterator1=strided_range<double>::iterator, InputIterator2=strided_range<double>::iterator, OutputIterator=strided_range<double>::iterator, BinaryFunction=Multiply<double>]" at line 110 of kernel/array_array.cu
+              instantiation of "void array_array_op(T *, int, T *, int, T *, int, int, Op) [with T=double, Op=Multiply<double>]" at line 129 of kernel/array_array.cu
+  
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/detail/transform.inl(166): error: class "thrust::THRUST_200302_520_530_600_610_620_750_NS::iterator_system<strided_range<double>::iterator>" has no member "type"
+      typedef typename thrust::iterator_system<OutputIterator>::type System3;
+                                                                ^
+            detected during:
+              instantiation of "OutputIterator thrust::THRUST_200302_520_530_600_610_620_750_NS::transform(InputIterator1, InputIterator1, InputIterator2, OutputIterator, BinaryFunction) [with InputIterator1=strided_range<double>::iterator, InputIterator2=strided_range<double>::iterator, OutputIterator=strided_range<double>::iterator, BinaryFunction=Multiply<double>]" at line 110 of kernel/array_array.cu
+              instantiation of "void array_array_op(T *, int, T *, int, T *, int, int, Op) [with T=double, Op=Multiply<double>]" at line 129 of kernel/array_array.cu
+  
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/detail/transform.inl(172): error: no instance of overloaded function "select_system" matches the argument list
+              argument types are: (System1, System2, System3)
+      return thrust::transform(select_system(system1,system2,system3), first1, last1, first2, result, op);
+                               ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/system/detail/generic/select_system.inl(94): note #3322-D: number of parameters of function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::system::detail::generic::select_system(thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System> &)" does not match the call
+        select_system(thrust::execution_policy<System> &system)
+        ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/system/detail/generic/select_system.inl(105): note #3322-D: number of parameters of function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::system::detail::generic::select_system(thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System1> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System2> &)" does not match the call
+        &select_system(thrust::execution_policy<System1> &system1,
+         ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/system/detail/generic/select_system.inl(118): note #3327-D: candidate function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::system::detail::generic::select_system(thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System1> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System2> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System3> &)" failed deduction
+        &select_system(thrust::execution_policy<System1> &system1,
+         ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/system/detail/generic/select_system.inl(132): note #3322-D: number of parameters of function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::system::detail::generic::select_system(thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System1> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System2> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System3> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System4> &)" does not match the call
+        &select_system(thrust::execution_policy<System1> &system1,
+         ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/system/detail/generic/select_system.inl(147): note #3322-D: number of parameters of function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::system::detail::generic::select_system(thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System1> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System2> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System3> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System4> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System5> &)" does not match the call
+        &select_system(thrust::execution_policy<System1> &system1,
+         ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/system/detail/generic/select_system.inl(163): note #3322-D: number of parameters of function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::system::detail::generic::select_system(thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System1> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System2> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System3> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System4> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System5> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System6> &)" does not match the call
+        &select_system(thrust::execution_policy<System1> &system1,
+         ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/system/detail/generic/select_system.inl(176): note #3322-D: number of parameters of function "thrust::THRUST_200302_520_530_600_610_620_750_NS::system::detail::generic::select_system(thrust::THRUST_200302_520_530_600_610_620_750_NS::any_system_tag)" does not match the call
+    thrust::device_system_tag select_system(thrust::any_system_tag)
+                              ^
+            detected during:
+              instantiation of "OutputIterator thrust::THRUST_200302_520_530_600_610_620_750_NS::transform(InputIterator1, InputIterator1, InputIterator2, OutputIterator, BinaryFunction) [with InputIterator1=strided_range<double>::iterator, InputIterator2=strided_range<double>::iterator, OutputIterator=strided_range<double>::iterator, BinaryFunction=Multiply<double>]" at line 110 of kernel/array_array.cu
+              instantiation of "void array_array_op(T *, int, T *, int, T *, int, int, Op) [with T=double, Op=Multiply<double>]" at line 129 of kernel/array_array.cu
+  
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/detail/transform.inl(172): error: no instance of overloaded function "thrust::transform" matches the argument list
+              argument types are: (<error-type>, strided_range<double>::iterator, strided_range<double>::iterator, strided_range<double>::iterator, strided_range<double>::iterator, Multiply<double>)
+      return thrust::transform(select_system(system1,system2,system3), first1, last1, first2, result, op);
+             ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/detail/transform.inl(44): note #3322-D: number of parameters of function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::transform(const thrust::THRUST_200302_520_530_600_610_620_750_NS::detail::execution_policy_base<DerivedPolicy> &, InputIterator, InputIterator, OutputIterator, UnaryFunction)" does not match the call
+     OutputIterator transform(const thrust::detail::execution_policy_base<DerivedPolicy> &exec,
+                    ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/detail/transform.inl(135): note #3322-D: number of parameters of function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::transform(InputIterator, InputIterator, OutputIterator, UnaryFunction)" does not match the call
+      OutputIterator transform(InputIterator first,
+                     ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/detail/transform.inl(61): note #3327-D: candidate function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::transform(const thrust::THRUST_200302_520_530_600_610_620_750_NS::detail::execution_policy_base<DerivedPolicy> &, InputIterator1, InputIterator1, InputIterator2, OutputIterator, BinaryFunction)" failed deduction
+     OutputIterator transform(const thrust::detail::execution_policy_base<DerivedPolicy> &exec,
+                    ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/detail/transform.inl(156): note #3322-D: number of parameters of function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::transform(InputIterator1, InputIterator1, InputIterator2, OutputIterator, BinaryFunction)" does not match the call
+      OutputIterator transform(InputIterator1 first1,
+                     ^
+            detected during:
+              instantiation of "OutputIterator thrust::THRUST_200302_520_530_600_610_620_750_NS::transform(InputIterator1, InputIterator1, InputIterator2, OutputIterator, BinaryFunction) [with InputIterator1=strided_range<double>::iterator, InputIterator2=strided_range<double>::iterator, OutputIterator=strided_range<double>::iterator, BinaryFunction=Multiply<double>]" at line 110 of kernel/array_array.cu
+              instantiation of "void array_array_op(T *, int, T *, int, T *, int, int, Op) [with T=double, Op=Multiply<double>]" at line 129 of kernel/array_array.cu
+  
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/detail/transform.inl(164): error: class "thrust::THRUST_200302_520_530_600_610_620_750_NS::iterator_system<strided_range<double>::iterator>" has no member "type"
+      typedef typename thrust::iterator_system<InputIterator1>::type System1;
+                                                                ^
+            detected during:
+              instantiation of "OutputIterator thrust::THRUST_200302_520_530_600_610_620_750_NS::transform(InputIterator1, InputIterator1, InputIterator2, OutputIterator, BinaryFunction) [with InputIterator1=strided_range<double>::iterator, InputIterator2=strided_range<double>::iterator, OutputIterator=strided_range<double>::iterator, BinaryFunction=Divide<double>]" at line 110 of kernel/array_array.cu
+              instantiation of "void array_array_op(T *, int, T *, int, T *, int, int, Op) [with T=double, Op=Divide<double>]" at line 130 of kernel/array_array.cu
+  
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/detail/transform.inl(165): error: class "thrust::THRUST_200302_520_530_600_610_620_750_NS::iterator_system<strided_range<double>::iterator>" has no member "type"
+      typedef typename thrust::iterator_system<InputIterator2>::type System2;
+                                                                ^
+            detected during:
+              instantiation of "OutputIterator thrust::THRUST_200302_520_530_600_610_620_750_NS::transform(InputIterator1, InputIterator1, InputIterator2, OutputIterator, BinaryFunction) [with InputIterator1=strided_range<double>::iterator, InputIterator2=strided_range<double>::iterator, OutputIterator=strided_range<double>::iterator, BinaryFunction=Divide<double>]" at line 110 of kernel/array_array.cu
+              instantiation of "void array_array_op(T *, int, T *, int, T *, int, int, Op) [with T=double, Op=Divide<double>]" at line 130 of kernel/array_array.cu
+  
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/detail/transform.inl(166): error: class "thrust::THRUST_200302_520_530_600_610_620_750_NS::iterator_system<strided_range<double>::iterator>" has no member "type"
+      typedef typename thrust::iterator_system<OutputIterator>::type System3;
+                                                                ^
+            detected during:
+              instantiation of "OutputIterator thrust::THRUST_200302_520_530_600_610_620_750_NS::transform(InputIterator1, InputIterator1, InputIterator2, OutputIterator, BinaryFunction) [with InputIterator1=strided_range<double>::iterator, InputIterator2=strided_range<double>::iterator, OutputIterator=strided_range<double>::iterator, BinaryFunction=Divide<double>]" at line 110 of kernel/array_array.cu
+              instantiation of "void array_array_op(T *, int, T *, int, T *, int, int, Op) [with T=double, Op=Divide<double>]" at line 130 of kernel/array_array.cu
+  
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/detail/transform.inl(172): error: no instance of overloaded function "select_system" matches the argument list
+              argument types are: (System1, System2, System3)
+      return thrust::transform(select_system(system1,system2,system3), first1, last1, first2, result, op);
+                               ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/system/detail/generic/select_system.inl(94): note #3322-D: number of parameters of function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::system::detail::generic::select_system(thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System> &)" does not match the call
+        select_system(thrust::execution_policy<System> &system)
+        ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/system/detail/generic/select_system.inl(105): note #3322-D: number of parameters of function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::system::detail::generic::select_system(thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System1> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System2> &)" does not match the call
+        &select_system(thrust::execution_policy<System1> &system1,
+         ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/system/detail/generic/select_system.inl(118): note #3327-D: candidate function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::system::detail::generic::select_system(thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System1> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System2> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System3> &)" failed deduction
+        &select_system(thrust::execution_policy<System1> &system1,
+         ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/system/detail/generic/select_system.inl(132): note #3322-D: number of parameters of function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::system::detail::generic::select_system(thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System1> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System2> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System3> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System4> &)" does not match the call
+        &select_system(thrust::execution_policy<System1> &system1,
+         ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/system/detail/generic/select_system.inl(147): note #3322-D: number of parameters of function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::system::detail::generic::select_system(thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System1> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System2> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System3> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System4> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System5> &)" does not match the call
+        &select_system(thrust::execution_policy<System1> &system1,
+         ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/system/detail/generic/select_system.inl(163): note #3322-D: number of parameters of function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::system::detail::generic::select_system(thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System1> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System2> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System3> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System4> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System5> &, thrust::THRUST_200302_520_530_600_610_620_750_NS::execution_policy<System6> &)" does not match the call
+        &select_system(thrust::execution_policy<System1> &system1,
+         ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/system/detail/generic/select_system.inl(176): note #3322-D: number of parameters of function "thrust::THRUST_200302_520_530_600_610_620_750_NS::system::detail::generic::select_system(thrust::THRUST_200302_520_530_600_610_620_750_NS::any_system_tag)" does not match the call
+    thrust::device_system_tag select_system(thrust::any_system_tag)
+                              ^
+            detected during:
+              instantiation of "OutputIterator thrust::THRUST_200302_520_530_600_610_620_750_NS::transform(InputIterator1, InputIterator1, InputIterator2, OutputIterator, BinaryFunction) [with InputIterator1=strided_range<double>::iterator, InputIterator2=strided_range<double>::iterator, OutputIterator=strided_range<double>::iterator, BinaryFunction=Divide<double>]" at line 110 of kernel/array_array.cu
+              instantiation of "void array_array_op(T *, int, T *, int, T *, int, int, Op) [with T=double, Op=Divide<double>]" at line 130 of kernel/array_array.cu
+  
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/detail/transform.inl(172): error: no instance of overloaded function "thrust::transform" matches the argument list
+              argument types are: (<error-type>, strided_range<double>::iterator, strided_range<double>::iterator, strided_range<double>::iterator, strided_range<double>::iterator, Divide<double>)
+      return thrust::transform(select_system(system1,system2,system3), first1, last1, first2, result, op);
+             ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/detail/transform.inl(44): note #3322-D: number of parameters of function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::transform(const thrust::THRUST_200302_520_530_600_610_620_750_NS::detail::execution_policy_base<DerivedPolicy> &, InputIterator, InputIterator, OutputIterator, UnaryFunction)" does not match the call
+     OutputIterator transform(const thrust::detail::execution_policy_base<DerivedPolicy> &exec,
+                    ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/detail/transform.inl(135): note #3322-D: number of parameters of function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::transform(InputIterator, InputIterator, OutputIterator, UnaryFunction)" does not match the call
+      OutputIterator transform(InputIterator first,
+                     ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/detail/transform.inl(61): note #3327-D: candidate function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::transform(const thrust::THRUST_200302_520_530_600_610_620_750_NS::detail::execution_policy_base<DerivedPolicy> &, InputIterator1, InputIterator1, InputIterator2, OutputIterator, BinaryFunction)" failed deduction
+     OutputIterator transform(const thrust::detail::execution_policy_base<DerivedPolicy> &exec,
+                    ^
+  /usr/local/cuda/bin/../targets/x86_64-linux/include/thrust/detail/transform.inl(156): note #3322-D: number of parameters of function template "thrust::THRUST_200302_520_530_600_610_620_750_NS::transform(InputIterator1, InputIterator1, InputIterator2, OutputIterator, BinaryFunction)" does not match the call
+      OutputIterator transform(InputIterator1 first1,
+                     ^
+            detected during:
+              instantiation of "OutputIterator thrust::THRUST_200302_520_530_600_610_620_750_NS::transform(InputIterator1, InputIterator1, InputIterator2, OutputIterator, BinaryFunction) [with InputIterator1=strided_range<double>::iterator, InputIterator2=strided_range<double>::iterator, OutputIterator=strided_range<double>::iterator, BinaryFunction=Divide<double>]" at line 110 of kernel/array_array.cu
+              instantiation of "void array_array_op(T *, int, T *, int, T *, int, int, Op) [with T=double, Op=Divide<double>]" at line 130 of kernel/array_array.cu
+  
+  40 errors detected in the compilation of "kernel/array_array.cu".
+
