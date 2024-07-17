@@ -271,7 +271,7 @@ where
     SB: DimTrait,
 {
     let c_shape = [a.shape()[0], b.shape()[1]];
-    let mut c = Matrix::<_, DimDyn, D>::zeros(c_shape);
+    let mut c = Matrix::<_, DimDyn, D>::alloc(c_shape);
     gemm_assign(a, b, &c.to_ref_mut(), alpha, beta);
     c
 }
@@ -313,7 +313,7 @@ mod gemm {
             ],
             [4, 5],
         );
-        let mut c = Matrix::<_, DimDyn, D>::zeros([3, 5]);
+        let mut c = Matrix::<_, DimDyn, D>::alloc([3, 5]);
         gemm_assign(&a, &b, &c.to_ref_mut(), 1., 0.);
         let ans = vec![
             110., 120., 130., 140., 150., 246., 272., 298., 324., 350., 382., 424., 466., 508.,

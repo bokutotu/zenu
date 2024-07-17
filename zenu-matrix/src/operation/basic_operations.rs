@@ -288,7 +288,6 @@ macro_rules! impl_basic_ops {
                 SL: DimTrait,
                 SR: DimTrait,
             {
-                println!("self shape: {:?} lhs shape {:?} rhs shape {:?}", self.as_ptr(),lhs.as_ptr(), rhs.as_ptr());
                 let larger_dim = larger_shape(lhs.shape(), rhs.shape());
                 let smaller_dim = smaller_shape(lhs.shape(), rhs.shape());
 
@@ -636,7 +635,7 @@ macro_rules! impl_basic_ops_no_inputs {
 
         impl<T: Num, R: Repr<Item = T>, S: DimTrait, D: DeviceBase + $trait_name> Matrix<R, S, D> {
             pub fn $output(&self) -> Matrix<Owned<T>, S, D> {
-                let mut ans = Matrix::zeros(self.shape().clone());
+                let mut ans = Matrix::alloc(self.shape().clone());
                 ans.to_ref_mut().$method(self);
                 ans
             }
@@ -659,7 +658,7 @@ impl_basic_ops_no_inputs!(LogOps, log, log_array, log_assign);
 
 impl<R: Repr, S: DimTrait, D: DeviceBase + PowOws + CopyBlas> Matrix<R, S, D> {
     pub fn powf_array(&self, scalar: R::Item) -> Matrix<Owned<R::Item>, S, D> {
-        let mut powf = Matrix::zeros(self.shape());
+        let mut powf = Matrix::alloc(self.shape());
         powf.to_ref_mut().powf(self, scalar);
         powf
     }
