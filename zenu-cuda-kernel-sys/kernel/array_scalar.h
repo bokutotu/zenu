@@ -21,6 +21,23 @@ void array_scalar_sub_assign_double(double *a, int size, int stride, double scal
 void array_scalar_mul_assign_double(double *a, int size, int stride, double scalar);
 void array_scalar_div_assign_double(double *a, int size, int stride, double scalar);
 
+void array_scalar_pointer_add_float(float *a, int size, int stride_a, float* scalar, float *out, int stride_out);
+void array_scalar_pointer_sub_float(float *a, int size, int stride_a, float* scalar, float *out, int stride_out);
+void array_scalar_pointer_mul_float(float *a, int size, int stride_a, float* scalar, float *out, int stride_out);
+void array_scalar_pointer_div_float(float *a, int size, int stride_a, float* scalar, float *out, int stride_out);
+void array_scalar_pointer_add_double(double *a, int size, int stride_a, double* scalar, double *out, int stride_out);
+void array_scalar_pointer_sub_double(double *a, int size, int stride_a, double* scalar, double *out, int stride_out);
+void array_scalar_pointer_mul_double(double *a, int size, int stride_a, double* scalar, double *out, int stride_out);
+void array_scalar_pointer_div_double(double *a, int size, int stride_a, double* scalar, double *out, int stride_out);
+void array_scalar_pointer_add_assign_float(float *a, int size, int stride, float* scalar);
+void array_scalar_pointer_sub_assign_float(float *a, int size, int stride, float* scalar);
+void array_scalar_pointer_mul_assign_float(float *a, int size, int stride, float* scalar);
+void array_scalar_pointer_div_assign_float(float *a, int size, int stride, float* scalar);
+void array_scalar_pointer_add_assign_double(double *a, int size, int stride, double* scalar);
+void array_scalar_pointer_sub_assign_double(double *a, int size, int stride, double* scalar);
+void array_scalar_pointer_mul_assign_double(double *a, int size, int stride, double* scalar);
+void array_scalar_pointer_div_assign_double(double *a, int size, int stride, double* scalar);
+
 void array_sin_float(float *a, int size, int stride_in, float *out, int stride_out);
 void array_cos_float(float *a, int size, int stride_in, float *out, int stride_out);
 void array_tan_float(float *a, int size, int stride_in, float *out, int stride_out);
