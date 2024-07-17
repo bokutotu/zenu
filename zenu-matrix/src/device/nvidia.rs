@@ -49,8 +49,8 @@ impl DeviceBase for Nvidia {
     }
 
     fn zeros<T: Num>(len: usize) -> *mut T {
-        let len = len * std::mem::size_of::<T>();
-        let ptr = Self::alloc(len).unwrap() as *mut T;
+        let bytes = len * std::mem::size_of::<T>();
+        let ptr = Self::alloc(bytes).unwrap() as *mut T;
         zenu_cuda::cublas::cublas_scal(len, T::zero(), ptr, 1).unwrap();
         ptr
     }
