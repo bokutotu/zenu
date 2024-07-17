@@ -225,8 +225,8 @@ mod mem_pool {
             Some(BUF_LEN - 200 - MIDDLE_BUFFER_SIZE)
         );
         assert_eq!(
-            map.smallest_unused_bytes_over_request(BUF_LEN - 101 - MIDDLE_BUFFER_SIZE),
-            Some(BUF_LEN - 100 - MIDDLE_BUFFER_SIZE)
+            map.smallest_unused_bytes_over_request(BUF_LEN - 105 - MIDDLE_BUFFER_SIZE),
+            Some(BUF_LEN - 104 - MIDDLE_BUFFER_SIZE)
         );
         assert_eq!(map.smallest_unused_bytes_over_request(BUF_LEN), None);
     }
@@ -290,8 +290,8 @@ mod mem_pool {
         map.insert(popped_buffer);
 
         assert_eq!(
-            map.smallest_unused_bytes_over_request(BUF_LEN - 101 - MIDDLE_BUFFER_SIZE),
-            Some(BUF_LEN - 100 - MIDDLE_BUFFER_SIZE)
+            map.smallest_unused_bytes_over_request(BUF_LEN - 105 - MIDDLE_BUFFER_SIZE),
+            Some(BUF_LEN - 104 - MIDDLE_BUFFER_SIZE)
         );
     }
 
@@ -323,9 +323,9 @@ mod mem_pool {
 
         assert_eq!(
             map.smallest_unused_bytes_over_request(BUF_LEN - 150 - MIDDLE_BUFFER_SIZE),
-            Some(BUF_LEN - 100 - MIDDLE_BUFFER_SIZE)
+            Some(BUF_LEN - 104 - MIDDLE_BUFFER_SIZE)
         );
-        let popped = map.pop_unused_bytes_ptr_buffer(BUF_LEN - 100 - MIDDLE_BUFFER_SIZE);
+        let popped = map.pop_unused_bytes_ptr_buffer(BUF_LEN - 104 - MIDDLE_BUFFER_SIZE);
         assert!(Arc::ptr_eq(&buffer1.0, &popped.0));
 
         assert_eq!(
@@ -367,11 +367,11 @@ mod mem_pool {
         assert!(ptr as usize == 0);
 
         // Try to allocate more, should fail
-        assert!(pool.try_alloc(BUF_LEN - 1 - MIDDLE_BUFFER_SIZE).unwrap() as usize == 0);
+        assert!(pool.try_alloc(BUF_LEN - 8 - MIDDLE_BUFFER_SIZE).unwrap() as usize == 0);
 
         assert_eq!(pool.unused_bytes_ptr_buffer_map.0.len(), 2);
 
-        assert!(pool.try_alloc(BUF_LEN - 3 - MIDDLE_BUFFER_SIZE).unwrap() as usize == 0);
+        assert!(pool.try_alloc(BUF_LEN - 16 - MIDDLE_BUFFER_SIZE).unwrap() as usize == 0);
         assert_eq!(pool.unused_bytes_ptr_buffer_map.0.len(), 3);
 
         pool.try_free(ptr).unwrap();
@@ -384,9 +384,9 @@ mod mem_pool {
         let mut ptrs = Vec::new();
 
         // Allocate multiple small buffers
-        for idx in 0..7 {
-            let ptr = pool.try_alloc(BUF_LEN / 10).unwrap();
-            let ptr_val = idx * (BUF_LEN / 10 + MIDDLE_BUFFER_SIZE);
+        for idx in 0..8 {
+            let ptr = pool.try_alloc(BUF_LEN / 16).unwrap();
+            let ptr_val = idx * (BUF_LEN / 16 + MIDDLE_BUFFER_SIZE);
             assert_eq!(ptr as usize, ptr_val);
             ptrs.push(ptr);
         }
