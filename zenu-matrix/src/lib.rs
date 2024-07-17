@@ -43,4 +43,4 @@ impl Default for ZenuMatrixState {
 }
 
 pub(crate) static ZENU_MATRIX_STATE: once_cell::sync::Lazy<ZenuMatrixState> =
-    once_cell::sync::Lazy::new(|| ZenuMatrixState::default());
+    once_cell::sync::Lazy::new(ZenuMatrixState::default);

@@ -38,7 +38,7 @@ impl<T: Num> MaxPool2dConfig<T> {
             output_shape[2],
             output_shape[3],
         );
-        let config = C::new(kernel_size, stride, pad, input_shape, output_shape.into());
+        let config = C::new(kernel_size, stride, pad, input_shape, output_shape);
         *self.config.borrow_mut() = Some(config);
     }
 
@@ -86,7 +86,7 @@ where
                 self.kernel_size,
                 self.stride,
                 self.pad,
-                &config,
+                config,
             ))
     }
 
@@ -131,7 +131,7 @@ where
                 self.kernel_size,
                 self.stride,
                 self.pad,
-                &config,
+                config,
             ))
     }
 
