@@ -43,10 +43,7 @@ impl<D: DeviceBase> DynMemPool<D> {
     pub fn try_free(&mut self, ptr: *mut u8) -> Result<(), ()> {
         let buffer = self.used_buffers.remove(&ptr).ok_or(())?;
         let bytes = buffer.lock().unwrap().bytes();
-        self.unused_buffers
-            .entry(bytes)
-            .or_insert_with(Vec::new)
-            .push(buffer);
+        self.unused_buffers.entry(bytes).or_default().push(buffer);
         Ok(())
     }
 
