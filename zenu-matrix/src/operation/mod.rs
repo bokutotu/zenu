@@ -1,6 +1,7 @@
 pub mod add_axis;
 pub mod asum;
 pub mod basic_operations;
+pub mod basic_operations_;
 pub mod broadcast;
 pub mod clip;
 pub mod copy_from;
