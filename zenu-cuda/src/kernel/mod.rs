@@ -90,11 +90,11 @@ impl_array_scalar!(
 
 macro_rules! impl_array_scalar_assign {
     (
-        $name_scalar:ident, 
-        $name_scalar_ptr: ident, 
-        $double_fn:ident, 
-        $float_fn:ident, 
-        $double_pointer:ident, 
+        $name_scalar:ident,
+        $name_scalar_ptr: ident,
+        $double_fn:ident,
+        $float_fn:ident,
+        $double_pointer:ident,
         $float_pointer:ident
     ) => {
         pub fn $name_scalar<T: 'static>(a: *mut T, scalar: T, size: usize, stride: usize) {
