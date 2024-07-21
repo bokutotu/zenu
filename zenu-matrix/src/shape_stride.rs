@@ -98,6 +98,9 @@ impl<D: DimTrait> ShapeStride<D> {
     }
 
     pub fn is_default_stride(&self) -> bool {
+        if self.shape().len() == 1 {
+            return true;
+        }
         default_stride(self.shape()) == self.stride()
     }
 
