@@ -1,9 +1,12 @@
 use crate::{
     device::{cpu::Cpu, DeviceBase},
-    dim::{default_stride, larger_shape, smaller_shape, DimDyn, DimTrait},
+    dim::{DimDyn, DimTrait},
     index::Index0D,
     matrix::{Matrix, Owned, Ref, Repr},
     num::Num,
+    with_clousers::{
+        array_array, array_array_array, array_array_scalar, scalar_array_with_closure,
+    },
 };
 
 #[cfg(feature = "nvidia")]
@@ -13,23 +16,6 @@ use crate::device::nvidia::Nvidia;
 use zenu_cuda::kernel::*;
 
 use super::copy_from::CopyBlas;
-
-fn get_tmp_matrix<R: Repr, S: DimTrait, D: DeviceBase>(
-    a: &Matrix<R, S, D>,
-    len: usize,
-    idx: usize,
-    self_len: usize,
-) -> Matrix<Ref<&R::Item>, DimDyn, D> {
-    if self_len == len {
-        if a.shape()[0] == 1 {
-            a.index_axis_dyn(Index0D::new(0))
-        } else {
-            a.index_axis_dyn(Index0D::new(idx))
-        }
-    } else {
-        a.to_ref().into_dyn_dim()
-    }
-}
 
 macro_rules! impl_basic_op_trait {
     (
@@ -253,13 +239,6 @@ impl_basic_op_trait!(
     array_scalar_div_assign_ptr
 );
 
-/// 1dのMatrixを受け取る(これは入力側でチェック)
-/// その配列の中身が1かどうかを確認
-/// 1ならtrueを返す
-fn is_1d_1(a: &[usize]) -> bool {
-    a[0] == 1
-}
-
 macro_rules! impl_basic_ops {
     (
         $method:ident,
@@ -268,239 +247,94 @@ macro_rules! impl_basic_ops {
         $scalar_assign_method:ident,
         $device_trait:ident
     ) => {
-        impl<'a, T, S, D> Matrix<Ref<&mut T>, S, D>
+        impl<T, D> Matrix<Ref<&mut T>, DimDyn, D>
         where
             T: Num,
-            S: DimTrait,
             D: DeviceBase + $device_trait,
         {
-            pub fn $scalar_method<RL: Repr<Item=T>, SL: DimTrait>(&mut self, lhs: &Matrix<RL, SL, D>, rhs: T) {
-                if self.shape().slice() != lhs.shape().slice() {
-                    panic!("Matrix shape mismatch");
-                }
-
-                let is_default_stride = self.stride() == default_stride(self.shape()) && lhs.stride() == default_stride(lhs.shape());
-                let num_dim = self.shape().len();
-
-                if self.shape().is_empty() {
+            pub fn $scalar_method<OR: Repr<Item = T>>(
+                &mut self,
+                other: &Matrix<OR, DimDyn, D>,
+                scalar: T,
+            ) {
+                array_array_scalar(self, &other.to_ref(), scalar, |a, b, c| {
+                    let num_elm = a.shape().num_elm();
+                    let to_stride = a.stride().into_iter().last().unwrap_or(1);
+                    let rhs_stride = b.stride().into_iter().last().unwrap_or(1);
                     D::scalar(
-                        self.as_mut_ptr(),
-                        lhs.as_ptr(),
-                        rhs,
-                        self.shape().num_elm(),
-                        1,
-                        1
+                        a.as_mut_ptr(),
+                        b.as_ptr(),
+                        c,
+                        num_elm,
+                        to_stride,
+                        rhs_stride,
                     );
-                } else if is_default_stride {
-                    D::scalar(
-                        self.as_mut_ptr(),
-                        lhs.as_ptr(),
-                        rhs,
-                        self.shape().num_elm(),
-                        self.stride()[num_dim - 1],
-                        lhs.stride()[num_dim - 1]
-                    );
-                } else {
-                    let num_iter = self.shape()[0];
-                    for idx in 0..num_iter {
-                        let mut s = self.index_axis_mut_dyn(Index0D::new(idx));
-                        let lhs = lhs.index_axis_dyn(Index0D::new(idx));
-                        s.$scalar_method(&lhs, rhs);
-                    }
-                }
+                });
+            }
+            pub fn $scalar_assign_method(&mut self, scalar: T) {
+                scalar_array_with_closure(self, scalar, |a, b| {
+                    let num_elm = a.shape().num_elm();
+                    let stride = a.stride().into_iter().last().unwrap_or(1);
+                    D::scalar_assign(a.as_mut_ptr(), b, num_elm, stride);
+                });
             }
 
-            pub fn $scalar_assign_method(&mut self, rhs: T) {
-                if self.shape().is_empty() {
-                    D::scalar_assign(
-                        self.as_mut_ptr(),
-                        rhs,
-                        self.shape().num_elm(),
-                        self.stride()[0]
-                    );
-                } else if self.shape().len() == 1 {
-                    D::scalar_assign(self.as_mut_ptr(), rhs, self.shape().num_elm(), self.stride()[0]);
-                } else {
-                    let num_iter = self.shape()[0];
-                    for idx in 0..num_iter {
-                        let mut s = self.index_axis_mut_dyn(Index0D::new(idx));
-                        s.$scalar_assign_method(rhs);
-                    }
-                }
+            pub fn $assign_method(&mut self, other: &Matrix<Ref<&T>, DimDyn, D>) {
+                array_array(
+                    self,
+                    &other,
+                    |a, b| {
+                        let num_elm = a.shape().num_elm();
+                        let to_stride = a.stride().into_iter().last().unwrap_or(1);
+                        let rhs_stride = b.stride().into_iter().last().unwrap_or(1);
+                        D::array_assign(a.as_mut_ptr(), b.as_ptr(), num_elm, to_stride, rhs_stride);
+                    },
+                    |a, b| {
+                        let num_elm = a.shape().num_elm();
+                        let stride = a.stride().into_iter().last().unwrap_or(1);
+                        D::scalar_assign_ptr(a.as_mut_ptr(), b, num_elm, stride);
+                    },
+                );
             }
 
-            pub fn $method<RL, RR, SL, SR>(&mut self, lhs: &Matrix<RL, SL, D>, rhs: &Matrix<RR, SR, D>)
-            where
-                RL: Repr<Item=T>,
-                RR: Repr<Item=T>,
-                SL: DimTrait,
-                SR: DimTrait,
-            {
-                let larger_dim = larger_shape(lhs.shape(), rhs.shape());
-                let smaller_dim = smaller_shape(lhs.shape(), rhs.shape());
-
-                if !(larger_dim.is_include(smaller_dim) || DimDyn::from(self.shape().slice()).is_include_bradcast(smaller_dim)) {
-                    panic!(
-                        "self dim is not match other dims self dim {:?}, lhs dim {:?} rhs dim {:?}",
-                        self.shape(),
-                        lhs.shape(),
-                        rhs.shape()
-                    );
-                }
-                if self.shape().slice() != larger_dim.slice() && self.shape().slice() != smaller_dim.slice() {
-                    panic!("longer shape lhs or rhs is same shape to self\n self.shape = {:?}\n lhs.shape() = {:?} \n rhs.shape() = {:?}",
-                           self.shape(), lhs.shape(), rhs.shape());
-                }
-
-                if rhs.shape().is_scalar() {
-                    let rhs = rhs.to_scalar();
-                    self.$scalar_method(lhs, rhs);
-                    return;
-                }
-
-                if lhs.shape().is_scalar() {
-                    let lhs = lhs.to_scalar();
-                    self.$scalar_method(rhs, lhs);
-                    return;
-                }
-
-                if self.shape().is_empty() {
-                    let rhs_slice = rhs.index_item(&[] as &[usize]);
-                    D::scalar(
-                        self.as_mut_ptr(),
-                        lhs.as_ptr(),
-                        rhs_slice,
-                        1,
-                        1,
-                        1,
-                    );
-                } else if self.shape().len() == 1 {
-                    if is_1d_1(lhs.shape().slice()) {
+            pub fn $method<LR: Repr<Item = T>, RR: Repr<Item = T>>(
+                &mut self,
+                lhs: &Matrix<LR, DimDyn, D>,
+                rhs: &Matrix<RR, DimDyn, D>,
+            ) {
+                array_array_array(
+                    self,
+                    &lhs.to_ref(),
+                    &rhs.to_ref(),
+                    |a, b, c| {
+                        let num_elm = a.shape().num_elm();
+                        let to_stride = a.stride().into_iter().last().unwrap_or(1);
+                        let lhs_stride = b.stride().into_iter().last().unwrap_or(1);
+                        let rhs_stride = c.stride().into_iter().last().unwrap_or(1);
+                        D::array_array(
+                            a.as_mut_ptr(),
+                            b.as_ptr(),
+                            c.as_ptr(),
+                            num_elm,
+                            to_stride,
+                            lhs_stride,
+                            rhs_stride,
+                        );
+                    },
+                    |a, b, c| {
+                        let num_elm = a.shape().num_elm();
+                        let to_stride = a.stride().into_iter().last().unwrap_or(1);
+                        let lhs_stride = b.stride().into_iter().last().unwrap_or(1);
                         D::scalar_ptr(
-                            self.as_mut_ptr(),
-                            rhs.as_ptr(),
-                            lhs.as_ptr(),
-                            self.shape().num_elm(),
-                            self.stride()[0],
-                            rhs.stride()[0]
+                            a.as_mut_ptr(),
+                            b.as_ptr(),
+                            c,
+                            to_stride,
+                            lhs_stride,
+                            num_elm,
                         );
-                        return;
-                    } else if is_1d_1(rhs.shape().slice()) {
-                        D::scalar_ptr(
-                            self.as_mut_ptr(),
-                            lhs.as_ptr(),
-                            rhs.as_ptr(),
-                            self.shape().num_elm(),
-                            self.stride()[0],
-                            lhs.stride()[0]
-                        );
-                        return;
-                    }
-
-                    D::array_array(
-                        self.as_mut_ptr(),
-                        lhs.as_ptr(),
-                        rhs.as_ptr(),
-                        self.shape().num_elm(),
-                        self.stride()[0],
-                        lhs.stride()[0],
-                        rhs.stride()[0]
-                    );
-                } else if self.shape().slice() == rhs.shape().slice() &&
-                          self.shape().slice() == lhs.shape().slice() &&
-                          self.shape_stride().is_default_stride() &&
-                          rhs.shape_stride().is_default_stride() &&
-                          lhs.shape_stride().is_default_stride()
-                {
-                    let len_shape = self.shape().len();
-                    D::array_array(
-                        self.as_mut_ptr(),
-                        lhs.as_ptr(),
-                        rhs.as_ptr(),
-                        self.shape().num_elm(),
-                        self.stride()[len_shape - 1],
-                        lhs.stride()[len_shape - 1],
-                        rhs.stride()[len_shape - 1]
-                    );
-                } else {
-                    let num_iter = self.shape()[0];
-                    let self_dim_len = self.shape().len();
-                    let rhs_dim_len = rhs.shape().len();
-                    let lhs_dim_len = lhs.shape().len();
-                    for idx in 0..num_iter {
-                        let mut s = self.index_axis_mut_dyn(Index0D::new(idx));
-                        let lhs = get_tmp_matrix(&lhs, lhs_dim_len, idx, self_dim_len);
-                        let rhs = get_tmp_matrix(&rhs, rhs_dim_len, idx, self_dim_len);
-                        s.$method(&lhs, &rhs);
-                    }
-                }
-            }
-
-            pub fn $assign_method<RR, SR>(&mut self, rhs: &Matrix<RR, SR, D>)
-            where
-                RR: Repr<Item=T>,
-                SR: DimTrait,
-            {
-                if self.shape().len() < rhs.shape().len() {
-                    panic!("Self shape len is larger than rhs shape len {:?} {:?}", self.shape(), rhs.shape());
-                }
-
-                if !(DimDyn::from(self.shape().slice())
-                    .is_include(DimDyn::from(rhs.shape().slice()))
-                    || DimDyn::from(self.shape().slice())
-                    .is_include_bradcast(DimDyn::from(rhs.shape().slice()))
-                )
-                {
-                    panic!("rhs shape is not include self shape {:?} {:?}", self.shape(), rhs.shape());
-                }
-
-                if !DimDyn::from(self.shape().slice())
-                    .is_include_bradcast(DimDyn::from(rhs.shape().slice()))
-                {
-                    panic!("rhs shape is not include self shape {:?} {:?}", self.shape(), rhs.shape());
-                }
-
-                if self.shape().is_empty() {
-                    let self_slice = self.as_mut_slice();
-                    let rhs_slice = rhs.index_item(&[] as &[usize]);
-                    D::scalar_assign(self_slice.as_mut_ptr(), rhs_slice, 1, 1);
-                } else if rhs.shape().is_empty() {
-                    self.$scalar_assign_method(rhs.index_item(&[] as &[usize]));
-                } else if self.shape().len() == 1 {
-                    if is_1d_1(rhs.shape().slice()) {
-                        self.$scalar_assign_method(
-                            rhs.index_item(&[0 as usize] as &[usize])
-                        );
-                        return;
-                    }
-                    D::array_assign(
-                        self.as_mut_ptr(),
-                        rhs.as_ptr(),
-                        self.shape().num_elm(),
-                        self.stride()[0],
-                        rhs.stride()[0]
-                    );
-                } else if self.shape().slice() == rhs.shape().slice()
-                          && self.shape_stride().is_default_stride()
-                          && rhs.shape_stride().is_default_stride() {
-                    let len_shape = self.shape().len();
-                    D::array_assign(
-                        self.as_mut_ptr(),
-                        rhs.as_ptr(),
-                        self.shape().num_elm(),
-                        self.stride()[len_shape - 1],
-                        rhs.stride()[len_shape - 1]
-                    );
-                } else {
-                    let num_iter = self.shape()[0];
-                    let self_shape_len = self.shape().len();
-                    let rhs_shape_len = rhs.shape().len();
-                    for idx in 0..num_iter {
-                        let mut s = self.index_axis_mut_dyn(Index0D::new(idx));
-                        let rhs = get_tmp_matrix(&rhs, rhs_shape_len, idx, self_shape_len);
-                        s.$assign_method(&rhs);
-                    }
-                }
+                    },
+                );
             }
         }
     };
@@ -1080,6 +914,7 @@ mod basic_ops {
         let b: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(vec![1.], []);
         let mut ans: Matrix<Owned<f32>, DimDyn, D> = Matrix::zeros([2, 2, 2]);
         ans.to_ref_mut().add_array(&a, &b);
+        println!("{:?}", ans);
         assert_eq!(ans.index_item([0, 0, 0]), 2.);
         assert_eq!(ans.index_item([0, 0, 1]), 3.);
         assert_eq!(ans.index_item([0, 1, 0]), 4.);
@@ -1240,7 +1075,7 @@ mod basic_ops {
         let mut a: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(a, [2, 2, 2]);
         let b = vec![1., 1., 1., 1., 1., 1., 1., 1.];
         let b: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(b, [2, 2, 2]);
-        a.to_ref_mut().sub_assign(&b);
+        a.to_ref_mut().sub_assign(&b.to_ref());
 
         assert_eq!(a.index_item([0, 0, 0]), 0.);
         assert_eq!(a.index_item([0, 0, 1]), 1.);
@@ -1342,7 +1177,7 @@ mod basic_ops {
         let mut a: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(a, [2, 2, 2]);
         let b = vec![8., 7., 6., 5., 4., 3., 2., 1.];
         let b: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(b, [2, 2, 2]);
-        a.to_ref_mut().mul_assign(&b);
+        a.to_ref_mut().mul_assign(&b.to_ref());
 
         assert_eq!(a.index_item([0, 0, 0]), 8.);
         assert_eq!(a.index_item([0, 0, 1]), 14.);
@@ -1444,7 +1279,7 @@ mod basic_ops {
         let mut a: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(a, [2, 2, 2]);
         let b = vec![8., 7., 6., 5., 4., 3., 2., 1.];
         let b: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(b, [2, 2, 2]);
-        a.to_ref_mut().div_assign(&b);
+        a.to_ref_mut().div_assign(&b.to_ref());
 
         assert_eq!(a.index_item([0, 0, 0]), 1. / 8.);
         assert_eq!(a.index_item([0, 0, 1]), 2. / 7.);

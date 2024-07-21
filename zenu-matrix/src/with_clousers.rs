@@ -1,12 +1,10 @@
 use crate::{
     device::DeviceBase,
-    dim::{larger_shape, smaller_shape, DimDyn, DimTrait},
+    dim::{default_stride, larger_shape, smaller_shape, DimDyn, DimTrait},
     index::Index0D,
     matrix::{Matrix, Ref, Repr},
     num::Num,
 };
-
-use super::basic_operations::AddOps;
 
 fn get_tmp_matrix<R: Repr, S: DimTrait, D: DeviceBase>(
     a: &Matrix<R, S, D>,
@@ -24,7 +22,7 @@ fn get_tmp_matrix<R: Repr, S: DimTrait, D: DeviceBase>(
         a.to_ref().into_dyn_dim()
     }
 }
-fn scalar_array_with_closure<T: Num, D: DeviceBase, B: Copy, F>(
+pub(crate) fn scalar_array_with_closure<T: Num, D: DeviceBase, B: Copy, F>(
     a: &Matrix<Ref<&mut T>, DimDyn, D>,
     b: B,
     f: F,
@@ -71,7 +69,7 @@ fn array_array_scalar_with_closure<T: Num, D: DeviceBase, B: Copy, F>(
         }
     }
 }
-fn array_array_scalar<T, D, F>(
+pub(crate) fn array_array_scalar<T, D, F>(
     a: &Matrix<Ref<&mut T>, DimDyn, D>,
     b: &Matrix<Ref<&T>, DimDyn, D>,
     c: T,
@@ -116,13 +114,15 @@ fn array_array_with_closure<T: Num, D: DeviceBase, FMatMat, FMatSca>(
     FMatMat: Fn(&Matrix<Ref<&mut T>, DimDyn, D>, &Matrix<Ref<&T>, DimDyn, D>) + Copy,
     FMatSca: Fn(&Matrix<Ref<&mut T>, DimDyn, D>, *const T) + Copy,
 {
-    if a.shape_stride().is_default_stride()
+    if a.shape().is_scalar() {
+        f_mat_scalar_ptr(a, b.as_ptr());
+    } else if b.shape().is_scalar() && a.shape_stride().is_default_stride() {
+        f_mat_scalar_ptr(a, b.as_ptr());
+    } else if a.shape_stride().is_default_stride()
         && b.shape_stride().is_default_stride()
         && a.shape() == b.shape()
     {
         f_mat_mat(a, b);
-    } else if b.shape().is_scalar() && a.shape_stride().is_default_stride() {
-        f_mat_scalar_ptr(a, b.as_ptr());
     } else {
         let num = a.shape()[0];
         for i in 0..num {
@@ -136,7 +136,7 @@ fn array_array_with_closure<T: Num, D: DeviceBase, FMatMat, FMatSca>(
         }
     }
 }
-fn array_array<T, D, FMatMat, FMatSca>(
+pub(crate) fn array_array<T, D, FMatMat, FMatSca>(
     a: &Matrix<Ref<&mut T>, DimDyn, D>,
     b: &Matrix<Ref<&T>, DimDyn, D>,
     f_mat_mat: FMatMat,
@@ -189,14 +189,7 @@ fn array_array_array_with_closure<T, D, FMatMat, FMatSca>(
         ) + Copy,
     FMatSca: Fn(&Matrix<Ref<&mut T>, DimDyn, D>, &Matrix<Ref<&T>, DimDyn, D>, *const T) + Copy,
 {
-    if a.shape_stride().is_default_stride()
-        && b.shape_stride().is_default_stride()
-        && c.shape_stride().is_default_stride()
-        && a.shape() == b.shape()
-        && a.shape() == c.shape()
-    {
-        f_mat_mat(a, b, c);
-    } else if b.shape().is_scalar()
+    if b.shape().is_scalar()
         && a.shape_stride().is_default_stride()
         && c.shape_stride().is_default_stride()
         && a.shape() == c.shape()
@@ -208,6 +201,13 @@ fn array_array_array_with_closure<T, D, FMatMat, FMatSca>(
         && a.shape() == b.shape()
     {
         f_mat_scalar_ptr(a, b, c.as_ptr());
+    } else if a.shape_stride().is_default_stride()
+        && b.shape_stride().is_default_stride()
+        && c.shape_stride().is_default_stride()
+        && a.shape() == b.shape()
+        && a.shape() == c.shape()
+    {
+        f_mat_mat(a, b, c);
     } else {
         let num = a.shape()[0];
         for i in 0..num {
@@ -223,7 +223,7 @@ fn array_array_array_with_closure<T, D, FMatMat, FMatSca>(
         }
     }
 }
-fn array_array_array<T, D, FMatMat, FMatSca>(
+pub(crate) fn array_array_array<T, D, FMatMat, FMatSca>(
     a: &Matrix<Ref<&mut T>, DimDyn, D>,
     b: &Matrix<Ref<&T>, DimDyn, D>,
     c: &Matrix<Ref<&T>, DimDyn, D>,
@@ -243,107 +243,110 @@ fn array_array_array<T, D, FMatMat, FMatSca>(
     array_array_array_with_closure(a, b, c, f_mat_mat, f_mat_scalar_ptr);
 }
 
-// test impl for Add
-impl<T, D> Matrix<Ref<&mut T>, DimDyn, D>
-where
-    T: Num,
-    D: DeviceBase + AddOps,
-{
-    pub fn add_scalar_(&self, other: &Matrix<Ref<&T>, DimDyn, D>, scalar: T) {
-        array_array_scalar(self, other, scalar, |a, b, c| {
-            let len = a.shape().len();
-            let num_elm = a.shape().num_elm();
-            let to_stride = a.stride()[len - 1];
-            let rhs_stride = b.stride()[len - 1];
-            D::scalar(
-                a.as_mut_ptr(),
-                b.as_ptr(),
-                c,
-                num_elm,
-                to_stride,
-                rhs_stride,
-            );
-        });
-    }
-    pub fn add_scalar_assign_(&self, scalar: T) {
-        scalar_array_with_closure(self, scalar, |a, b| {
-            let len = a.shape().len();
-            let num_elm = a.shape().num_elm();
-            let stride = a.stride()[len - 1];
-            D::scalar_assign(a.as_mut_ptr(), b, num_elm, stride);
-        });
-    }
-
-    pub fn add_assign_(&self, other: Matrix<Ref<&T>, DimDyn, D>) {
-        array_array(
-            self,
-            &other,
-            |a, b| {
-                let len = a.shape().len();
-                let num_elm = a.shape().num_elm();
-                let to_stride = a.stride()[len - 1];
-                let rhs_stride = b.stride()[len - 1];
-                D::array_assign(a.as_mut_ptr(), b.as_ptr(), num_elm, to_stride, rhs_stride);
-            },
-            |a, b| {
-                let len = a.shape().len();
-                let num_elm = a.shape().num_elm();
-                let stride = a.stride()[len - 1];
-                D::scalar_assign_ptr(a.as_mut_ptr(), b, num_elm, stride);
-            },
-        );
-    }
-
-    pub fn add_(&self, lhs: &Matrix<Ref<&T>, DimDyn, D>, rhs: &Matrix<Ref<&T>, DimDyn, D>) {
-        array_array_array(
-            self,
-            lhs,
-            rhs,
-            |a, b, c| {
-                let len = a.shape().len();
-                let num_elm = a.shape().num_elm();
-                let to_stride = a.stride()[len - 1];
-                let lhs_stride = b.stride()[len - 1];
-                let rhs_stride = c.stride()[len - 1];
-                D::array_array(
-                    a.as_mut_ptr(),
-                    b.as_ptr(),
-                    c.as_ptr(),
-                    num_elm,
-                    to_stride,
-                    lhs_stride,
-                    rhs_stride,
-                );
-            },
-            |a, b, c| {
-                let len = a.shape().len();
-                let num_elm = a.shape().num_elm();
-                let to_stride = a.stride()[len - 1];
-                let lhs_stride = b.stride()[len - 1];
-                D::scalar_ptr(
-                    a.as_mut_ptr(),
-                    b.as_ptr(),
-                    c,
-                    num_elm,
-                    to_stride,
-                    lhs_stride,
-                );
-            },
-        );
-    }
-}
-
 #[cfg(test)]
 mod basic_ops {
     use std::{cell::RefCell, rc::Rc};
 
     use crate::{
-        device::cpu::Cpu,
-        dim::DimDyn,
+        device::{cpu::Cpu, DeviceBase},
+        dim::{DimDyn, DimTrait},
         matrix::{Matrix, Owned, Ref},
-        operation::basic_operations_::scalar_array_with_closure,
+        num::Num,
+        operation::basic_operations::AddOps,
         slice_dynamic,
     };
+
+    use super::{array_array, array_array_array, array_array_scalar, scalar_array_with_closure};
+
+    // test impl for Add
+    impl<T, D> Matrix<Ref<&mut T>, DimDyn, D>
+    where
+        T: Num,
+        D: DeviceBase + AddOps,
+    {
+        fn add_scalar_(&self, other: &Matrix<Ref<&T>, DimDyn, D>, scalar: T) {
+            array_array_scalar(self, other, scalar, |a, b, c| {
+                let len = a.shape().len();
+                let num_elm = a.shape().num_elm();
+                let to_stride = a.stride()[len - 1];
+                let rhs_stride = b.stride()[len - 1];
+                D::scalar(
+                    a.as_mut_ptr(),
+                    b.as_ptr(),
+                    c,
+                    num_elm,
+                    to_stride,
+                    rhs_stride,
+                );
+            });
+        }
+        fn add_scalar_assign_(&self, scalar: T) {
+            scalar_array_with_closure(self, scalar, |a, b| {
+                let len = a.shape().len();
+                let num_elm = a.shape().num_elm();
+                let stride = a.stride()[len - 1];
+                D::scalar_assign(a.as_mut_ptr(), b, num_elm, stride);
+            });
+        }
+
+        fn add_assign_(&self, other: Matrix<Ref<&T>, DimDyn, D>) {
+            array_array(
+                self,
+                &other,
+                |a, b| {
+                    let len = a.shape().len();
+                    let num_elm = a.shape().num_elm();
+                    let to_stride = a.stride()[len - 1];
+                    let rhs_stride = b.stride()[len - 1];
+                    D::array_assign(a.as_mut_ptr(), b.as_ptr(), num_elm, to_stride, rhs_stride);
+                },
+                |a, b| {
+                    let len = a.shape().len();
+                    let num_elm = a.shape().num_elm();
+                    let stride = a.stride()[len - 1];
+                    D::scalar_assign_ptr(a.as_mut_ptr(), b, num_elm, stride);
+                },
+            );
+        }
+
+        fn add_(&self, lhs: &Matrix<Ref<&T>, DimDyn, D>, rhs: &Matrix<Ref<&T>, DimDyn, D>) {
+            array_array_array(
+                self,
+                lhs,
+                rhs,
+                |a, b, c| {
+                    let len = a.shape().len();
+                    let num_elm = a.shape().num_elm();
+                    let to_stride = a.stride()[len - 1];
+                    let lhs_stride = b.stride()[len - 1];
+                    let rhs_stride = c.stride()[len - 1];
+                    D::array_array(
+                        a.as_mut_ptr(),
+                        b.as_ptr(),
+                        c.as_ptr(),
+                        num_elm,
+                        to_stride,
+                        lhs_stride,
+                        rhs_stride,
+                    );
+                },
+                |a, b, c| {
+                    let len = a.shape().len();
+                    let num_elm = a.shape().num_elm();
+                    let to_stride = a.stride()[len - 1];
+                    let lhs_stride = b.stride()[len - 1];
+                    D::scalar_ptr(
+                        a.as_mut_ptr(),
+                        b.as_ptr(),
+                        c,
+                        num_elm,
+                        to_stride,
+                        lhs_stride,
+                    );
+                },
+            );
+        }
+    }
 
     #[test]
     fn scalar_array_default_stride() {
