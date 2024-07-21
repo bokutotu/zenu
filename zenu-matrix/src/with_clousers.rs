@@ -1,6 +1,6 @@
 use crate::{
     device::DeviceBase,
-    dim::{default_stride, larger_shape, smaller_shape, DimDyn, DimTrait},
+    dim::{larger_shape, smaller_shape, DimDyn, DimTrait},
     index::Index0D,
     matrix::{Matrix, Ref, Repr},
     num::Num,

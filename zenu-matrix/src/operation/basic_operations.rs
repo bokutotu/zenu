@@ -59,9 +59,21 @@ macro_rules! impl_basic_op_trait {
 
             fn scalar_assign<T: Num>(to: *mut T, rhs: T, num_elm: usize, to_stride: usize);
 
-            fn scalar_ptr<T: Num>(to: *mut T, rhs: *const T, scalar: *const T, to_stride: usize, rhs_stride: usize, num_elm: usize);
+            fn scalar_ptr<T: Num>(
+                to: *mut T,
+                rhs: *const T,
+                scalar: *const T,
+                to_stride: usize,
+                rhs_stride: usize,
+                num_elm: usize
+            );
 
-            fn scalar_assign_ptr<T: Num>(to: *mut T, scalar: *const T, num_elm: usize, to_stride: usize);
+            fn scalar_assign_ptr<T: Num>(
+                to: *mut T,
+                scalar: *const T,
+                num_elm: usize,
+                to_stride: usize
+            );
         }
 
         impl$name for Cpu {
@@ -127,7 +139,14 @@ macro_rules! impl_basic_op_trait {
             }
 
             #[allow(clippy::not_unsafe_ptr_arg_deref)]
-            fn scalar_ptr<T: Num>(to: *mut T, lhs: *const T, scalar: *const T, to_stride: usize, lhs_stride: usize, num_elm: usize) {
+            fn scalar_ptr<T: Num>(
+                to: *mut T,
+                lhs: *const T,
+                scalar: *const T,
+                to_stride: usize,
+                lhs_stride: usize,
+                num_elm: usize
+            ) {
                 for i in 0..num_elm {
                     unsafe {
                         *to.add(i * to_stride) = T::$cpu_method(*lhs.add(i * lhs_stride), *scalar);
@@ -136,7 +155,12 @@ macro_rules! impl_basic_op_trait {
             }
 
             #[allow(clippy::not_unsafe_ptr_arg_deref)]
-            fn scalar_assign_ptr<T: Num>(to: *mut T, scalar: *const T, num_elm: usize, to_stride: usize) {
+            fn scalar_assign_ptr<T: Num>(
+                to: *mut T,
+                scalar: *const T,
+                num_elm: usize,
+                to_stride: usize
+            ) {
                 for i in 0..num_elm {
                     unsafe {
                         T::$cpu_assign_method(&mut *to.add(i * to_stride), *scalar);
