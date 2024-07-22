@@ -189,13 +189,7 @@ fn array_array_array_with_closure<T, D, FMatMat, FMatSca>(
         ) + Copy,
     FMatSca: Fn(&Matrix<Ref<&mut T>, DimDyn, D>, &Matrix<Ref<&T>, DimDyn, D>, *const T) + Copy,
 {
-    if b.shape().is_scalar()
-        && a.shape_stride().is_default_stride()
-        && c.shape_stride().is_default_stride()
-        && a.shape() == c.shape()
-    {
-        f_mat_scalar_ptr(a, c, b.as_ptr());
-    } else if c.shape().is_scalar()
+    if c.shape().is_scalar()
         && a.shape_stride().is_default_stride()
         && b.shape_stride().is_default_stride()
         && a.shape() == b.shape()
