@@ -9,7 +9,7 @@ use zenu_autograd::{
 };
 use zenu_matrix::{device::Device, dim::DimTrait, nn::conv2d::conv2d_out_size, num::Num};
 
-use crate::{Module, StateDict};
+use crate::{Module, Parameterizes, StateDict};
 
 #[derive(Serialize, Deserialize)]
 #[serde(bound(deserialize = "T: Num + Deserialize<'de>"))]
@@ -53,6 +53,16 @@ impl<T: Num, D: Device> Module<T, D> for Conv2d<T, D> {
             self.bias.clone(),
             Some(self.config.borrow().as_ref().unwrap().clone()),
         )
+    }
+}
+
+impl<T: Num, D: Device> Parameterizes<T, D> for Conv2d<T, D> {
+    fn weights(&self) -> Vec<&Variable<T, D>> {
+        vec![&self.filter]
+    }
+
+    fn biases(&self) -> Vec<&Variable<T, D>> {
+        self.bias.as_ref().into_iter().collect()
     }
 }
 
