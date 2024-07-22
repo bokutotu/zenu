@@ -1,4 +1,4 @@
-use crate::{Module, StateDict};
+use crate::{Module, Parameteres, StateDict};
 use rand_distr::{Distribution, StandardNormal};
 use serde::{Deserialize, Serialize};
 use zenu_autograd::{
@@ -28,6 +28,16 @@ impl<T: Num, D: Device> Module<T, D> for Linear<T, D> {
         } else {
             output
         }
+    }
+}
+
+impl<T: Num, D: Device> Parameteres<T, D> for Linear<T, D> {
+    fn weights(&self) -> Vec<&Variable<T, D>> {
+        vec![&self.weight]
+    }
+
+    fn biases(&self) -> Vec<&Variable<T, D>> {
+        self.bias.as_ref().map_or_else(Vec::new, |b| vec![b])
     }
 }
 

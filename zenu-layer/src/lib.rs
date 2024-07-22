@@ -8,6 +8,16 @@ pub trait Module<T: Num, D: Device> {
     fn call(&self, input: Variable<T, D>) -> Variable<T, D>;
 }
 
+pub trait Parameteres<T: Num, D: Device> {
+    fn weights(&self) -> Vec<&Variable<T, D>>;
+    fn biases(&self) -> Vec<&Variable<T, D>>;
+    fn parameters(&self) -> Vec<&Variable<T, D>> {
+        let mut params = self.weights();
+        params.extend(self.biases());
+        params
+    }
+}
+
 pub trait StateDict<'de>: Serialize + Deserialize<'de> {
     fn to_json(&self) -> String {
         serde_json::to_string(self).unwrap()
