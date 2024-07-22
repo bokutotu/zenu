@@ -116,13 +116,20 @@ fn array_array_with_closure<T: Num, D: DeviceBase, FMatMat, FMatSca>(
 {
     if a.shape().is_scalar() {
         f_mat_scalar_ptr(a, b.as_ptr());
-    } else if b.shape().is_scalar() && a.shape_stride().is_default_stride() {
-        f_mat_scalar_ptr(a, b.as_ptr());
-    } else if a.shape_stride().is_default_stride()
-        && b.shape_stride().is_default_stride()
-        && a.shape() == b.shape()
-    {
-        f_mat_mat(a, b);
+    // } else if a.shape_stride().is_default_stride() && b.shape().is_scalar() {
+    //     f_mat_scalar_ptr(a, b.as_ptr());
+    // } else if a.shape_stride().is_default_stride()
+    //     && b.shape_stride().is_default_stride()
+    //     && a.shape() == b.shape()
+    // {
+    //     f_mat_mat(a, b);
+    } else if a.shape_stride().is_default_stride() {
+        if b.shape().is_scalar() {
+            f_mat_scalar_ptr(a, b.as_ptr());
+        } else if b.shape_stride().is_default_stride() && a.shape() == b.shape() {
+            f_mat_mat(a, b);
+        }
+    // }
     } else {
         let num = a.shape()[0];
         for i in 0..num {
