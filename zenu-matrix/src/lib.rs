@@ -19,6 +19,7 @@ mod impl_ops;
 mod impl_serde;
 mod matrix_format;
 mod memory_pool;
+mod with_clousers;
 
 #[cfg(feature = "nvidia")]
 use device::nvidia::Nvidia;
