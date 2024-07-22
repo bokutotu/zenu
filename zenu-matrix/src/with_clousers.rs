@@ -114,6 +114,7 @@ fn array_array_with_closure<T: Num, D: DeviceBase, FMatMat, FMatSca>(
     FMatMat: Fn(&Matrix<Ref<&mut T>, DimDyn, D>, &Matrix<Ref<&T>, DimDyn, D>) + Copy,
     FMatSca: Fn(&Matrix<Ref<&mut T>, DimDyn, D>, *const T) + Copy,
 {
+    #[allow(clippy::if_same_then_else)]
     if a.shape().is_scalar() {
         f_mat_scalar_ptr(a, b.as_ptr());
     } else if a.shape_stride().is_default_stride() && b.shape().is_scalar() {
