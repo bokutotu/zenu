@@ -8,6 +8,16 @@ proc-macro2 = "1"
 quote = "1"
 syn = { version = "1", features = ["full"] }
 
+
+
+[dev-dependencies]
+zenu-matrix = { path = "../zenu-matrix", version = "0.1.1" }
+zenu-autograd = { path = "../zenu-autograd", version = "0.1.1" }
+zenu-optimizer = { path = "../zenu-optimizer", version = "0.1.0" }
+zenu-layer = { path = "../zenu-layer", version = "0.1.0" }
+serde = { version = "1.0.197", features = ["derive"] }
+
+
 [lib]
 proc-macro = true
 
