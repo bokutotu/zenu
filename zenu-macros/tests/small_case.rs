@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
-// use serde::{Deserialize, Serialize};
-use zenu_layer::{layers::linear::Linear, Parameteres};
+use zenu_layer::{layers::linear::Linear, Parameters, StateDict};
 use zenu_macros::ZenuModel;
 use zenu_matrix::{device::cpu::Cpu, device::Device, num::Num};
 
@@ -30,4 +29,8 @@ fn test_zenu_model() {
     // Add assertions here to test the behavior
     assert_eq!((weight.to_ref() - ans_weights.to_ref()).asum(), 0.);
     assert_eq!((bias.to_ref() - ans_biases.to_ref()).asum(), 0.);
+
+    let json = hoge.to_json();
+    // let json = serde_json::to_string(&hoge).unwrap();
+    // let _hoge: Hoge<f32, Cpu> = serde_json::from_str(&json).unwrap();
 }
