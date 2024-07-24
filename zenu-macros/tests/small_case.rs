@@ -1,10 +1,11 @@
 use serde::{Deserialize, Serialize};
+// use serde::{Deserialize, Serialize};
 use zenu_layer::{layers::linear::Linear, Parameteres};
 use zenu_macros::ZenuModel;
 use zenu_matrix::{device::cpu::Cpu, device::Device, num::Num};
 
 #[derive(ZenuModel, Serialize, Deserialize)]
-#[serde(bound(deserialize = "T: Num + Deserialize<'de>"))]
+#[zenu(bound(num = "T", device = "D"))]
 pub struct Hoge<T: Num, D: Device> {
     pub linear: Linear<T, D>,
 }
