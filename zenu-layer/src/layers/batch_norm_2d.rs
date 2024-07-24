@@ -6,7 +6,7 @@ use zenu_autograd::{
 };
 use zenu_matrix::{device::Device, dim::DimTrait, num::Num};
 
-use crate::{Module, Parameteres, StateDict};
+use crate::{Module, Parameters, StateDict};
 
 #[derive(Serialize, Deserialize)]
 #[serde(bound(deserialize = "T: Num + Deserialize<'de>"))]
@@ -39,7 +39,7 @@ impl<T: Num, D: Device> Module<T, D> for BatchNorm2d<T, D> {
     }
 }
 
-impl<T: Num, D: Device> Parameteres<T, D> for BatchNorm2d<T, D> {
+impl<T: Num, D: Device> Parameters<T, D> for BatchNorm2d<T, D> {
     fn weights(&self) -> Vec<&Variable<T, D>> {
         vec![&self.scale]
     }

@@ -121,7 +121,7 @@ fn impl_parameters(input: &DeriveInput) -> TokenStream2 {
     });
 
     quote!(
-        impl #impl_generics ::zenu_layer::Parameteres<T, D> for #name #ty_generics #where_clause {
+        impl #impl_generics ::zenu_layer::Parameters<T, D> for #name #ty_generics #where_clause {
             fn weights(&self) -> Vec<&::zenu_autograd::Variable<T, D>> {
                 let mut params = Vec::new();
                 #(

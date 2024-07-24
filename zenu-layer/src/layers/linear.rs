@@ -1,4 +1,4 @@
-use crate::{Module, Parameteres, StateDict};
+use crate::{Module, Parameters, StateDict};
 use rand_distr::{Distribution, StandardNormal};
 use serde::{Deserialize, Serialize};
 use zenu_autograd::{
@@ -31,7 +31,7 @@ impl<T: Num, D: Device> Module<T, D> for Linear<T, D> {
     }
 }
 
-impl<T: Num, D: Device> Parameteres<T, D> for Linear<T, D> {
+impl<T: Num, D: Device> Parameters<T, D> for Linear<T, D> {
     fn weights(&self) -> Vec<&Variable<T, D>> {
         vec![&self.weight]
     }
