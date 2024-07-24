@@ -5,7 +5,11 @@ use zenu_matrix::{device::cpu::Cpu, device::Device, num::Num};
 
 #[derive(ZenuModel, Serialize, Deserialize)]
 #[zenu(bound(num = "T", device = "D"))]
-pub struct Hoge<T: Num, D: Device> {
+pub struct Hoge<T, D>
+where
+    T: Num,
+    D: Device,
+{
     pub linear: Linear<T, D>,
 }
 
