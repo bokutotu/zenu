@@ -1,5 +1,3 @@
-use serde::{Deserialize, Serialize};
-
 use zenu::{
     autograd::{
         creator::from_vec::from_vec,
@@ -8,19 +6,16 @@ use zenu::{
     },
     dataset::{train_val_split, DataLoader, Dataset},
     dataset_loader::mnist_dataset,
-    layer::{layers::linear::Linear, Module, StateDict},
+    layer::{layers::linear::Linear, Module},
     matrix::device::{cpu::Cpu, Device},
     optimizer::sgd::SGD,
     update_parameters,
 };
 
-#[derive(Serialize, Deserialize)]
 pub struct SimpleModel<D: Device> {
     pub linear_1: Linear<f32, D>,
     pub linear_2: Linear<f32, D>,
 }
-
-impl<'de, D: Device + Deserialize<'de>> StateDict<'de> for SimpleModel<D> {}
 
 impl<D: Device> SimpleModel<D> {
     pub fn new() -> Self {
