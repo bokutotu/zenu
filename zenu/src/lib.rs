@@ -9,6 +9,7 @@ use std::{
 };
 
 use serde::Deserialize;
+
 use zenu_autograd::Variable;
 use zenu_layer::Parameters;
 use zenu_matrix::{device::Device, num::Num};
@@ -16,6 +17,7 @@ use zenu_optimizer::Optimizer;
 
 pub use zenu_autograd as autograd;
 pub use zenu_layer as layer;
+pub use zenu_macro::Parameters;
 pub use zenu_matrix as matrix;
 pub use zenu_optimizer as optimizer;
 
