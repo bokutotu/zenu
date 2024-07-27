@@ -18,6 +18,8 @@ zenu-test = { path = "../zenu-test", version = "0.1.0" }
 zenu-layer = { path = "../zenu-layer", version = "0.1.0" }
 serde = { version = "1.0.197", features = ["derive"] }
 serde_json = "1.0"
+rand_distr = "0.4.3"
+
 
 [lib]
 proc-macro = true
