@@ -1,6 +1,7 @@
+use std::collections::HashMap;
+
 use crate::{Module, Parameters};
 use rand_distr::{Distribution, StandardNormal};
-use serde::{Deserialize, Serialize};
 use zenu_autograd::{
     creator::{rand::normal, zeros::zeros},
     functions::matmul::matmul,
@@ -8,8 +9,6 @@ use zenu_autograd::{
 };
 use zenu_matrix::{device::Device, num::Num};
 
-#[derive(Serialize, Deserialize)]
-#[serde(bound(deserialize = "T: Num + Deserialize<'de>"))]
 pub struct Linear<T: Num, D: Device> {
     in_features: usize,
     out_features: usize,
@@ -30,12 +29,18 @@ impl<T: Num, D: Device> Module<T, D> for Linear<T, D> {
 }
 
 impl<T: Num, D: Device> Parameters<T, D> for Linear<T, D> {
-    fn weights(&self) -> Vec<&Variable<T, D>> {
-        vec![&self.weight]
+    fn weights(&self) -> HashMap<String, Variable<T, D>> {
+        let mut weights = HashMap::new();
+        weights.insert("linear.weight".to_string(), self.weight.clone());
+        weights
     }
 
-    fn biases(&self) -> Vec<&Variable<T, D>> {
-        self.bias.as_ref().map_or_else(Vec::new, |b| vec![b])
+    fn biases(&self) -> HashMap<String, Variable<T, D>> {
+        let mut biases = HashMap::new();
+        if let Some(bias) = &self.bias {
+            biases.insert("linear.bias".to_string(), bias.clone());
+        }
+        biases
     }
 }
 

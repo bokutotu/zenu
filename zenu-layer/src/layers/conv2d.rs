@@ -1,7 +1,6 @@
-use std::cell::RefCell;
+use std::{cell::RefCell, collections::HashMap};
 
 use rand_distr::{Distribution, StandardNormal};
-use serde::{Deserialize, Serialize};
 use zenu_autograd::{
     creator::{rand::normal, zeros::zeros},
     functions::conv2d::{conv2d, Conv2dConfigs},
@@ -11,12 +10,9 @@ use zenu_matrix::{device::Device, dim::DimTrait, nn::conv2d::conv2d_out_size, nu
 
 use crate::{Module, Parameters};
 
-#[derive(Serialize, Deserialize)]
-#[serde(bound(deserialize = "T: Num + Deserialize<'de>"))]
 pub struct Conv2d<T: Num, D: Device> {
     pub filter: Variable<T, D>,
     pub bias: Option<Variable<T, D>>,
-    #[serde(skip)]
     config: RefCell<Option<Conv2dConfigs<T>>>,
     stride: (usize, usize),
     padding: (usize, usize),
@@ -55,12 +51,26 @@ impl<T: Num, D: Device> Module<T, D> for Conv2d<T, D> {
 }
 
 impl<T: Num, D: Device> Parameters<T, D> for Conv2d<T, D> {
-    fn weights(&self) -> Vec<&Variable<T, D>> {
-        vec![&self.filter]
+    fn weights(&self) -> HashMap<String, Variable<T, D>> {
+        HashMap::new()
+            .into_iter()
+            .chain(std::iter::once((
+                String::from("conv2d.filter"),
+                self.filter.clone(),
+            )))
+            .collect()
     }
 
-    fn biases(&self) -> Vec<&Variable<T, D>> {
-        self.bias.as_ref().into_iter().collect()
+    fn biases(&self) -> HashMap<String, Variable<T, D>> {
+        self.bias
+            .as_ref()
+            .map(|bias| {
+                HashMap::new()
+                    .into_iter()
+                    .chain(std::iter::once((String::from("conv2d.bias"), bias.clone())))
+                    .collect()
+            })
+            .unwrap_or_default()
     }
 }
 

@@ -2,6 +2,7 @@ pub mod dataset;
 pub mod dataset_loader;
 
 use std::{
+    collections::HashMap,
     fs::File,
     io::{Read, Write},
     path::Path,
@@ -9,7 +10,7 @@ use std::{
 
 use serde::Deserialize;
 use zenu_autograd::Variable;
-use zenu_layer::StateDict;
+use zenu_layer::Parameters;
 use zenu_matrix::{device::Device, num::Num};
 use zenu_optimizer::Optimizer;
 
@@ -28,43 +29,55 @@ pub fn update_parameters<T: Num, D: Device, O: Optimizer<T, D>>(
     loss.clear_grad();
 }
 
-pub fn save_model<'de, M: StateDict<'de>, P: AsRef<Path>>(
-    model: M,
-    save_path: P,
+pub fn save_model<T: Num, D: Device, M: Parameters<T, D>, P: AsRef<Path>>(
+    model: &M,
+    path: P,
 ) -> Result<(), &'static str> {
-    let bin = model.to_bytes();
-    let mut file = File::create(save_path).map_err(|_| "Failed to save model")?;
+    let path = path.as_ref();
+    let mut file = File::create(path).map_err(|_| "Failed to save model")?;
+    let state_dict = model.parameters();
+    let bin = bincode::serialize(&state_dict).map_err(|_| "Failed to save model")?;
     file.write_all(&bin).map_err(|_| "Failed to save model")?;
     Ok(())
 }
 
-pub fn load_model_from_vec<'de, T, D: Device, M: StateDict<'de>>(
-    bin: &'de [u8],
-) -> Result<M, &'static str>
-where
-    T: Num + Deserialize<'de>,
-{
-    let model = M::from_bytes(bin);
-    Ok(model)
-}
-
-pub fn load_model<M: for<'de> StateDict<'de>, P: AsRef<Path>>(
-    save_path: P,
-) -> Result<M, &'static str> {
-    let mut file = File::open(save_path).map_err(|_| "Failed to load model")?;
+pub fn load_model<
+    T: Num + for<'de> Deserialize<'de>,
+    D: Device,
+    M: Parameters<T, D>,
+    P: AsRef<Path>,
+>(
+    path: P,
+    model: &M,
+) -> Result<(), &'static str> {
+    let path = path.as_ref();
+    let mut file = File::open(path).map_err(|_| "Failed to load model")?;
     let mut bin = Vec::new();
     file.read_to_end(&mut bin)
         .map_err(|_| "Failed to load model")?;
-
-    Ok(M::from_bytes(&bin))
+    let state_dict: HashMap<String, Variable<T, D>> =
+        bincode::deserialize(&bin).map_err(|_| "Failed to load model")?;
+    let model_state_dict = model.parameters();
+    for (key, value) in state_dict.iter() {
+        if let Some(parameter) = model_state_dict.get(key) {
+            parameter
+                .get_data_mut()
+                .to_ref_mut()
+                .copy_from(&value.get_data());
+        } else {
+            return Err("Failed to load model");
+        }
+    }
+    Ok(())
 }
 
 #[cfg(test)]
 mod save_and_load_paramters {
+    use std::collections::HashMap;
+
     use super::{load_model, save_model};
-    use serde::{Deserialize, Serialize};
     use zenu_autograd::{creator::rand, Variable};
-    use zenu_layer::{layers::linear::Linear, Module, StateDict};
+    use zenu_layer::{layers::linear::Linear, Module, Parameters};
     use zenu_matrix::{
         device::{cpu::Cpu, Device},
         num::Num,
@@ -73,18 +86,32 @@ mod save_and_load_paramters {
 
     #[test]
     fn save_and_load_parameters() {
-        #[derive(Serialize, Deserialize)]
         struct TestModel {
             layer1: Linear<f32, Cpu>,
             layer2: Linear<f32, Cpu>,
         }
 
-        impl<'de> StateDict<'de> for TestModel {}
-
         impl Module<f32, Cpu> for TestModel {
             fn call(&self, inputs: Variable<f32, Cpu>) -> zenu_autograd::Variable<f32, Cpu> {
                 let x = self.layer1.call(inputs.clone());
                 self.layer2.call(x)
+            }
+        }
+
+        impl Parameters<f32, Cpu> for TestModel {
+            fn weights(&self) -> HashMap<String, Variable<f32, Cpu>> {
+                let mut weights = HashMap::new();
+                let layer1_weight = self.layer1.weight.clone();
+                let layer2_weight = self.layer2.weight.clone();
+                weights.insert("layer1.weight".to_string(), layer1_weight);
+                weights.insert("layer2.weight".to_string(), layer2_weight);
+                weights
+            }
+            fn biases(&self) -> HashMap<String, Variable<f32, Cpu>> {
+                let mut biases = HashMap::new();
+                biases.insert("layer1.bias".to_string(), self.layer1.bias.clone().unwrap());
+                biases.insert("layer2.bias".to_string(), self.layer2.bias.clone().unwrap());
+                biases
             }
         }
 
@@ -94,9 +121,13 @@ mod save_and_load_paramters {
         };
 
         let save_path = "test.json";
-        save_model(model, save_path).unwrap();
+        save_model(&model, save_path).unwrap();
 
-        let model = load_model::<TestModel, _>(save_path).unwrap();
+        let new_model = TestModel {
+            layer1: Linear::new(2, 2, true),
+            layer2: Linear::new(2, 2, true),
+        };
+        load_model(save_path, &new_model).unwrap();
 
         let fake_input = rand::normal(1.0, 1.0, Some(42), &[1, 2]);
         let original = model.call(fake_input.clone());
@@ -110,8 +141,6 @@ mod save_and_load_paramters {
         std::fs::remove_file(save_path).unwrap();
     }
 
-    #[derive(Serialize, Deserialize)]
-    #[serde(bound(deserialize = "T: Num + Deserialize<'de>, D: Device + Deserialize<'de>"))]
     struct ConvNet<T: Num, D: Device> {
         conv1: zenu_layer::layers::conv2d::Conv2d<T, D>,
         conv2: zenu_layer::layers::conv2d::Conv2d<T, D>,
@@ -119,12 +148,55 @@ mod save_and_load_paramters {
         fc2: Linear<T, D>,
     }
 
-    impl<'de, T: Num + Deserialize<'de>, D: Device + Deserialize<'de>> StateDict<'de>
-        for ConvNet<T, D>
-    {
+    impl<T: Num, D: Device> Parameters<T, D> for ConvNet<T, D> {
+        fn weights(&self) -> HashMap<String, Variable<T, D>> {
+            let mut weights = HashMap::new();
+            let conv1_weights = self.conv1.weights();
+            let conv2_weights = self.conv2.weights();
+            let fc1_weights = self.fc1.weights();
+            let fc2_weights = self.fc2.weights();
+
+            weights.insert(
+                "conv1.filter".to_string(),
+                conv1_weights["conv2d.filter"].clone(),
+            );
+            weights.insert(
+                "conv2.filter".to_string(),
+                conv2_weights["conv2d.filter"].clone(),
+            );
+            weights.insert(
+                "fc1.weight".to_string(),
+                fc1_weights["linear.weight"].clone(),
+            );
+            weights.insert(
+                "fc2.weight".to_string(),
+                fc2_weights["linear.weight"].clone(),
+            );
+            weights
+        }
+
+        fn biases(&self) -> HashMap<String, Variable<T, D>> {
+            let mut biases = HashMap::new();
+            let conv1_biases = self.conv1.biases();
+            let conv2_biases = self.conv2.biases();
+            let fc1_biases = self.fc1.biases();
+            let fc2_biases = self.fc2.biases();
+
+            biases.insert(
+                "conv1.bias".to_string(),
+                conv1_biases["conv2d.bias"].clone(),
+            );
+            biases.insert(
+                "conv2.bias".to_string(),
+                conv2_biases["conv2d.bias"].clone(),
+            );
+            biases.insert("fc1.bias".to_string(), fc1_biases["linear.bias"].clone());
+            biases.insert("fc2.bias".to_string(), fc2_biases["linear.bias"].clone());
+            biases
+        }
     }
 
-    fn hoge<D: Device + for<'de> Deserialize<'de>>() {
+    fn hoge<D: Device>() {
         let model = ConvNet::<f32, D> {
             conv1: zenu_layer::layers::conv2d::Conv2d::new(1, 20, (5, 5), (1, 1), (0, 0), true),
             conv2: zenu_layer::layers::conv2d::Conv2d::new(20, 50, (5, 5), (1, 1), (0, 0), true),
@@ -133,9 +205,16 @@ mod save_and_load_paramters {
         };
 
         let save_path = "test.json";
-        save_model(model, save_path).unwrap();
+        save_model(&model, save_path).unwrap();
 
-        let _model = load_model::<ConvNet<f32, D>, _>(save_path).unwrap();
+        let _model = ConvNet::<f32, D> {
+            conv1: zenu_layer::layers::conv2d::Conv2d::new(1, 20, (5, 5), (1, 1), (0, 0), true),
+            conv2: zenu_layer::layers::conv2d::Conv2d::new(20, 50, (5, 5), (1, 1), (0, 0), true),
+            fc1: Linear::new(4 * 4 * 50, 500, true),
+            fc2: Linear::new(500, 10, true),
+        };
+
+        let _model = load_model(save_path, &_model).unwrap();
 
         std::fs::remove_file(save_path).unwrap();
     }
