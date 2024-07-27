@@ -44,3 +44,30 @@ DEFINE_ARRAY_ARRAY_WRAPPER(double, add)
 DEFINE_ARRAY_ARRAY_WRAPPER(double, sub)
 DEFINE_ARRAY_ARRAY_WRAPPER(double, mul)
 DEFINE_ARRAY_ARRAY_WRAPPER(double, div)
+
+template <typename T>
+__global__ void conv_bias_add_kernel(const T *input, T *output, int channel_stride, 
+                                     const T *bias, int bias_size, int total_elements) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    
+    if (idx < total_elements) {
+        int channel = (idx / channel_stride) % bias_size;
+        output[idx] = input[idx] + bias[channel];
+    }
+}
+
+void conv_bias_add_float(const float *input, float *output, int channel_stride, const float *bias, int bias_size, int total_elements) {
+    dim3 block_size(256);
+    dim3 grid_size((total_elements + block_size.x - 1) / block_size.x);
+
+    conv_bias_add_kernel<<<grid_size, block_size>>>(input, output, channel_stride, bias, bias_size, total_elements);
+    cudaDeviceSynchronize();
+}
+
+void conv_bias_add_double(const double *input, double *output, int channel_stride, const double *bias, int bias_size, int total_elements) {
+    dim3 block_size(256);
+    dim3 grid_size((total_elements + block_size.x - 1) / block_size.x);
+
+    conv_bias_add_kernel<<<grid_size, block_size>>>(input, output, channel_stride, bias, bias_size, total_elements);
+    cudaDeviceSynchronize();
+}
