@@ -59,14 +59,14 @@ impl<T: Num, D: Device> Sub<Variable<T, D>> for Variable<T, D> {
 
 #[cfg(test)]
 mod tests {
-    use zenu_matrix::matrix::Matrix;
+    use zenu_matrix::{device::cpu::Cpu, matrix::Matrix};
     use zenu_test::assert_val_eq;
 
     use super::*;
 
     #[test]
     fn sub() {
-        let x = Variable::new(Matrix::from_vec(vec![1., 2., 3.], [3]));
+        let x = Variable::<f32, Cpu>::new(Matrix::from_vec(vec![1., 2., 3.], [3]));
         let y = Variable::new(Matrix::from_vec(vec![1., 2., 3.], [3]));
         let z = x.clone() - y.clone();
         let ans = Matrix::zeros([3]);
