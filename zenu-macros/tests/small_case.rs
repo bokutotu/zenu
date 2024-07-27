@@ -30,11 +30,18 @@ fn test_zenu_model() {
     let weight = weights[0].get_data();
     let bias = biases[0].get_data();
 
-    // Add assertions here to test the behavior
     assert_eq!((weight.to_ref() - ans_weights.to_ref()).asum(), 0.);
     assert_eq!((bias.to_ref() - ans_biases.to_ref()).asum(), 0.);
 
     let json = hoge.to_json();
-    // let json = serde_json::to_string(&hoge).unwrap();
-    // let _hoge: Hoge<f32, Cpu> = serde_json::from_str(&json).unwrap();
+    let new_hoge = Hoge::<f32, Cpu>::from_json(&json);
+
+    let weights = new_hoge.weights();
+    let biases = new_hoge.biases();
+
+    let weight = weights[0].get_data();
+    let bias = biases[0].get_data();
+
+    assert_eq!((weight.to_ref() - ans_weights.to_ref()).asum(), 0.);
+    assert_eq!((bias.to_ref() - ans_biases.to_ref()).asum(), 0.);
 }
