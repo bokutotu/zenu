@@ -8,8 +8,6 @@ proc-macro2 = "1"
 quote = "1"
 syn = { version = "1", features = ["full"] }
 
-
-
 [dev-dependencies]
 zenu-matrix = { path = "../zenu-matrix", version = "0.1.1" }
 zenu-autograd = { path = "../zenu-autograd", version = "0.1.1" }
