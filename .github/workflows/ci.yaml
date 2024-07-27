@@ -27,6 +27,9 @@ jobs:
       - name: Run clippy on zenu-optimizer
         run: cd zenu-optimizer && cargo clippy --verbose
 
+      - name: Run clippy on zenu-macros
+        run: cd zenu-macros && cargo clippy --verbose
+
       - name: Run clippy on zenu
         run: cd zenu && cargo clippy --verbose
 
@@ -60,6 +63,9 @@ jobs:
 
       - name: Run tests on zenu-optimizer
         run: cd zenu-optimizer && cargo test --verbose
+
+      - name: Run tests on zenu-macros
+        run: cd zenu-macros && cargo test --verbose
 
       - name: Run tests on zenu
         run: cd zenu && cargo test --verbose

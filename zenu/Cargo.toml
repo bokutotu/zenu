@@ -13,12 +13,13 @@ zenu-matrix = { path = "../zenu-matrix", version = "0.1.1" }
 zenu-autograd = { path = "../zenu-autograd", version = "0.1.1" }
 zenu-layer = { path = "../zenu-layer", version = "0.1.0" }
 zenu-optimizer = { path = "../zenu-optimizer", version = "0.1.0" }
+zenu-macros = { path = "../zenu-macros", version = "0.1.0" }
 
 reqwest = { version = "0.12", features = ["json", "blocking"] }
 flate2 = { version = "1.0", features = ["zlib"] }
 rand = { version = "0.8.5", features = ["small_rng"] }
 serde = { version = "1.0.114", features = ["derive"] }
-serde_json = "1.0"
+bincode = "1.3.3"
 tar = "0.4.40"
 
 [dev-dependencies]
