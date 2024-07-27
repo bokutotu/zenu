@@ -545,6 +545,48 @@ pub fn array_max_idx<T: 'static>(input: *const T, size: usize, stride: usize) ->
     ans as usize
 }
 
+pub fn conv_bias_add<T: 'static>(
+    input: *const T,
+    bias: *const T,
+    total_elements: usize,
+    channel_stride: usize,
+    bias_size: usize,
+    output: *mut T,
+) {
+    let total_elements = total_elements as ::std::os::raw::c_int;
+    let channel_stride = channel_stride as ::std::os::raw::c_int;
+    let bias_size = bias_size as ::std::os::raw::c_int;
+    if TypeId::of::<T>() == TypeId::of::<f32>() {
+        let input = input as *mut f32;
+        let bias = bias as *mut f32;
+        let output = output as *mut f32;
+        unsafe {
+            conv_bias_add_float(
+                input,
+                output,
+                channel_stride,
+                bias,
+                bias_size,
+                total_elements,
+            )
+        };
+    } else if TypeId::of::<T>() == TypeId::of::<f64>() {
+        let input = input as *mut f64;
+        let bias = bias as *mut f64;
+        let output = output as *mut f64;
+        unsafe {
+            conv_bias_add_double(
+                input,
+                output,
+                channel_stride,
+                bias,
+                bias_size,
+                total_elements,
+            )
+        };
+    }
+}
+
 #[cfg(test)]
 mod array_array {
     use super::*;
