@@ -1,4 +1,4 @@
-use crate::{Module, Parameters, StateDict};
+use crate::{Module, Parameters};
 use rand_distr::{Distribution, StandardNormal};
 use serde::{Deserialize, Serialize};
 use zenu_autograd::{
@@ -16,8 +16,6 @@ pub struct Linear<T: Num, D: Device> {
     pub weight: Variable<T, D>,
     pub bias: Option<Variable<T, D>>,
 }
-
-impl<'de, T: Num + Deserialize<'de>, D: Device> StateDict<'de> for Linear<T, D> {}
 
 impl<T: Num, D: Device> Module<T, D> for Linear<T, D> {
     fn call(&self, input: Variable<T, D>) -> Variable<T, D> {

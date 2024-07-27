@@ -9,7 +9,7 @@ use zenu_autograd::{
 };
 use zenu_matrix::{device::Device, dim::DimTrait, nn::conv2d::conv2d_out_size, num::Num};
 
-use crate::{Module, Parameters, StateDict};
+use crate::{Module, Parameters};
 
 #[derive(Serialize, Deserialize)]
 #[serde(bound(deserialize = "T: Num + Deserialize<'de>"))]
@@ -21,8 +21,6 @@ pub struct Conv2d<T: Num, D: Device> {
     stride: (usize, usize),
     padding: (usize, usize),
 }
-
-impl<'de, T: Num + Deserialize<'de>, D: Device> StateDict<'de> for Conv2d<T, D> {}
 
 impl<T: Num, D: Device> Module<T, D> for Conv2d<T, D> {
     fn call(&self, input: Variable<T, D>) -> Variable<T, D> {

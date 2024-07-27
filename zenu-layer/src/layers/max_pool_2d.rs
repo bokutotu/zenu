@@ -5,7 +5,7 @@ use zenu_autograd::{
 };
 use zenu_matrix::{device::Device, num::Num};
 
-use crate::{Module, Parameters, StateDict};
+use crate::{Module, Parameters};
 
 #[derive(Serialize, Deserialize)]
 #[serde(bound(deserialize = "T: Num + Deserialize<'de>"))]
@@ -16,8 +16,6 @@ pub struct MaxPool2d<T: Num> {
     #[serde(skip)]
     config: MaxPool2dConfig<T>,
 }
-
-impl<'de, T: Num + Deserialize<'de>> StateDict<'de> for MaxPool2d<T> {}
 
 impl<T: Num, D: Device> Parameters<T, D> for MaxPool2d<T> {
     fn weights(&self) -> Vec<&Variable<T, D>> {
