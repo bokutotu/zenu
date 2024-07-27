@@ -9,11 +9,7 @@ pub fn zenu_derive_parameters(input: TokenStream) -> TokenStream {
 
     let parameters_impl = impl_parameters(&input);
 
-    let expanded = quote! {
-        #parameters_impl
-    };
-
-    TokenStream::from(expanded)
+    TokenStream::from(parameters_impl)
 }
 
 fn impl_parameters(input: &DeriveInput) -> TokenStream2 {
@@ -30,33 +26,37 @@ fn impl_parameters(input: &DeriveInput) -> TokenStream2 {
     let weights_code = fields.clone().map(|field| {
         let field_name = &field.ident;
         quote! {
-            &self.#field_name.weights()
+            for (name, variable) in &self.#field_name.weights() {
+                let name = format!("{}.{}", stringify!(#field_name), name);
+                params.insert(name.clone(), variable.clone());
+            }
         }
     });
 
     let biases_code = fields.clone().map(|field| {
         let field_name = &field.ident;
         quote! {
-            &self.#field_name.biases()
+            for (name, variable) in &self.#field_name.biases() {
+                let name = format!("{}.{}", stringify!(#field_name), name);
+                params.insert(name.clone(), variable.clone());
+            }
         }
     });
 
     quote!(
-        impl #impl_generics ::zenu_layer::Parameters<T, D> for #name #ty_generics #where_clause {
-            fn weights(&self) -> Vec<&::zenu_autograd::Variable<T, D>> {
-                let mut params = Vec::new();
+        impl #impl_generics ::zenu_layer::Parameters #ty_generics for #name #ty_generics #where_clause {
+            fn weights(&self) -> std::collections::HashMap<String, ::zenu_autograd::Variable<T, D>> {
+                let mut params = std::collections::HashMap::new();
                 #(
-                    let weights = #weights_code;
-                    params.extend(weights);
+                    #weights_code;
                 )*
                 params
             }
 
-            fn biases(&self) -> Vec<&::zenu_autograd::Variable<T, D>> {
-                let mut params = Vec::new();
+            fn biases(&self) -> std::collections::HashMap<String, ::zenu_autograd::Variable<T, D>> {
+                let mut params = std::collections::HashMap::new();
                 #(
-                    let biases = #biases_code;
-                    params.extend(biases);
+                    #biases_code;
                 )*
                 params
             }
