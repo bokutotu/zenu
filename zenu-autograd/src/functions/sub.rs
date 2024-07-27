@@ -1,8 +1,10 @@
-use std::ops::Sub;
+use std::{cell::RefCell, ops::Sub, rc::Rc};
 
 use zenu_matrix::{device::Device, num::Num};
 
-use crate::{Function, Variable};
+use crate::{creator::alloc::alloc, Function, Variable};
+
+use super::output_shape;
 
 pub struct SubFunc<T: Num, D: Device> {
     x: Variable<T, D>,
@@ -35,8 +37,16 @@ impl<T: Num, D: Device> Function<T, D> for SubFunc<T, D> {
 }
 
 pub fn sub<T: Num, D: Device>(x: Variable<T, D>, y: Variable<T, D>) -> Variable<T, D> {
-    let y = y * Variable::from(T::minus_one());
-    x + y
+    let output_shape = output_shape(&x, &y);
+    let output = alloc(output_shape);
+    let sub = SubFunc {
+        x,
+        y,
+        output: output.clone(),
+    };
+    sub.forward();
+    output.set_creator(Rc::new(RefCell::new(Box::new(sub))));
+    output
 }
 
 impl<T: Num, D: Device> Sub<Variable<T, D>> for Variable<T, D> {
@@ -44,5 +54,27 @@ impl<T: Num, D: Device> Sub<Variable<T, D>> for Variable<T, D> {
 
     fn sub(self, rhs: Variable<T, D>) -> Self::Output {
         sub(self, rhs)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use zenu_matrix::matrix::Matrix;
+    use zenu_test::assert_val_eq;
+
+    use super::*;
+
+    #[test]
+    fn sub() {
+        let x = Variable::new(Matrix::from_vec(vec![1., 2., 3.], [3]));
+        let y = Variable::new(Matrix::from_vec(vec![1., 2., 3.], [3]));
+        let z = x.clone() - y.clone();
+        let ans = Matrix::zeros([3]);
+        let ones = Matrix::ones([3]);
+        let minus_ones = Matrix::from_vec(vec![-1., -1., -1.], [3]);
+        assert_val_eq!(z.get_data(), zeros, 1e-4);
+        z.backward();
+        assert_val_eq!(x.get_grad(), ones, 1e-4);
+        assert_val_eq!(y.get_grad(), minus_ones, 1e-4);
     }
 }

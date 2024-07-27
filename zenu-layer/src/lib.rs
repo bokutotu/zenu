@@ -35,8 +35,7 @@ impl<T: Num, D: Device> Parameters<T, D> for () {
         HashMap::new()
     }
 }
-
-impl<T: Num, D: Device> Parameters<T, D> for Vec<Box<dyn Parameters<T, D>>> {
+impl<T: Num, D: Device, P: Parameters<T, D>> Parameters<T, D> for Vec<P> {
     fn weights(&self) -> HashMap<String, Variable<T, D>> {
         let mut weights = HashMap::new();
         for (idx, param) in self.iter().enumerate() {
@@ -68,7 +67,7 @@ impl<T: Num, D: Device> Parameters<T, D> for Box<dyn Parameters<T, D>> {
     }
 }
 
-impl<T: Num, D: Device> Parameters<T, D> for HashMap<String, Box<dyn Parameters<T, D>>> {
+impl<T: Num, D: Device, P: Parameters<T, D>> Parameters<T, D> for HashMap<String, P> {
     fn weights(&self) -> HashMap<String, Variable<T, D>> {
         let mut weights = HashMap::new();
         for (key, param) in self.iter() {
