@@ -1,23 +1,29 @@
-use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+
 use zenu_autograd::{
     functions::pool2d::{max_pool_2d, MaxPool2dConfig},
     Variable,
 };
 use zenu_matrix::{device::Device, num::Num};
 
-use crate::{Module, StateDict};
+use crate::{Module, Parameters};
 
-#[derive(Serialize, Deserialize)]
-#[serde(bound(deserialize = "T: Num + Deserialize<'de>"))]
 pub struct MaxPool2d<T: Num> {
     stride: (usize, usize),
     kernel_size: (usize, usize),
     pad: (usize, usize),
-    #[serde(skip)]
     config: MaxPool2dConfig<T>,
 }
 
-impl<'de, T: Num + Deserialize<'de>> StateDict<'de> for MaxPool2d<T> {}
+impl<T: Num, D: Device> Parameters<T, D> for MaxPool2d<T> {
+    fn weights(&self) -> HashMap<String, Variable<T, D>> {
+        HashMap::new()
+    }
+
+    fn biases(&self) -> HashMap<String, Variable<T, D>> {
+        HashMap::new()
+    }
+}
 
 impl<T: Num> MaxPool2d<T> {
     #[must_use]

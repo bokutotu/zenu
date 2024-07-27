@@ -1,7 +1,6 @@
-use std::cell::RefCell;
+use std::{cell::RefCell, collections::HashMap};
 
 use rand_distr::{Distribution, StandardNormal};
-use serde::{Deserialize, Serialize};
 use zenu_autograd::{
     creator::{rand::normal, zeros::zeros},
     functions::conv2d::{conv2d, Conv2dConfigs},
@@ -9,20 +8,15 @@ use zenu_autograd::{
 };
 use zenu_matrix::{device::Device, dim::DimTrait, nn::conv2d::conv2d_out_size, num::Num};
 
-use crate::{Module, Parameteres, StateDict};
+use crate::{Module, Parameters};
 
-#[derive(Serialize, Deserialize)]
-#[serde(bound(deserialize = "T: Num + Deserialize<'de>"))]
 pub struct Conv2d<T: Num, D: Device> {
     pub filter: Variable<T, D>,
     pub bias: Option<Variable<T, D>>,
-    #[serde(skip)]
     config: RefCell<Option<Conv2dConfigs<T>>>,
     stride: (usize, usize),
     padding: (usize, usize),
 }
-
-impl<'de, T: Num + Deserialize<'de>, D: Device> StateDict<'de> for Conv2d<T, D> {}
 
 impl<T: Num, D: Device> Module<T, D> for Conv2d<T, D> {
     fn call(&self, input: Variable<T, D>) -> Variable<T, D> {
@@ -56,13 +50,27 @@ impl<T: Num, D: Device> Module<T, D> for Conv2d<T, D> {
     }
 }
 
-impl<T: Num, D: Device> Parameteres<T, D> for Conv2d<T, D> {
-    fn weights(&self) -> Vec<&Variable<T, D>> {
-        vec![&self.filter]
+impl<T: Num, D: Device> Parameters<T, D> for Conv2d<T, D> {
+    fn weights(&self) -> HashMap<String, Variable<T, D>> {
+        HashMap::new()
+            .into_iter()
+            .chain(std::iter::once((
+                String::from("conv2d.filter"),
+                self.filter.clone(),
+            )))
+            .collect()
     }
 
-    fn biases(&self) -> Vec<&Variable<T, D>> {
-        self.bias.as_ref().into_iter().collect()
+    fn biases(&self) -> HashMap<String, Variable<T, D>> {
+        self.bias
+            .as_ref()
+            .map(|bias| {
+                HashMap::new()
+                    .into_iter()
+                    .chain(std::iter::once((String::from("conv2d.bias"), bias.clone())))
+                    .collect()
+            })
+            .unwrap_or_default()
     }
 }
 
@@ -110,30 +118,5 @@ impl<T: Num, D: Device> Conv2d<T, D> {
             stride: self.stride,
             padding: self.padding,
         }
-    }
-}
-
-#[cfg(test)]
-mod conv2d {
-    use zenu_autograd::creator::rand::normal;
-    use zenu_matrix::device::cpu::Cpu;
-
-    use crate::{layers::conv2d::Conv2d, Module, StateDict};
-
-    #[test]
-    fn conv2d() {
-        let input = normal::<f32, _, Cpu>(0.0, 1.0, Some(42), &[2, 3, 5, 5]);
-        let conv2d = Conv2d::new(3, 4, (3, 3), (1, 1), (1, 1), true);
-        let _output = conv2d.call(input);
-
-        let conv2d_params = conv2d.to_json();
-
-        let conv_2d_json = serde_json::to_string(&conv2d).unwrap();
-
-        let deserialized_conv2d: Conv2d<f32, Cpu> = serde_json::from_str(&conv_2d_json).unwrap();
-
-        let de_parames = deserialized_conv2d.to_json();
-
-        assert_eq!(conv2d_params, de_parames);
     }
 }
