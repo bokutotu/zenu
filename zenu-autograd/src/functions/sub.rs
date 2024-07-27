@@ -72,9 +72,9 @@ mod tests {
         let ans = Matrix::zeros([3]);
         let ones = Matrix::ones([3]);
         let minus_ones = Matrix::from_vec(vec![-1., -1., -1.], [3]);
-        assert_val_eq!(z.get_data(), zeros, 1e-4);
+        assert_val_eq!(z, ans, 1e-4);
         z.backward();
-        assert_val_eq!(x.get_grad(), ones, 1e-4);
-        assert_val_eq!(y.get_grad(), minus_ones, 1e-4);
+        assert_val_eq!(x, ones, 1e-4);
+        assert_val_eq!(y, minus_ones, 1e-4);
     }
 }
