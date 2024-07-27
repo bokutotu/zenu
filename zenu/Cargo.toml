@@ -13,6 +13,7 @@ zenu-matrix = { path = "../zenu-matrix", version = "0.1.1" }
 zenu-autograd = { path = "../zenu-autograd", version = "0.1.1" }
 zenu-layer = { path = "../zenu-layer", version = "0.1.0" }
 zenu-optimizer = { path = "../zenu-optimizer", version = "0.1.0" }
+zenu-macro = { path = "../zenu-macro", version = "0.1.0" }
 
 reqwest = { version = "0.12", features = ["json", "blocking"] }
 flate2 = { version = "1.0", features = ["zlib"] }
