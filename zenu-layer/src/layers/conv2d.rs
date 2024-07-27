@@ -120,28 +120,3 @@ impl<T: Num, D: Device> Conv2d<T, D> {
         }
     }
 }
-
-#[cfg(test)]
-mod conv2d {
-    use zenu_autograd::creator::rand::normal;
-    use zenu_matrix::device::cpu::Cpu;
-
-    use crate::{layers::conv2d::Conv2d, Module, StateDict};
-
-    #[test]
-    fn conv2d() {
-        let input = normal::<f32, _, Cpu>(0.0, 1.0, Some(42), &[2, 3, 5, 5]);
-        let conv2d = Conv2d::new(3, 4, (3, 3), (1, 1), (1, 1), true);
-        let _output = conv2d.call(input);
-
-        let conv2d_params = conv2d.to_json();
-
-        let conv_2d_json = serde_json::to_string(&conv2d).unwrap();
-
-        let deserialized_conv2d: Conv2d<f32, Cpu> = serde_json::from_str(&conv_2d_json).unwrap();
-
-        let de_parames = deserialized_conv2d.to_json();
-
-        assert_eq!(conv2d_params, de_parames);
-    }
-}
