@@ -5,8 +5,7 @@ use zenu_matrix::{
     dim::{DimDyn, DimTrait},
     nn::conv2d::{
         conv2d_bckwd_data, conv2d_bckwd_data_bias, conv2d_bckwd_filter, conv2d_bias_add,
-        conv2d_forward, conv2d_out_size, deconv2d_out_size, Conv2dBckwdDataConfig,
-        Conv2dBckwdFilterConfig, Conv2dConfig,
+        conv2d_forward, conv2d_out_size, deconv2d_out_size, Conv2dConfig,
     },
     num::Num,
 };
