@@ -27,9 +27,6 @@ void array_array_div_assign_double(double *a, int stride_a, double *b, int strid
 void conv_bias_add_float(const float *input, float *output, int channel_stride, const float *bias, int bias_size, int total_elements);
 void conv_bias_add_double(const double *input, double *output, int channel_stride, const double *bias, int bias_size, int total_elements);
 
-void conv_bias_backward_float(const float *output_grad, float *bias_grad, int channel_stride, int bias_size, int total_elements);
-void conv_bias_backward_double(const double *output_grad, double *bias_grad, int channel_stride, int bias_size, int total_elements);
-
 #ifdef __cplusplus
 }
 #endif
