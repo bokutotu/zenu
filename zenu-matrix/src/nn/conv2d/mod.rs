@@ -3,7 +3,6 @@ use crate::{
     dim::{DimDyn, DimTrait},
     matrix::{Matrix, Owned, Ref},
     num::Num,
-    operation::sum::sum_to,
 };
 
 mod conv2d_bckwd_filter_cpu;
@@ -307,7 +306,9 @@ impl Conv2d for Cpu {
         dy: Matrix<Ref<&T>, DimDyn, Self>,
         dx: Matrix<Ref<&mut T>, DimDyn, Self>,
     ) {
-        sum_to(dy, dx);
+        let dy_0 = dy.sum(0, true);
+        let dy_0_2 = dy_0.to_ref().sum(2, true);
+        dx.copy_from(&dy_0_2.to_ref().sum(3, true));
     }
 }
 
@@ -589,7 +590,6 @@ mod conv2d {
     struct Conv2dTestCase<D: Device> {
         input: Matrix<Owned<f32>, DimDyn, D>,
         filter: Matrix<Owned<f32>, DimDyn, D>,
-        bias: Option<Matrix<Owned<f32>, DimDyn, D>>,
         pad_h: usize,
         pad_w: usize,
         stride_h: usize,
@@ -599,7 +599,6 @@ mod conv2d {
         expected: Matrix<Owned<f32>, DimDyn, D>,
         input_grad: Matrix<Owned<f32>, DimDyn, D>,
         filter_grad: Matrix<Owned<f32>, DimDyn, D>,
-        bias_grad: Option<Matrix<Owned<f32>, DimDyn, D>>,
         output_grad: Matrix<Owned<f32>, DimDyn, D>,
     }
 
@@ -888,7 +887,6 @@ mod conv2d {
         Conv2dTestCase {
             input,
             filter,
-            bias: None,
             pad_h: 1,
             pad_w: 1,
             stride_h: 1,
@@ -898,7 +896,6 @@ mod conv2d {
             expected,
             input_grad,
             filter_grad,
-            bias_grad: None,
             output_grad,
         }
     }
