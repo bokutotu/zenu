@@ -73,22 +73,53 @@ void conv_bias_add_double(const double *input, double *output, int channel_strid
     cudaDeviceSynchronize();
 }
 
+// template <typename T>
+// __global__ void conv_bias_backward_kernel(const T *output_grad, T *bias_grad, 
+//                                           int channel_stride, int bias_size, int total_elements) {
+//     int tid = threadIdx.x;
+//     int bid = blockIdx.x;
+//     int channel = bid;
+//
+//     if (channel < bias_size) {
+//         T sum = 0;
+//         for (int i = tid; i < total_elements; i += blockDim.x) {
+//             if ((i / channel_stride) % bias_size == channel) {
+//                 sum += output_grad[i];
+//             }
+//         }
+//
+//         __shared__ T shared_sum[256];
+//         shared_sum[tid] = sum;
+//         __syncthreads();
+//         
+//         for (int stride = blockDim.x / 2; stride > 0; stride >>= 1) {
+//             if (tid < stride) {
+//                 shared_sum[tid] += shared_sum[tid + stride];
+//             }
+//             __syncthreads();
+//         }
+//
+//         if (tid == 0) {
+//             bias_grad[channel] = shared_sum[0];
+//         }
+//     }
+// }
 template <typename T>
 __global__ void conv_bias_backward_kernel(const T *output_grad, T *bias_grad, 
                                           int channel_stride, int bias_size, int total_elements) {
     int tid = threadIdx.x;
     int bid = blockIdx.x;
-    int channel = bid;
-
-    if (channel < bias_size) {
+    
+    __shared__ T shared_sum[256];
+    
+    for (int channel = bid; channel < bias_size; channel += gridDim.x) {
         T sum = 0;
         for (int i = tid; i < total_elements; i += blockDim.x) {
             if ((i / channel_stride) % bias_size == channel) {
                 sum += output_grad[i];
             }
         }
-
-        __shared__ T shared_sum[256];
+        
         shared_sum[tid] = sum;
         __syncthreads();
         
@@ -98,10 +129,11 @@ __global__ void conv_bias_backward_kernel(const T *output_grad, T *bias_grad,
             }
             __syncthreads();
         }
-
+        
         if (tid == 0) {
             bias_grad[channel] = shared_sum[0];
         }
+        __syncthreads(); // 次のチャンネルの計算の前に同期を取る
     }
 }
 
