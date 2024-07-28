@@ -5,7 +5,7 @@ use zenu_matrix::{
     dim::{DimDyn, DimTrait},
     nn::conv2d::{
         conv2d_bckwd_data, conv2d_bckwd_data_bias, conv2d_bckwd_filter, conv2d_bias_add,
-        conv2d_forward, conv2d_out_size, deconv2d_out_size, Conv2dConfig,
+        conv2d_forward, conv2d_out_size, create_conv_descriptor, deconv2d_out_size, Conv2dConfig,
     },
     num::Num,
 };
@@ -14,8 +14,6 @@ use crate::{creator::alloc::alloc, Function, Variable, VariableWeak};
 
 pub struct Conv2dConfigsInner<T: Num> {
     pub conv2d_forward: Conv2dConfig<T>,
-    pub deconv2d: Conv2dBckwdDataConfig<T>,
-    pub conv2d_bkwdfilter: Conv2dBckwdFilterConfig<T>,
 }
 
 impl<T: Num> Conv2dConfigsInner<T> {
@@ -27,20 +25,19 @@ impl<T: Num> Conv2dConfigsInner<T> {
         padding: (usize, usize),
         num_algo: usize,
     ) -> Self {
-        let conv2d_forward = Conv2dConfig::new(
-            input, output, filter, padding.0, padding.1, stride.0, stride.1, 1, 1, num_algo,
+        let conv2d_forward = create_conv_descriptor(
+            input.slice(),
+            output.slice(),
+            filter.slice(),
+            padding.0,
+            padding.1,
+            stride.0,
+            stride.1,
+            1,
+            1,
+            num_algo,
         );
-        let deconv2d = Conv2dBckwdDataConfig::new(
-            input, output, filter, padding.0, padding.1, stride.0, stride.1, 1, 1, num_algo,
-        );
-        let conv2d_bkwdfilter = Conv2dBckwdFilterConfig::new(
-            input, output, filter, padding.0, padding.1, stride.0, stride.1, 1, 1, num_algo,
-        );
-        Self {
-            conv2d_forward,
-            deconv2d,
-            conv2d_bkwdfilter,
-        }
+        Self { conv2d_forward }
     }
 }
 
@@ -65,16 +62,8 @@ impl<T: Num> Conv2dConfigs<T> {
         }
     }
 
-    pub fn get_conv2d_forward(&self) -> &Conv2dConfig<T> {
+    pub fn get_inner(&self) -> &Conv2dConfig<T> {
         &self.inner.conv2d_forward
-    }
-
-    pub fn get_deconv2d(&self) -> &Conv2dBckwdDataConfig<T> {
-        &self.inner.deconv2d
-    }
-
-    pub fn get_conv2d_bkwdfilter(&self) -> &Conv2dBckwdFilterConfig<T> {
-        &self.inner.conv2d_bkwdfilter
     }
 }
 
@@ -119,7 +108,7 @@ struct Conv2dBiasBackward<T: Num, D: Device> {
 
 impl<T: Num, D: Device> Function<T, D> for Conv2d<T, D> {
     fn forward(&self) {
-        let config = self.config.get_conv2d_forward();
+        let config = self.config.get_inner();
         let y = conv2d_forward(
             self.x.get_data().to_ref(),
             self.filter.get_data().to_ref(),
@@ -180,7 +169,7 @@ impl<T: Num, D: Device> Function<T, D> for Deconv2d<T, D> {
             self.stride.1,
             1,
             1,
-            Some(self.config.clone().get_deconv2d()),
+            Some(self.config.clone().get_inner()),
         );
 
         self.y
@@ -231,7 +220,7 @@ impl<T: Num, D: Device> Function<T, D> for Conv2dBackward<T, D> {
             1,
             1,
             self.filter.get_data().shape(),
-            Some(self.config.clone().get_conv2d_bkwdfilter()),
+            Some(self.config.clone().get_inner()),
         );
         self.filter_grad
             .upgrade()
