@@ -3,6 +3,7 @@ use crate::{
     dim::{DimDyn, DimTrait},
     matrix::{Matrix, Owned, Ref},
     num::Num,
+    operation::sum::sum_to,
 };
 
 mod conv2d_bckwd_filter_cpu;
@@ -15,7 +16,10 @@ use self::{
 };
 
 #[cfg(feature = "nvidia")]
-use zenu_cuda::cudnn::{conv::*, TensorFormat};
+use zenu_cuda::{
+    cudnn::{conv::*, TensorFormat},
+    kernel::{conv_bias_add, conv_bias_backward},
+};
 
 #[cfg(feature = "nvidia")]
 use crate::device::nvidia::Nvidia;
@@ -203,6 +207,19 @@ pub trait Conv2d: DeviceBase {
         dilation_w: usize,
         config: Option<&Conv2dBckwdFilterConfig<T>>,
     );
+
+    #[allow(clippy::too_many_arguments)]
+    fn conv2d_forward_bias<T: Num>(
+        input: Matrix<Ref<&T>, DimDyn, Self>,
+        y: Matrix<Ref<&mut T>, DimDyn, Self>,
+        bias: Matrix<Ref<&T>, DimDyn, Self>,
+    );
+
+    #[allow(clippy::too_many_arguments)]
+    fn conv2d_bckwd_data_bias<T: Num>(
+        dy: Matrix<Ref<&T>, DimDyn, Self>,
+        dx: Matrix<Ref<&mut T>, DimDyn, Self>,
+    );
 }
 
 impl Conv2d for Cpu {
@@ -276,6 +293,21 @@ impl Conv2d for Cpu {
             (pad_h, pad_w),
             (stride_h, stride_w),
         ));
+    }
+
+    fn conv2d_forward_bias<T: Num>(
+        input: Matrix<Ref<&T>, DimDyn, Self>,
+        mut y: Matrix<Ref<&mut T>, DimDyn, Self>,
+        bias: Matrix<Ref<&T>, DimDyn, Self>,
+    ) {
+        y.add_array(&input, &bias);
+    }
+
+    fn conv2d_bckwd_data_bias<T: Num>(
+        dy: Matrix<Ref<&T>, DimDyn, Self>,
+        dx: Matrix<Ref<&mut T>, DimDyn, Self>,
+    ) {
+        sum_to(dy, dx);
     }
 }
 
@@ -391,13 +423,48 @@ impl Conv2d for Nvidia {
             df.as_mut_ptr(),
         )
     }
+
+    fn conv2d_forward_bias<T: Num>(
+        input: Matrix<Ref<&T>, DimDyn, Self>,
+        y: Matrix<Ref<&mut T>, DimDyn, Self>,
+        bias: Matrix<Ref<&T>, DimDyn, Self>,
+    ) {
+        let input_channel_stride = input.stride()[1];
+        let input_num_elm = input.shape().num_elm();
+        let bias_num_elm = bias.shape().num_elm();
+
+        conv_bias_add(
+            input.as_ptr(),
+            bias.as_ptr(),
+            input_num_elm,
+            input_channel_stride,
+            bias_num_elm,
+            y.as_mut_ptr(),
+        );
+    }
+
+    fn conv2d_bckwd_data_bias<T: Num>(
+        dy: Matrix<Ref<&T>, DimDyn, Self>,
+        dx: Matrix<Ref<&mut T>, DimDyn, Self>,
+    ) {
+        let dy_channel_stride = dy.stride()[1];
+        let dy_num_elm = dy.shape().num_elm();
+        let dx_num_elm = dx.shape().num_elm();
+
+        conv_bias_backward(
+            dy.as_ptr(),
+            dx.as_mut_ptr(),
+            dy_num_elm,
+            dy_channel_stride,
+            dx_num_elm,
+        );
+    }
 }
 
 #[allow(clippy::too_many_arguments)]
 pub fn conv2d_forward<T: Num, D: Device>(
     input: Matrix<Ref<&T>, DimDyn, D>,
     filter: Matrix<Ref<&T>, DimDyn, D>,
-    bias: Option<Matrix<Ref<&T>, DimDyn, D>>,
     pad_h: usize,
     pad_w: usize,
     stride_h: usize,
@@ -425,9 +492,6 @@ pub fn conv2d_forward<T: Num, D: Device>(
         dilation_w,
         config,
     );
-    if let Some(bias) = bias {
-        y += bias;
-    }
     y
 }
 
@@ -494,6 +558,21 @@ pub fn conv2d_bckwd_filter<T: Num, D: Device>(
     df
 }
 
+pub fn conv2d_bias_add<T: Num, D: Device>(
+    input: Matrix<Ref<&T>, DimDyn, D>,
+    bias: Matrix<Ref<&T>, DimDyn, D>,
+    output: Matrix<Ref<&mut T>, DimDyn, D>,
+) {
+    D::conv2d_forward_bias(input, output, bias);
+}
+
+pub fn conv2d_bckwd_data_bias<T: Num, D: Device>(
+    dy: Matrix<Ref<&T>, DimDyn, D>,
+    dx: Matrix<Ref<&mut T>, DimDyn, D>,
+) {
+    D::conv2d_bckwd_data_bias(dy, dx);
+}
+
 #[cfg(test)]
 mod conv2d {
     use zenu_test::{assert_mat_eq_epsilon, run_mat_test};
@@ -530,7 +609,6 @@ mod conv2d {
         let forward_pred = conv2d_forward(
             test_case.input.to_ref(),
             test_case.filter.to_ref(),
-            None,
             test_case.pad_h,
             test_case.pad_w,
             test_case.stride_h,

@@ -4,8 +4,9 @@ use zenu_matrix::{
     device::Device,
     dim::{DimDyn, DimTrait},
     nn::conv2d::{
-        conv2d_bckwd_data, conv2d_bckwd_filter, conv2d_forward, conv2d_out_size, deconv2d_out_size,
-        Conv2dBckwdDataConfig, Conv2dBckwdFilterConfig, Conv2dConfig,
+        conv2d_bckwd_data, conv2d_bckwd_data_bias, conv2d_bckwd_filter, conv2d_bias_add,
+        conv2d_forward, conv2d_out_size, deconv2d_out_size, Conv2dBckwdDataConfig,
+        Conv2dBckwdFilterConfig, Conv2dConfig,
     },
     num::Num,
 };
@@ -106,14 +107,23 @@ struct Conv2dBackward<T: Num, D: Device> {
     config: Conv2dConfigs<T>,
 }
 
+struct Conv2dBiasAdd<T: Num, D: Device> {
+    y: Variable<T, D>,
+    bias: Variable<T, D>,
+    output: VariableWeak<T, D>,
+}
+
+struct Conv2dBiasBackward<T: Num, D: Device> {
+    y_grad: Variable<T, D>,
+    bias_grad: VariableWeak<T, D>,
+}
+
 impl<T: Num, D: Device> Function<T, D> for Conv2d<T, D> {
     fn forward(&self) {
         let config = self.config.get_conv2d_forward();
         let y = conv2d_forward(
             self.x.get_data().to_ref(),
             self.filter.get_data().to_ref(),
-            // FIXME bias
-            None,
             self.padding.0,
             self.padding.1,
             self.stride.0,
@@ -260,6 +270,44 @@ impl<T: Num, D: Device> Function<T, D> for Conv2dBackward<T, D> {
     }
 }
 
+impl<T: Num, D: Device> Function<T, D> for Conv2dBiasAdd<T, D> {
+    fn forward(&self) {
+        let output = self.output.upgrade().unwrap();
+        let mut output = output.get_data_mut();
+        conv2d_bias_add(
+            self.y.get_data().to_ref(),
+            self.bias.get_data().to_ref(),
+            output.to_ref_mut(),
+        )
+    }
+
+    fn backward(&self) {
+        let y_grad = self.y.get_grad().unwrap();
+        let bias_grad = conv2d_bias_backward(y_grad, self.bias.clone());
+        self.bias.set_grad(bias_grad);
+    }
+
+    fn get_inputs(&self) -> Vec<Variable<T, D>> {
+        vec![self.y.clone(), self.bias.clone()]
+    }
+}
+
+impl<T: Num, D: Device> Function<T, D> for Conv2dBiasBackward<T, D> {
+    fn forward(&self) {
+        let bias_grad = self.bias_grad.upgrade().unwrap();
+        let mut bias_grad = bias_grad.get_data_mut();
+        conv2d_bckwd_data_bias(self.y_grad.get_data().to_ref(), bias_grad.to_ref_mut())
+    }
+
+    fn backward(&self) {
+        unimplemented!()
+    }
+
+    fn get_inputs(&self) -> Vec<Variable<T, D>> {
+        vec![self.y_grad.clone()]
+    }
+}
+
 pub fn conv2d<T: Num, D: Device>(
     x: Variable<T, D>,
     filter: Variable<T, D>,
@@ -303,7 +351,7 @@ pub fn conv2d<T: Num, D: Device>(
     conv2d.forward();
     y.set_creator(Rc::new(RefCell::new(Box::new(conv2d))));
     match bias {
-        Some(bias) => y + bias,
+        Some(bias) => conv2d_bias(y, bias),
         None => y,
     }
 }
@@ -344,7 +392,7 @@ pub fn deconv2d<T: Num, D: Device>(
     deconv2d.forward();
     y.set_creator(Rc::new(RefCell::new(Box::new(deconv2d))));
     match bias {
-        Some(bias) => y + bias,
+        Some(bias) => conv2d_bias(y, bias),
         None => y,
     }
 }
@@ -380,6 +428,31 @@ fn conv2d_filter_grad<T: Num, D: Device>(
     conv2d_bkwd_filter.forward();
     filter_grad.set_creator(Rc::new(RefCell::new(Box::new(conv2d_bkwd_filter))));
     filter_grad
+}
+
+fn conv2d_bias<T: Num, D: Device>(y: Variable<T, D>, bias: Variable<T, D>) -> Variable<T, D> {
+    let output = alloc(y.get_data().shape().slice());
+    let conv2d_bias_add = Conv2dBiasAdd {
+        y,
+        bias,
+        output: output.clone().downgrade(),
+    };
+    conv2d_bias_add.forward();
+    output.set_creator(Rc::new(RefCell::new(Box::new(conv2d_bias_add))));
+    output
+}
+
+fn conv2d_bias_backward<T: Num, D: Device>(
+    y_grad: Variable<T, D>,
+    bias_grad: Variable<T, D>,
+) -> Variable<T, D> {
+    let conv2d_bias_backward = Conv2dBiasBackward {
+        y_grad,
+        bias_grad: bias_grad.clone().downgrade(),
+    };
+    conv2d_bias_backward.forward();
+    bias_grad.set_creator(Rc::new(RefCell::new(Box::new(conv2d_bias_backward))));
+    bias_grad
 }
 
 #[cfg(test)]

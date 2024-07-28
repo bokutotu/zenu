@@ -587,6 +587,31 @@ pub fn conv_bias_add<T: 'static>(
     }
 }
 
+pub fn conv_bias_backward<T: 'static>(
+    input: *const T,
+    bias_grad: *mut T,
+    total_elements: usize,
+    channel_stride: usize,
+    bias_size: usize,
+) {
+    let total_elements = total_elements as ::std::os::raw::c_int;
+    let channel_stride = channel_stride as ::std::os::raw::c_int;
+    let bias_size = bias_size as ::std::os::raw::c_int;
+    if TypeId::of::<T>() == TypeId::of::<f32>() {
+        let input = input as *mut f32;
+        let bias_grad = bias_grad as *mut f32;
+        unsafe {
+            conv_bias_backward_float(input, bias_grad, channel_stride, bias_size, total_elements)
+        };
+    } else if TypeId::of::<T>() == TypeId::of::<f64>() {
+        let input = input as *mut f64;
+        let bias_grad = bias_grad as *mut f64;
+        unsafe {
+            conv_bias_backward_double(input, bias_grad, channel_stride, bias_size, total_elements)
+        };
+    }
+}
+
 #[cfg(test)]
 mod array_array {
     use super::*;
