@@ -64,8 +64,8 @@ pub struct Conv2dConfig<T: Num> {
     _phantom: std::marker::PhantomData<T>,
 }
 
-#[allow(clippy::too_many_arguments, unused_variables, dead_code)]
-fn create_conv_descriptor<T: Num>(
+#[allow(clippy::too_many_arguments, unused_variables)]
+pub fn create_conv_descriptor<T: Num>(
     input_shape: &[usize],
     output_shape: &[usize],
     filter_shape: &[usize],
