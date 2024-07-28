@@ -64,7 +64,7 @@ pub struct Conv2dConfig<T: Num> {
     _phantom: std::marker::PhantomData<T>,
 }
 
-#[allow(clippy::too_many_arguments)]
+#[allow(clippy::too_many_arguments, unused_variables, dead_code)]
 fn create_conv_descriptor<T: Num>(
     input_shape: &[usize],
     output_shape: &[usize],
@@ -103,13 +103,13 @@ fn create_conv_descriptor<T: Num>(
         let dilation_h: i32 = dilation_h as i32;
         let dilation_w: i32 = dilation_w as i32;
 
-        let conv = ConvolutionBuilder::default()
+        let conv = ConvolutionBuilder::<T>::default()
             .input(
                 input_shape_0,
                 input_shape_1,
                 input_shape_2,
                 input_shape_3,
-                TensorFormat::NHWC,
+                TensorFormat::NCHW,
             )
             .unwrap()
             .filter(
@@ -117,7 +117,7 @@ fn create_conv_descriptor<T: Num>(
                 filter_shape_1,
                 filter_shape_2,
                 filter_shape_3,
-                TensorFormat::NHWC,
+                TensorFormat::NCHW,
             )
             .unwrap()
             .output(
@@ -125,7 +125,7 @@ fn create_conv_descriptor<T: Num>(
                 output_shape_1,
                 output_shape_2,
                 output_shape_3,
-                TensorFormat::NHWC,
+                TensorFormat::NCHW,
             )
             .unwrap()
             .conv(pad_h, pad_w, stride_h, stride_w, dilation_h, dilation_w)
