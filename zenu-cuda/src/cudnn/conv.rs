@@ -305,7 +305,7 @@ impl Drop for Workspace {
     }
 }
 
-pub struct ConvolutionConfig {
+pub struct ConvolutionConfig<T> {
     input: cudnnTensorDescriptor_t,
     filter: cudnnFilterDescriptor_t,
     conv: cudnnConvolutionDescriptor_t,
@@ -317,17 +317,11 @@ pub struct ConvolutionConfig {
     fwd_workspace: Workspace,
     bwd_data_workspace: Workspace,
     bwd_filter_workspace: Workspace,
+    _marker: std::marker::PhantomData<T>,
 }
 
-impl ConvolutionConfig {
-    pub fn forward<T: 'static>(
-        &self,
-        alpha: T,
-        input: *const T,
-        filter: *const T,
-        beta: T,
-        output: *mut T,
-    ) {
+impl<T> ConvolutionConfig<T> {
+    pub fn forward(&self, alpha: T, input: *const T, filter: *const T, beta: T, output: *mut T) {
         let state = ZENU_CUDA_STATE.lock().unwrap();
         let handle = state.get_cudnn();
         unsafe {
@@ -349,7 +343,7 @@ impl ConvolutionConfig {
         }
     }
 
-    pub fn backward_data<T: 'static>(
+    pub fn backward_data(
         &self,
         alpha: T,
         filter: *const T,
@@ -378,7 +372,7 @@ impl ConvolutionConfig {
         }
     }
 
-    pub fn backward_filter<T: 'static>(
+    pub fn backward_filter(
         &self,
         alpha: T,
         input: *const T,
@@ -408,7 +402,7 @@ impl ConvolutionConfig {
     }
 }
 
-impl Drop for ConvolutionConfig {
+impl<T> Drop for ConvolutionConfig<T> {
     fn drop(&mut self) {
         unsafe {
             cudnnDestroyTensorDescriptor(self.input);
@@ -423,7 +417,7 @@ impl Drop for ConvolutionConfig {
 }
 
 #[derive(Default)]
-pub struct ConvolutionBuilder {
+pub struct ConvolutionBuilder<T> {
     input: Option<cudnnTensorDescriptor_t>,
     filter: Option<cudnnFilterDescriptor_t>,
     conv: Option<cudnnConvolutionDescriptor_t>,
@@ -432,14 +426,11 @@ pub struct ConvolutionBuilder {
     fwd_algo: Option<cudnnConvolutionFwdAlgo_t>,
     bwd_data_algo: Option<cudnnConvolutionBwdDataAlgo_t>,
     bwd_filter_algo: Option<cudnnConvolutionBwdFilterAlgo_t>,
+    _marker: std::marker::PhantomData<T>,
 }
 
-impl ConvolutionBuilder {
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    pub fn input<T: 'static>(
+impl<T: 'static> ConvolutionBuilder<T> {
+    pub fn input(
         mut self,
         n: i32,
         c: i32,
@@ -451,7 +442,7 @@ impl ConvolutionBuilder {
         Ok(self)
     }
 
-    pub fn filter<T: 'static>(
+    pub fn filter(
         mut self,
         k: i32,
         c: i32,
@@ -478,7 +469,7 @@ impl ConvolutionBuilder {
         Ok(self)
     }
 
-    pub fn output<T: 'static>(
+    pub fn output(
         mut self,
         n: i32,
         c: i32,
@@ -516,7 +507,7 @@ impl ConvolutionBuilder {
         self
     }
 
-    pub fn bias<T: 'static>(
+    pub fn bias(
         mut self,
         n: i32,
         c: i32,
@@ -528,7 +519,7 @@ impl ConvolutionBuilder {
         Ok(self)
     }
 
-    pub fn build(self) -> ConvolutionConfig {
+    pub fn build(self) -> ConvolutionConfig<T> {
         let input = self.input.unwrap();
         let filter = self.filter.unwrap();
         let conv = self.conv.unwrap();
@@ -557,6 +548,7 @@ impl ConvolutionBuilder {
             fwd_workspace,
             bwd_data_workspace,
             bwd_filter_workspace,
+            _marker: std::marker::PhantomData,
         }
     }
 }
@@ -584,14 +576,14 @@ mod cudnn {
         let out_h = (h + 2 * pad_h - kh) / stride_h + 1;
         let out_w = (w + 2 * pad_w - kw) / stride_w + 1;
 
-        let conv_config = ConvolutionBuilder::new()
-            .input::<f32>(n, c, h, w, TensorFormat::NCHW)
+        let conv_config = ConvolutionBuilder::default()
+            .input(n, c, h, w, TensorFormat::NCHW)
             .unwrap()
-            .filter::<f32>(k, c, kh, kw, TensorFormat::NCHW)
+            .filter(k, c, kh, kw, TensorFormat::NCHW)
             .unwrap()
             .conv(pad_h, pad_w, stride_h, stride_w, 1, 1)
             .unwrap()
-            .output::<f32>(n, k, out_h, out_w, TensorFormat::NCHW)
+            .output(n, k, out_h, out_w, TensorFormat::NCHW)
             .unwrap()
             .algorithms(1)
             .build();
@@ -772,14 +764,14 @@ mod cudnn {
 
     #[test]
     fn test_convolution_config_creation() {
-        let conv_config = ConvolutionBuilder::new()
-            .input::<f32>(2, 3, 5, 5, TensorFormat::NCHW)
+        let conv_config = ConvolutionBuilder::<f32>::default()
+            .input(2, 3, 5, 5, TensorFormat::NCHW)
             .unwrap()
-            .filter::<f32>(4, 3, 3, 3, TensorFormat::NCHW)
+            .filter(4, 3, 3, 3, TensorFormat::NCHW)
             .unwrap()
             .conv(1, 1, 1, 1, 1, 1)
             .unwrap()
-            .output::<f32>(2, 4, 5, 5, TensorFormat::NCHW)
+            .output(2, 4, 5, 5, TensorFormat::NCHW)
             .unwrap()
             .algorithms(5)
             .build();
