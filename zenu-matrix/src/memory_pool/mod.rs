@@ -51,7 +51,11 @@
 //!         [終了] <----------------------[ストリームに関連付け]
 //!
 
-use std::sync::{Arc, Mutex};
+use std::{
+    error::Error,
+    fmt::Display,
+    sync::{Arc, Mutex},
+};
 
 use crate::device::DeviceBase;
 
@@ -82,9 +86,9 @@ pub struct MemPool<D: DeviceBase> {
 unsafe impl<D: DeviceBase> Send for MemPool<D> {}
 unsafe impl<D: DeviceBase> Sync for MemPool<D> {}
 
+#[allow(clippy::enum_variant_names)]
 #[derive(Debug, Clone, Copy)]
 pub enum MemPoolError {
-    DataPtrError,
     DynMemPoolFreeError,
     StaticBufferPtrRangeError,
     StaticBufferFreeError,
@@ -93,6 +97,24 @@ pub enum MemPoolError {
     MemPoolFreeError,
     DeviceMallocError,
 }
+
+impl Display for MemPoolError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            MemPoolError::DynMemPoolFreeError => write!(f, "Dynamic memory pool free error"),
+            MemPoolError::StaticBufferPtrRangeError => write!(f, "Static buffer ptr range error"),
+            MemPoolError::StaticBufferFreeError => write!(f, "Static buffer free error"),
+            MemPoolError::StaticBufferTooLargeRequestError => {
+                write!(f, "Static buffer too large request error")
+            }
+            MemPoolError::StaticMemPoolFreeError => write!(f, "Static memory pool free error"),
+            MemPoolError::MemPoolFreeError => write!(f, "Memory pool free error"),
+            MemPoolError::DeviceMallocError => write!(f, "Device malloc error"),
+        }
+    }
+}
+
+impl Error for MemPoolError {}
 
 impl<D: DeviceBase> MemPool<D> {
     pub fn try_alloc(&self, bytes: usize) -> Result<*mut u8, MemPoolError> {

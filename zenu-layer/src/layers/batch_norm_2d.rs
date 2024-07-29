@@ -50,10 +50,10 @@ impl<T: Num, D: Device> Parameters<T, D> for BatchNorm2d<T, D> {
 
     fn parameters(&self) -> HashMap<String, Variable<T, D>> {
         let mut parameters = HashMap::new();
-        for (key, value) in self.weights().iter() {
+        for (key, value) in &self.weights() {
             parameters.insert(key.clone(), value.clone());
         }
-        for (key, value) in self.biases().iter() {
+        for (key, value) in &self.biases() {
             parameters.insert(key.clone(), value.clone());
         }
         parameters.insert("batch_norm_2d.mean".to_string(), self.mean.clone());
