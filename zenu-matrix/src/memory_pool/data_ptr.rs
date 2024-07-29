@@ -10,7 +10,7 @@ pub(super) struct DataPtr<D: DeviceBase> {
 
 impl<D: DeviceBase> DataPtr<D> {
     pub(super) fn new(bytes: usize) -> Result<Self, MemPoolError> {
-        let ptr = D::raw_alloc(bytes).map_err(|_| MemPoolError::DataPtrError)? as *mut u8;
+        let ptr = D::raw_alloc(bytes).map_err(|_| MemPoolError::DeviceMallocError)?;
         Ok(DataPtr {
             ptr,
             bytes,

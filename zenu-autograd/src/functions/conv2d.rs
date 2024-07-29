@@ -119,7 +119,6 @@ impl<T: Num, D: Device> Function<T, D> for Conv2d<T, D> {
             // FIXME use dilated
             1,
             1,
-            // FIXME
             Some(config),
         );
         self.y
@@ -298,12 +297,11 @@ impl<T: Num, D: Device> Function<T, D> for Conv2dBiasBackward<T, D> {
     }
 }
 
-pub fn conv2d<T: Num, D: Device>(
+fn conv2d_inner<T: Num, D: Device>(
     x: Variable<T, D>,
     filter: Variable<T, D>,
     stride: (usize, usize),
     padding: (usize, usize),
-    bias: Option<Variable<T, D>>,
     config: Option<Conv2dConfigs<T>>,
 ) -> Variable<T, D> {
     let output_shape = conv2d_out_size(
@@ -340,18 +338,29 @@ pub fn conv2d<T: Num, D: Device>(
     };
     conv2d.forward();
     y.set_creator(Rc::new(RefCell::new(Box::new(conv2d))));
+    y
+}
+
+pub fn conv2d<T: Num, D: Device>(
+    x: Variable<T, D>,
+    filter: Variable<T, D>,
+    stride: (usize, usize),
+    padding: (usize, usize),
+    bias: Option<Variable<T, D>>,
+    config: Option<Conv2dConfigs<T>>,
+) -> Variable<T, D> {
+    let y = conv2d_inner(x, filter, stride, padding, config);
     match bias {
         Some(bias) => conv2d_bias(y, bias),
         None => y,
     }
 }
 
-pub fn deconv2d<T: Num, D: Device>(
+fn deconv2d_inner<T: Num, D: Device>(
     x: Variable<T, D>,
     filter: Variable<T, D>,
     stride: (usize, usize),
     padding: (usize, usize),
-    bias: Option<Variable<T, D>>,
     config: Option<Conv2dConfigs<T>>,
 ) -> Variable<T, D> {
     let config = config.unwrap_or_else(|| {
@@ -381,6 +390,18 @@ pub fn deconv2d<T: Num, D: Device>(
     };
     deconv2d.forward();
     y.set_creator(Rc::new(RefCell::new(Box::new(deconv2d))));
+    y
+}
+
+pub fn deconv2d<T: Num, D: Device>(
+    x: Variable<T, D>,
+    filter: Variable<T, D>,
+    stride: (usize, usize),
+    padding: (usize, usize),
+    bias: Option<Variable<T, D>>,
+    config: Option<Conv2dConfigs<T>>,
+) -> Variable<T, D> {
+    let y = deconv2d_inner(x, filter, stride, padding, config);
     match bias {
         Some(bias) => conv2d_bias(y, bias),
         None => y,

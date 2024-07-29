@@ -16,10 +16,10 @@ pub trait Parameters<T: Num, D: Device> {
         let weights = self.weights();
         let biases = self.biases();
         let mut parameters = HashMap::new();
-        for (key, value) in weights.iter() {
+        for (key, value) in weights {
             parameters.insert(key.clone(), value.clone());
         }
-        for (key, value) in biases.iter() {
+        for (key, value) in biases {
             parameters.insert(key.clone(), value.clone());
         }
         parameters
@@ -39,8 +39,8 @@ impl<T: Num, D: Device, P: Parameters<T, D>> Parameters<T, D> for Vec<P> {
     fn weights(&self) -> HashMap<String, Variable<T, D>> {
         let mut weights = HashMap::new();
         for (idx, param) in self.iter().enumerate() {
-            for (key, value) in param.weights().iter() {
-                weights.insert(format!("{}.{}", idx, key), value.clone());
+            for (key, value) in param.weights() {
+                weights.insert(format!("{idx}.{key}"), value.clone());
             }
         }
         weights
@@ -49,8 +49,8 @@ impl<T: Num, D: Device, P: Parameters<T, D>> Parameters<T, D> for Vec<P> {
     fn biases(&self) -> HashMap<String, Variable<T, D>> {
         let mut biases = HashMap::new();
         for (idx, param) in self.iter().enumerate() {
-            for (key, value) in param.biases().iter() {
-                biases.insert(format!("{}.{}", idx, key), value.clone());
+            for (key, value) in param.biases() {
+                biases.insert(format!("{idx}.{key}",), value.clone());
             }
         }
         biases
@@ -67,12 +67,14 @@ impl<T: Num, D: Device> Parameters<T, D> for Box<dyn Parameters<T, D>> {
     }
 }
 
-impl<T: Num, D: Device, P: Parameters<T, D>> Parameters<T, D> for HashMap<String, P> {
+impl<T: Num, D: Device, P: Parameters<T, D>, S: ::std::hash::BuildHasher> Parameters<T, D>
+    for HashMap<String, P, S>
+{
     fn weights(&self) -> HashMap<String, Variable<T, D>> {
         let mut weights = HashMap::new();
-        for (key, param) in self.iter() {
-            for (sub_key, value) in param.weights().iter() {
-                weights.insert(format!("{}.{}", key, sub_key), value.clone());
+        for (key, param) in self {
+            for (sub_key, value) in param.weights() {
+                weights.insert(format!("{key}.{sub_key}"), value.clone());
             }
         }
         weights
@@ -80,9 +82,9 @@ impl<T: Num, D: Device, P: Parameters<T, D>> Parameters<T, D> for HashMap<String
 
     fn biases(&self) -> HashMap<String, Variable<T, D>> {
         let mut biases = HashMap::new();
-        for (key, param) in self.iter() {
-            for (sub_key, value) in param.biases().iter() {
-                biases.insert(format!("{}.{}", key, sub_key), value.clone());
+        for (key, param) in self {
+            for (sub_key, value) in param.biases() {
+                biases.insert(format!("{key}.{sub_key}"), value.clone());
             }
         }
         biases
