@@ -5,7 +5,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use super::static_buffer::StaticSizeBuffer;
+use super::{static_buffer::StaticSizeBuffer, MemPoolError};
 use crate::device::DeviceBase;
 
 #[derive(Clone)]
@@ -15,7 +15,7 @@ impl<D: DeviceBase, const N: usize> ArcBuffer<D, N> {
     fn ptr(&self) -> *mut u8 {
         self.0.lock().unwrap().ptr()
     }
-    fn try_free(&self, ptr: *mut u8) -> Result<(), ()> {
+    fn try_free(&self, ptr: *mut u8) -> Result<(), MemPoolError> {
         self.0.lock().unwrap().try_free(ptr)
     }
     fn get_unused_bytes(&self) -> usize {
@@ -138,7 +138,7 @@ impl<D: DeviceBase, const N: usize> StaticMemPool<D, N> {
             .smallest_unused_bytes_over_request(bytes)
     }
 
-    pub fn try_alloc(&mut self, bytes: usize) -> Result<*mut u8, ()> {
+    pub fn try_alloc(&mut self, bytes: usize) -> Result<*mut u8, MemPoolError> {
         if let Some(unused_bytes) = self.smallest_unused_bytes_over_request(bytes) {
             let buffer = self
                 .unused_bytes_ptr_buffer_map
@@ -156,8 +156,11 @@ impl<D: DeviceBase, const N: usize> StaticMemPool<D, N> {
         }
     }
 
-    pub fn try_free(&mut self, ptr: *mut u8) -> Result<(), ()> {
-        let buffer = self.alloced_ptr_buffer_map.remove(&ptr).ok_or(())?;
+    pub fn try_free(&mut self, ptr: *mut u8) -> Result<(), MemPoolError> {
+        let buffer = self
+            .alloced_ptr_buffer_map
+            .remove(&ptr)
+            .ok_or(MemPoolError::StaticMemPoolFreeError)?;
         let start_ptr = buffer.ptr();
         let unused_bytes = buffer.get_unused_bytes();
         self.unused_bytes_ptr_buffer_map

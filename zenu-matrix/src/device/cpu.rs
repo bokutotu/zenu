@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{num::Num, ZENU_MATRIX_STATE};
+use crate::{memory_pool::MemPoolError, num::Num, ZENU_MATRIX_STATE};
 
 use super::{Device, DeviceBase};
 
@@ -12,7 +12,7 @@ impl DeviceBase for Cpu {
         unsafe { libc::free(ptr as *mut libc::c_void) }
     }
 
-    fn mem_pool_drop_ptr(ptr: *mut u8) -> Result<(), ()> {
+    fn mem_pool_drop_ptr(ptr: *mut u8) -> Result<(), MemPoolError> {
         let state = &ZENU_MATRIX_STATE;
         state.cpu_mem_pool.try_free(ptr)
     }
@@ -59,16 +59,16 @@ impl DeviceBase for Cpu {
         ptr
     }
 
-    fn raw_alloc(num_bytes: usize) -> Result<*mut u8, ()> {
+    fn raw_alloc(num_bytes: usize) -> Result<*mut u8, String> {
         let ptr = unsafe { libc::malloc(num_bytes) };
         if ptr.is_null() {
-            Err(())
+            Err("null pointer".to_string())
         } else {
             Ok(ptr as *mut u8)
         }
     }
 
-    fn mem_pool_alloc(num_bytes: usize) -> Result<*mut u8, ()> {
+    fn mem_pool_alloc(num_bytes: usize) -> Result<*mut u8, MemPoolError> {
         let state = &ZENU_MATRIX_STATE;
         state.cpu_mem_pool.try_alloc(num_bytes)
     }

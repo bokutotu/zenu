@@ -1,5 +1,5 @@
 use super::{Device, DeviceBase};
-use crate::{num::Num, ZENU_MATRIX_STATE};
+use crate::{memory_pool::MemPoolError, num::Num, ZENU_MATRIX_STATE};
 use serde::{Deserialize, Serialize};
 
 #[derive(Copy, Clone, Default, Debug, Serialize, Deserialize)]
@@ -10,7 +10,7 @@ impl DeviceBase for Nvidia {
         zenu_cuda::runtime::cuda_free(ptr as *mut std::ffi::c_void).unwrap();
     }
 
-    fn mem_pool_drop_ptr(ptr: *mut u8) -> Result<(), ()> {
+    fn mem_pool_drop_ptr(ptr: *mut u8) -> Result<(), MemPoolError> {
         let state = &ZENU_MATRIX_STATE;
         state.nvidia_mem_pool.try_free(ptr)
     }
@@ -55,11 +55,12 @@ impl DeviceBase for Nvidia {
         ptr
     }
 
-    fn raw_alloc(num_bytes: usize) -> Result<*mut u8, ()> {
-        zenu_cuda::runtime::cuda_malloc_bytes(num_bytes).map_err(|_| ())
+    fn raw_alloc(num_bytes: usize) -> Result<*mut u8, String> {
+        zenu_cuda::runtime::cuda_malloc_bytes(num_bytes)
+            .map_err(|_| "cudaMalloc failed".to_string())
     }
 
-    fn mem_pool_alloc(num_bytes: usize) -> Result<*mut u8, ()> {
+    fn mem_pool_alloc(num_bytes: usize) -> Result<*mut u8, MemPoolError> {
         let state = &ZENU_MATRIX_STATE;
         state.nvidia_mem_pool.try_alloc(num_bytes)
     }
