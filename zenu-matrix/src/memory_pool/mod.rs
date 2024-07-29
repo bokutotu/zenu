@@ -87,7 +87,7 @@ unsafe impl<D: DeviceBase> Send for MemPool<D> {}
 unsafe impl<D: DeviceBase> Sync for MemPool<D> {}
 
 #[allow(clippy::enum_variant_names)]
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum MemPoolError {
     DynMemPoolFreeError,
     StaticBufferPtrRangeError,
