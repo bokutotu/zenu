@@ -82,8 +82,20 @@ pub struct MemPool<D: DeviceBase> {
 unsafe impl<D: DeviceBase> Send for MemPool<D> {}
 unsafe impl<D: DeviceBase> Sync for MemPool<D> {}
 
+#[derive(Debug, Clone, Copy)]
+pub enum MemPoolError {
+    DataPtrError,
+    DynMemPoolFreeError,
+    StaticBufferPtrRangeError,
+    StaticBufferFreeError,
+    StaticBufferTooLargeRequestError,
+    StaticMemPoolFreeError,
+    MemPoolFreeError,
+    DeviceMallocError,
+}
+
 impl<D: DeviceBase> MemPool<D> {
-    pub fn try_alloc(&self, bytes: usize) -> Result<*mut u8, ()> {
+    pub fn try_alloc(&self, bytes: usize) -> Result<*mut u8, MemPoolError> {
         // 1mbまではsmall_poolを使用する
         if bytes <= 1024 * 1024 {
             self.small_pool.lock().unwrap().try_alloc(bytes)
@@ -94,7 +106,7 @@ impl<D: DeviceBase> MemPool<D> {
         }
     }
 
-    pub fn try_free(&self, ptr: *mut u8) -> Result<(), ()> {
+    pub fn try_free(&self, ptr: *mut u8) -> Result<(), MemPoolError> {
         let mut small_pool = self.small_pool.lock().unwrap();
         let mut large_pool = self.large_pool.lock().unwrap();
         let mut dynamic_pool = self.dynamic_pool.lock().unwrap();
@@ -105,7 +117,7 @@ impl<D: DeviceBase> MemPool<D> {
         } else if dynamic_pool.contains(ptr) {
             dynamic_pool.try_free(ptr).unwrap();
         } else {
-            return Err(());
+            return Err(MemPoolError::MemPoolFreeError);
         }
         Ok(())
     }

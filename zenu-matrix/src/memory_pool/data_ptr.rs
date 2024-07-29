@@ -1,5 +1,7 @@
 use crate::device::DeviceBase;
 
+use super::MemPoolError;
+
 pub(super) struct DataPtr<D: DeviceBase> {
     pub ptr: *mut u8,
     pub bytes: usize,
@@ -7,8 +9,8 @@ pub(super) struct DataPtr<D: DeviceBase> {
 }
 
 impl<D: DeviceBase> DataPtr<D> {
-    pub(super) fn new(bytes: usize) -> Result<Self, ()> {
-        let ptr = D::raw_alloc(bytes)?;
+    pub(super) fn new(bytes: usize) -> Result<Self, MemPoolError> {
+        let ptr = D::raw_alloc(bytes).map_err(|_| MemPoolError::DataPtrError)? as *mut u8;
         Ok(DataPtr {
             ptr,
             bytes,
