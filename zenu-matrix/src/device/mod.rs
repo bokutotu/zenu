@@ -1,6 +1,7 @@
 use serde::Serialize;
 
 use crate::{
+    memory_pool::MemPoolError,
     nn::{batch_norm::BatchNormalization, conv2d::Conv2d, pool2d::Pool2dImpl},
     num::Num,
     operation::{
@@ -35,23 +36,23 @@ pub trait DeviceBase: Copy + Default + Serialize + 'static {
             Self::raw_drop_ptr(ptr)
         }
     }
-    fn mem_pool_drop_ptr(ptr: *mut u8) -> Result<(), ()>;
+    fn mem_pool_drop_ptr(ptr: *mut u8) -> Result<(), MemPoolError>;
     fn raw_drop_ptr<T>(ptr: *mut T);
     fn clone_ptr<T>(ptr: *const T, len: usize) -> *mut T;
     fn assign_item<T: Num>(ptr: *mut T, offset: usize, value: T);
     fn get_item<T: Num>(ptr: *const T, offset: usize) -> T;
     fn from_vec<T: Num>(vec: Vec<T>) -> *mut T;
     fn zeros<T: Num>(len: usize) -> *mut T;
-    fn alloc(num_bytes: usize) -> Result<*mut u8, ()> {
+    fn alloc(num_bytes: usize) -> Result<*mut u8, MemPoolError> {
         let state = &ZENU_MATRIX_STATE;
         if state.use_mem_pool {
             Self::mem_pool_alloc(num_bytes)
         } else {
-            Self::raw_alloc(num_bytes)
+            Self::raw_alloc(num_bytes).map_err(|_| MemPoolError::DeviceMallocError)
         }
     }
-    fn mem_pool_alloc(num_bytes: usize) -> Result<*mut u8, ()>;
-    fn raw_alloc(num_bytes: usize) -> Result<*mut u8, ()>;
+    fn mem_pool_alloc(num_bytes: usize) -> Result<*mut u8, MemPoolError>;
+    fn raw_alloc(num_bytes: usize) -> Result<*mut u8, String>;
 }
 
 pub trait Device:

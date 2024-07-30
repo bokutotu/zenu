@@ -1,6 +1,6 @@
 use crate::device::DeviceBase;
 
-use super::{data_ptr::DataPtr, MIDDLE_BUFFER_SIZE};
+use super::{data_ptr::DataPtr, MemPoolError, MIDDLE_BUFFER_SIZE};
 use std::collections::BTreeMap;
 
 pub struct StaticSizeBuffer<D: DeviceBase, const N: usize> {
@@ -11,7 +11,7 @@ pub struct StaticSizeBuffer<D: DeviceBase, const N: usize> {
 }
 
 impl<D: DeviceBase, const N: usize> StaticSizeBuffer<D, N> {
-    pub fn new() -> Result<Self, ()> {
+    pub fn new() -> Result<Self, MemPoolError> {
         Ok(StaticSizeBuffer {
             data: DataPtr::new(N)?,
             used_buffer_range: BTreeMap::new(),
@@ -44,9 +44,9 @@ impl<D: DeviceBase, const N: usize> StaticSizeBuffer<D, N> {
         (start, end)
     }
 
-    pub fn try_alloc(&mut self, bytes: usize) -> Result<*mut u8, ()> {
+    pub fn try_alloc(&mut self, bytes: usize) -> Result<*mut u8, MemPoolError> {
         if self.get_unused_bytes() < bytes {
-            return Err(());
+            return Err(MemPoolError::StaticBufferTooLargeRequestError);
         }
         let (mut start, mut end) = self.start_end_ptr(bytes);
 
@@ -58,15 +58,17 @@ impl<D: DeviceBase, const N: usize> StaticSizeBuffer<D, N> {
         }
 
         if start < self.data.ptr || end > unsafe { self.data.ptr.add(N) } {
-            return Err(());
+            return Err(MemPoolError::StaticBufferPtrRangeError);
         }
 
         self.used_buffer_range.insert(start, end);
         Ok(start)
     }
 
-    pub fn try_free(&mut self, ptr: *mut u8) -> Result<(), ()> {
-        self.used_buffer_range.remove(&ptr).ok_or(())?;
+    pub fn try_free(&mut self, ptr: *mut u8) -> Result<(), MemPoolError> {
+        self.used_buffer_range
+            .remove(&ptr)
+            .ok_or(MemPoolError::StaticBufferFreeError)?;
         Ok(())
     }
 
