@@ -253,7 +253,7 @@ impl<T: Num, D: Device> Function<T, D> for Conv2dBackward<T, D> {
     }
 
     fn get_inputs(&self) -> Vec<Variable<T, D>> {
-        vec![self.x.clone(), self.filter.clone()]
+        vec![self.x.clone(), self.filter.clone(), self.y_grad.clone()]
     }
 }
 
@@ -338,6 +338,7 @@ fn conv2d_inner<T: Num, D: Device>(
     };
     conv2d.forward();
     y.set_creator(Rc::new(RefCell::new(Box::new(conv2d))));
+    y.set_name("conv2d.output");
     y
 }
 
@@ -350,10 +351,11 @@ pub fn conv2d<T: Num, D: Device>(
     config: Option<Conv2dConfigs<T>>,
 ) -> Variable<T, D> {
     let y = conv2d_inner(x, filter, stride, padding, config);
-    match bias {
+    let y = match bias {
         Some(bias) => conv2d_bias(y, bias),
         None => y,
-    }
+    };
+    y
 }
 
 fn deconv2d_inner<T: Num, D: Device>(
@@ -390,6 +392,7 @@ fn deconv2d_inner<T: Num, D: Device>(
     };
     deconv2d.forward();
     y.set_creator(Rc::new(RefCell::new(Box::new(deconv2d))));
+    y.set_name("deconv2d.output");
     y
 }
 
@@ -408,7 +411,7 @@ pub fn deconv2d<T: Num, D: Device>(
     }
 }
 
-fn conv2d_filter_grad<T: Num, D: Device>(
+pub fn conv2d_filter_grad<T: Num, D: Device>(
     x: Variable<T, D>,
     y_grad: Variable<T, D>,
     stride: (usize, usize),
@@ -438,6 +441,7 @@ fn conv2d_filter_grad<T: Num, D: Device>(
     };
     conv2d_bkwd_filter.forward();
     filter_grad.set_creator(Rc::new(RefCell::new(Box::new(conv2d_bkwd_filter))));
+    filter_grad.set_name("conv2d.filter_grad");
     filter_grad
 }
 
@@ -450,6 +454,7 @@ fn conv2d_bias<T: Num, D: Device>(y: Variable<T, D>, bias: Variable<T, D>) -> Va
     };
     conv2d_bias_add.forward();
     output.set_creator(Rc::new(RefCell::new(Box::new(conv2d_bias_add))));
+    output.set_name("conv2d.bias_add");
     output
 }
 
@@ -464,6 +469,7 @@ fn conv2d_bias_backward<T: Num, D: Device>(
     };
     conv2d_bias_backward.forward();
     bias_grad.set_creator(Rc::new(RefCell::new(Box::new(conv2d_bias_backward))));
+    bias_grad.set_name("conv2d.bias_grad");
     bias_grad
 }
 
