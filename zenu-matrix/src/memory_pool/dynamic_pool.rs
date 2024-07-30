@@ -6,7 +6,7 @@ use std::{
 
 use crate::device::DeviceBase;
 
-use super::dynamic_buffer::DynBuffer;
+use super::{dynamic_buffer::DynBuffer, MemPoolError};
 
 #[derive(Default)]
 pub struct DynMemPool<D: DeviceBase> {
@@ -15,7 +15,7 @@ pub struct DynMemPool<D: DeviceBase> {
 }
 
 impl<D: DeviceBase> DynMemPool<D> {
-    pub fn try_alloc(&mut self, bytes: usize) -> Result<*mut u8, ()> {
+    pub fn try_alloc(&mut self, bytes: usize) -> Result<*mut u8, MemPoolError> {
         match self.smallest_unused_bytes_over_request(bytes) {
             Some(smallest_unused_bytes_over_request) => {
                 let buffers = self
@@ -40,8 +40,11 @@ impl<D: DeviceBase> DynMemPool<D> {
         }
     }
 
-    pub fn try_free(&mut self, ptr: *mut u8) -> Result<(), ()> {
-        let buffer = self.used_buffers.remove(&ptr).ok_or(())?;
+    pub fn try_free(&mut self, ptr: *mut u8) -> Result<(), MemPoolError> {
+        let buffer = self
+            .used_buffers
+            .remove(&ptr)
+            .ok_or(MemPoolError::DynMemPoolFreeError)?;
         let bytes = buffer.lock().unwrap().bytes();
         self.unused_buffers.entry(bytes).or_default().push(buffer);
         Ok(())

@@ -24,6 +24,9 @@ void array_array_sub_assign_double(double *a, int stride_a, double *b, int strid
 void array_array_mul_assign_double(double *a, int stride_a, double *b, int stride_b, int n);
 void array_array_div_assign_double(double *a, int stride_a, double *b, int stride_b, int n);
 
+void conv_bias_add_float(const float *input, float *output, int channel_stride, const float *bias, int bias_size, int total_elements);
+void conv_bias_add_double(const double *input, double *output, int channel_stride, const double *bias, int bias_size, int total_elements);
+
 #ifdef __cplusplus
 }
 #endif

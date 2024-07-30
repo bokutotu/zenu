@@ -437,12 +437,12 @@ where
         owned
     }
 
-    pub fn try_to_scalar(&self) -> Result<R::Item, ()> {
+    pub fn try_to_scalar(&self) -> Result<R::Item, String> {
         if self.shape().is_scalar() {
             let scalr = self.ptr.get_item(0);
             Ok(scalr)
         } else {
-            Err(())
+            Err("this matrix is not scalar".to_string())
         }
     }
 

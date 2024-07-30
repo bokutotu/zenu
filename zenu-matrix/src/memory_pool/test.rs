@@ -9,7 +9,7 @@ mod mem_pool {
         memory_pool::{
             static_buffer::StaticSizeBuffer,
             static_mem_pool::{ArcBuffer, StaticMemPool, UnusedBytesPtrBufferMap},
-            MIDDLE_BUFFER_SIZE,
+            MemPoolError, MIDDLE_BUFFER_SIZE,
         },
         num::Num,
     };
@@ -21,14 +21,14 @@ mod mem_pool {
         fn zeros<T: Num>(_len: usize) -> *mut T {
             todo!();
         }
-        fn alloc(_num_bytes: usize) -> Result<*mut u8, ()> {
+        fn alloc(_num_bytes: usize) -> Result<*mut u8, MemPoolError> {
             Ok(0 as *mut u8)
         }
-        fn mem_pool_drop_ptr(_ptr: *mut u8) -> Result<(), ()> {
+        fn mem_pool_drop_ptr(_ptr: *mut u8) -> Result<(), MemPoolError> {
             Ok(())
         }
         fn raw_drop_ptr<T>(_ptr: *mut T) {}
-        fn raw_alloc(_num_bytes: usize) -> Result<*mut u8, ()> {
+        fn raw_alloc(_num_bytes: usize) -> Result<*mut u8, String> {
             Ok(0 as *mut u8)
         }
         fn get_item<T: Num>(_ptr: *const T, _offset: usize) -> T {
@@ -43,7 +43,7 @@ mod mem_pool {
         fn assign_item<T: Num>(_ptr: *mut T, _offset: usize, _value: T) {
             todo!();
         }
-        fn mem_pool_alloc(_num_bytes: usize) -> Result<*mut u8, ()> {
+        fn mem_pool_alloc(_num_bytes: usize) -> Result<*mut u8, MemPoolError> {
             Ok(0 as *mut u8)
         }
     }
@@ -52,7 +52,7 @@ mod mem_pool {
     fn too_large_alloc() {
         let mut buffer = StaticSizeBuffer::<MockDeviceBase, 1024>::new().unwrap();
         let ptr = buffer.try_alloc(4000);
-        assert_eq!(ptr, Err(()));
+        assert_eq!(ptr, Err(MemPoolError::StaticBufferTooLargeRequestError));
     }
 
     // 領域を2回確保し、アドレスを確認する

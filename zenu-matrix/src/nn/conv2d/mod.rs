@@ -15,7 +15,10 @@ use self::{
 };
 
 #[cfg(feature = "nvidia")]
-use zenu_cuda::cudnn::{conv::*, TensorFormat};
+use zenu_cuda::{
+    cudnn::{conv::*, TensorFormat},
+    kernel::conv_bias_add,
+};
 
 #[cfg(feature = "nvidia")]
 use crate::device::nvidia::Nvidia;
@@ -55,111 +58,89 @@ pub fn deconv2d_out_size(
     [b, ic, h, w]
 }
 
-macro_rules! impl_conv_config {
-    ($name:ident, $inner:ident, $inner_builder:ident, $desc_create:ident) => {
-        pub struct $name<T: Num> {
-            #[cfg(feature = "nvidia")]
-            pub conv: $inner,
-            _phantom: std::marker::PhantomData<T>,
-        }
-
-        #[cfg(feature = "nvidia")]
-        fn $desc_create<T: Num>(
-            input: DimDyn,
-            output: DimDyn,
-            filter: DimDyn,
-            pad_h: usize,
-            pad_w: usize,
-            stride_h: usize,
-            stride_w: usize,
-            dilation_h: usize,
-            dilation_w: usize,
-            num_algo: usize,
-        ) -> $inner {
-            $inner_builder::default()
-                .input::<T>(
-                    input[0].try_into().unwrap(),
-                    input[1].try_into().unwrap(),
-                    input[2].try_into().unwrap(),
-                    input[3].try_into().unwrap(),
-                    TensorFormat::NCHW,
-                )
-                .unwrap()
-                .filter::<T>(
-                    filter[0].try_into().unwrap(),
-                    filter[1].try_into().unwrap(),
-                    filter[2].try_into().unwrap(),
-                    filter[3].try_into().unwrap(),
-                    TensorFormat::NCHW,
-                )
-                .unwrap()
-                .output::<T>(
-                    output[0].try_into().unwrap(),
-                    output[1].try_into().unwrap(),
-                    output[2].try_into().unwrap(),
-                    output[3].try_into().unwrap(),
-                    TensorFormat::NCHW,
-                )
-                .unwrap()
-                .conv(
-                    pad_h.try_into().unwrap(),
-                    pad_w.try_into().unwrap(),
-                    stride_h.try_into().unwrap(),
-                    stride_w.try_into().unwrap(),
-                    dilation_h.try_into().unwrap(),
-                    dilation_w.try_into().unwrap(),
-                )
-                .unwrap()
-                .algorithm(num_algo)
-                .unwrap()
-                .build()
-                .unwrap()
-        }
-
-        impl<T: Num> $name<T> {
-            #[allow(unused_variables, clippy::too_many_arguments)]
-            pub fn new(
-                input: DimDyn,
-                output: DimDyn,
-                filter: DimDyn,
-                pad_h: usize,
-                pad_w: usize,
-                stride_h: usize,
-                stride_w: usize,
-                dilation_h: usize,
-                dilation_w: usize,
-                num_algo: usize,
-            ) -> Self {
-                Self {
-                    #[cfg(feature = "nvidia")]
-                    conv: $desc_create::<T>(
-                        input, output, filter, pad_h, pad_w, stride_h, stride_w, dilation_h,
-                        dilation_w, num_algo,
-                    ),
-                    _phantom: std::marker::PhantomData,
-                }
-            }
-        }
-    };
+pub struct Conv2dConfig<T: Num> {
+    #[cfg(feature = "nvidia")]
+    pub conv: ConvolutionConfig<T>,
+    _phantom: std::marker::PhantomData<T>,
 }
-impl_conv_config!(
-    Conv2dConfig,
-    ConvDescriptor,
-    ConvolutionBuilder,
-    create_conv_descriptor
-);
-impl_conv_config!(
-    Conv2dBckwdDataConfig,
-    ConvolutionBackwardData,
-    ConvolutionBackwardDataBuilder,
-    create_conv_bckwd_data
-);
-impl_conv_config!(
-    Conv2dBckwdFilterConfig,
-    ConvolutionBackwardFilter,
-    ConvolutionBackwardFilterBuilder,
-    create_conv_bckwd_filter
-);
+
+#[allow(clippy::too_many_arguments, unused_variables)]
+pub fn create_conv_descriptor<T: Num>(
+    input_shape: &[usize],
+    output_shape: &[usize],
+    filter_shape: &[usize],
+    pad_h: usize,
+    pad_w: usize,
+    stride_h: usize,
+    stride_w: usize,
+    dilation_h: usize,
+    dilation_w: usize,
+    groups: usize,
+) -> Conv2dConfig<T> {
+    #[cfg(feature = "nvidia")]
+    let conv = {
+        let input_shape_0: i32 = input_shape[0] as i32;
+        let input_shape_1: i32 = input_shape[1] as i32;
+        let input_shape_2: i32 = input_shape[2] as i32;
+        let input_shape_3: i32 = input_shape[3] as i32;
+
+        let output_shape_0: i32 = output_shape[0] as i32;
+        let output_shape_1: i32 = output_shape[1] as i32;
+        let output_shape_2: i32 = output_shape[2] as i32;
+        let output_shape_3: i32 = output_shape[3] as i32;
+
+        let filter_shape_0: i32 = filter_shape[0] as i32;
+        let filter_shape_1: i32 = filter_shape[1] as i32;
+        let filter_shape_2: i32 = filter_shape[2] as i32;
+        let filter_shape_3: i32 = filter_shape[3] as i32;
+
+        let pad_h: i32 = pad_h as i32;
+        let pad_w: i32 = pad_w as i32;
+
+        let stride_h: i32 = stride_h as i32;
+        let stride_w: i32 = stride_w as i32;
+
+        let dilation_h: i32 = dilation_h as i32;
+        let dilation_w: i32 = dilation_w as i32;
+
+        let conv = ConvolutionBuilder::<T>::default()
+            .input(
+                input_shape_0,
+                input_shape_1,
+                input_shape_2,
+                input_shape_3,
+                TensorFormat::NCHW,
+            )
+            .unwrap()
+            .filter(
+                filter_shape_0,
+                filter_shape_1,
+                filter_shape_2,
+                filter_shape_3,
+                TensorFormat::NCHW,
+            )
+            .unwrap()
+            .output(
+                output_shape_0,
+                output_shape_1,
+                output_shape_2,
+                output_shape_3,
+                TensorFormat::NCHW,
+            )
+            .unwrap()
+            .conv(pad_h, pad_w, stride_h, stride_w, dilation_h, dilation_w)
+            .unwrap()
+            .algorithms(groups);
+
+        conv.build()
+    };
+
+    Conv2dConfig {
+        #[cfg(feature = "nvidia")]
+        conv,
+        _phantom: std::marker::PhantomData,
+    }
+}
 
 pub trait Conv2d: DeviceBase {
     #[allow(clippy::too_many_arguments)]
@@ -187,7 +168,7 @@ pub trait Conv2d: DeviceBase {
         stride_w: usize,
         dilation_h: usize,
         dilation_w: usize,
-        config: Option<&Conv2dBckwdDataConfig<T>>,
+        config: Option<&Conv2dConfig<T>>,
     );
 
     #[allow(clippy::too_many_arguments)]
@@ -201,7 +182,20 @@ pub trait Conv2d: DeviceBase {
         stride_w: usize,
         dilation_h: usize,
         dilation_w: usize,
-        config: Option<&Conv2dBckwdFilterConfig<T>>,
+        config: Option<&Conv2dConfig<T>>,
+    );
+
+    #[allow(clippy::too_many_arguments)]
+    fn conv2d_forward_bias<T: Num>(
+        input: Matrix<Ref<&T>, DimDyn, Self>,
+        y: Matrix<Ref<&mut T>, DimDyn, Self>,
+        bias: Matrix<Ref<&T>, DimDyn, Self>,
+    );
+
+    #[allow(clippy::too_many_arguments)]
+    fn conv2d_bckwd_bias<T: Num>(
+        dy: Matrix<Ref<&T>, DimDyn, Self>,
+        dx: Matrix<Ref<&mut T>, DimDyn, Self>,
     );
 }
 
@@ -240,7 +234,7 @@ impl Conv2d for Cpu {
         stride_w: usize,
         dilation_h: usize,
         dilation_w: usize,
-        _config: Option<&Conv2dBckwdDataConfig<T>>,
+        _config: Option<&Conv2dConfig<T>>,
     ) {
         if dilation_h != 1 || dilation_w != 1 {
             todo!();
@@ -264,7 +258,7 @@ impl Conv2d for Cpu {
         stride_w: usize,
         dilation_h: usize,
         dilation_w: usize,
-        _config: Option<&Conv2dBckwdFilterConfig<T>>,
+        _config: Option<&Conv2dConfig<T>>,
     ) {
         if dilation_h != 1 || dilation_w != 1 {
             todo!();
@@ -276,6 +270,23 @@ impl Conv2d for Cpu {
             (pad_h, pad_w),
             (stride_h, stride_w),
         ));
+    }
+
+    fn conv2d_forward_bias<T: Num>(
+        input: Matrix<Ref<&T>, DimDyn, Self>,
+        mut y: Matrix<Ref<&mut T>, DimDyn, Self>,
+        bias: Matrix<Ref<&T>, DimDyn, Self>,
+    ) {
+        y.add_array(&input, &bias);
+    }
+
+    fn conv2d_bckwd_bias<T: Num>(
+        dy: Matrix<Ref<&T>, DimDyn, Self>,
+        dx: Matrix<Ref<&mut T>, DimDyn, Self>,
+    ) {
+        let dy_0 = dy.sum(0, true);
+        let dy_0_2 = dy_0.to_ref().sum(2, true);
+        dx.copy_from(&dy_0_2.to_ref().sum(3, true));
     }
 }
 
@@ -295,18 +306,21 @@ impl Conv2d for Nvidia {
     ) {
         let config = match config {
             Some(config) => &config.conv,
-            None => &create_conv_descriptor::<T>(
-                input.shape(),
-                y.shape(),
-                filter.shape(),
-                pad_h,
-                pad_w,
-                stride_h,
-                stride_w,
-                dilation_h,
-                dilation_w,
-                1,
-            ),
+            None => {
+                &create_conv_descriptor::<T>(
+                    input.shape().slice(),
+                    y.shape().slice(),
+                    filter.shape().slice(),
+                    pad_h,
+                    pad_w,
+                    stride_h,
+                    stride_w,
+                    dilation_h,
+                    dilation_w,
+                    1,
+                )
+                .conv
+            }
         };
 
         config.forward(
@@ -328,22 +342,25 @@ impl Conv2d for Nvidia {
         stride_w: usize,
         dilation_h: usize,
         dilation_w: usize,
-        config: Option<&Conv2dBckwdDataConfig<T>>,
+        config: Option<&Conv2dConfig<T>>,
     ) {
         let config = match config {
             Some(config) => &config.conv,
-            None => &create_conv_bckwd_data::<T>(
-                dx.shape(),
-                dy.shape(),
-                filter.shape(),
-                pad_h,
-                pad_w,
-                stride_h,
-                stride_w,
-                dilation_h,
-                dilation_w,
-                1,
-            ),
+            None => {
+                &create_conv_descriptor::<T>(
+                    dx.shape().slice(),
+                    dy.shape().slice(),
+                    filter.shape().slice(),
+                    pad_h,
+                    pad_w,
+                    stride_h,
+                    stride_w,
+                    dilation_h,
+                    dilation_w,
+                    1,
+                )
+                .conv
+            }
         };
 
         config.backward_data(
@@ -365,22 +382,25 @@ impl Conv2d for Nvidia {
         stride_w: usize,
         dilation_h: usize,
         dilation_w: usize,
-        config: Option<&Conv2dBckwdFilterConfig<T>>,
+        config: Option<&Conv2dConfig<T>>,
     ) {
         let config = match config {
             Some(config) => &config.conv,
-            None => &create_conv_bckwd_filter::<T>(
-                input.shape(),
-                dy.shape(),
-                df.shape(),
-                pad_h,
-                pad_w,
-                stride_h,
-                stride_w,
-                dilation_h,
-                dilation_w,
-                1,
-            ),
+            None => {
+                &create_conv_descriptor::<T>(
+                    input.shape().slice(),
+                    dy.shape().slice(),
+                    df.shape().slice(),
+                    pad_h,
+                    pad_w,
+                    stride_h,
+                    stride_w,
+                    dilation_h,
+                    dilation_w,
+                    1,
+                )
+                .conv
+            }
         };
 
         config.backward_filter(
@@ -391,13 +411,40 @@ impl Conv2d for Nvidia {
             df.as_mut_ptr(),
         )
     }
+
+    fn conv2d_forward_bias<T: Num>(
+        input: Matrix<Ref<&T>, DimDyn, Self>,
+        y: Matrix<Ref<&mut T>, DimDyn, Self>,
+        bias: Matrix<Ref<&T>, DimDyn, Self>,
+    ) {
+        let input_channel_stride = input.stride()[1];
+        let input_num_elm = input.shape().num_elm();
+        let bias_num_elm = bias.shape().num_elm();
+
+        conv_bias_add(
+            input.as_ptr(),
+            bias.as_ptr(),
+            input_num_elm,
+            input_channel_stride,
+            bias_num_elm,
+            y.as_mut_ptr(),
+        );
+    }
+
+    fn conv2d_bckwd_bias<T: Num>(
+        dy: Matrix<Ref<&T>, DimDyn, Self>,
+        dx: Matrix<Ref<&mut T>, DimDyn, Self>,
+    ) {
+        let dy_shape = dy.shape();
+        let dy_shape = dy_shape.slice();
+        backward_bias(T::one(), dy.as_ptr(), T::zero(), dx.as_mut_ptr(), dy_shape);
+    }
 }
 
 #[allow(clippy::too_many_arguments)]
 pub fn conv2d_forward<T: Num, D: Device>(
     input: Matrix<Ref<&T>, DimDyn, D>,
     filter: Matrix<Ref<&T>, DimDyn, D>,
-    bias: Option<Matrix<Ref<&T>, DimDyn, D>>,
     pad_h: usize,
     pad_w: usize,
     stride_h: usize,
@@ -425,9 +472,6 @@ pub fn conv2d_forward<T: Num, D: Device>(
         dilation_w,
         config,
     );
-    if let Some(bias) = bias {
-        y += bias;
-    }
     y
 }
 
@@ -441,7 +485,7 @@ pub fn conv2d_bckwd_data<T: Num, D: Device>(
     stride_w: usize,
     dilation_h: usize,
     dilation_w: usize,
-    config: Option<&Conv2dBckwdDataConfig<T>>,
+    config: Option<&Conv2dConfig<T>>,
 ) -> Matrix<Owned<T>, DimDyn, D> {
     let input_shape = deconv2d_out_size(
         dy.shape().slice(),
@@ -476,7 +520,7 @@ pub fn conv2d_bckwd_filter<T: Num, D: Device>(
     dilation_h: usize,
     dilation_w: usize,
     filter_shape: DimDyn,
-    config: Option<&Conv2dBckwdFilterConfig<T>>,
+    config: Option<&Conv2dConfig<T>>,
 ) -> Matrix<Owned<T>, DimDyn, D> {
     let mut df = Matrix::<Owned<T>, DimDyn, D>::alloc(filter_shape);
     D::conv2d_bckwd_filter(
@@ -492,6 +536,21 @@ pub fn conv2d_bckwd_filter<T: Num, D: Device>(
         config,
     );
     df
+}
+
+pub fn conv2d_bias_add<T: Num, D: Device>(
+    input: Matrix<Ref<&T>, DimDyn, D>,
+    bias: Matrix<Ref<&T>, DimDyn, D>,
+    output: Matrix<Ref<&mut T>, DimDyn, D>,
+) {
+    D::conv2d_forward_bias(input, output, bias);
+}
+
+pub fn conv2d_bckwd_data_bias<T: Num, D: Device>(
+    dy: Matrix<Ref<&T>, DimDyn, D>,
+    dx: Matrix<Ref<&mut T>, DimDyn, D>,
+) {
+    D::conv2d_bckwd_bias(dy, dx);
 }
 
 #[cfg(test)]
@@ -510,7 +569,6 @@ mod conv2d {
     struct Conv2dTestCase<D: Device> {
         input: Matrix<Owned<f32>, DimDyn, D>,
         filter: Matrix<Owned<f32>, DimDyn, D>,
-        bias: Option<Matrix<Owned<f32>, DimDyn, D>>,
         pad_h: usize,
         pad_w: usize,
         stride_h: usize,
@@ -520,7 +578,6 @@ mod conv2d {
         expected: Matrix<Owned<f32>, DimDyn, D>,
         input_grad: Matrix<Owned<f32>, DimDyn, D>,
         filter_grad: Matrix<Owned<f32>, DimDyn, D>,
-        bias_grad: Option<Matrix<Owned<f32>, DimDyn, D>>,
         output_grad: Matrix<Owned<f32>, DimDyn, D>,
     }
 
@@ -530,7 +587,6 @@ mod conv2d {
         let forward_pred = conv2d_forward(
             test_case.input.to_ref(),
             test_case.filter.to_ref(),
-            None,
             test_case.pad_h,
             test_case.pad_w,
             test_case.stride_h,
@@ -810,7 +866,6 @@ mod conv2d {
         Conv2dTestCase {
             input,
             filter,
-            bias: None,
             pad_h: 1,
             pad_w: 1,
             stride_h: 1,
@@ -820,7 +875,6 @@ mod conv2d {
             expected,
             input_grad,
             filter_grad,
-            bias_grad: None,
             output_grad,
         }
     }
