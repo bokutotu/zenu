@@ -17,6 +17,7 @@ pub mod broadcast;
 pub mod clip;
 pub mod conv2d;
 pub mod cosh;
+pub mod dropout;
 pub mod exp;
 pub mod flatten;
 pub mod log;

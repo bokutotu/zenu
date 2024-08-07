@@ -23,7 +23,7 @@ impl<D: DeviceBase> NNCache<D> {
         }
         Self {
             bytes,
-            ptr: ptr as *mut u8,
+            ptr,
             _device: std::marker::PhantomData,
         }
     }
