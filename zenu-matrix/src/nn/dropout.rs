@@ -107,7 +107,7 @@ impl Dropout for Cpu {
         let rate = state.rate;
         let num_elm = x.shape().num_elm();
         let mask = {
-            let mut mask = Matrix::alloc(&[num_elm]);
+            let mut mask = Matrix::zeros(&[num_elm]);
             dropout_mask(mask.to_ref_mut(), rate);
             mask
         };
@@ -122,7 +122,9 @@ impl Dropout for Cpu {
     ) -> Matrix<Owned<T>, DimDyn, Self> {
         let rate = state.rate;
         let mask = state.state.as_ref().unwrap();
-        let dx = (dy.to_ref() * mask.to_ref()) * (T::one() / T::from(1.0 - rate).unwrap());
+        let dy = dy.reshape([dy.shape().num_elm()]);
+        let grad_ratio = dbg!(T::one() / T::from(1.0 - rate).unwrap());
+        let dx = dy.to_ref() * mask.to_ref() * grad_ratio;
         dx.reshape_no_alloc_owned(dy.shape())
     }
 }
@@ -228,7 +230,7 @@ mod dropout {
         matrix::Matrix,
     };
 
-    use super::{dropout_grad, DropoutState};
+    use super::{dropout, dropout_grad, DropoutState};
 
     fn dropout_4d<D: Device>() {
         let mut state = DropoutState::<f32, D>::new(0.8);
@@ -239,7 +241,7 @@ mod dropout {
             &[1, 2, 2, 3],
         );
 
-        let y = super::dropout(&x, &mut state);
+        let y = dropout(&x, &mut state);
         let y_cpu = y.clone().to::<Cpu>();
         let y_cpu_ref = y_cpu.to_ref();
         let y_cpu_slice = y_cpu_ref.as_slice();
