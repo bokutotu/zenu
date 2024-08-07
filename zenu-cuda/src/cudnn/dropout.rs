@@ -144,7 +144,7 @@ pub struct DropoutConfig<T: 'static> {
 
 impl<T: 'static> DropoutConfig<T> {
     pub fn new(shape: &[usize]) -> Result<Self, ZenuCudnnError> {
-        let shape = shape.into_iter().map(|x| *x as i32).collect::<Vec<i32>>();
+        let shape = shape.iter().map(|x| *x as i32).collect::<Vec<i32>>();
         let tensor_desc = if shape.len() == 4 {
             tensor_descriptor_4d::<T>(
                 shape[0],
@@ -193,7 +193,7 @@ impl<T: 'static> DropoutConfig<T> {
             dropout,
             seed,
             state,
-            self.get_state_size() as usize,
+            self.get_state_size(),
         )
     }
 

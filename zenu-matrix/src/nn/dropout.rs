@@ -107,7 +107,7 @@ impl Dropout for Cpu {
         let rate = state.rate;
         let num_elm = x.shape().num_elm();
         let mask = {
-            let mut mask = Matrix::ones(&[num_elm]);
+            let mut mask = Matrix::ones([num_elm]);
             dropout_mask(mask.to_ref_mut(), rate);
             mask
         };
@@ -123,7 +123,7 @@ impl Dropout for Cpu {
         let rate = state.rate;
         let mask = state.state.as_ref().unwrap();
         let dy = dy.reshape([dy.shape().num_elm()]);
-        let grad_ratio = dbg!(T::one() / T::from(1.0 - rate).unwrap());
+        let grad_ratio = T::one() / T::from(1.0 - rate).unwrap();
         let dx = dy.to_ref() * mask.to_ref() * grad_ratio;
         dx.reshape_no_alloc_owned(dy.shape())
     }
