@@ -6,6 +6,7 @@ use self::error::ZenuCudnnError;
 
 pub mod batch_norm;
 pub mod conv;
+pub mod dropout;
 pub mod error;
 pub mod pooling;
 pub mod rnn;
@@ -56,6 +57,33 @@ pub(crate) fn tensor_descriptor_4d<T: 'static>(
             return Err(ZenuCudnnError::from(status));
         }
         let status = cudnnSetTensor4dDescriptor(tensor, format, data_type, n, c, h, w);
+        if status != cudnnStatus_t::CUDNN_STATUS_SUCCESS {
+            return Err(ZenuCudnnError::from(status));
+        }
+    }
+    Ok(tensor)
+}
+
+pub(crate) fn tensor_descriptor_2d<T: 'static>(
+    witdh: i32,
+    height: i32,
+) -> Result<cudnnTensorDescriptor_t, ZenuCudnnError> {
+    let data_type = zenu_cudnn_data_type::<T>();
+    let mut tensor: cudnnTensorDescriptor_t = std::ptr::null_mut();
+    unsafe {
+        let status = cudnnCreateTensorDescriptor(&mut tensor as *mut cudnnTensorDescriptor_t);
+        if status != cudnnStatus_t::CUDNN_STATUS_SUCCESS {
+            return Err(ZenuCudnnError::from(status));
+        }
+        let dim = [witdh, height];
+        let stride = [height, 1];
+        let status = cudnnSetTensorNdDescriptor(
+            tensor,
+            data_type,
+            2,
+            &dim as *const ::libc::c_int,
+            &stride as *const ::libc::c_int,
+        );
         if status != cudnnStatus_t::CUDNN_STATUS_SUCCESS {
             return Err(ZenuCudnnError::from(status));
         }
