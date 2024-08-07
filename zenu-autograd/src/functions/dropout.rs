@@ -78,13 +78,20 @@ impl<T: Num, D: Device> Function<T, D> for DropoutBackward<T, D> {
     }
 }
 
-pub fn dropout<T: Num, D: Device>(input: Variable<T, D>, rate: f32) -> Variable<T, D> {
+pub fn dropout<T: Num, D: Device>(
+    input: Variable<T, D>,
+    rate: f32,
+    config: Option<DropoutConfig<T, D>>,
+) -> Variable<T, D> {
     if !is_train() {
         return input;
     }
     let output = alloc(input.get_shape());
 
-    let config = DropoutConfig::new(rate);
+    let config = match config {
+        Some(config) => config,
+        None => DropoutConfig::new(rate),
+    };
 
     let dropout = DropoutForward {
         config,
@@ -133,7 +140,7 @@ mod dropout {
 
     fn dropout_4d_train<D: Device>() {
         let input = normal::<f32, _, D>(1f32, 1f32, None, [3, 3, 3, 3]);
-        let output = dropout(input.clone(), 0.8);
+        let output = dropout(input.clone(), 0.8, None);
         output.backward();
 
         let input_mat_cpu = {
