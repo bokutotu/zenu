@@ -248,7 +248,7 @@ mod dropout {
     use super::*;
 
     #[test]
-    fn test_dropout() {
+    fn test_dropout_4d() {
         let dropout = DropoutConfig::<f32>::new(&[2, 3, 2, 2]).unwrap();
         let space_size = dropout.get_reserve_space_size();
         let state_size = dropout.get_state_size();
@@ -259,6 +259,7 @@ mod dropout {
             1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12., 13., 14., 15., 16., 17., 18., 19.,
             20., 21., 22., 23., 24.,
         ];
+        let mut output_cpu = vec![0.; 24];
         let input_gpu = cuda_malloc::<f32>(24).unwrap();
         let output_gpu = cuda_malloc::<f32>(24).unwrap();
         cuda_copy(
@@ -272,5 +273,115 @@ mod dropout {
         dropout
             .forward(input_gpu, output_gpu, space as *mut ::libc::c_void)
             .unwrap();
+        cuda_copy(
+            output_cpu.as_mut_ptr(),
+            output_gpu,
+            24,
+            ZenuCudaMemCopyKind::DeviceToHost,
+        )
+        .unwrap();
+        let input_grad_expect = output_cpu
+            .iter()
+            .map(|x| if *x == 0. { 0. } else { 1. / 0.5 })
+            .collect::<Vec<f32>>();
+
+        let output_grad_cpu = vec![1.0; 24];
+        let mut input_grad_cpu = vec![0.0; 24];
+        let output_grad_gpu = cuda_malloc::<f32>(24).unwrap();
+        let input_grad_gpu = cuda_malloc::<f32>(24).unwrap();
+        cuda_copy(
+            output_grad_gpu,
+            output_grad_cpu.as_ptr(),
+            24,
+            ZenuCudaMemCopyKind::HostToDevice,
+        )
+        .unwrap();
+
+        dropout
+            .backward(
+                output_grad_gpu,
+                input_grad_gpu,
+                space as *mut ::libc::c_void,
+            )
+            .unwrap();
+
+        cuda_copy(
+            input_grad_cpu.as_mut_ptr(),
+            input_grad_gpu,
+            24,
+            ZenuCudaMemCopyKind::DeviceToHost,
+        )
+        .unwrap();
+
+        assert_eq!(input_grad_expect, input_grad_cpu);
+    }
+
+    #[test]
+    fn test_dropout_2d() {
+        let dropout = DropoutConfig::<f32>::new(&[2 * 3, 2 * 2]).unwrap();
+        let space_size = dropout.get_reserve_space_size();
+        let state_size = dropout.get_state_size();
+        let space = cuda_malloc_bytes(space_size).unwrap();
+        let state = cuda_malloc::<u8>(state_size as usize).unwrap();
+        dropout.set(0.5, 0, state as *mut ::libc::c_void).unwrap();
+        let input_cpu = vec![
+            1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12., 13., 14., 15., 16., 17., 18., 19.,
+            20., 21., 22., 23., 24.,
+        ];
+        let mut output_cpu = vec![0.; 24];
+        let input_gpu = cuda_malloc::<f32>(24).unwrap();
+        let output_gpu = cuda_malloc::<f32>(24).unwrap();
+        cuda_copy(
+            input_gpu,
+            input_cpu.as_ptr(),
+            24,
+            ZenuCudaMemCopyKind::HostToDevice,
+        )
+        .unwrap();
+
+        dropout
+            .forward(input_gpu, output_gpu, space as *mut ::libc::c_void)
+            .unwrap();
+        cuda_copy(
+            output_cpu.as_mut_ptr(),
+            output_gpu,
+            24,
+            ZenuCudaMemCopyKind::DeviceToHost,
+        )
+        .unwrap();
+        let input_grad_expect = output_cpu
+            .iter()
+            .map(|x| if *x == 0. { 0. } else { 1. / 0.5 })
+            .collect::<Vec<f32>>();
+
+        let output_grad_cpu = vec![1.0; 24];
+        let mut input_grad_cpu = vec![0.0; 24];
+        let output_grad_gpu = cuda_malloc::<f32>(24).unwrap();
+        let input_grad_gpu = cuda_malloc::<f32>(24).unwrap();
+        cuda_copy(
+            output_grad_gpu,
+            output_grad_cpu.as_ptr(),
+            24,
+            ZenuCudaMemCopyKind::HostToDevice,
+        )
+        .unwrap();
+
+        dropout
+            .backward(
+                output_grad_gpu,
+                input_grad_gpu,
+                space as *mut ::libc::c_void,
+            )
+            .unwrap();
+
+        cuda_copy(
+            input_grad_cpu.as_mut_ptr(),
+            input_grad_gpu,
+            24,
+            ZenuCudaMemCopyKind::DeviceToHost,
+        )
+        .unwrap();
+
+        assert_eq!(input_grad_expect, input_grad_cpu);
     }
 }
