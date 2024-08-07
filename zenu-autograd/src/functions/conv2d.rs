@@ -351,11 +351,10 @@ pub fn conv2d<T: Num, D: Device>(
     config: Option<Conv2dConfigs<T>>,
 ) -> Variable<T, D> {
     let y = conv2d_inner(x, filter, stride, padding, config);
-    let y = match bias {
+    match bias {
         Some(bias) => conv2d_bias(y, bias),
         None => y,
-    };
-    y
+    }
 }
 
 fn deconv2d_inner<T: Num, D: Device>(
