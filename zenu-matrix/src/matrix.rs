@@ -453,6 +453,11 @@ where
             panic!("Matrix is not scalar");
         }
     }
+
+    pub fn as_slice(&self) -> &[R::Item] {
+        let num_elm = self.shape().num_elm();
+        unsafe { std::slice::from_raw_parts(self.as_ptr(), num_elm) }
+    }
 }
 
 impl<T, S, D> Matrix<Owned<T>, S, D>
