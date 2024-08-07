@@ -178,8 +178,8 @@ impl<T: 'static> DropoutConfig<T> {
         self.reserve_space_size
     }
 
-    pub fn get_state_size(&self) -> i32 {
-        self.state_size
+    pub fn get_state_size(&self) -> usize {
+        self.state_size as usize
     }
 
     pub fn set(
