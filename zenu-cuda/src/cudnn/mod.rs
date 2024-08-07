@@ -8,6 +8,7 @@ pub mod batch_norm;
 pub mod conv;
 pub mod error;
 pub mod pooling;
+pub mod rnn;
 
 pub(crate) fn zenu_cudnn_data_type<T: 'static>() -> cudnnDataType_t {
     if TypeId::of::<T>() == TypeId::of::<f32>() {
