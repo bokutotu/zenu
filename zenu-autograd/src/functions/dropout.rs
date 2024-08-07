@@ -7,8 +7,9 @@ use zenu_matrix::{
     num::Num,
 };
 
-use crate::{creator::alloc::alloc, Function, Variable, VariableWeak};
+use crate::{creator::alloc::alloc, is_train, Function, Variable, VariableWeak};
 
+#[derive(Clone)]
 pub struct DropoutConfig<T: Num, D: Device> {
     inner: Rc<RefCell<DropoutState<T, D>>>,
 }
@@ -48,7 +49,7 @@ impl<T: Num, D: Device> Function<T, D> for DropoutForward<T, D> {
     fn backward(&self) {
         let output = self.output.upgrade().unwrap();
         let output_grad = output.get_grad().unwrap();
-        let input_grad = dropout_backward(output_grad, self.config.inner.borrow().rate);
+        let input_grad = dropout_backward(output_grad, self.config.clone());
         self.input.set_grad(input_grad);
     }
 
@@ -78,6 +79,9 @@ impl<T: Num, D: Device> Function<T, D> for DropoutBackward<T, D> {
 }
 
 pub fn dropout<T: Num, D: Device>(input: Variable<T, D>, rate: f32) -> Variable<T, D> {
+    if !is_train() {
+        return input;
+    }
     let output = alloc(input.get_shape());
 
     let config = DropoutConfig::new(rate);
@@ -97,10 +101,11 @@ pub fn dropout<T: Num, D: Device>(input: Variable<T, D>, rate: f32) -> Variable<
     output
 }
 
-fn dropout_backward<T: Num, D: Device>(output_grad: Variable<T, D>, rate: f32) -> Variable<T, D> {
+fn dropout_backward<T: Num, D: Device>(
+    output_grad: Variable<T, D>,
+    config: DropoutConfig<T, D>,
+) -> Variable<T, D> {
     let input_grad = alloc(output_grad.get_shape());
-
-    let config = DropoutConfig::new(rate);
 
     let dropout = DropoutBackward {
         config,
@@ -115,4 +120,68 @@ fn dropout_backward<T: Num, D: Device>(output_grad: Variable<T, D>, rate: f32) -
     input_grad.set_name("dropout_grad");
 
     input_grad
+}
+
+#[cfg(test)]
+mod dropout {
+    use zenu_matrix::device::{cpu::Cpu, Device};
+    use zenu_test::run_test;
+
+    use crate::creator::rand::normal;
+
+    use super::dropout;
+
+    fn dropout_4d_train<D: Device>() {
+        let input = normal::<f32, _, D>(1f32, 1f32, None, [3, 3, 3, 3]);
+        let output = dropout(input.clone(), 0.8);
+        output.backward();
+
+        let input_mat_cpu = {
+            let input = input.get_data().clone();
+            input.to::<Cpu>()
+        };
+        let output_mat_cpu = {
+            let output = output.get_data().clone();
+            output.to::<Cpu>()
+        };
+
+        let mask = {
+            let s = output_mat_cpu.as_slice();
+            s.iter().map(|&x| (x != 0f32)).collect::<Vec<_>>()
+        };
+
+        let output_slice = output_mat_cpu.as_slice();
+        let input_slice = input_mat_cpu.as_slice();
+
+        for idx in 0..output_slice.len() {
+            if !mask[idx] {
+                assert_eq!(output_slice[idx], 0f32);
+            } else {
+                let diff = output_slice[idx] - input_slice[idx] / 0.2;
+                assert!(
+                    diff.abs() < 1e-5,
+                    "idx : {} output : {} input slice: {} diff :{}",
+                    idx,
+                    output_slice[idx],
+                    input_slice[idx],
+                    diff
+                );
+            }
+        }
+
+        let input_grad = input.get_grad().unwrap();
+        let input_grad_cpu = {
+            let input_grad = input_grad.get_data().clone();
+            input_grad.to::<Cpu>()
+        };
+
+        for idx in 0..output_slice.len() {
+            if !mask[idx] {
+                assert_eq!(input_grad_cpu.as_slice()[idx], 0f32);
+            } else {
+                assert_eq!(input_grad_cpu.as_slice()[idx], 1f32 / (1f32 - 0.8));
+            }
+        }
+    }
+    run_test!(dropout_4d_train, dropout_4d_train_cpu, dropout_4d_train_gpu);
 }

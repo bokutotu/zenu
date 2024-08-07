@@ -111,7 +111,8 @@ impl Dropout for Cpu {
             dropout_mask(mask.to_ref_mut(), rate);
             mask
         };
-        let y = x.reshape([num_elm]) * mask.to_ref();
+        let grad_ratio = T::one() / T::from(1.0 - rate).unwrap();
+        let y = x.reshape([num_elm]) * mask.to_ref() * grad_ratio;
         state.state = Some(mask);
         y.reshape_no_alloc_owned(x.shape())
     }
@@ -122,10 +123,11 @@ impl Dropout for Cpu {
     ) -> Matrix<Owned<T>, DimDyn, Self> {
         let rate = state.rate;
         let mask = state.state.as_ref().unwrap();
+        let dy_original_shape = dy.shape();
         let dy = dy.reshape([dy.shape().num_elm()]);
         let grad_ratio = T::one() / T::from(1.0 - rate).unwrap();
         let dx = dy.to_ref() * mask.to_ref() * grad_ratio;
-        dx.reshape_no_alloc_owned(dy.shape())
+        dx.reshape_no_alloc_owned(dy_original_shape)
     }
 }
 
