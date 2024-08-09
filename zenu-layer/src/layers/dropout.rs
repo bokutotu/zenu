@@ -28,6 +28,7 @@ impl<T: Num, D: Device> Module<T, D> for Dropout<T, D> {
 }
 
 impl<T: Num, D: Device> Dropout<T, D> {
+    #[must_use]
     pub fn new(rate: f32) -> Self {
         let config = DropoutConfig::new(rate);
         Self {
