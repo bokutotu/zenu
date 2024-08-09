@@ -9,7 +9,7 @@ use crate::ZENU_CUDA_STATE;
 
 use super::{error::ZenuCudnnError, tensor_descriptor_2d, tensor_descriptor_4d};
 
-fn dropout_descriptor() -> Result<cudnnDropoutDescriptor_t, ZenuCudnnError> {
+pub(crate) fn dropout_descriptor() -> Result<cudnnDropoutDescriptor_t, ZenuCudnnError> {
     let mut dropout: cudnnDropoutDescriptor_t = std::ptr::null_mut();
     unsafe {
         let status = cudnnCreateDropoutDescriptor(&mut dropout as *mut cudnnDropoutDescriptor_t);
