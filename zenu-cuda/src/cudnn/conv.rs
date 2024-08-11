@@ -1,33 +1,13 @@
-use super::{error::ZenuCudnnError, tensor_descriptor_4d, zenu_cudnn_data_type, TensorFormat};
+use super::{
+    error::ZenuCudnnError, filter_descriptor_4d, tensor_descriptor_4d, zenu_cudnn_data_type,
+    TensorFormat,
+};
 
 use crate::ZENU_CUDA_STATE;
 
 use std::cell::UnsafeCell;
 
 use zenu_cudnn_sys::*;
-
-fn filter_descriptor<T: 'static>(
-    k: i32,
-    c: i32,
-    h: i32,
-    w: i32,
-    format: TensorFormat,
-) -> Result<cudnnFilterDescriptor_t, ZenuCudnnError> {
-    let data_type = zenu_cudnn_data_type::<T>();
-    let format = format.into();
-    let mut filter: cudnnFilterDescriptor_t = std::ptr::null_mut();
-    unsafe {
-        let status = cudnnCreateFilterDescriptor(&mut filter as *mut cudnnFilterDescriptor_t);
-        if status != cudnnStatus_t::CUDNN_STATUS_SUCCESS {
-            return Err(ZenuCudnnError::from(status));
-        }
-        let status = cudnnSetFilter4dDescriptor(filter, data_type, format, k, c, h, w);
-        if status != cudnnStatus_t::CUDNN_STATUS_SUCCESS {
-            return Err(ZenuCudnnError::from(status));
-        }
-    }
-    Ok(filter)
-}
 
 fn convolution_descriptor(
     pad_h: i32,
@@ -445,7 +425,7 @@ impl<T: 'static> ConvolutionBuilder<T> {
         w: i32,
         format: TensorFormat,
     ) -> Result<Self, ZenuCudnnError> {
-        self.filter = Some(filter_descriptor::<T>(k, c, h, w, format)?);
+        self.filter = Some(filter_descriptor_4d::<T>(k, c, h, w, format)?);
         Ok(self)
     }
 
