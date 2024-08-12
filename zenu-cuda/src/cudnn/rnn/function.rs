@@ -7,12 +7,11 @@ use zenu_cudnn_sys::{
     cudnnRNNDataDescriptor_t, cudnnRNNDataLayout_t, cudnnRNNDescriptor_t, cudnnRNNForward,
     cudnnRNNInputMode_t, cudnnRNNMode_t, cudnnSetRNNDataDescriptor, cudnnSetRNNDescriptor_v8,
     cudnnStatus_t, cudnnTensorDescriptor_t, cudnnWgradMode_t, CUDNN_RNN_PADDED_IO_DISABLED,
-    CUDNN_RNN_PADDED_IO_ENABLED,
 };
 
 use crate::ZENU_CUDA_STATE;
 
-use super::error::ZenuCudnnError;
+use super::super::error::ZenuCudnnError;
 
 pub enum RNNAlgo {
     Standard,
@@ -41,7 +40,7 @@ pub enum RNNMathType {
 }
 
 #[allow(clippy::too_many_arguments)]
-fn rnn_descriptor<Data: 'static, Math: 'static>(
+pub fn rnn_descriptor<Data: 'static, Math: 'static>(
     algo: RNNAlgo,
     cell: RNNCell,
     bias: RNNBias,
@@ -141,6 +140,18 @@ fn rnn_descriptor<Data: 'static, Math: 'static>(
     Ok(rnn_desc)
 }
 
+pub fn rnn_weight_space(rnn_desc: cudnnRNNDescriptor_t) -> Result<usize, ZenuCudnnError> {
+    let mut size: usize = 0;
+
+    let handle = ZENU_CUDA_STATE.lock().unwrap().get_cudnn().as_ptr();
+
+    let status = unsafe { cudnnGetRNNWeightSpaceSize(handle, rnn_desc, &mut size as *mut usize) };
+    if status != zenu_cudnn_sys::cudnnStatus_t::CUDNN_STATUS_SUCCESS {
+        return Err(ZenuCudnnError::from(status));
+    }
+
+    Ok(size)
+}
 pub struct RNNBytes {
     weights_size: usize,
     workspace_size: usize,
@@ -153,7 +164,6 @@ impl RNNBytes {
         is_training: bool,
         x_desc: cudnnRNNDataDescriptor_t,
     ) -> Self {
-        println!("here");
         let weights_size = Self::rnn_weight_space(rnn_desc).unwrap();
         let (workspace_size, reserve_size) =
             Self::rnn_tmp_space(rnn_desc, is_training, x_desc).unwrap();
@@ -390,6 +400,7 @@ pub fn rnn_bkwd_weight<T: 'static>(
     Ok(())
 }
 
+#[derive(Debug, Clone, Copy)]
 pub enum RNNDataLayout {
     SeqMajorUnpacked,
     SeqMajorPacked,
