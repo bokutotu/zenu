@@ -8,12 +8,12 @@ use crate::{cudnn::tensor_descriptor_nd, ZENU_CUDA_STATE};
 use super::{
     function::{
         rnn_bkwd_data, rnn_bkwd_weight, rnn_data_descriptor, rnn_descriptor, rnn_fwd,
-        rnn_weight_space,
+        rnn_weight_params, rnn_weight_space, RNNWeightParams,
     },
     RNNAlgo, RNNBias, RNNCell, RNNDataLayout, RNNMathType,
 };
 
-pub struct RnnConfig<T: 'static> {
+pub struct RNNConfig<T: 'static> {
     pub rnn_desc: cudnnRNNDescriptor_t,
     pub h_desc: cudnnTensorDescriptor_t,
     pub c_desc: cudnnTensorDescriptor_t,
@@ -21,6 +21,8 @@ pub struct RnnConfig<T: 'static> {
     pub input_size: usize,
     pub hidden_size: usize,
     pub num_layers: usize,
+    pub cell: RNNCell,
+    pub bidirectional: bool,
     _marker: std::marker::PhantomData<T>,
 }
 
@@ -29,7 +31,39 @@ pub struct RnnWorkspace {
     pub reserve_size: usize,
 }
 
-impl<T: 'static> RnnConfig<T> {
+pub struct RNNDescPtr {
+    pub desc: cudnnTensorDescriptor_t,
+    pub ptr: *mut std::ffi::c_void,
+}
+
+pub struct LstmParams {
+    pub input_gate_x: RNNDescPtr,
+    pub input_gate_h: RNNDescPtr,
+    pub forget_gate_x: RNNDescPtr,
+    pub forget_gate_h: RNNDescPtr,
+    pub cell_x: RNNDescPtr,
+    pub cell_h: RNNDescPtr,
+    pub output_gate_x: RNNDescPtr,
+    pub output_gate_h: RNNDescPtr,
+}
+
+pub struct RNNParams {
+    pub input_weight: RNNDescPtr,
+    pub hidden_weight: RNNDescPtr,
+    pub input_bias: RNNDescPtr,
+    pub hidden_bias: RNNDescPtr,
+}
+
+pub struct GRUParams {
+    pub reset_gate_x: RNNDescPtr,
+    pub reset_gate_h: RNNDescPtr,
+    pub update_gate_x: RNNDescPtr,
+    pub update_gate_h: RNNDescPtr,
+    pub cell_x: RNNDescPtr,
+    pub cell_h: RNNDescPtr,
+}
+
+impl<T: 'static> RNNConfig<T> {
     pub fn new(
         algo: RNNAlgo,
         cell: RNNCell,
@@ -77,6 +111,8 @@ impl<T: 'static> RnnConfig<T> {
             input_size,
             hidden_size,
             num_layers,
+            cell,
+            bidirectional,
             _marker: std::marker::PhantomData,
         }
     }
@@ -116,9 +152,187 @@ impl<T: 'static> RnnConfig<T> {
             reserve_size,
         }
     }
+
+    // pub fn get_input_params(&self, weight_ptr: *mut T) -> RNNDescPtr {
+    //     let RNNWeightParams {
+    //         weight_desc,
+    //         weight,
+    //         ..
+    //     } = rnn_weight_params(self.rnn_desc, 0, self.weights_size, weight_ptr, 0).unwrap();
+    //
+    //     RNNDescPtr {
+    //         desc: weight_desc,
+    //         ptr: weight,
+    //     }
+    // }
+
+    pub fn get_rnn_params(&self, weight_ptr: *mut T) -> Vec<RNNParams> {
+        if self.cell != RNNCell::RNNRelu && self.cell != RNNCell::RNNTanh {
+            panic!("Only RNN cell is supported");
+        }
+        let mut params = Vec::new();
+
+        for layer_idx in 0..self.num_layers {
+            let input_params =
+                rnn_weight_params(self.rnn_desc, layer_idx, self.weights_size, weight_ptr, 0)
+                    .unwrap();
+            let hidden_params =
+                rnn_weight_params(self.rnn_desc, layer_idx, self.weights_size, weight_ptr, 1)
+                    .unwrap();
+
+            params.push(RNNParams {
+                input_weight: RNNDescPtr {
+                    desc: input_params.weight_desc,
+                    ptr: input_params.weight,
+                },
+                hidden_weight: RNNDescPtr {
+                    desc: hidden_params.weight_desc,
+                    ptr: hidden_params.weight,
+                },
+                input_bias: RNNDescPtr {
+                    desc: input_params.bias_desc,
+                    ptr: input_params.bias,
+                },
+                hidden_bias: RNNDescPtr {
+                    desc: hidden_params.bias_desc,
+                    ptr: hidden_params.bias,
+                },
+            });
+        }
+
+        params
+    }
+
+    pub fn get_lstm_params(&self, weight_ptr: *mut T) -> Vec<LstmParams> {
+        if self.cell != RNNCell::LSTM {
+            panic!("Only LSTM cell is supported");
+        }
+        let mut params = Vec::new();
+
+        for layer_idx in 0..self.num_layers {
+            let input_gate_x =
+                rnn_weight_params(self.rnn_desc, layer_idx, self.weights_size, weight_ptr, 0)
+                    .unwrap();
+            let input_gate_h =
+                rnn_weight_params(self.rnn_desc, layer_idx, self.weights_size, weight_ptr, 1)
+                    .unwrap();
+            let forget_gate_x =
+                rnn_weight_params(self.rnn_desc, layer_idx, self.weights_size, weight_ptr, 2)
+                    .unwrap();
+            let forget_gate_h =
+                rnn_weight_params(self.rnn_desc, layer_idx, self.weights_size, weight_ptr, 3)
+                    .unwrap();
+            let cell_x =
+                rnn_weight_params(self.rnn_desc, layer_idx, self.weights_size, weight_ptr, 4)
+                    .unwrap();
+            let cell_h =
+                rnn_weight_params(self.rnn_desc, layer_idx, self.weights_size, weight_ptr, 5)
+                    .unwrap();
+            let output_gate_x =
+                rnn_weight_params(self.rnn_desc, layer_idx, self.weights_size, weight_ptr, 6)
+                    .unwrap();
+            let output_gate_h =
+                rnn_weight_params(self.rnn_desc, layer_idx, self.weights_size, weight_ptr, 7)
+                    .unwrap();
+
+            params.push(LstmParams {
+                input_gate_x: RNNDescPtr {
+                    desc: input_gate_x.weight_desc,
+                    ptr: input_gate_x.weight,
+                },
+                input_gate_h: RNNDescPtr {
+                    desc: input_gate_h.weight_desc,
+                    ptr: input_gate_h.weight,
+                },
+                forget_gate_x: RNNDescPtr {
+                    desc: forget_gate_x.weight_desc,
+                    ptr: forget_gate_x.weight,
+                },
+                forget_gate_h: RNNDescPtr {
+                    desc: forget_gate_h.weight_desc,
+                    ptr: forget_gate_h.weight,
+                },
+                cell_x: RNNDescPtr {
+                    desc: cell_x.weight_desc,
+                    ptr: cell_x.weight,
+                },
+                cell_h: RNNDescPtr {
+                    desc: cell_h.weight_desc,
+                    ptr: cell_h.weight,
+                },
+                output_gate_x: RNNDescPtr {
+                    desc: output_gate_x.weight_desc,
+                    ptr: output_gate_x.weight,
+                },
+                output_gate_h: RNNDescPtr {
+                    desc: output_gate_h.weight_desc,
+                    ptr: output_gate_h.weight,
+                },
+            });
+        }
+
+        params
+    }
+
+    pub fn get_gru_params(&self, weight_ptr: *mut T) -> Vec<GRUParams> {
+        if self.cell != RNNCell::GRU {
+            panic!("Only GRU cell is supported");
+        }
+        let mut params = Vec::new();
+
+        for layer_idx in 0..self.num_layers {
+            let reset_gate_x =
+                rnn_weight_params(self.rnn_desc, layer_idx, self.weights_size, weight_ptr, 0)
+                    .unwrap();
+            let reset_gate_h =
+                rnn_weight_params(self.rnn_desc, layer_idx, self.weights_size, weight_ptr, 1)
+                    .unwrap();
+            let update_gate_x =
+                rnn_weight_params(self.rnn_desc, layer_idx, self.weights_size, weight_ptr, 2)
+                    .unwrap();
+            let update_gate_h =
+                rnn_weight_params(self.rnn_desc, layer_idx, self.weights_size, weight_ptr, 3)
+                    .unwrap();
+            let cell_x =
+                rnn_weight_params(self.rnn_desc, layer_idx, self.weights_size, weight_ptr, 4)
+                    .unwrap();
+            let cell_h =
+                rnn_weight_params(self.rnn_desc, layer_idx, self.weights_size, weight_ptr, 5)
+                    .unwrap();
+
+            params.push(GRUParams {
+                reset_gate_x: RNNDescPtr {
+                    desc: reset_gate_x.weight_desc,
+                    ptr: reset_gate_x.weight,
+                },
+                reset_gate_h: RNNDescPtr {
+                    desc: reset_gate_h.weight_desc,
+                    ptr: reset_gate_h.weight,
+                },
+                update_gate_x: RNNDescPtr {
+                    desc: update_gate_x.weight_desc,
+                    ptr: update_gate_x.weight,
+                },
+                update_gate_h: RNNDescPtr {
+                    desc: update_gate_h.weight_desc,
+                    ptr: update_gate_h.weight,
+                },
+                cell_x: RNNDescPtr {
+                    desc: cell_x.weight_desc,
+                    ptr: cell_x.weight,
+                },
+                cell_h: RNNDescPtr {
+                    desc: cell_h.weight_desc,
+                    ptr: cell_h.weight,
+                },
+            });
+        }
+
+        params
+    }
 }
 
-impl<T: 'static> Drop for RnnConfig<T> {
+impl<T: 'static> Drop for RNNConfig<T> {
     fn drop(&mut self) {
         unsafe {
             zenu_cudnn_sys::cudnnDestroyRNNDescriptor(self.rnn_desc);
@@ -129,7 +343,7 @@ impl<T: 'static> Drop for RnnConfig<T> {
 }
 
 pub struct RNNExecutor<'a, T: 'static> {
-    pub config: &'a RnnConfig<T>,
+    pub config: &'a RNNConfig<T>,
     pub x_desc: cudnnRNNDataDescriptor_t,
     pub y_desc: cudnnRNNDataDescriptor_t,
     pub workspace: RnnWorkspace,
@@ -138,7 +352,7 @@ pub struct RNNExecutor<'a, T: 'static> {
 
 impl<'a, T: 'static + Clone + Copy> RNNExecutor<'a, T> {
     pub fn new(
-        config: &'a RnnConfig<T>,
+        config: &'a RNNConfig<T>,
         seq_lengh: usize,
         batch_size: usize,
         seq_length_array: &[usize],
@@ -206,7 +420,7 @@ impl<'a, T: 'static + Clone + Copy> RNNExecutor<'a, T> {
             cy,
             self.config.weights_size,
             weight,
-            self.workspace.reserve_size,
+            self.workspace.workspace_size,
             workspace,
             self.workspace.reserve_size,
             reserve,
