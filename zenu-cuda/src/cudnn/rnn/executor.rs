@@ -8,7 +8,7 @@ use crate::{cudnn::tensor_descriptor_nd, ZENU_CUDA_STATE};
 use super::{
     function::{
         rnn_bkwd_data, rnn_bkwd_weight, rnn_data_descriptor, rnn_descriptor, rnn_fwd,
-        rnn_weight_params, rnn_weight_space, RNNWeightParams,
+        rnn_weight_params, rnn_weight_space,
     },
     RNNAlgo, RNNBias, RNNCell, RNNDataLayout, RNNMathType,
 };
@@ -64,6 +64,7 @@ pub struct GRUParams {
 }
 
 impl<T: 'static> RNNConfig<T> {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         algo: RNNAlgo,
         cell: RNNCell,
@@ -117,6 +118,7 @@ impl<T: 'static> RNNConfig<T> {
         }
     }
 
+    #[allow(clippy::not_unsafe_ptr_arg_deref)]
     pub fn get_workspace_reserve_size(
         &self,
         is_training: bool,
@@ -393,6 +395,7 @@ impl<'a, T: 'static + Clone + Copy> RNNExecutor<'a, T> {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn fwd(
         &self,
         x: *const T,
@@ -428,6 +431,7 @@ impl<'a, T: 'static + Clone + Copy> RNNExecutor<'a, T> {
         .unwrap();
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn bkwd_data(
         &self,
         y: *const T,
