@@ -1,12 +1,13 @@
 use std::any::TypeId;
 
 use zenu_cudnn_sys::{
-    cudnnDataType_t, cudnnDirectionMode_t, cudnnDropoutDescriptor_t, cudnnForwardMode_t,
-    cudnnGetRNNTempSpaceSizes, cudnnGetRNNWeightSpaceSize, cudnnMathType_t, cudnnRNNAlgo_t,
-    cudnnRNNBackwardData_v8, cudnnRNNBackwardWeights_v8, cudnnRNNBiasMode_t,
-    cudnnRNNDataDescriptor_t, cudnnRNNDataLayout_t, cudnnRNNDescriptor_t, cudnnRNNForward,
-    cudnnRNNInputMode_t, cudnnRNNMode_t, cudnnSetRNNDataDescriptor, cudnnSetRNNDescriptor_v8,
-    cudnnStatus_t, cudnnTensorDescriptor_t, cudnnWgradMode_t, CUDNN_RNN_PADDED_IO_DISABLED,
+    cudnnCreateTensorDescriptor, cudnnDataType_t, cudnnDirectionMode_t, cudnnDropoutDescriptor_t,
+    cudnnForwardMode_t, cudnnGetRNNTempSpaceSizes, cudnnGetRNNWeightParams,
+    cudnnGetRNNWeightSpaceSize, cudnnMathType_t, cudnnRNNAlgo_t, cudnnRNNBackwardData_v8,
+    cudnnRNNBackwardWeights_v8, cudnnRNNBiasMode_t, cudnnRNNDataDescriptor_t, cudnnRNNDataLayout_t,
+    cudnnRNNDescriptor_t, cudnnRNNForward, cudnnRNNInputMode_t, cudnnRNNMode_t,
+    cudnnSetRNNDataDescriptor, cudnnSetRNNDescriptor_v8, cudnnStatus_t, cudnnTensorDescriptor_t,
+    cudnnWgradMode_t, CUDNN_RNN_PADDED_IO_DISABLED,
 };
 
 use crate::ZENU_CUDA_STATE;
@@ -19,6 +20,7 @@ pub enum RNNAlgo {
     PersistDynamic,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RNNCell {
     LSTM,
     GRU,
@@ -470,6 +472,69 @@ pub fn rnn_data_descriptor<T: 'static>(
         return Err(ZenuCudnnError::from(status));
     }
     Ok(tensor)
+}
+
+pub struct RNNWeightParams {
+    pub weight_desc: cudnnTensorDescriptor_t,
+    pub weight: *mut ::libc::c_void,
+    pub bias_desc: cudnnTensorDescriptor_t,
+    pub bias: *mut ::libc::c_void,
+}
+
+pub fn rnn_weight_params<T: 'static>(
+    rnn_desc: cudnnRNNDescriptor_t,
+    pseudo_layer: usize,
+    weight_size: usize,
+    weight: *mut T,
+    leyer_id: usize,
+) -> Result<RNNWeightParams, ZenuCudnnError> {
+    let handle = ZENU_CUDA_STATE.lock().unwrap().get_cudnn().as_ptr();
+
+    let mut weight_desc: cudnnTensorDescriptor_t = std::ptr::null_mut();
+    let mut bias_desc: cudnnTensorDescriptor_t = std::ptr::null_mut();
+
+    let status =
+        unsafe { cudnnCreateTensorDescriptor(&mut weight_desc as *mut cudnnTensorDescriptor_t) };
+    if status != zenu_cudnn_sys::cudnnStatus_t::CUDNN_STATUS_SUCCESS {
+        return Err(ZenuCudnnError::from(status));
+    }
+
+    let status =
+        unsafe { cudnnCreateTensorDescriptor(&mut bias_desc as *mut cudnnTensorDescriptor_t) };
+    if status != zenu_cudnn_sys::cudnnStatus_t::CUDNN_STATUS_SUCCESS {
+        return Err(ZenuCudnnError::from(status));
+    }
+
+    let mut m_addr = std::ptr::null_mut();
+    let m_addr_addr = &mut m_addr as *mut *mut ::libc::c_void;
+
+    let mut b_addr = std::ptr::null_mut();
+    let b_addr_addr = &mut b_addr as *mut *mut ::libc::c_void;
+
+    let status = unsafe {
+        cudnnGetRNNWeightParams(
+            handle,
+            rnn_desc,
+            pseudo_layer as i32,
+            weight_size,
+            weight as *mut ::libc::c_void,
+            leyer_id as i32,
+            weight_desc,
+            m_addr_addr,
+            bias_desc,
+            b_addr_addr,
+        )
+    };
+    if status != zenu_cudnn_sys::cudnnStatus_t::CUDNN_STATUS_SUCCESS {
+        return Err(ZenuCudnnError::from(status));
+    }
+
+    Ok(RNNWeightParams {
+        weight_desc,
+        weight: m_addr,
+        bias_desc,
+        bias: b_addr,
+    })
 }
 
 #[cfg(test)]
