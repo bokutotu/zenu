@@ -139,23 +139,23 @@ pub(crate) fn filter_descriptor_4d<T: 'static>(
     Ok(filter)
 }
 
-pub(crate) fn filter_descriptor_nd<T: 'static>(
-    dims: &[i32],
-    format: TensorFormat,
-) -> Result<cudnnFilterDescriptor_t, ZenuCudnnError> {
-    let data_type = zenu_cudnn_data_type::<T>();
-    let format = format.into();
-    let mut filter: cudnnFilterDescriptor_t = std::ptr::null_mut();
-    unsafe {
-        let status = cudnnCreateFilterDescriptor(&mut filter as *mut cudnnFilterDescriptor_t);
-        if status != cudnnStatus_t::CUDNN_STATUS_SUCCESS {
-            return Err(ZenuCudnnError::from(status));
-        }
-        let status =
-            cudnnSetFilterNdDescriptor(filter, data_type, format, dims.len() as i32, dims.as_ptr());
-        if status != cudnnStatus_t::CUDNN_STATUS_SUCCESS {
-            return Err(ZenuCudnnError::from(status));
-        }
-    }
-    Ok(filter)
-}
+// pub(crate) fn filter_descriptor_nd<T: 'static>(
+//     dims: &[i32],
+//     format: TensorFormat,
+// ) -> Result<cudnnFilterDescriptor_t, ZenuCudnnError> {
+//     let data_type = zenu_cudnn_data_type::<T>();
+//     let format = format.into();
+//     let mut filter: cudnnFilterDescriptor_t = std::ptr::null_mut();
+//     unsafe {
+//         let status = cudnnCreateFilterDescriptor(&mut filter as *mut cudnnFilterDescriptor_t);
+//         if status != cudnnStatus_t::CUDNN_STATUS_SUCCESS {
+//             return Err(ZenuCudnnError::from(status));
+//         }
+//         let status =
+//             cudnnSetFilterNdDescriptor(filter, data_type, format, dims.len() as i32, dims.as_ptr());
+//         if status != cudnnStatus_t::CUDNN_STATUS_SUCCESS {
+//             return Err(ZenuCudnnError::from(status));
+//         }
+//     }
+//     Ok(filter)
+// }

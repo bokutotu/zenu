@@ -2,8 +2,7 @@
 mod rnn {
     use crate::{
         cudnn::rnn::{
-            executor::RNNExecutor, function::rnn_data_descriptor, RNNAlgo, RNNBias, RNNCell,
-            RNNConfig, RNNDataLayout, RNNMathType,
+            executor::RNNExecutor, RNNAlgo, RNNBias, RNNCell, RNNConfig, RNNDataLayout, RNNMathType,
         },
         runtime::{cuda_copy, cuda_malloc, cuda_malloc_bytes, ZenuCudaMemCopyKind},
     };
