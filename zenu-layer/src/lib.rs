@@ -13,7 +13,10 @@ impl<T: Num, D: Device> ModuleParameters<T, D> for Variable<T, D> {}
 
 impl<T: Num, D: Device> ModuleParameters<T, D> for Vec<Variable<T, D>> {}
 
-impl<T: Num, D: Device, K> ModuleParameters<T, D> for HashMap<K, Variable<T, D>> {}
+impl<T: Num, D: Device, K, S: ::std::hash::BuildHasher> ModuleParameters<T, D>
+    for HashMap<K, Variable<T, D>, S>
+{
+}
 
 pub trait Module<T: Num, D: Device> {
     type Input: ModuleParameters<T, D>;
