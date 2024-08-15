@@ -19,6 +19,8 @@ pub struct Dropout<T: Num, D: Device> {
 }
 
 impl<T: Num, D: Device> Module<T, D> for Dropout<T, D> {
+    type Input = Variable<T, D>;
+    type Output = Variable<T, D>;
     fn call(&self, input: Variable<T, D>) -> Variable<T, D> {
         if self.input_shape.as_ref().unwrap().borrow().slice() != input.get_shape().slice() {
             todo!();

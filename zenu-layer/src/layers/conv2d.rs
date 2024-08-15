@@ -19,6 +19,8 @@ pub struct Conv2d<T: Num, D: Device> {
 }
 
 impl<T: Num, D: Device> Module<T, D> for Conv2d<T, D> {
+    type Input = Variable<T, D>;
+    type Output = Variable<T, D>;
     fn call(&self, input: Variable<T, D>) -> Variable<T, D> {
         if self.config.borrow().is_none() {
             let input_shape = input.get_data().shape();

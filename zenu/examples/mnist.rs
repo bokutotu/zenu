@@ -27,6 +27,9 @@ impl<D: Device> SimpleModel<D> {
 }
 
 impl<D: Device> Module<f32, D> for SimpleModel<D> {
+    type Input = Variable<f32, D>;
+    type Output = Variable<f32, D>;
+
     fn call(&self, inputs: Variable<f32, D>) -> Variable<f32, D> {
         let x = self.linear_1.call(inputs);
         let x = relu(x);

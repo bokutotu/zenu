@@ -38,6 +38,8 @@ impl<T: Num> MaxPool2d<T> {
 }
 
 impl<T: Num, D: Device> Module<T, D> for MaxPool2d<T> {
+    type Input = Variable<T, D>;
+    type Output = Variable<T, D>;
     fn call(&self, input: Variable<T, D>) -> Variable<T, D> {
         max_pool_2d(
             input,
