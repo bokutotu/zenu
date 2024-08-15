@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, hash::BuildHasher};
 
 use zenu_autograd::Variable;
 use zenu_matrix::{device::Device, num::Num};
@@ -13,7 +13,7 @@ impl<T: Num, D: Device> ModuleParameters<T, D> for Variable<T, D> {}
 
 impl<T: Num, D: Device> ModuleParameters<T, D> for Vec<Variable<T, D>> {}
 
-impl<T: Num, D: Device, K, S: ::std::hash::BuildHasher> ModuleParameters<T, D>
+impl<T: Num, D: Device, K, S: BuildHasher> ModuleParameters<T, D>
     for HashMap<K, Variable<T, D>, S>
 {
 }
