@@ -19,6 +19,8 @@ pub struct BatchNorm2d<T: Num, D: Device> {
 }
 
 impl<T: Num, D: Device> Module<T, D> for BatchNorm2d<T, D> {
+    type Input = Variable<T, D>;
+    type Output = Variable<T, D>;
     fn call(&self, input: Variable<T, D>) -> Variable<T, D> {
         if input.get_shape() != self.config.get_shape() {
             self.config.update_shape(input.get_shape().slice());

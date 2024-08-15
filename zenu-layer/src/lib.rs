@@ -5,8 +5,20 @@ use zenu_matrix::{device::Device, num::Num};
 
 pub mod layers;
 
+pub trait ModuleParameters<T: Num, D: Device> {}
+
+impl<T: Num, D: Device> ModuleParameters<T, D> for () {}
+
+impl<T: Num, D: Device> ModuleParameters<T, D> for Variable<T, D> {}
+
+impl<T: Num, D: Device> ModuleParameters<T, D> for Vec<Variable<T, D>> {}
+
+impl<T: Num, D: Device, K> ModuleParameters<T, D> for HashMap<K, Variable<T, D>> {}
+
 pub trait Module<T: Num, D: Device> {
-    fn call(&self, input: Variable<T, D>) -> Variable<T, D>;
+    type Input: ModuleParameters<T, D>;
+    type Output: ModuleParameters<T, D>;
+    fn call(&self, input: Self::Input) -> Self::Output;
 }
 
 pub trait Parameters<T: Num, D: Device> {

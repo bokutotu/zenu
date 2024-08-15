@@ -94,6 +94,8 @@ mod save_and_load_paramters {
         }
 
         impl Module<f32, Cpu> for TestModel {
+            type Input = Variable<f32, Cpu>;
+            type Output = Variable<f32, Cpu>;
             fn call(&self, inputs: Variable<f32, Cpu>) -> zenu_autograd::Variable<f32, Cpu> {
                 let x = self.layer1.call(inputs.clone());
                 self.layer2.call(x)

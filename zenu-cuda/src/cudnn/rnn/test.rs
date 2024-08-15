@@ -113,7 +113,7 @@ mod rnn {
             seq_length,
             batch_size,
             &[seq_length],
-            RNNDataLayout::SeqMajorUnpacked,
+            RNNDataLayout::SeqMajorPacked,
             0_f32,
             true,
         );
