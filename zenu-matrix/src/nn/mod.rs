@@ -6,6 +6,7 @@ pub mod conv2d;
 pub mod dropout;
 pub mod im2col;
 pub mod pool2d;
+pub mod rnn;
 
 #[allow(unused)]
 pub(crate) struct NNCache<D: DeviceBase> {
