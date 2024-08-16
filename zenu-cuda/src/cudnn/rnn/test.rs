@@ -111,7 +111,6 @@ mod rnn {
         let exe = RNNExecutor::new(
             &config,
             seq_length,
-            batch_size,
             &[seq_length],
             RNNDataLayout::SeqMajorPacked,
             0_f32,

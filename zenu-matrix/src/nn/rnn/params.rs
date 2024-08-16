@@ -1,24 +1,34 @@
 use crate::{
     device::DeviceBase,
     dim::DimDyn,
-    matrix::{Matrix, Ref},
+    matrix::{Matrix, Owned, Ref},
     num::Num,
 };
 
-pub struct RNNOutput<'a, T: Num, D: DeviceBase> {
-    pub x: Matrix<Ref<&'a T>, DimDyn, D>,
-    pub hy: Matrix<Ref<&'a T>, DimDyn, D>,
+pub struct RNNOutput<T: Num, D: DeviceBase> {
+    pub y: Matrix<Owned<T>, DimDyn, D>,
+    pub hy: Matrix<Owned<T>, DimDyn, D>,
 }
 
-pub struct RNNBkwdDataOutput<'a, T: Num, D: DeviceBase> {
-    pub dx: Matrix<Ref<&'a T>, DimDyn, D>,
-    pub dhx: Matrix<Ref<&'a T>, DimDyn, D>,
+pub struct RNNBkwdDataOutput<T: Num, D: DeviceBase> {
+    pub dx: Matrix<Owned<T>, DimDyn, D>,
+    pub dhx: Matrix<Owned<T>, DimDyn, D>,
 }
 
-pub struct RNNBkwdWeightsOutput<'a, T: Num, D: DeviceBase> {
-    pub dwx: Matrix<Ref<&'a T>, DimDyn, D>,
-    pub dwh: Matrix<Ref<&'a T>, DimDyn, D>,
-    pub db: Matrix<Ref<&'a T>, DimDyn, D>,
+pub struct RNNBkwdWeightsOutputCpu<T: Num, D: DeviceBase> {
+    pub dwx: Matrix<Owned<T>, DimDyn, D>,
+    pub dwh: Matrix<Owned<T>, DimDyn, D>,
+    pub db: Matrix<Owned<T>, DimDyn, D>,
+}
+
+pub struct RNNBackwardWeightsOutputNvidia {
+    pub dw: *mut u8,
+}
+
+pub enum RNNBkwdWeightsOutput<T: Num, D: DeviceBase> {
+    Cpu(Vec<RNNBkwdWeightsOutputCpu<T, D>>),
+    #[cfg(feature = "nvidia")]
+    Nvidia(RNNBackwardWeightsOutputNvidia),
 }
 
 pub struct RNNParametersCpu<'a, T: Num, D: DeviceBase> {

@@ -1,18 +1,17 @@
 use std::{cell::RefCell, rc::Rc};
 
-use zenu_cuda::cudnn::rnn::{RNNAlgo, RNNBias, RNNCell, RNNMathType};
+use zenu_cuda::cudnn::rnn::{RNNAlgo, RNNBias, RNNCell, RNNDataLayout, RNNMathType};
 #[cfg(feature = "nvidia")]
 use zenu_cuda::cudnn::rnn::{RNNConfig as NvidiaRNNConfig, RNNExecutor};
 
 use crate::num::Num;
 
 #[cfg(feature = "nvidia")]
-pub struct NvidiaConfig<'a, T: Num> {
+pub struct NvidiaConfig<T: Num> {
     pub config: NvidiaRNNConfig<T>,
-    pub exe: Option<RNNExecutor<'a, T>>,
 }
 
-impl<T: Num> NvidiaConfig<'_, T> {
+impl<T: Num> NvidiaConfig<T> {
     fn new(
         cell: RNNCell,
         bidirectional: bool,
@@ -37,7 +36,7 @@ impl<T: Num> NvidiaConfig<'_, T> {
             num_layers,
             batch_size,
         );
-        Self { config, exe: None }
+        Self { config }
     }
 
     pub fn new_rnn_relu(
@@ -115,12 +114,27 @@ impl<T: Num> NvidiaConfig<'_, T> {
             batch_size,
         )
     }
+
+    pub fn get_weight_bytes(&self) -> usize {
+        self.config.weights_size
+    }
+
+    pub fn create_executor(&self, is_training: bool, seq_length: usize) -> RNNExecutor<T> {
+        let seq_length_array = vec![seq_length; self.config.batch_size];
+        RNNExecutor::new(
+            &self.config,
+            seq_length,
+            &seq_length_array,
+            RNNDataLayout::SeqMajorUnpacked,
+            T::zero(),
+            is_training,
+        )
+    }
 }
 
-#[derive(Clone)]
-pub struct RNNConfig<'a, T: Num> {
+pub struct RNNConfig<T: Num> {
     #[cfg(feature = "nvidia")]
-    pub config: Rc<RefCell<NvidiaConfig<'a, T>>>,
+    pub config: NvidiaConfig<T>,
 
     _phantom: std::marker::PhantomData<T>,
 }
