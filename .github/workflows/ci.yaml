@@ -16,7 +16,7 @@ jobs:
         uses: ./.github/actions/setup
 
       - name: Run clippy on zenu-matrix
-        run: cd zenu-matrix && cargo clippy --verbose --features "cpu"
+        run: cd zenu-matrix && cargo clippy --verbose
 
       - name: Run clippy on zenu-autograd
         run: cd zenu-autograd && cargo clippy --verbose
@@ -53,7 +53,7 @@ jobs:
         uses: ./.github/actions/setup
 
       - name: Run tests on zenu-matrix
-        run: cd zenu-matrix && cargo test --verbose --features "cpu"
+        run: cd zenu-matrix && cargo test --verbose
           
       - name: Run tests on zenu-autograd
         run: cd zenu-autograd && cargo test --verbose
