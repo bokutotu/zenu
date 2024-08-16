@@ -20,6 +20,7 @@ pub struct RNNConfig<T: 'static> {
     pub weights_size: usize,
     pub input_size: usize,
     pub hidden_size: usize,
+    pub batch_size: usize,
     pub num_layers: usize,
     pub cell: RNNCell,
     pub bidirectional: bool,
@@ -112,6 +113,7 @@ impl<T: 'static> RNNConfig<T> {
             input_size,
             hidden_size,
             num_layers,
+            batch_size,
             cell,
             bidirectional,
             _marker: std::marker::PhantomData,
@@ -356,7 +358,6 @@ impl<'a, T: 'static + Clone + Copy> RNNExecutor<'a, T> {
     pub fn new(
         config: &'a RNNConfig<T>,
         seq_lengh: usize,
-        batch_size: usize,
         seq_length_array: &[usize],
         layout: RNNDataLayout,
         fill_value: T,
@@ -368,7 +369,7 @@ impl<'a, T: 'static + Clone + Copy> RNNExecutor<'a, T> {
             .collect::<Vec<i32>>();
         let x_desc = rnn_data_descriptor::<T>(
             seq_lengh as i32,
-            batch_size as i32,
+            config.batch_size as i32,
             config.input_size as i32,
             &seq_len_array,
             layout,
@@ -378,7 +379,7 @@ impl<'a, T: 'static + Clone + Copy> RNNExecutor<'a, T> {
 
         let y_desc = rnn_data_descriptor::<T>(
             seq_lengh as i32,
-            batch_size as i32,
+            config.batch_size as i32,
             config.hidden_size as i32,
             &seq_len_array,
             layout,
