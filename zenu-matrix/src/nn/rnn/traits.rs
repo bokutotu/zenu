@@ -1,24 +1,22 @@
 use crate::{
-    device::nvidia::Nvidia,
+    device::DeviceBase,
     dim::DimDyn,
     matrix::{Matrix, Ref},
     num::Num,
 };
 
-use super::{RNNBkwdDataOutput, RNNBkwdWeightsOutput, RNNConfig, RNNOutput, RNNParameters, RNN};
+use super::{RNNBkwdDataOutput, RNNBkwdWeightsOutput, RNNConfig, RNNOutput, RNNParameters};
 
-impl RNN for Nvidia {
+pub trait RNN: DeviceBase {
     fn fwd<T: Num>(
         &self,
         x: Matrix<Ref<&T>, DimDyn, Self>,
         hx: Matrix<Ref<&T>, DimDyn, Self>,
         params: RNNParameters<T, Self>,
         config: RNNConfig<T>,
-    ) -> RNNOutput<T, Self> {
-        todo!()
-    }
+    ) -> RNNOutput<T, Self>;
 
-    fn bkwd_data<T: crate::num::Num>(
+    fn bkwd_data<T: Num>(
         &self,
         x: Matrix<Ref<&T>, DimDyn, Self>,
         y: Matrix<Ref<&T>, DimDyn, Self>,
@@ -26,18 +24,14 @@ impl RNN for Nvidia {
         dhy: Matrix<Ref<&T>, DimDyn, Self>,
         params: RNNParameters<T, Self>,
         config: RNNConfig<T>,
-    ) -> RNNBkwdDataOutput<T, Self> {
-        todo!()
-    }
+    ) -> RNNBkwdDataOutput<T, Self>;
 
-    fn bkwd_weights<T: crate::num::Num>(
+    fn bkwd_weights<T: Num>(
         &self,
         x: Matrix<Ref<&T>, DimDyn, Self>,
         hx: Matrix<Ref<&T>, DimDyn, Self>,
         y: Matrix<Ref<&T>, DimDyn, Self>,
         params: RNNParameters<T, Self>,
         config: RNNConfig<T>,
-    ) -> RNNBkwdWeightsOutput<T, Self> {
-        todo!()
-    }
+    ) -> RNNBkwdWeightsOutput<T, Self>;
 }
