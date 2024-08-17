@@ -115,7 +115,7 @@ mod rnn {
                 0.2815195620059967,
                 0.056163541972637177,
             ],
-            [5, 1, 2],
+            [seq_length, batch_size, input_size],
         );
 
         let params = RNNParameters { weight: weight_ptr };
@@ -145,7 +145,7 @@ mod rnn {
             0.2105420082807541,
             0.0,
         ];
-        let ans = Matrix::<_, DimDyn, _>::from_vec(ans, [5, 1, 4]);
+        let ans = Matrix::<_, DimDyn, _>::from_vec(ans, [seq_length, batch_size, output_size]);
         assert_mat_eq_epsilon!(y, ans, 1e-6);
     }
 }
