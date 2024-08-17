@@ -128,4 +128,24 @@ impl<T: Num> RNNConfig<T> {
             is_training,
         )
     }
+
+    pub fn get_input_size(&self) -> usize {
+        self.config.input_size
+    }
+
+    pub fn get_hidden_size(&self) -> usize {
+        self.config.hidden_size
+    }
+
+    pub fn get_num_layers(&self) -> usize {
+        self.config.num_layers
+    }
+
+    pub fn get_batch_size(&self) -> usize {
+        self.config.batch_size
+    }
+
+    pub fn get_is_bidirectional(&self) -> bool {
+        self.config.bidirectional
+    }
 }

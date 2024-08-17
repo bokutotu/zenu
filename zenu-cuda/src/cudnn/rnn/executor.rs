@@ -499,6 +499,14 @@ impl<'a, T: 'static + Clone + Copy> RNNExecutor<'a, T> {
         )
         .unwrap();
     }
+
+    pub fn get_reserve_size(&self) -> usize {
+        self.workspace.reserve_size
+    }
+
+    pub fn get_workspace_size(&self) -> usize {
+        self.workspace.workspace_size
+    }
 }
 
 impl<'a, T: 'static> Drop for RNNExecutor<'a, T> {
