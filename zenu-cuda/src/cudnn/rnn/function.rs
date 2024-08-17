@@ -2,12 +2,11 @@ use std::any::TypeId;
 
 use zenu_cudnn_sys::{
     cudnnCreateTensorDescriptor, cudnnDataType_t, cudnnDirectionMode_t, cudnnDropoutDescriptor_t,
-    cudnnForwardMode_t, cudnnGetRNNTempSpaceSizes, cudnnGetRNNWeightParams,
-    cudnnGetRNNWeightSpaceSize, cudnnMathType_t, cudnnRNNAlgo_t, cudnnRNNBackwardData_v8,
-    cudnnRNNBackwardWeights_v8, cudnnRNNBiasMode_t, cudnnRNNDataDescriptor_t, cudnnRNNDataLayout_t,
-    cudnnRNNDescriptor_t, cudnnRNNForward, cudnnRNNInputMode_t, cudnnRNNMode_t,
-    cudnnSetRNNDataDescriptor, cudnnSetRNNDescriptor_v8, cudnnStatus_t, cudnnTensorDescriptor_t,
-    cudnnWgradMode_t, CUDNN_RNN_PADDED_IO_DISABLED,
+    cudnnForwardMode_t, cudnnGetRNNWeightParams, cudnnGetRNNWeightSpaceSize, cudnnMathType_t,
+    cudnnRNNAlgo_t, cudnnRNNBackwardData_v8, cudnnRNNBackwardWeights_v8, cudnnRNNBiasMode_t,
+    cudnnRNNDataDescriptor_t, cudnnRNNDataLayout_t, cudnnRNNDescriptor_t, cudnnRNNForward,
+    cudnnRNNInputMode_t, cudnnRNNMode_t, cudnnSetRNNDataDescriptor, cudnnSetRNNDescriptor_v8,
+    cudnnStatus_t, cudnnTensorDescriptor_t, cudnnWgradMode_t, CUDNN_RNN_PADDED_IO_DISABLED,
 };
 
 use crate::ZENU_CUDA_STATE;
@@ -153,87 +152,6 @@ pub fn rnn_weight_space(rnn_desc: cudnnRNNDescriptor_t) -> Result<usize, ZenuCud
     }
 
     Ok(size)
-}
-pub struct RNNBytes {
-    weights_size: usize,
-    workspace_size: usize,
-    reserve_size: usize,
-}
-
-impl RNNBytes {
-    pub fn new(
-        rnn_desc: cudnnRNNDescriptor_t,
-        is_training: bool,
-        x_desc: cudnnRNNDataDescriptor_t,
-    ) -> Self {
-        let weights_size = Self::rnn_weight_space(rnn_desc).unwrap();
-        let (workspace_size, reserve_size) =
-            Self::rnn_tmp_space(rnn_desc, is_training, x_desc).unwrap();
-        Self {
-            weights_size,
-            workspace_size,
-            reserve_size,
-        }
-    }
-
-    pub fn weights_size(&self) -> usize {
-        self.weights_size
-    }
-
-    pub fn workspace_size(&self) -> usize {
-        self.workspace_size
-    }
-
-    pub fn reserve_size(&self) -> usize {
-        self.reserve_size
-    }
-
-    fn rnn_weight_space(rnn_desc: cudnnRNNDescriptor_t) -> Result<usize, ZenuCudnnError> {
-        let mut size: usize = 0;
-
-        let handle = ZENU_CUDA_STATE.lock().unwrap().get_cudnn().as_ptr();
-
-        let status =
-            unsafe { cudnnGetRNNWeightSpaceSize(handle, rnn_desc, &mut size as *mut usize) };
-        if status != zenu_cudnn_sys::cudnnStatus_t::CUDNN_STATUS_SUCCESS {
-            return Err(ZenuCudnnError::from(status));
-        }
-
-        Ok(size)
-    }
-
-    fn rnn_tmp_space(
-        rnn_desc: cudnnRNNDescriptor_t,
-        is_training: bool,
-        x_desc: cudnnRNNDataDescriptor_t,
-    ) -> Result<(usize, usize), ZenuCudnnError> {
-        let handle = ZENU_CUDA_STATE.lock().unwrap().get_cudnn().as_ptr();
-
-        let fwd_mode = if is_training {
-            cudnnForwardMode_t::CUDNN_FWD_MODE_TRAINING
-        } else {
-            cudnnForwardMode_t::CUDNN_FWD_MODE_INFERENCE
-        };
-
-        let mut workspace_size: usize = 0;
-        let mut reserve_size: usize = 0;
-
-        let status = unsafe {
-            cudnnGetRNNTempSpaceSizes(
-                handle,
-                rnn_desc,
-                fwd_mode,
-                x_desc,
-                &mut workspace_size as *mut usize,
-                &mut reserve_size as *mut usize,
-            )
-        };
-        if status != zenu_cudnn_sys::cudnnStatus_t::CUDNN_STATUS_SUCCESS {
-            return Err(ZenuCudnnError::from(status));
-        }
-
-        Ok((workspace_size, reserve_size))
-    }
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -541,12 +459,102 @@ pub fn rnn_weight_params<T: 'static>(
 mod rnn {
     use std::usize;
 
-    use crate::{cudnn::tensor_descriptor_nd, runtime::cuda_malloc};
+    use zenu_cudnn_sys::{
+        cudnnForwardMode_t, cudnnGetRNNTempSpaceSizes, cudnnGetRNNWeightSpaceSize,
+        cudnnRNNDataDescriptor_t, cudnnRNNDescriptor_t,
+    };
+
+    use crate::{
+        cudnn::{error::ZenuCudnnError, tensor_descriptor_nd},
+        runtime::cuda_malloc,
+        ZENU_CUDA_STATE,
+    };
 
     use super::{
-        rnn_data_descriptor, rnn_descriptor, rnn_fwd, RNNAlgo, RNNBias, RNNBytes, RNNCell,
-        RNNDataLayout, RNNMathType,
+        rnn_data_descriptor, rnn_descriptor, rnn_fwd, RNNAlgo, RNNBias, RNNCell, RNNDataLayout,
+        RNNMathType,
     };
+    pub struct RNNBytes {
+        weights_size: usize,
+        workspace_size: usize,
+        reserve_size: usize,
+    }
+
+    impl RNNBytes {
+        pub fn new(
+            rnn_desc: cudnnRNNDescriptor_t,
+            is_training: bool,
+            x_desc: cudnnRNNDataDescriptor_t,
+        ) -> Self {
+            let weights_size = Self::rnn_weight_space(rnn_desc).unwrap();
+            let (workspace_size, reserve_size) =
+                Self::rnn_tmp_space(rnn_desc, is_training, x_desc).unwrap();
+            Self {
+                weights_size,
+                workspace_size,
+                reserve_size,
+            }
+        }
+
+        pub fn weights_size(&self) -> usize {
+            self.weights_size
+        }
+
+        pub fn workspace_size(&self) -> usize {
+            self.workspace_size
+        }
+
+        pub fn reserve_size(&self) -> usize {
+            self.reserve_size
+        }
+
+        fn rnn_weight_space(rnn_desc: cudnnRNNDescriptor_t) -> Result<usize, ZenuCudnnError> {
+            let mut size: usize = 0;
+
+            let handle = ZENU_CUDA_STATE.lock().unwrap().get_cudnn().as_ptr();
+
+            let status =
+                unsafe { cudnnGetRNNWeightSpaceSize(handle, rnn_desc, &mut size as *mut usize) };
+            if status != zenu_cudnn_sys::cudnnStatus_t::CUDNN_STATUS_SUCCESS {
+                return Err(ZenuCudnnError::from(status));
+            }
+
+            Ok(size)
+        }
+
+        fn rnn_tmp_space(
+            rnn_desc: cudnnRNNDescriptor_t,
+            is_training: bool,
+            x_desc: cudnnRNNDataDescriptor_t,
+        ) -> Result<(usize, usize), ZenuCudnnError> {
+            let handle = ZENU_CUDA_STATE.lock().unwrap().get_cudnn().as_ptr();
+
+            let fwd_mode = if is_training {
+                cudnnForwardMode_t::CUDNN_FWD_MODE_TRAINING
+            } else {
+                cudnnForwardMode_t::CUDNN_FWD_MODE_INFERENCE
+            };
+
+            let mut workspace_size: usize = 0;
+            let mut reserve_size: usize = 0;
+
+            let status = unsafe {
+                cudnnGetRNNTempSpaceSizes(
+                    handle,
+                    rnn_desc,
+                    fwd_mode,
+                    x_desc,
+                    &mut workspace_size as *mut usize,
+                    &mut reserve_size as *mut usize,
+                )
+            };
+            if status != zenu_cudnn_sys::cudnnStatus_t::CUDNN_STATUS_SUCCESS {
+                return Err(ZenuCudnnError::from(status));
+            }
+
+            Ok((workspace_size, reserve_size))
+        }
+    }
 
     #[test]
     fn rnn_run_test() {

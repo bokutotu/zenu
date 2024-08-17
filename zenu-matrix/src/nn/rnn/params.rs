@@ -1,7 +1,7 @@
 use crate::{
-    device::{nvidia::Nvidia, DeviceBase},
+    device::nvidia::Nvidia,
     dim::DimDyn,
-    matrix::{Matrix, Owned, Ref},
+    matrix::{Matrix, Owned},
     num::Num,
 };
 
