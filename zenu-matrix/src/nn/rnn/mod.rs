@@ -1,11 +1,12 @@
 mod config;
-mod cpu;
+// mod cpu;
 mod functions;
-#[cfg(feature = "nvidia")]
-mod nvidia;
+// #[cfg(feature = "nvidia")]
+// mod nvidia;
 mod params;
-mod traits;
+// mod traits;
 
 pub use config::*;
 pub use params::*;
-pub use traits::*;
+// pub use traits::*;
+pub use functions::*;
