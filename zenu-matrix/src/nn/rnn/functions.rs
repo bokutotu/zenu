@@ -111,3 +111,39 @@ pub fn rnn_bkwd_data<T: Num>(
     );
     RNNBkwdDataOutput { dx, dhx }
 }
+
+pub fn rnn_bkwd_weights<T: Num>(
+    x: Matrix<Ref<&T>, DimDyn, Nvidia>,
+    hx: Option<Matrix<Ref<&T>, DimDyn, Nvidia>>,
+    y: Matrix<Ref<&T>, DimDyn, Nvidia>,
+    config: RNNConfig<T>,
+) -> RNNParameters<T> {
+    rnn_fwd_shape_check(x.shape(), hx.map(|hx| hx.shape()), &config);
+    let rnn_exe = config.create_executor(true, x.shape()[1]);
+    let reserve_size = rnn_exe.get_reserve_size();
+    let workspace_size = rnn_exe.get_workspace_size();
+
+    let reserve = Nvidia::alloc(reserve_size).unwrap();
+    let workspace = Nvidia::alloc(workspace_size).unwrap();
+
+    let mut dweight = Matrix::alloc(params.get_weight_shape());
+    let mut dhx = match hx {
+        Some(hx) => Matrix::alloc(hx.shape()),
+        None => {
+            let d = config.get_num_layers() * if config.is_bidirectional() { 2 } else { 1 };
+            Matrix::alloc([d, config.get_hidden_size()])
+        }
+    };
+
+    let output = rnn_exe.bkwd_weights(
+        x.as_ptr(),
+        hx.as_ptr(),
+        y.as_ptr(),
+        dweight.to_ref_mut().as_mut_ptr(),
+        workspace.as_ptr(),
+        reserve.as_ptr(),
+    );
+    RNNParameters {
+        weight: dweight.as_mut_ptr(),
+    }
+}
