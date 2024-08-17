@@ -43,7 +43,7 @@ pub fn rnn_fwd<T: Num>(
         hx.as_ref().map(|hx| hx.to_ref().shape()),
         &config,
     );
-    let rnn_exe = config.create_executor(is_training, x.shape()[1]);
+    let rnn_exe = config.create_executor(is_training, x.shape()[0]);
     let reserve_size = rnn_exe.get_reserve_size();
     let workspace_size = rnn_exe.get_workspace_size();
 

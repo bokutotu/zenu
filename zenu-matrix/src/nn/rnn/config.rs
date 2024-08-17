@@ -27,7 +27,7 @@ impl<T: Num> RNNConfig<T> {
             cell,
             RNNBias::DoubleBias,
             bidirectional,
-            RNNMathType::TensorOpAllowConversion,
+            RNNMathType::TensorOp,
             None,
             input_size,
             hidden_size,
