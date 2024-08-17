@@ -1,17 +1,15 @@
-use std::{cell::RefCell, rc::Rc};
-
-use zenu_cuda::cudnn::rnn::{RNNAlgo, RNNBias, RNNCell, RNNDataLayout, RNNMathType};
-#[cfg(feature = "nvidia")]
-use zenu_cuda::cudnn::rnn::{RNNConfig as NvidiaRNNConfig, RNNExecutor};
+use zenu_cuda::cudnn::rnn::{
+    RNNAlgo, RNNBias, RNNCell, RNNConfig as NvidiaRNNConfig, RNNDataLayout, RNNExecutor,
+    RNNMathType,
+};
 
 use crate::num::Num;
 
-#[cfg(feature = "nvidia")]
-pub struct NvidiaConfig<T: Num> {
+pub struct RNNConfig<T: Num> {
     pub config: NvidiaRNNConfig<T>,
 }
 
-impl<T: Num> NvidiaConfig<T> {
+impl<T: Num> RNNConfig<T> {
     fn new(
         cell: RNNCell,
         bidirectional: bool,
@@ -130,11 +128,4 @@ impl<T: Num> NvidiaConfig<T> {
             is_training,
         )
     }
-}
-
-pub struct RNNConfig<T: Num> {
-    #[cfg(feature = "nvidia")]
-    pub config: NvidiaConfig<T>,
-
-    _phantom: std::marker::PhantomData<T>,
 }
