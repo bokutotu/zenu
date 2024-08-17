@@ -68,3 +68,46 @@ pub fn rnn_fwd<T: Num>(
     );
     RNNOutput { y, hy }
 }
+
+pub fn rnn_bkwd_data<T: Num>(
+    x: Matrix<Ref<&T>, DimDyn, Nvidia>,
+    y: Matrix<Ref<&T>, DimDyn, Nvidia>,
+    dy: Matrix<Ref<&T>, DimDyn, Nvidia>,
+    hx: Option<Matrix<Ref<&T>, DimDyn, Nvidia>>,
+    dhy: Option<Matrix<Ref<&T>, DimDyn, Nvidia>>,
+    config: RNNConfig<T>,
+    params: RNNParameters,
+) -> RNNBkwdDataOutput<T> {
+    rnn_fwd_shape_check(x.shape(), hx.map(|hx| hx.shape()), &config);
+    let rnn_exe = config.create_executor(true, x.shape()[1]);
+    let reserve_size = rnn_exe.get_reserve_size();
+    let workspace_size = rnn_exe.get_workspace_size();
+
+    let reserve = Nvidia::alloc(reserve_size).unwrap();
+    let workspace = Nvidia::alloc(workspace_size).unwrap();
+
+    let mut dx = Matrix::alloc(x.shape());
+    let mut dhx = match hx {
+        Some(hx) => Matrix::alloc(hx.shape()),
+        None => {
+            let d = config.get_num_layers() * if config.is_bidirectional() { 2 } else { 1 };
+            Matrix::alloc([d, config.get_hidden_size()])
+        }
+    };
+
+    let output = rnn_exe.bkwd_data(
+        y.as_ptr(),
+        dy.as_ptr(),
+        dx.to_ref_mut().as_mut_ptr(),
+        hx.as_ptr(),
+        dhy.as_ptr(),
+        dhx.to_ref_mut().as_mut_ptr(),
+        std::ptr::null_mut(),
+        std::ptr::null_mut(),
+        std::ptr::null_mut(),
+        weight,
+        workspace,
+        reserve,
+    );
+    RNNBkwdDataOutput { dx, dhx }
+}
