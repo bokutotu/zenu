@@ -1,3 +1,13 @@
+use std::{collections::HashMap, path::Path};
+
+use serde::Deserialize;
+use zenu_matrix::{
+    device::Device,
+    dim::DimDyn,
+    matrix::{Matrix, Owned},
+    num::Num,
+};
+
 /// Don't use  this macro in sub, abs, asum, zeros
 /// becase this macro uses them.
 #[macro_export]
@@ -88,4 +98,21 @@ macro_rules! run_mat_test {
             $test_func::<crate::device::nvidia::Nvidia>();
         }
     };
+}
+
+pub fn read_test_case_from_json<P: AsRef<Path>, T: Num, D: Device>(
+    path: P,
+) -> HashMap<String, Matrix<Owned<T>, DimDyn, D>>
+where
+    T: for<'de> Deserialize<'de>,
+{
+    let json = std::fs::read_to_string(path).unwrap();
+    let json: serde_json::Value = serde_json::from_str(&json).unwrap();
+    let mut map = HashMap::new();
+    for (key, value) in json.as_object().unwrap() {
+        let value = value.to_string();
+        let data: Matrix<Owned<T>, DimDyn, D> = serde_json::from_str(&value).unwrap();
+        map.insert(key.to_string(), data);
+    }
+    map
 }
