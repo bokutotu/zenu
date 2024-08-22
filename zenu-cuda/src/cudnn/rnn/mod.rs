@@ -4,4 +4,4 @@ mod test;
 
 pub use function::{RNNAlgo, RNNBias, RNNCell, RNNDataLayout, RNNMathType};
 
-pub use executor::{RNNConfig, RNNExecutor};
+pub use executor::{RNNConfig, RNNExecutor, RNNParams};
