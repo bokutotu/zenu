@@ -6,6 +6,8 @@ pub mod conv2d;
 pub mod dropout;
 pub mod im2col;
 pub mod pool2d;
+
+#[cfg(feature = "nvidia")]
 pub mod rnn;
 
 #[allow(unused)]

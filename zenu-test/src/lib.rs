@@ -2,7 +2,7 @@ use std::{collections::HashMap, path::Path};
 
 use serde::Deserialize;
 use zenu_matrix::{
-    device::Device,
+    device::{cpu::Cpu, Device},
     dim::DimDyn,
     matrix::{Matrix, Owned},
     num::Num,
@@ -100,18 +100,16 @@ macro_rules! run_mat_test {
     };
 }
 
-pub fn read_test_case_from_json<P: AsRef<Path>, T: Num, D: Device>(
-    path: P,
-) -> HashMap<String, Matrix<Owned<T>, DimDyn, D>>
+pub fn read_test_case_from_json<P>(path: P) -> HashMap<String, Matrix<Owned<f32>, DimDyn, Cpu>>
 where
-    T: for<'de> Deserialize<'de>,
+    P: AsRef<Path>,
 {
     let json = std::fs::read_to_string(path).unwrap();
     let json: serde_json::Value = serde_json::from_str(&json).unwrap();
     let mut map = HashMap::new();
     for (key, value) in json.as_object().unwrap() {
         let value = value.to_string();
-        let data: Matrix<Owned<T>, DimDyn, D> = serde_json::from_str(&value).unwrap();
+        let data: Matrix<Owned<f32>, DimDyn, Cpu> = serde_json::from_str(&value).unwrap();
         map.insert(key.to_string(), data);
     }
     map

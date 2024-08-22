@@ -3,7 +3,9 @@ use zenu_cuda::cudnn::rnn::{
     RNNMathType,
 };
 
-use crate::num::Num;
+use crate::{device::Device, num::Num};
+
+use super::RNNWeights;
 
 pub struct RNNConfig<T: Num> {
     pub config: NvidiaRNNConfig<T>,
@@ -147,5 +149,26 @@ impl<T: Num> RNNConfig<T> {
 
     pub fn get_is_bidirectional(&self) -> bool {
         self.config.bidirectional
+    }
+
+    pub fn load_rnn_weights<D: Device>(
+        &self,
+        ptr: *mut u8,
+        params: Vec<RNNWeights<T, D>>,
+    ) -> Result<(), String> {
+        if self.get_num_layers() != params.len() {
+            return Err("Number of layers does not match".to_string());
+        }
+
+        let rnn_params = self.config.get_rnn_params(ptr as *mut _);
+
+        for idx in 0..self.get_num_layers() {
+            let layer = &params[idx];
+            let layer_params = &rnn_params[idx];
+
+            layer.set_weight(layer_params);
+        }
+
+        Ok(())
     }
 }
