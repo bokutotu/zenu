@@ -35,8 +35,8 @@ pub fn rnn_fwd<T: Num>(
     x: Matrix<Ref<&T>, DimDyn, Nvidia>,
     hx: Option<Matrix<Ref<&T>, DimDyn, Nvidia>>,
     is_training: bool,
-    config: RNNConfig<T>,
-    params: RNNParameters,
+    config: &RNNConfig<T>,
+    params: &RNNParameters,
 ) -> RNNOutput<T> {
     rnn_fwd_shape_check(
         x.shape(),
@@ -67,7 +67,12 @@ pub fn rnn_fwd<T: Num>(
         workspace as *mut _,
         reserve as *mut _,
     );
-    RNNOutput { y, hy }
+    RNNOutput {
+        y,
+        hy,
+        reserve,
+        workspace,
+    }
 }
 
 fn rnn_bkwd_data_shape_check<T: Num>(
@@ -132,6 +137,8 @@ pub fn rnn_bkwd_data<T: Num>(
     dhy: Option<Matrix<Ref<&T>, DimDyn, Nvidia>>,
     config: RNNConfig<T>,
     params: RNNParameters,
+    reserve: *mut u8,
+    workspace: *mut u8,
 ) -> RNNBkwdDataOutput<T> {
     rnn_bkwd_data_shape_check(
         x.shape(),

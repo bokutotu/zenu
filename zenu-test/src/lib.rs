@@ -1,12 +1,6 @@
 use std::{collections::HashMap, path::Path};
 
 use serde::Deserialize;
-use zenu_matrix::{
-    device::{cpu::Cpu, Device},
-    dim::DimDyn,
-    matrix::{Matrix, Owned},
-    num::Num,
-};
 
 /// Don't use  this macro in sub, abs, asum, zeros
 /// becase this macro uses them.
@@ -100,17 +94,36 @@ macro_rules! run_mat_test {
     };
 }
 
-pub fn read_test_case_from_json<P>(path: P) -> HashMap<String, Matrix<Owned<f32>, DimDyn, Cpu>>
-where
-    P: AsRef<Path>,
-{
-    let json = std::fs::read_to_string(path).unwrap();
-    let json: serde_json::Value = serde_json::from_str(&json).unwrap();
-    let mut map = HashMap::new();
-    for (key, value) in json.as_object().unwrap() {
-        let value = value.to_string();
-        let data: Matrix<Owned<f32>, DimDyn, Cpu> = serde_json::from_str(&value).unwrap();
-        map.insert(key.to_string(), data);
-    }
-    map
+// pub fn read_test_case_from_json<P>(path: P) -> HashMap<String, Matrix<Owned<f32>, DimDyn, Cpu>>
+// where
+//     P: AsRef<Path>,
+// {
+//     let json = std::fs::read_to_string(path).unwrap();
+//     let json: serde_json::Value = serde_json::from_str(&json).unwrap();
+//     let mut map = HashMap::new();
+//     for (key, value) in json.as_object().unwrap() {
+//         let value = value.to_string();
+//         let data: Matrix<Owned<f32>, DimDyn, Cpu> = serde_json::from_str(&value).unwrap();
+//         map.insert(key.to_string(), data);
+//     }
+//     map
+// }
+//
+#[macro_export]
+macro_rules! read_test_case_from_json {
+    ($path:expr) => {{
+        let json = std::fs::read_to_string($path).unwrap();
+        let json: serde_json::Value = serde_json::from_str(&json).unwrap();
+        let mut map = std::collections::HashMap::new();
+        for (key, value) in json.as_object().unwrap() {
+            let value = value.to_string();
+            let data: crate::matrix::Matrix<
+                crate::matrix::Owned<f32>,
+                crate::dim::DimDyn,
+                crate::device::cpu::Cpu,
+            > = serde_json::from_str(&value).unwrap();
+            map.insert(key.to_string(), data);
+        }
+        map
+    }};
 }

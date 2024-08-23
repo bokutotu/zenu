@@ -151,6 +151,8 @@ impl<T: Num> RNNConfig<T> {
         self.config.bidirectional
     }
 
+    /// this function not check shape of params
+    /// make sure that params has the same shape as the config
     pub fn load_rnn_weights<D: Device>(
         &self,
         ptr: *mut u8,
