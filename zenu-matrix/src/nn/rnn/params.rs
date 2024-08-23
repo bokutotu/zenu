@@ -4,7 +4,7 @@ use zenu_cuda::{
 };
 
 use crate::{
-    device::{nvidia::Nvidia, Device},
+    device::{nvidia::Nvidia, Device, DeviceBase},
     dim::{DimDyn, DimTrait},
     matrix::{Matrix, Owned, Ref},
     num::Num,
@@ -13,6 +13,8 @@ use crate::{
 pub struct RNNOutput<T: Num> {
     pub y: Matrix<Owned<T>, DimDyn, Nvidia>,
     pub hy: Matrix<Owned<T>, DimDyn, Nvidia>,
+    pub reserve: *mut u8,
+    pub workspace: *mut u8,
 }
 
 pub struct RNNBkwdDataOutput<T: Num> {
@@ -22,6 +24,19 @@ pub struct RNNBkwdDataOutput<T: Num> {
 
 pub struct RNNParameters {
     pub weight: *mut u8,
+}
+
+impl RNNParameters {
+    pub fn new(bytes: usize) -> Self {
+        let weight = Nvidia::alloc(bytes).unwrap();
+        Self { weight }
+    }
+}
+
+impl Drop for RNNParameters {
+    fn drop(&mut self) {
+        Nvidia::drop_ptr(self.weight);
+    }
 }
 
 pub struct RNNWeights<T: Num, D: Device> {
