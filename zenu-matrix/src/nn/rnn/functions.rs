@@ -135,10 +135,8 @@ pub fn rnn_bkwd_data<T: Num>(
     dy: Matrix<Ref<&T>, DimDyn, Nvidia>,
     hx: Option<Matrix<Ref<&T>, DimDyn, Nvidia>>,
     dhy: Option<Matrix<Ref<&T>, DimDyn, Nvidia>>,
-    config: RNNConfig<T>,
-    params: RNNParameters,
-    reserve: *mut u8,
-    workspace: *mut u8,
+    config: &RNNConfig<T>,
+    params: &RNNParameters,
 ) -> RNNBkwdDataOutput<T> {
     rnn_bkwd_data_shape_check(
         x.shape(),

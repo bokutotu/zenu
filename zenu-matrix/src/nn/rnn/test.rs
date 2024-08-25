@@ -51,6 +51,24 @@ mod rnn {
         let y = rnn_fwd(x.to_ref(), None, true, &config, &param);
         let output = matrix_map.get("output").unwrap().clone();
         let output = output.to::<Nvidia>();
-        assert_mat_eq_epsilon!(y.y, output, 1e-5);
+        assert_mat_eq_epsilon!(y.y.to_ref(), output, 1e-5);
+
+        let dy = Matrix::ones_like(&y.y);
+
+        let dx = rnn_bkwd_data(
+            x.to_ref(),
+            y.y.to_ref(),
+            dy.to_ref(),
+            None,
+            None,
+            &config,
+            &param,
+        );
+
+        assert_mat_eq_epsilon!(
+            dx.dx.to_ref(),
+            matrix_map.get("input_grad").unwrap().clone().to::<Nvidia>(),
+            1e-5
+        );
     }
 }
