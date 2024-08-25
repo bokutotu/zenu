@@ -111,7 +111,7 @@ impl ReluOps for Nvidia {
             relu(
                 input as *mut f32,
                 output as *mut f32,
-                alpha as f32,
+                alpha,
                 size,
                 input_stride,
                 output_stride,
@@ -121,7 +121,7 @@ impl ReluOps for Nvidia {
             relu(
                 input as *mut f64,
                 output as *mut f64,
-                alpha as f64,
+                alpha,
                 size,
                 input_stride,
                 output_stride,

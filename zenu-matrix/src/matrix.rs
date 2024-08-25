@@ -146,13 +146,11 @@ where
             (a, b) if a == b => Owned::clone_memory(self_raw_ptr, len, D::default()),
             #[cfg(feature = "nvidia")]
             (a, b) if a == TypeId::of::<Cpu>() && b == TypeId::of::<Nvidia>() => {
-                let ptr = zenu_cuda::runtime::copy_to_gpu(self_raw_ptr, len);
-                ptr
+                zenu_cuda::runtime::copy_to_gpu(self_raw_ptr, len)
             }
             #[cfg(feature = "nvidia")]
             (a, b) if a == TypeId::of::<Nvidia>() && b == TypeId::of::<Cpu>() => {
-                let ptr = zenu_cuda::runtime::copy_to_cpu(self_raw_ptr, len);
-                ptr
+                zenu_cuda::runtime::copy_to_cpu(self_raw_ptr, len)
             }
             _ => unreachable!(),
         };
