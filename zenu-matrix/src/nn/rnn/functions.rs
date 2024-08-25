@@ -18,16 +18,13 @@ fn rnn_fwd_shape_check<T: Num>(x: DimDyn, hx: Option<DimDyn>, config: &RNNConfig
         panic!("Input size mismatch");
     }
     let d = config.get_num_layers() * if config.get_is_bidirectional() { 2 } else { 1 };
-    match hx {
-        Some(hx) => {
-            if hx[0] != d {
-                panic!("Number of layers mismatch");
-            }
-            if hx[1] != config.get_hidden_size() {
-                panic!("Hidden size mismatch");
-            }
+    if let Some(hx) = hx {
+        if hx[0] != d {
+            panic!("Number of layers mismatch");
         }
-        None => {}
+        if hx[1] != config.get_hidden_size() {
+            panic!("Hidden size mismatch");
+        }
     }
 }
 
@@ -38,11 +35,7 @@ pub fn rnn_fwd<T: Num>(
     config: &RNNConfig<T>,
     params: &RNNParameters,
 ) -> RNNOutput<T> {
-    rnn_fwd_shape_check(
-        x.shape(),
-        hx.as_ref().map(|hx| hx.to_ref().shape()),
-        &config,
-    );
+    rnn_fwd_shape_check(x.shape(), hx.as_ref().map(|hx| hx.to_ref().shape()), config);
     let rnn_exe = config.create_executor(is_training, x.shape()[0]);
     let reserve_size = rnn_exe.get_reserve_size();
     let workspace_size = rnn_exe.get_workspace_size();
@@ -144,7 +137,7 @@ pub fn rnn_bkwd_data<T: Num>(
         dy.shape(),
         hx.as_ref().map(|hx| hx.shape()),
         dhy.as_ref().map(|dhy| dhy.shape()),
-        &config,
+        config,
     );
     let rnn_exe = config.create_executor(true, x.shape()[1]);
     let reserve_size = rnn_exe.get_reserve_size();
@@ -202,16 +195,13 @@ fn rnn_bkwd_weights_shape_check<T: Num>(
     }
 
     let d = config.get_num_layers() * if config.get_is_bidirectional() { 2 } else { 1 };
-    match hx {
-        Some(hx) => {
-            if hx[0] != d {
-                panic!("Number of layers mismatch");
-            }
-            if hx[1] != config.get_hidden_size() {
-                panic!("Hidden size mismatch");
-            }
+    if let Some(hx) = hx {
+        if hx[0] != d {
+            panic!("Number of layers mismatch");
         }
-        None => {}
+        if hx[1] != config.get_hidden_size() {
+            panic!("Hidden size mismatch");
+        }
     }
 }
 

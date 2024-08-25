@@ -70,15 +70,14 @@ fn create_batch_norm_gpu<T: Num>(input: DimDyn) -> BatchNorm2d<T> {
         input[2].try_into().unwrap(),
         input[3].try_into().unwrap(),
     );
-    let batch_norm = BatchNorm2dBuilder::<T>::new()
+    BatchNorm2dBuilder::<T>::new()
         .input(input.0, input.1, input.2, input.3, TensorFormat::NCHW)
         .unwrap()
         .output(input.0, input.1, input.2, input.3, TensorFormat::NCHW)
         .unwrap()
         .scale_bias_mean_var(input.1, TensorFormat::NCHW)
         .unwrap()
-        .build();
-    batch_norm
+        .build()
 }
 
 #[cfg(feature = "nvidia")]
@@ -89,7 +88,7 @@ fn create_batch_norm_backward_gpu<T: Num>(input: DimDyn) -> BatchNorm2dBackward<
         input[2].try_into().unwrap(),
         input[3].try_into().unwrap(),
     );
-    let batch_norm_backward = BatchNorm2dBackwardBuilder::<T>::new()
+    BatchNorm2dBackwardBuilder::<T>::new()
         .input(input.0, input.1, input.2, input.3, TensorFormat::NCHW)
         .unwrap()
         .input_grad(input.0, input.1, input.2, input.3, TensorFormat::NCHW)
@@ -98,8 +97,7 @@ fn create_batch_norm_backward_gpu<T: Num>(input: DimDyn) -> BatchNorm2dBackward<
         .unwrap()
         .scale_bias_mean_var(input.1, TensorFormat::NCHW)
         .unwrap()
-        .build();
-    batch_norm_backward
+        .build()
 }
 
 #[cfg(feature = "nvidia")]
@@ -110,15 +108,14 @@ fn create_batch_norm_inference_gpu<T: Num>(input: DimDyn) -> BatchNorm2dInferenc
         input[2].try_into().unwrap(),
         input[3].try_into().unwrap(),
     );
-    let batch_norm_inference = BatchNorm2dInferenceBuilder::<T>::new()
+    BatchNorm2dInferenceBuilder::<T>::new()
         .input(input.0, input.1, input.2, input.3, TensorFormat::NCHW)
         .unwrap()
         .output(input.0, input.1, input.2, input.3, TensorFormat::NCHW)
         .unwrap()
         .scale_bias_mean_var(input.1, TensorFormat::NCHW)
         .unwrap()
-        .build();
-    batch_norm_inference
+        .build()
 }
 
 pub trait BatchNormalization: DeviceBase {
