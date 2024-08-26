@@ -6,14 +6,14 @@ use zenu_cudnn_sys::{
 use crate::{cudnn::tensor_descriptor_nd, ZENU_CUDA_STATE};
 
 use super::{
-    function::{
+    helper::{
         rnn_bkwd_data, rnn_bkwd_weight, rnn_data_descriptor, rnn_descriptor, rnn_fwd,
         rnn_weight_params, rnn_weight_space,
     },
     RNNAlgo, RNNBias, RNNCell, RNNDataLayout, RNNMathType,
 };
 
-pub struct RNNConfig<T: 'static> {
+pub struct RNNDescriptor<T: 'static> {
     pub rnn_desc: cudnnRNNDescriptor_t,
     pub h_desc: cudnnTensorDescriptor_t,
     pub c_desc: cudnnTensorDescriptor_t,
@@ -64,7 +64,7 @@ pub struct GRUParams {
     pub cell_h: RNNDescPtr,
 }
 
-impl<T: 'static> RNNConfig<T> {
+impl<T: 'static> RNNDescriptor<T> {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         algo: RNNAlgo,
@@ -156,19 +156,6 @@ impl<T: 'static> RNNConfig<T> {
             reserve_size,
         }
     }
-
-    // pub fn get_input_params(&self, weight_ptr: *mut T) -> RNNDescPtr {
-    //     let RNNWeightParams {
-    //         weight_desc,
-    //         weight,
-    //         ..
-    //     } = rnn_weight_params(self.rnn_desc, 0, self.weights_size, weight_ptr, 0).unwrap();
-    //
-    //     RNNDescPtr {
-    //         desc: weight_desc,
-    //         ptr: weight,
-    //     }
-    // }
 
     pub fn get_rnn_params(&self, weight_ptr: *mut T) -> Vec<RNNParams> {
         if self.cell != RNNCell::RNNRelu && self.cell != RNNCell::RNNTanh {
@@ -336,7 +323,7 @@ impl<T: 'static> RNNConfig<T> {
     }
 }
 
-impl<T: 'static> Drop for RNNConfig<T> {
+impl<T: 'static> Drop for RNNDescriptor<T> {
     fn drop(&mut self) {
         unsafe {
             zenu_cudnn_sys::cudnnDestroyRNNDescriptor(self.rnn_desc);
@@ -346,17 +333,17 @@ impl<T: 'static> Drop for RNNConfig<T> {
     }
 }
 
-pub struct RNNExecutor<'a, T: 'static> {
-    pub config: &'a RNNConfig<T>,
+pub struct RNNContext<'a, T: 'static> {
+    pub config: &'a RNNDescriptor<T>,
     pub x_desc: cudnnRNNDataDescriptor_t,
     pub y_desc: cudnnRNNDataDescriptor_t,
     pub workspace: RnnWorkspace,
     pub is_training: bool,
 }
 
-impl<'a, T: 'static + Clone + Copy> RNNExecutor<'a, T> {
+impl<'a, T: 'static + Clone + Copy> RNNContext<'a, T> {
     pub fn new(
-        config: &'a RNNConfig<T>,
+        config: &'a RNNDescriptor<T>,
         seq_lengh: usize,
         seq_length_array: &[usize],
         layout: RNNDataLayout,
@@ -509,7 +496,7 @@ impl<'a, T: 'static + Clone + Copy> RNNExecutor<'a, T> {
     }
 }
 
-impl<'a, T: 'static> Drop for RNNExecutor<'a, T> {
+impl<'a, T: 'static> Drop for RNNContext<'a, T> {
     fn drop(&mut self) {
         unsafe {
             zenu_cudnn_sys::cudnnDestroyRNNDataDescriptor(self.x_desc);

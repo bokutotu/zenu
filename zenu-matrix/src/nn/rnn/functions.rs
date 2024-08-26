@@ -139,7 +139,7 @@ pub fn rnn_bkwd_data<T: Num>(
         dhy.as_ref().map(|dhy| dhy.shape()),
         config,
     );
-    let rnn_exe = config.create_executor(true, x.shape()[1]);
+    let rnn_exe = config.create_executor(true, x.shape()[0]);
     let reserve_size = rnn_exe.get_reserve_size();
     let workspace_size = rnn_exe.get_workspace_size();
 
