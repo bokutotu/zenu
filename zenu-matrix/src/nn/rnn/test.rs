@@ -56,7 +56,7 @@ mod rnn {
         let dy = Matrix::ones_like(&y.y);
 
         let dx = rnn_bkwd_data(
-            x.to_ref(),
+            x.shape(),
             y.y.to_ref(),
             dy.to_ref(),
             None,
@@ -70,5 +70,23 @@ mod rnn {
             matrix_map.get("input_grad").unwrap().clone().to::<Nvidia>(),
             1e-5
         );
+
+        let dw = rnn_bkwd_weights(x.to_ref(), None, y.y.to_ref(), &mut config);
+
+        let params = config.store_rnn_weights::<Cpu>(dw.weight as *mut u8);
+        let input_weight = params[0].input_weight();
+        let hidden_weight = params[0].hidden_weight();
+        let input_bias = params[0].input_bias().unwrap();
+        let hidden_bias = params[0].hidden_bias().unwrap();
+
+        let input_weight_expected = matrix_map.get("rnn.weight_ih_l0_grad").unwrap().clone();
+        let hidden_weight_expected = matrix_map.get("rnn.weight_hh_l0_grad").unwrap().clone();
+        let input_bias_expected = matrix_map.get("rnn.bias_ih_l0_grad").unwrap().clone();
+        let hidden_bias_expected = matrix_map.get("rnn.bias_hh_l0_grad").unwrap().clone();
+
+        assert_mat_eq_epsilon!(input_weight, input_weight_expected.to::<Cpu>(), 1e-5);
+        assert_mat_eq_epsilon!(hidden_weight, hidden_weight_expected.to::<Cpu>(), 1e-5);
+        assert_mat_eq_epsilon!(input_bias, input_bias_expected.to::<Cpu>(), 1e-5);
+        assert_mat_eq_epsilon!(hidden_bias, hidden_bias_expected.to::<Cpu>(), 1e-5);
     }
 }

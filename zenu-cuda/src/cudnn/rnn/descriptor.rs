@@ -499,6 +499,10 @@ impl<T: 'static + Copy> RNNDescriptor<T> {
     pub fn get_reserve_size(&self) -> usize {
         self.context.as_ref().unwrap().get_reserve_size()
     }
+
+    pub fn context_is_none(&self) -> bool {
+        self.context.is_none()
+    }
 }
 
 impl<T: 'static + Copy> Drop for RNNDescriptor<T> {
@@ -519,150 +523,6 @@ pub struct RNNContext {
 }
 
 impl RNNContext {
-    // pub fn new(
-    //     seq_lengh: usize,
-    //     seq_length_array: &[usize],
-    //     layout: RNNDataLayout,
-    //     fill_value: T,
-    //     is_training: bool,
-    // ) -> Self {
-    //     let seq_len_array = seq_length_array
-    //         .iter()
-    //         .map(|&x| x as i32)
-    //         .collect::<Vec<i32>>();
-    //     let x_desc = rnn_data_descriptor::<T>(
-    //         seq_lengh as i32,
-    //         config.batch_size as i32,
-    //         config.input_size as i32,
-    //         &seq_len_array,
-    //         layout,
-    //         fill_value,
-    //     )
-    //     .unwrap();
-    //
-    //     let y_desc = rnn_data_descriptor::<T>(
-    //         seq_lengh as i32,
-    //         config.batch_size as i32,
-    //         config.hidden_size as i32,
-    //         &seq_len_array,
-    //         layout,
-    //         fill_value,
-    //     )
-    //     .unwrap();
-    //     let workspace = config.get_workspace_reserve_size(is_training, x_desc);
-    //     Self {
-    //         config,
-    //         x_desc,
-    //         y_desc,
-    //         workspace,
-    //         is_training,
-    //     }
-    // }
-
-    // #[allow(clippy::too_many_arguments)]
-    // pub fn fwd(
-    //     &self,
-    //     x: *const T,
-    //     y: *mut T,
-    //     hx: *const T,
-    //     hy: *mut T,
-    //     cx: *const T,
-    //     cy: *mut T,
-    //     weight: *mut T,
-    //     workspace: *mut T,
-    //     reserve: *mut T,
-    // ) {
-    //     rnn_fwd(
-    //         self.config.rnn_desc,
-    //         self.is_training,
-    //         self.x_desc,
-    //         x,
-    //         self.y_desc,
-    //         y,
-    //         self.config.h_desc,
-    //         hx,
-    //         hy,
-    //         self.config.c_desc,
-    //         cx,
-    //         cy,
-    //         self.config.weights_size,
-    //         weight,
-    //         self.workspace.workspace_size,
-    //         workspace,
-    //         self.workspace.reserve_size,
-    //         reserve,
-    //     )
-    //     .unwrap();
-    // }
-    //
-    // #[allow(clippy::too_many_arguments)]
-    // pub fn bkwd_data(
-    //     &self,
-    //     y: *const T,
-    //     dy: *const T,
-    //     dx: *mut T,
-    //     hx: *const T,
-    //     dhy: *const T,
-    //     dhx: *mut T,
-    //     cx: *const T,
-    //     dcy: *const T,
-    //     dcx: *mut T,
-    //     weight: *const T,
-    //     workspace: *mut T,
-    //     reserve: *mut T,
-    // ) {
-    //     rnn_bkwd_data(
-    //         self.config.rnn_desc,
-    //         self.y_desc,
-    //         y,
-    //         dy,
-    //         self.x_desc,
-    //         dx,
-    //         self.config.h_desc,
-    //         hx,
-    //         dhy,
-    //         dhx,
-    //         self.config.c_desc,
-    //         cx,
-    //         dcy,
-    //         dcx,
-    //         self.config.weights_size,
-    //         weight,
-    //         self.workspace.workspace_size,
-    //         workspace,
-    //         self.workspace.reserve_size,
-    //         reserve,
-    //     )
-    //     .unwrap();
-    // }
-    //
-    // pub fn bkwd_weights(
-    //     &self,
-    //     x: *const T,
-    //     hx: *const T,
-    //     y: *const T,
-    //     dweight: *mut T,
-    //     workspace: *mut T,
-    //     reserve: *mut T,
-    // ) {
-    //     rnn_bkwd_weight(
-    //         self.config.rnn_desc,
-    //         self.x_desc,
-    //         x,
-    //         self.config.h_desc,
-    //         hx,
-    //         self.y_desc,
-    //         y,
-    //         self.config.weights_size,
-    //         dweight,
-    //         self.workspace.workspace_size,
-    //         workspace,
-    //         self.workspace.reserve_size,
-    //         reserve,
-    //     )
-    //     .unwrap();
-    // }
-
     pub fn get_reserve_size(&self) -> usize {
         self.workspace.reserve_size
     }

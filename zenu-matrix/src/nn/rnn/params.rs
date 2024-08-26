@@ -38,10 +38,10 @@ impl Drop for RNNParameters {
 }
 
 pub struct RNNWeights<T: Num, D: Device> {
-    input_weight: Matrix<Owned<T>, DimDyn, D>,
-    hidden_weight: Matrix<Owned<T>, DimDyn, D>,
-    input_bias: Option<Matrix<Owned<T>, DimDyn, D>>,
-    hidden_bias: Option<Matrix<Owned<T>, DimDyn, D>>,
+    pub input_weight: Matrix<Owned<T>, DimDyn, D>,
+    pub hidden_weight: Matrix<Owned<T>, DimDyn, D>,
+    pub input_bias: Option<Matrix<Owned<T>, DimDyn, D>>,
+    pub hidden_bias: Option<Matrix<Owned<T>, DimDyn, D>>,
 }
 
 impl<T: Num, D: Device> RNNWeights<T, D> {
