@@ -13,17 +13,18 @@ use super::{
     RNNAlgo, RNNBias, RNNCell, RNNDataLayout, RNNMathType,
 };
 
-pub struct RNNDescriptor<T: 'static> {
-    pub rnn_desc: cudnnRNNDescriptor_t,
-    pub h_desc: cudnnTensorDescriptor_t,
-    pub c_desc: cudnnTensorDescriptor_t,
-    pub weights_size: usize,
-    pub input_size: usize,
-    pub hidden_size: usize,
-    pub batch_size: usize,
-    pub num_layers: usize,
-    pub cell: RNNCell,
-    pub bidirectional: bool,
+pub struct RNNDescriptor<T: 'static + Copy> {
+    rnn_desc: cudnnRNNDescriptor_t,
+    h_desc: cudnnTensorDescriptor_t,
+    c_desc: cudnnTensorDescriptor_t,
+    weights_size: usize,
+    input_size: usize,
+    hidden_size: usize,
+    batch_size: usize,
+    num_layers: usize,
+    cell: RNNCell,
+    bidirectional: bool,
+    context: Option<RNNContext>,
     _marker: std::marker::PhantomData<T>,
 }
 
@@ -64,7 +65,7 @@ pub struct GRUParams {
     pub cell_h: RNNDescPtr,
 }
 
-impl<T: 'static> RNNDescriptor<T> {
+impl<T: 'static + Copy> RNNDescriptor<T> {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         algo: RNNAlgo,
@@ -116,6 +117,7 @@ impl<T: 'static> RNNDescriptor<T> {
             batch_size,
             cell,
             bidirectional,
+            context: None,
             _marker: std::marker::PhantomData,
         }
     }
@@ -321,43 +323,23 @@ impl<T: 'static> RNNDescriptor<T> {
 
         params
     }
-}
 
-impl<T: 'static> Drop for RNNDescriptor<T> {
-    fn drop(&mut self) {
-        unsafe {
-            zenu_cudnn_sys::cudnnDestroyRNNDescriptor(self.rnn_desc);
-            zenu_cudnn_sys::cudnnDestroyTensorDescriptor(self.h_desc);
-            zenu_cudnn_sys::cudnnDestroyTensorDescriptor(self.c_desc);
-        }
-    }
-}
-
-pub struct RNNContext<'a, T: 'static> {
-    pub config: &'a RNNDescriptor<T>,
-    pub x_desc: cudnnRNNDataDescriptor_t,
-    pub y_desc: cudnnRNNDataDescriptor_t,
-    pub workspace: RnnWorkspace,
-    pub is_training: bool,
-}
-
-impl<'a, T: 'static + Clone + Copy> RNNContext<'a, T> {
-    pub fn new(
-        config: &'a RNNDescriptor<T>,
-        seq_lengh: usize,
+    pub fn set_input_size(
+        &mut self,
+        seq_length: usize,
         seq_length_array: &[usize],
         layout: RNNDataLayout,
-        fill_value: T,
         is_training: bool,
-    ) -> Self {
+        fill_value: T,
+    ) {
         let seq_len_array = seq_length_array
             .iter()
             .map(|&x| x as i32)
             .collect::<Vec<i32>>();
         let x_desc = rnn_data_descriptor::<T>(
-            seq_lengh as i32,
-            config.batch_size as i32,
-            config.input_size as i32,
+            seq_length as i32,
+            self.batch_size as i32,
+            self.input_size as i32,
             &seq_len_array,
             layout,
             fill_value,
@@ -365,22 +347,21 @@ impl<'a, T: 'static + Clone + Copy> RNNContext<'a, T> {
         .unwrap();
 
         let y_desc = rnn_data_descriptor::<T>(
-            seq_lengh as i32,
-            config.batch_size as i32,
-            config.hidden_size as i32,
+            seq_length as i32,
+            self.batch_size as i32,
+            self.hidden_size as i32,
             &seq_len_array,
             layout,
             fill_value,
         )
         .unwrap();
-        let workspace = config.get_workspace_reserve_size(is_training, x_desc);
-        Self {
-            config,
+        let workspace = self.get_workspace_reserve_size(is_training, x_desc);
+        self.context = Some(RNNContext::<T> {
             x_desc,
             y_desc,
             workspace,
             is_training,
-        }
+        });
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -397,23 +378,23 @@ impl<'a, T: 'static + Clone + Copy> RNNContext<'a, T> {
         reserve: *mut T,
     ) {
         rnn_fwd(
-            self.config.rnn_desc,
-            self.is_training,
-            self.x_desc,
+            self.rnn_desc,
+            self.context.as_ref().unwrap().is_training,
+            self.context.as_ref().unwrap().x_desc,
             x,
-            self.y_desc,
+            self.context.as_ref().unwrap().y_desc,
             y,
-            self.config.h_desc,
+            self.h_desc,
             hx,
             hy,
-            self.config.c_desc,
+            self.c_desc,
             cx,
             cy,
-            self.config.weights_size,
+            self.weights_size,
             weight,
-            self.workspace.workspace_size,
+            self.context.as_ref().unwrap().get_workspace_size(),
             workspace,
-            self.workspace.reserve_size,
+            self.context.as_ref().unwrap().get_reserve_size(),
             reserve,
         )
         .unwrap();
@@ -436,25 +417,25 @@ impl<'a, T: 'static + Clone + Copy> RNNContext<'a, T> {
         reserve: *mut T,
     ) {
         rnn_bkwd_data(
-            self.config.rnn_desc,
-            self.y_desc,
+            self.rnn_desc,
+            self.context.as_ref().unwrap().y_desc,
             y,
             dy,
-            self.x_desc,
+            self.context.as_ref().unwrap().x_desc,
             dx,
-            self.config.h_desc,
+            self.h_desc,
             hx,
             dhy,
             dhx,
-            self.config.c_desc,
+            self.c_desc,
             cx,
             dcy,
             dcx,
-            self.config.weights_size,
+            self.weights_size,
             weight,
-            self.workspace.workspace_size,
+            self.context.as_ref().unwrap().get_workspace_size(),
             workspace,
-            self.workspace.reserve_size,
+            self.context.as_ref().unwrap().get_reserve_size(),
             reserve,
         )
         .unwrap();
@@ -470,22 +451,197 @@ impl<'a, T: 'static + Clone + Copy> RNNContext<'a, T> {
         reserve: *mut T,
     ) {
         rnn_bkwd_weight(
-            self.config.rnn_desc,
-            self.x_desc,
+            self.rnn_desc,
+            self.context.as_ref().unwrap().x_desc,
             x,
-            self.config.h_desc,
+            self.h_desc,
             hx,
-            self.y_desc,
+            self.context.as_ref().unwrap().y_desc,
             y,
-            self.config.weights_size,
+            self.weights_size,
             dweight,
-            self.workspace.workspace_size,
+            self.context.as_ref().unwrap().get_workspace_size(),
             workspace,
-            self.workspace.reserve_size,
+            self.context.as_ref().unwrap().get_reserve_size(),
             reserve,
         )
         .unwrap();
     }
+
+    pub fn get_weights_size(&self) -> usize {
+        self.weights_size
+    }
+
+    pub fn get_workspace_size(&self) -> usize {
+        self.context.as_ref().unwrap().get_workspace_size()
+    }
+
+    pub fn get_reserve_size(&self) -> usize {
+        self.context.as_ref().unwrap().get_reserve_size()
+    }
+}
+
+impl<T: 'static + Copy> Drop for RNNDescriptor<T> {
+    fn drop(&mut self) {
+        unsafe {
+            zenu_cudnn_sys::cudnnDestroyRNNDescriptor(self.rnn_desc);
+            zenu_cudnn_sys::cudnnDestroyTensorDescriptor(self.h_desc);
+            zenu_cudnn_sys::cudnnDestroyTensorDescriptor(self.c_desc);
+        }
+    }
+}
+
+pub struct RNNContext {
+    pub x_desc: cudnnRNNDataDescriptor_t,
+    pub y_desc: cudnnRNNDataDescriptor_t,
+    pub workspace: RnnWorkspace,
+    pub is_training: bool,
+}
+
+impl RNNContext {
+    // pub fn new(
+    //     seq_lengh: usize,
+    //     seq_length_array: &[usize],
+    //     layout: RNNDataLayout,
+    //     fill_value: T,
+    //     is_training: bool,
+    // ) -> Self {
+    //     let seq_len_array = seq_length_array
+    //         .iter()
+    //         .map(|&x| x as i32)
+    //         .collect::<Vec<i32>>();
+    //     let x_desc = rnn_data_descriptor::<T>(
+    //         seq_lengh as i32,
+    //         config.batch_size as i32,
+    //         config.input_size as i32,
+    //         &seq_len_array,
+    //         layout,
+    //         fill_value,
+    //     )
+    //     .unwrap();
+    //
+    //     let y_desc = rnn_data_descriptor::<T>(
+    //         seq_lengh as i32,
+    //         config.batch_size as i32,
+    //         config.hidden_size as i32,
+    //         &seq_len_array,
+    //         layout,
+    //         fill_value,
+    //     )
+    //     .unwrap();
+    //     let workspace = config.get_workspace_reserve_size(is_training, x_desc);
+    //     Self {
+    //         config,
+    //         x_desc,
+    //         y_desc,
+    //         workspace,
+    //         is_training,
+    //     }
+    // }
+
+    // #[allow(clippy::too_many_arguments)]
+    // pub fn fwd(
+    //     &self,
+    //     x: *const T,
+    //     y: *mut T,
+    //     hx: *const T,
+    //     hy: *mut T,
+    //     cx: *const T,
+    //     cy: *mut T,
+    //     weight: *mut T,
+    //     workspace: *mut T,
+    //     reserve: *mut T,
+    // ) {
+    //     rnn_fwd(
+    //         self.config.rnn_desc,
+    //         self.is_training,
+    //         self.x_desc,
+    //         x,
+    //         self.y_desc,
+    //         y,
+    //         self.config.h_desc,
+    //         hx,
+    //         hy,
+    //         self.config.c_desc,
+    //         cx,
+    //         cy,
+    //         self.config.weights_size,
+    //         weight,
+    //         self.workspace.workspace_size,
+    //         workspace,
+    //         self.workspace.reserve_size,
+    //         reserve,
+    //     )
+    //     .unwrap();
+    // }
+    //
+    // #[allow(clippy::too_many_arguments)]
+    // pub fn bkwd_data(
+    //     &self,
+    //     y: *const T,
+    //     dy: *const T,
+    //     dx: *mut T,
+    //     hx: *const T,
+    //     dhy: *const T,
+    //     dhx: *mut T,
+    //     cx: *const T,
+    //     dcy: *const T,
+    //     dcx: *mut T,
+    //     weight: *const T,
+    //     workspace: *mut T,
+    //     reserve: *mut T,
+    // ) {
+    //     rnn_bkwd_data(
+    //         self.config.rnn_desc,
+    //         self.y_desc,
+    //         y,
+    //         dy,
+    //         self.x_desc,
+    //         dx,
+    //         self.config.h_desc,
+    //         hx,
+    //         dhy,
+    //         dhx,
+    //         self.config.c_desc,
+    //         cx,
+    //         dcy,
+    //         dcx,
+    //         self.config.weights_size,
+    //         weight,
+    //         self.workspace.workspace_size,
+    //         workspace,
+    //         self.workspace.reserve_size,
+    //         reserve,
+    //     )
+    //     .unwrap();
+    // }
+    //
+    // pub fn bkwd_weights(
+    //     &self,
+    //     x: *const T,
+    //     hx: *const T,
+    //     y: *const T,
+    //     dweight: *mut T,
+    //     workspace: *mut T,
+    //     reserve: *mut T,
+    // ) {
+    //     rnn_bkwd_weight(
+    //         self.config.rnn_desc,
+    //         self.x_desc,
+    //         x,
+    //         self.config.h_desc,
+    //         hx,
+    //         self.y_desc,
+    //         y,
+    //         self.config.weights_size,
+    //         dweight,
+    //         self.workspace.workspace_size,
+    //         workspace,
+    //         self.workspace.reserve_size,
+    //         reserve,
+    //     )
+    //     .unwrap();
+    // }
 
     pub fn get_reserve_size(&self) -> usize {
         self.workspace.reserve_size
@@ -496,7 +652,7 @@ impl<'a, T: 'static + Clone + Copy> RNNContext<'a, T> {
     }
 }
 
-impl<'a, T: 'static> Drop for RNNContext<'a, T> {
+impl Drop for RNNContext {
     fn drop(&mut self) {
         unsafe {
             zenu_cudnn_sys::cudnnDestroyRNNDataDescriptor(self.x_desc);

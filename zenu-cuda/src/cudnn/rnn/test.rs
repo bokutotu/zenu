@@ -15,7 +15,7 @@ mod rnn {
         let batch_size = 1;
         let seq_length = 5;
         let num_layers = 1;
-        let config = RNNDescriptor::<f32>::new(
+        let mut config = RNNDescriptor::<f32>::new(
             RNNAlgo::Standard,
             RNNCell::RNNRelu,
             RNNBias::DoubleBias,
@@ -28,7 +28,7 @@ mod rnn {
             batch_size,
         );
 
-        let weight_bytes = config.weights_size;
+        let weight_bytes = config.get_weights_size();
 
         let weight_ptr = cuda_malloc_bytes(weight_bytes).unwrap() as *mut f32;
 
@@ -109,24 +109,31 @@ mod rnn {
         )
         .unwrap();
 
-        let exe = RNNContext::new(
-            &config,
+        // let exe = RNNContext::new(
+        //     &config,
+        //     seq_length,
+        //     &[seq_length],
+        //     RNNDataLayout::SeqMajorPacked,
+        //     0_f32,
+        //     true,
+        // );
+        config.set_input_size(
             seq_length,
             &[seq_length],
             RNNDataLayout::SeqMajorPacked,
-            0_f32,
             true,
+            0_f32,
         );
 
         let output_gpu = cuda_malloc::<f32>(20).unwrap();
 
-        let workspace = exe.workspace.workspace_size;
+        let workspace = config.get_workspace_size();
         let workspace = cuda_malloc_bytes(workspace).unwrap();
 
-        let reserve = exe.workspace.reserve_size;
+        let reserve = config.get_reserve_size();
         let reserve = cuda_malloc_bytes(reserve).unwrap();
 
-        exe.fwd(
+        config.fwd(
             input_gpu,
             output_gpu,
             std::ptr::null_mut(),
