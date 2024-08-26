@@ -36,7 +36,7 @@ pub fn rnn_fwd<T: Num>(
     params: &RNNParameters,
 ) -> RNNOutput<T> {
     rnn_fwd_shape_check(x.shape(), hx.as_ref().map(|hx| hx.to_ref().shape()), desc);
-    desc.set_input_shape(is_training, x.shape()[0]);
+    desc.config_seq_length(is_training, x.shape()[0]);
 
     let mut y = Matrix::alloc([x.shape()[0], x.shape()[1], desc.get_hidden_size()]);
 
@@ -111,7 +111,7 @@ fn rnn_bkwd_data_shape_check<T: Num>(
 }
 
 pub fn rnn_bkwd_data<T: Num>(
-    x: Matrix<Ref<&T>, DimDyn, Nvidia>,
+    x_shape: DimDyn,
     y: Matrix<Ref<&T>, DimDyn, Nvidia>,
     dy: Matrix<Ref<&T>, DimDyn, Nvidia>,
     hx: Option<Matrix<Ref<&T>, DimDyn, Nvidia>>,
@@ -120,16 +120,16 @@ pub fn rnn_bkwd_data<T: Num>(
     params: &RNNParameters,
 ) -> RNNBkwdDataOutput<T> {
     rnn_bkwd_data_shape_check(
-        x.shape(),
+        x_shape,
         y.shape(),
         dy.shape(),
         hx.as_ref().map(|hx| hx.shape()),
         dhy.as_ref().map(|dhy| dhy.shape()),
         desc,
     );
-    desc.set_input_shape(true, x.shape()[0]);
+    desc.config_seq_length(true, x_shape[0]);
 
-    let mut dx = Matrix::alloc(x.shape());
+    let mut dx = Matrix::alloc(x_shape);
     let mut dhx = {
         let d = desc.desc.get_num_layers()
             * if desc.desc.get_is_bidirectional() {
@@ -203,7 +203,7 @@ pub fn rnn_bkwd_weights<T: Num>(
         y.shape(),
         &desc,
     );
-    desc.set_input_shape(true, x.shape()[1]);
+    desc.config_seq_length(true, x.shape()[1]);
 
     let dweight = Nvidia::alloc(desc.desc.get_weights_size()).unwrap();
 

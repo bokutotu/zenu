@@ -4,6 +4,7 @@ use zenu_cuda::cudnn::rnn::{
 
 use crate::{
     device::{nvidia::Nvidia, Device, DeviceBase},
+    matrix::Matrix,
     num::Num,
 };
 
@@ -138,30 +139,36 @@ impl<T: Num> RNNDescriptor<T> {
         self.desc.get_weights_size()
     }
 
-    pub fn set_input_shape(&mut self, is_training: bool, seq_length: usize) {
-        let seq_length_array = vec![seq_length; self.desc.get_num_layers()];
-        let layout = RNNDataLayout::SeqMajorUnpacked;
-        let fill_value = T::zero();
-
-        let prev_workspace_size = self.desc.get_workspace_size();
-        let prev_reserve_space_size = self.desc.get_reserve_size();
+    /// this function set input sequence length
+    /// if seq_length is different from the previous one, it will reallocate workspace
+    pub fn config_seq_length(&mut self, is_training: bool, seq_length: usize) {
+        let prev_workspace_size = if self.workspace.is_null() {
+            0
+        } else {
+            self.desc.get_workspace_size()
+        };
+        let prev_reserve_space_size = if self.reserve_space.is_null() {
+            0
+        } else {
+            self.desc.get_reserve_size()
+        };
 
         self.desc.set_input_size(
             seq_length,
-            &seq_length_array,
-            layout,
+            &vec![seq_length; self.desc.get_num_layers()],
+            RNNDataLayout::SeqMajorUnpacked,
             is_training,
-            fill_value,
+            T::zero(),
         );
 
         if prev_workspace_size != self.desc.get_workspace_size()
             || prev_reserve_space_size != self.desc.get_reserve_size()
         {
-            self.reallocate_workspace();
+            self.allocate_workspace();
         }
     }
 
-    pub fn reallocate_workspace(&mut self) {
+    pub fn allocate_workspace(&mut self) {
         if !self.workspace.is_null() {
             Nvidia::drop_ptr(self.workspace);
         }
@@ -195,6 +202,7 @@ impl<T: Num> RNNDescriptor<T> {
 
     /// this function not check shape of params
     /// make sure that params has the same shape as the config
+    // TODO: ptrはRNNDescriptorのメンバにする
     pub fn load_rnn_weights<D: Device>(
         &self,
         ptr: *mut u8,
@@ -214,6 +222,38 @@ impl<T: Num> RNNDescriptor<T> {
         }
 
         Ok(())
+    }
+
+    pub fn store_rnn_weights<D: Device>(&self, weight_ptr: *mut u8) -> Vec<RNNWeights<T, D>> {
+        let mut params = Vec::with_capacity(self.get_num_layers());
+
+        let rnn_params = self.desc.get_rnn_params(weight_ptr as *mut _);
+
+        for idx in 0..self.get_num_layers() {
+            let input_weight = if idx == 0 || (idx == 1 && self.get_is_bidirectional()) {
+                let input_shape = &[self.get_hidden_size(), self.get_input_size()];
+                Matrix::alloc(input_shape)
+            } else {
+                let input_shape = &[self.get_hidden_size(), self.get_hidden_size()];
+                Matrix::alloc(input_shape)
+            };
+            let hidden_weight = Matrix::alloc(&[self.get_hidden_size(), self.get_hidden_size()]);
+            let input_bias = Matrix::alloc(&[self.get_hidden_size()]);
+            let hidden_bias = Matrix::alloc(&[self.get_hidden_size()]);
+
+            let layer_params = RNNWeights::new(
+                input_weight,
+                hidden_weight,
+                Some(input_bias),
+                Some(hidden_bias),
+            );
+
+            let layer = &rnn_params[idx];
+            layer_params.set_weight(layer);
+            params.push(layer_params);
+        }
+
+        params
     }
 
     pub fn fwd(
