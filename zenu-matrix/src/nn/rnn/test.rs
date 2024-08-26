@@ -14,7 +14,7 @@ mod rnn {
         let batch_size = 1;
         let num_layers = 1;
 
-        let config = RNNConfig::<f32>::new_rnn_relu(
+        let mut config = RNNDescriptor::<f32>::new_rnn_relu(
             false,
             0.0,
             input_size,
@@ -48,7 +48,7 @@ mod rnn {
         let x = matrix_map.get("input").unwrap().clone();
         let x = x.to::<Nvidia>();
 
-        let y = rnn_fwd(x.to_ref(), None, true, &config, &param);
+        let y = rnn_fwd(x.to_ref(), None, true, &mut config, &param);
         let output = matrix_map.get("output").unwrap().clone();
         let output = output.to::<Nvidia>();
         assert_mat_eq_epsilon!(y.y.to_ref(), output, 1e-5);
@@ -61,7 +61,7 @@ mod rnn {
             dy.to_ref(),
             None,
             None,
-            &config,
+            &mut config,
             &param,
         );
 

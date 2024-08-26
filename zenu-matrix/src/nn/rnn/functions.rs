@@ -5,9 +5,9 @@ use crate::{
     num::Num,
 };
 
-use super::{RNNBkwdDataOutput, RNNConfig, RNNOutput, RNNParameters};
+use super::{RNNBkwdDataOutput, RNNDescriptor, RNNOutput, RNNParameters};
 
-fn rnn_fwd_shape_check<T: Num>(x: DimDyn, hx: Option<DimDyn>, config: &RNNConfig<T>) {
+fn rnn_fwd_shape_check<T: Num>(x: DimDyn, hx: Option<DimDyn>, config: &RNNDescriptor<T>) {
     if x.len() != 3 {
         panic!("Input shape must be 3D");
     }
@@ -32,24 +32,19 @@ pub fn rnn_fwd<T: Num>(
     x: Matrix<Ref<&T>, DimDyn, Nvidia>,
     hx: Option<Matrix<Ref<&T>, DimDyn, Nvidia>>,
     is_training: bool,
-    config: &RNNConfig<T>,
+    desc: &mut RNNDescriptor<T>,
     params: &RNNParameters,
 ) -> RNNOutput<T> {
-    rnn_fwd_shape_check(x.shape(), hx.as_ref().map(|hx| hx.to_ref().shape()), config);
-    let rnn_exe = config.create_executor(is_training, x.shape()[0]);
-    let reserve_size = rnn_exe.get_reserve_size();
-    let workspace_size = rnn_exe.get_workspace_size();
+    rnn_fwd_shape_check(x.shape(), hx.as_ref().map(|hx| hx.to_ref().shape()), desc);
+    desc.set_input_shape(is_training, x.shape()[0]);
 
-    let reserve = Nvidia::alloc(reserve_size).unwrap();
-    let workspace = Nvidia::alloc(workspace_size).unwrap();
+    let mut y = Matrix::alloc([x.shape()[0], x.shape()[1], desc.get_hidden_size()]);
 
-    let mut y = Matrix::alloc([x.shape()[0], x.shape()[1], config.get_hidden_size()]);
+    let d = desc.get_num_layers() * if desc.get_is_bidirectional() { 2 } else { 1 };
 
-    let d = config.get_num_layers() * if config.get_is_bidirectional() { 2 } else { 1 };
+    let mut hy = Matrix::alloc([d, desc.get_hidden_size()]);
 
-    let mut hy = Matrix::alloc([d, config.get_hidden_size()]);
-
-    rnn_exe.fwd(
+    desc.fwd(
         x.as_ptr(),
         y.to_ref_mut().as_mut_ptr(),
         hx.map(|hx| hx.as_ptr()).unwrap_or(std::ptr::null()),
@@ -57,15 +52,8 @@ pub fn rnn_fwd<T: Num>(
         std::ptr::null_mut(),
         std::ptr::null_mut(),
         params.weight as *mut _,
-        workspace as *mut _,
-        reserve as *mut _,
     );
-    RNNOutput {
-        y,
-        hy,
-        reserve,
-        workspace,
-    }
+    RNNOutput { y, hy }
 }
 
 fn rnn_bkwd_data_shape_check<T: Num>(
@@ -74,24 +62,24 @@ fn rnn_bkwd_data_shape_check<T: Num>(
     dy: DimDyn,
     hx: Option<DimDyn>,
     dhy: Option<DimDyn>,
-    config: &RNNConfig<T>,
+    desc: &RNNDescriptor<T>,
 ) {
     if x.len() != 3 {
         panic!("Input shape must be 3D");
     }
-    if x[1] != config.get_batch_size() {
+    if x[1] != desc.get_batch_size() {
         panic!("Batch size mismatch");
     }
-    if x[2] != config.get_input_size() {
+    if x[2] != desc.get_input_size() {
         panic!("Input size mismatch");
     }
     if y.len() != 3 {
         panic!("Output shape must be 3D");
     }
-    if y[1] != config.get_batch_size() {
+    if y[1] != desc.get_batch_size() {
         panic!("Batch size mismatch");
     }
-    if y[2] != config.get_hidden_size() {
+    if y[2] != desc.get_hidden_size() {
         panic!("Hidden size mismatch");
     }
     if y.slice() != dy.slice() {
@@ -113,11 +101,11 @@ fn rnn_bkwd_data_shape_check<T: Num>(
         panic!("hx and dhy shape mismatch");
     }
 
-    let d = config.get_num_layers() * if config.get_is_bidirectional() { 2 } else { 1 };
+    let d = desc.get_num_layers() * if desc.get_is_bidirectional() { 2 } else { 1 };
     if hx[0] != d {
         panic!("Number of layers mismatch");
     }
-    if hx[1] != config.get_hidden_size() {
+    if hx[1] != desc.get_hidden_size() {
         panic!("Hidden size mismatch");
     }
 }
@@ -128,7 +116,7 @@ pub fn rnn_bkwd_data<T: Num>(
     dy: Matrix<Ref<&T>, DimDyn, Nvidia>,
     hx: Option<Matrix<Ref<&T>, DimDyn, Nvidia>>,
     dhy: Option<Matrix<Ref<&T>, DimDyn, Nvidia>>,
-    config: &RNNConfig<T>,
+    desc: &mut RNNDescriptor<T>,
     params: &RNNParameters,
 ) -> RNNBkwdDataOutput<T> {
     rnn_bkwd_data_shape_check(
@@ -137,22 +125,22 @@ pub fn rnn_bkwd_data<T: Num>(
         dy.shape(),
         hx.as_ref().map(|hx| hx.shape()),
         dhy.as_ref().map(|dhy| dhy.shape()),
-        config,
+        desc,
     );
-    let rnn_exe = config.create_executor(true, x.shape()[0]);
-    let reserve_size = rnn_exe.get_reserve_size();
-    let workspace_size = rnn_exe.get_workspace_size();
-
-    let reserve = Nvidia::alloc(reserve_size).unwrap();
-    let workspace = Nvidia::alloc(workspace_size).unwrap();
+    desc.set_input_shape(true, x.shape()[0]);
 
     let mut dx = Matrix::alloc(x.shape());
     let mut dhx = {
-        let d = config.get_num_layers() * if config.get_is_bidirectional() { 2 } else { 1 };
-        Matrix::alloc([d, config.get_hidden_size()])
+        let d = desc.desc.get_num_layers()
+            * if desc.desc.get_is_bidirectional() {
+                2
+            } else {
+                1
+            };
+        Matrix::alloc([d, desc.desc.get_hidden_size()])
     };
 
-    rnn_exe.bkwd_data(
+    desc.bkwd_data(
         y.as_ptr(),
         dy.as_ptr(),
         dx.to_ref_mut().as_mut_ptr(),
@@ -163,8 +151,6 @@ pub fn rnn_bkwd_data<T: Num>(
         std::ptr::null_mut(),
         std::ptr::null_mut(),
         params.weight as *mut _,
-        workspace as *mut _,
-        reserve as *mut _,
     );
     RNNBkwdDataOutput { dx, dhx }
 }
@@ -173,33 +159,33 @@ fn rnn_bkwd_weights_shape_check<T: Num>(
     x: DimDyn,
     hx: Option<DimDyn>,
     y: DimDyn,
-    config: &RNNConfig<T>,
+    desc: &RNNDescriptor<T>,
 ) {
     if x.len() != 3 {
         panic!("Input shape must be 3D");
     }
-    if x[1] != config.get_batch_size() {
+    if x[1] != desc.get_batch_size() {
         panic!("Batch size mismatch");
     }
-    if x[2] != config.get_input_size() {
+    if x[2] != desc.get_input_size() {
         panic!("Input size mismatch");
     }
     if y.len() != 3 {
         panic!("Output shape must be 3D");
     }
-    if y[1] != config.get_batch_size() {
+    if y[1] != desc.get_batch_size() {
         panic!("Batch size mismatch");
     }
-    if y[2] != config.get_hidden_size() {
+    if y[2] != desc.get_hidden_size() {
         panic!("Hidden size mismatch");
     }
 
-    let d = config.get_num_layers() * if config.get_is_bidirectional() { 2 } else { 1 };
+    let d = desc.get_num_layers() * if desc.get_is_bidirectional() { 2 } else { 1 };
     if let Some(hx) = hx {
         if hx[0] != d {
             panic!("Number of layers mismatch");
         }
-        if hx[1] != config.get_hidden_size() {
+        if hx[1] != desc.get_hidden_size() {
             panic!("Hidden size mismatch");
         }
     }
@@ -209,30 +195,23 @@ pub fn rnn_bkwd_weights<T: Num>(
     x: Matrix<Ref<&T>, DimDyn, Nvidia>,
     hx: Option<Matrix<Ref<&T>, DimDyn, Nvidia>>,
     y: Matrix<Ref<&T>, DimDyn, Nvidia>,
-    config: RNNConfig<T>,
+    desc: &mut RNNDescriptor<T>,
 ) -> RNNParameters {
     rnn_bkwd_weights_shape_check(
         x.shape(),
         hx.as_ref().map(|hx| hx.shape()),
         y.shape(),
-        &config,
+        &desc,
     );
-    let rnn_exe = config.create_executor(true, x.shape()[1]);
-    let reserve_size = rnn_exe.get_reserve_size();
-    let workspace_size = rnn_exe.get_workspace_size();
+    desc.set_input_shape(true, x.shape()[1]);
 
-    let reserve = Nvidia::alloc(reserve_size).unwrap();
-    let workspace = Nvidia::alloc(workspace_size).unwrap();
+    let dweight = Nvidia::alloc(desc.desc.get_weights_size()).unwrap();
 
-    let dweight = Nvidia::alloc(config.get_weight_bytes()).unwrap();
-
-    rnn_exe.bkwd_weights(
+    desc.bkwd_weights(
         x.as_ptr(),
         hx.map(|hx| hx.as_ptr()).unwrap_or(std::ptr::null()),
         y.as_ptr(),
         dweight as *mut _,
-        workspace as *mut _,
-        reserve as *mut _,
     );
     RNNParameters { weight: dweight }
 }

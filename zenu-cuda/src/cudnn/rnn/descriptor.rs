@@ -159,6 +159,26 @@ impl<T: 'static + Copy> RNNDescriptor<T> {
         }
     }
 
+    pub fn get_input_size(&self) -> usize {
+        self.input_size
+    }
+
+    pub fn get_hidden_size(&self) -> usize {
+        self.hidden_size
+    }
+
+    pub fn get_num_layers(&self) -> usize {
+        self.num_layers
+    }
+
+    pub fn get_batch_size(&self) -> usize {
+        self.batch_size
+    }
+
+    pub fn get_is_bidirectional(&self) -> bool {
+        self.bidirectional
+    }
+
     pub fn get_rnn_params(&self, weight_ptr: *mut T) -> Vec<RNNParams> {
         if self.cell != RNNCell::RNNRelu && self.cell != RNNCell::RNNTanh {
             panic!("Only RNN cell is supported");
@@ -356,7 +376,7 @@ impl<T: 'static + Copy> RNNDescriptor<T> {
         )
         .unwrap();
         let workspace = self.get_workspace_reserve_size(is_training, x_desc);
-        self.context = Some(RNNContext::<T> {
+        self.context = Some(RNNContext {
             x_desc,
             y_desc,
             workspace,

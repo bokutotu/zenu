@@ -13,8 +13,6 @@ use crate::{
 pub struct RNNOutput<T: Num> {
     pub y: Matrix<Owned<T>, DimDyn, Nvidia>,
     pub hy: Matrix<Owned<T>, DimDyn, Nvidia>,
-    pub reserve: *mut u8,
-    pub workspace: *mut u8,
 }
 
 pub struct RNNBkwdDataOutput<T: Num> {
