@@ -1,10 +1,7 @@
 #[cfg(test)]
 mod rnn {
     use crate::{
-        cudnn::rnn::{
-            descriptor::RNNContext, RNNAlgo, RNNBias, RNNCell, RNNDataLayout, RNNDescriptor,
-            RNNMathType,
-        },
+        cudnn::rnn::{RNNAlgo, RNNBias, RNNCell, RNNDataLayout, RNNDescriptor, RNNMathType},
         runtime::{cuda_copy, cuda_malloc, cuda_malloc_bytes, ZenuCudaMemCopyKind},
     };
 
