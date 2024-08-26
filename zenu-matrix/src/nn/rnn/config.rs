@@ -1,5 +1,5 @@
 use zenu_cuda::cudnn::rnn::{
-    RNNAlgo, RNNBias, RNNCell, RNNConfig as NvidiaRNNConfig, RNNDataLayout, RNNExecutor,
+    RNNAlgo, RNNBias, RNNCell, RNNContext, RNNDataLayout, RNNDescriptor as NvidiaRNNConfig,
     RNNMathType,
 };
 
@@ -119,9 +119,9 @@ impl<T: Num> RNNConfig<T> {
         self.config.weights_size
     }
 
-    pub fn create_executor(&self, is_training: bool, seq_length: usize) -> RNNExecutor<T> {
+    pub fn create_executor(&self, is_training: bool, seq_length: usize) -> RNNContext<T> {
         let seq_length_array = vec![seq_length; self.config.batch_size];
-        RNNExecutor::new(
+        RNNContext::new(
             &self.config,
             seq_length,
             &seq_length_array,

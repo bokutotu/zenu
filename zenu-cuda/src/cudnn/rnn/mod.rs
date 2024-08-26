@@ -1,7 +1,7 @@
-mod executor;
-mod function;
+mod descriptor;
+mod helper;
 mod test;
 
-pub use function::{RNNAlgo, RNNBias, RNNCell, RNNDataLayout, RNNMathType};
+pub use helper::{RNNAlgo, RNNBias, RNNCell, RNNDataLayout, RNNMathType};
 
-pub use executor::{RNNConfig, RNNExecutor, RNNParams};
+pub use descriptor::{RNNContext, RNNDescriptor, RNNParams};

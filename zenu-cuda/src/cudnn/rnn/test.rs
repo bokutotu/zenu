@@ -2,7 +2,8 @@
 mod rnn {
     use crate::{
         cudnn::rnn::{
-            executor::RNNExecutor, RNNAlgo, RNNBias, RNNCell, RNNConfig, RNNDataLayout, RNNMathType,
+            descriptor::RNNContext, RNNAlgo, RNNBias, RNNCell, RNNDataLayout, RNNDescriptor,
+            RNNMathType,
         },
         runtime::{cuda_copy, cuda_malloc, cuda_malloc_bytes, ZenuCudaMemCopyKind},
     };
@@ -14,7 +15,7 @@ mod rnn {
         let batch_size = 1;
         let seq_length = 5;
         let num_layers = 1;
-        let config = RNNConfig::<f32>::new(
+        let config = RNNDescriptor::<f32>::new(
             RNNAlgo::Standard,
             RNNCell::RNNRelu,
             RNNBias::DoubleBias,
@@ -108,7 +109,7 @@ mod rnn {
         )
         .unwrap();
 
-        let exe = RNNExecutor::new(
+        let exe = RNNContext::new(
             &config,
             seq_length,
             &[seq_length],
