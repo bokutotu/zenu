@@ -77,13 +77,8 @@ pub(crate) fn tensor_descriptor_2d<T: 'static>(
         }
         let dim = [witdh, height];
         let stride = [height, 1];
-        let status = cudnnSetTensorNdDescriptor(
-            tensor,
-            data_type,
-            2,
-            &dim as *const ::libc::c_int,
-            &stride as *const ::libc::c_int,
-        );
+        let status =
+            cudnnSetTensorNdDescriptor(tensor, data_type, 2, dim.as_ptr(), stride.as_ptr());
         if status != cudnnStatus_t::CUDNN_STATUS_SUCCESS {
             return Err(ZenuCudnnError::from(status));
         }

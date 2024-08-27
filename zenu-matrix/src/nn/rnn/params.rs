@@ -152,7 +152,6 @@ impl<T: Num, D: Device> RNNWeights<T, D> {
         let kind = if std::any::TypeId::of::<D>() == std::any::TypeId::of::<Nvidia>() {
             ZenuCudaMemCopyKind::HostToHost
         } else {
-            println!("HostToDevice");
             ZenuCudaMemCopyKind::DeviceToHost
         };
 

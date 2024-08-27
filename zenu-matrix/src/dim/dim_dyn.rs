@@ -6,11 +6,18 @@ use serde::{Deserialize, Serialize};
 
 use super::{DimTrait, GreaterDimTrait, LessDimTrait};
 
-#[derive(Clone, Debug, Default, PartialEq, Copy, Serialize, Deserialize)]
+#[derive(Clone, Default, PartialEq, Copy, Serialize, Deserialize)]
 pub struct DimDyn {
     dim: [usize; 6],
     len: usize,
 }
+
+impl std::fmt::Debug for DimDyn {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", &self.dim[0..self.len])
+    }
+}
+
 /// larger_shapeは2つのshapeのうち大きい方のshapeを返す
 /// xとyを受け取り、xがlarger_shapeである場合はtrueを返す
 /// xがyよりも小さい場合はfalseを返す
