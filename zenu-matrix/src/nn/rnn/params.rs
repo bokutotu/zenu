@@ -37,6 +37,7 @@ impl Drop for RNNParameters {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct RNNWeights<T: Num, D: Device> {
     pub input_weight: Matrix<Owned<T>, DimDyn, D>,
     pub hidden_weight: Matrix<Owned<T>, DimDyn, D>,
@@ -75,6 +76,14 @@ impl<T: Num, D: Device> RNNWeights<T, D> {
         self.hidden_bias.as_ref().map(|b| b.to_ref())
     }
 
+    pub fn input_bias_mut(&mut self) -> Option<Matrix<Ref<&mut T>, DimDyn, D>> {
+        self.input_bias.as_mut().map(|b| b.to_ref_mut())
+    }
+
+    pub fn hidden_bias_mut(&mut self) -> Option<Matrix<Ref<&mut T>, DimDyn, D>> {
+        self.hidden_bias.as_mut().map(|b| b.to_ref_mut())
+    }
+
     pub fn set_weight(&self, params: &RNNParams) {
         let input_weight_ptr = params.input_weight.ptr as *mut T;
         let hidden_weight_ptr = params.hidden_weight.ptr as *mut T;
@@ -86,11 +95,17 @@ impl<T: Num, D: Device> RNNWeights<T, D> {
         let input_bias_numelm = self.input_bias.as_ref().map(|b| b.shape().num_elm());
         let hidden_bias_numelm = self.hidden_bias.as_ref().map(|b| b.shape().num_elm());
 
+        let kind = if std::any::TypeId::of::<D>() == std::any::TypeId::of::<Nvidia>() {
+            ZenuCudaMemCopyKind::HostToHost
+        } else {
+            ZenuCudaMemCopyKind::HostToDevice
+        };
+
         cuda_copy(
             input_weight_ptr,
             self.input_weight.as_ptr(),
             input_weight_numelm,
-            ZenuCudaMemCopyKind::HostToDevice,
+            kind,
         )
         .unwrap();
 
@@ -98,7 +113,7 @@ impl<T: Num, D: Device> RNNWeights<T, D> {
             hidden_weight_ptr,
             self.hidden_weight.as_ptr(),
             hidden_weight_numelm,
-            ZenuCudaMemCopyKind::HostToDevice,
+            kind,
         )
         .unwrap();
 
@@ -107,7 +122,7 @@ impl<T: Num, D: Device> RNNWeights<T, D> {
                 input_bias_ptr,
                 input_bias.as_ptr(),
                 input_bias_numelm.unwrap(),
-                ZenuCudaMemCopyKind::HostToDevice,
+                kind,
             )
             .unwrap();
         }
@@ -117,7 +132,62 @@ impl<T: Num, D: Device> RNNWeights<T, D> {
                 hidden_bias_ptr,
                 hidden_bias.as_ptr(),
                 hidden_bias_numelm.unwrap(),
-                ZenuCudaMemCopyKind::HostToDevice,
+                kind,
+            )
+            .unwrap();
+        }
+    }
+
+    pub fn load_from_params(&mut self, params: &RNNParams) {
+        let input_weight_ptr = params.input_weight.ptr as *const T;
+        let hidden_weight_ptr = params.hidden_weight.ptr as *const T;
+        let input_bias_ptr = params.input_bias.ptr as *const T;
+        let hidden_bias_ptr = params.hidden_bias.ptr as *const T;
+
+        let input_weight_numelm = self.input_weight().shape().num_elm();
+        let hidden_weight_numelm = self.hidden_weight().shape().num_elm();
+        let input_bias_numelm = self.input_bias.as_ref().map(|b| b.shape().num_elm());
+        let hidden_bias_numelm = self.hidden_bias.as_ref().map(|b| b.shape().num_elm());
+
+        let kind = if std::any::TypeId::of::<D>() == std::any::TypeId::of::<Nvidia>() {
+            ZenuCudaMemCopyKind::HostToHost
+        } else {
+            println!("HostToDevice");
+            ZenuCudaMemCopyKind::DeviceToHost
+        };
+
+        cuda_copy(
+            self.input_weight.to_ref_mut().as_mut_ptr(),
+            input_weight_ptr,
+            input_weight_numelm,
+            kind,
+        )
+        .unwrap();
+
+        cuda_copy(
+            self.hidden_weight.to_ref_mut().as_mut_ptr(),
+            hidden_weight_ptr,
+            hidden_weight_numelm,
+            kind,
+        )
+        .unwrap();
+
+        if let Some(input_bias) = self.input_bias_mut() {
+            cuda_copy(
+                input_bias.as_mut_ptr(),
+                input_bias_ptr,
+                input_bias_numelm.unwrap(),
+                kind,
+            )
+            .unwrap();
+        }
+
+        if let Some(hidden_bias) = self.hidden_bias_mut() {
+            cuda_copy(
+                hidden_bias.as_mut_ptr(),
+                hidden_bias_ptr,
+                hidden_bias_numelm.unwrap(),
+                kind,
             )
             .unwrap();
         }

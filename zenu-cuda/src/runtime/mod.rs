@@ -56,6 +56,7 @@ pub fn cuda_free<T>(ptr: *mut T) -> Result<(), ZenuCudaRuntimeError> {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
 pub enum ZenuCudaMemCopyKind {
     HostToHost,
     HostToDevice,

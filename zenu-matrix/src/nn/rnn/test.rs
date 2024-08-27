@@ -74,6 +74,9 @@ mod rnn {
         let dw = rnn_bkwd_weights(x.to_ref(), None, y.y.to_ref(), &mut config);
 
         let params = config.store_rnn_weights::<Cpu>(dw.weight as *mut u8);
+
+        println!("{:?}", params);
+
         let input_weight = params[0].input_weight();
         let hidden_weight = params[0].hidden_weight();
         let input_bias = params[0].input_bias().unwrap();

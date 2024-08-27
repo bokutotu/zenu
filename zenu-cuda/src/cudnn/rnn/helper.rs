@@ -304,12 +304,12 @@ pub fn rnn_bkwd_weight<T: 'static>(
             hx as *const ::libc::c_void,
             y_desc,
             y as *const ::libc::c_void,
+            weight_size,
+            dweight as *mut ::libc::c_void,
             workspace_size,
             workspace as *mut ::libc::c_void,
             reserve_size,
             reserve as *mut ::libc::c_void,
-            weight_size,
-            dweight as *mut ::libc::c_void,
         )
     };
 
