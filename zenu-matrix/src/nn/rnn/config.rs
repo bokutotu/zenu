@@ -229,7 +229,7 @@ impl<T: Num> RNNDescriptor<T> {
 
         let rnn_params = self.desc.get_rnn_params(weight_ptr as *mut _);
 
-        for idx in 0..self.get_num_layers() {
+        for (idx, layer) in rnn_params.iter().enumerate() {
             let input_weight = if idx == 0 || (idx == 1 && self.get_is_bidirectional()) {
                 let input_shape = &[self.get_hidden_size(), self.get_input_size()];
                 Matrix::alloc(input_shape)
@@ -237,9 +237,9 @@ impl<T: Num> RNNDescriptor<T> {
                 let input_shape = &[self.get_hidden_size(), self.get_hidden_size()];
                 Matrix::alloc(input_shape)
             };
-            let hidden_weight = Matrix::alloc(&[self.get_hidden_size(), self.get_hidden_size()]);
-            let input_bias = Matrix::alloc(&[self.get_hidden_size()]);
-            let hidden_bias = Matrix::alloc(&[self.get_hidden_size()]);
+            let hidden_weight = Matrix::alloc([self.get_hidden_size(), self.get_hidden_size()]);
+            let input_bias = Matrix::alloc([self.get_hidden_size()]);
+            let hidden_bias = Matrix::alloc([self.get_hidden_size()]);
 
             let mut layer_params = RNNWeights::new(
                 input_weight,
@@ -248,7 +248,6 @@ impl<T: Num> RNNDescriptor<T> {
                 Some(hidden_bias),
             );
 
-            let layer = &rnn_params[idx];
             layer_params.load_from_params(layer);
             params.push(layer_params);
         }
@@ -256,6 +255,7 @@ impl<T: Num> RNNDescriptor<T> {
         params
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn fwd(
         &self,
         x: *const T,
@@ -279,6 +279,7 @@ impl<T: Num> RNNDescriptor<T> {
         );
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn bkwd_data(
         &self,
         y: *const T,

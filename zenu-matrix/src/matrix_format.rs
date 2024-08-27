@@ -216,7 +216,13 @@ where
         format_array(self, f, <_>::fmt, &fmt_opt)?;
 
         // Add extra information for Debug
-        write!(f, ", shape={:?}, strides={:?}", self.shape(), self.stride(),)?;
+        write!(
+            f,
+            "\n shape={:?}, strides={:?}",
+            // "\nshape={:?}",
+            self.shape(),
+            self.stride(),
+        )?;
         // match self.shape().len() {
         //     Some(ndim) => write!(f, ", const ndim={}", ndim)?,
         //     None => write!(f, ", dynamic ndim={}", self.shape().len())?,

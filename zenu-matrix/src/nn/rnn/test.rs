@@ -75,8 +75,6 @@ mod rnn {
 
         let params = config.store_rnn_weights::<Cpu>(dw.weight as *mut u8);
 
-        println!("{:?}", params);
-
         let input_weight = params[0].input_weight();
         let hidden_weight = params[0].hidden_weight();
         let input_bias = params[0].input_bias().unwrap();
@@ -87,9 +85,9 @@ mod rnn {
         let input_bias_expected = matrix_map.get("rnn.bias_ih_l0_grad").unwrap().clone();
         let hidden_bias_expected = matrix_map.get("rnn.bias_hh_l0_grad").unwrap().clone();
 
-        assert_mat_eq_epsilon!(input_weight, input_weight_expected.to::<Cpu>(), 1e-5);
-        assert_mat_eq_epsilon!(hidden_weight, hidden_weight_expected.to::<Cpu>(), 1e-5);
-        assert_mat_eq_epsilon!(input_bias, input_bias_expected.to::<Cpu>(), 1e-5);
-        assert_mat_eq_epsilon!(hidden_bias, hidden_bias_expected.to::<Cpu>(), 1e-5);
+        assert_mat_eq_epsilon!(input_weight, input_weight_expected, 1e-5);
+        assert_mat_eq_epsilon!(hidden_weight, hidden_weight_expected, 1e-5);
+        assert_mat_eq_epsilon!(input_bias, input_bias_expected, 1e-5);
+        assert_mat_eq_epsilon!(hidden_bias, hidden_bias_expected, 1e-5);
     }
 }
