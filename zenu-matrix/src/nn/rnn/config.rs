@@ -206,7 +206,7 @@ impl<T: Num> RNNDescriptor<T> {
     pub fn load_rnn_weights<D: Device>(
         &self,
         ptr: *mut u8,
-        params: Vec<RNNWeights<T, D>>,
+        mut params: Vec<RNNWeights<T, D>>,
     ) -> Result<(), String> {
         if self.get_num_layers() != params.len() {
             return Err("Number of layers does not match".to_string());
@@ -215,7 +215,7 @@ impl<T: Num> RNNDescriptor<T> {
         let rnn_params = self.desc.get_rnn_params(ptr as *mut _);
 
         for idx in 0..self.get_num_layers() {
-            let layer = &params[idx];
+            let layer = &mut params[idx];
             let layer_params = &rnn_params[idx];
 
             layer.set_weight(layer_params);
@@ -241,7 +241,7 @@ impl<T: Num> RNNDescriptor<T> {
             let input_bias = Matrix::alloc(&[self.get_hidden_size()]);
             let hidden_bias = Matrix::alloc(&[self.get_hidden_size()]);
 
-            let layer_params = RNNWeights::new(
+            let mut layer_params = RNNWeights::new(
                 input_weight,
                 hidden_weight,
                 Some(input_bias),
@@ -249,7 +249,7 @@ impl<T: Num> RNNDescriptor<T> {
             );
 
             let layer = &rnn_params[idx];
-            layer_params.set_weight(layer);
+            layer_params.load_from_params(layer);
             params.push(layer_params);
         }
 
