@@ -198,7 +198,7 @@ pub fn rnn_bkwd_weights<T: Num>(
     desc: &mut RNNDescriptor<T>,
 ) -> RNNParameters {
     rnn_bkwd_weights_shape_check(x.shape(), hx.as_ref().map(|hx| hx.shape()), y.shape(), desc);
-    desc.config_seq_length(true, x.shape()[1]);
+    desc.config_seq_length(true, x.shape()[0]);
 
     let dweight = Nvidia::alloc(desc.desc.get_weights_size()).unwrap();
 
