@@ -105,24 +105,21 @@ mod rnn {
     #[test]
     fn test_rnn_seq_len_1() {
         test_json_single(
-            "../test_data_json/matrix/rnn_fwd_bkwd_single_seq_len_1.json".to_string(),
+            "../test_data_json/rnn_fwd_bkwd_single_seq_len_1.json".to_string(),
             1,
         );
     }
 
     #[test]
-    fn test_rnn_seq_len_2() {
+    fn test_rnn_seq_len_3() {
         test_json_single(
-            "../test_data_json/matrix/rnn_fwd_bkwd_single_seq_len_3.json".to_string(),
+            "../test_data_json/rnn_fwd_bkwd_single_seq_len_3.json".to_string(),
             1,
         );
     }
 
     #[test]
     fn test_rnn_seq_len_5() {
-        test_json_single(
-            "../test_data_json/matrix/rnn_fwd_bkwd_single.json".to_string(),
-            1,
-        );
+        test_json_single("../test_data_json/rnn_fwd_bkwd_single.json".to_string(), 1);
     }
 }

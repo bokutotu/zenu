@@ -1,8 +1,8 @@
-mod config;
-mod functions;
+mod descriptor;
 mod params;
+mod rnn;
 mod test;
 
-pub use config::*;
-pub use functions::*;
+pub use descriptor::*;
 pub use params::*;
+pub use rnn::*;
