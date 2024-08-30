@@ -256,7 +256,7 @@ impl<T: Num> RNNDescriptor<T> {
     }
 
     #[allow(clippy::too_many_arguments)]
-    pub fn fwd(
+    pub(crate) fn fwd(
         &self,
         x: *const T,
         y: *mut T,
@@ -280,7 +280,7 @@ impl<T: Num> RNNDescriptor<T> {
     }
 
     #[allow(clippy::too_many_arguments)]
-    pub fn bkwd_data(
+    pub(crate) fn bkwd_data(
         &self,
         y: *const T,
         dy: *const T,
@@ -309,7 +309,7 @@ impl<T: Num> RNNDescriptor<T> {
         )
     }
 
-    pub fn bkwd_weights(&self, x: *const T, hx: *const T, y: *const T, dweight: *mut T) {
+    pub(crate) fn bkwd_weights(&self, x: *const T, hx: *const T, y: *const T, dweight: *mut T) {
         self.desc.bkwd_weights(
             x,
             hx,
