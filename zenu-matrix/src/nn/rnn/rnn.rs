@@ -33,7 +33,6 @@ pub fn rnn_fwd<T: Num>(
     hx: Option<Matrix<Ref<&T>, DimDyn, Nvidia>>,
     is_training: bool,
     desc: &mut RNNDescriptor<T>,
-    params: &RNNParameters,
 ) -> RNNOutput<T> {
     rnn_fwd_shape_check(x.shape(), hx.as_ref().map(|hx| hx.to_ref().shape()), desc);
     desc.config_seq_length(is_training, x.shape()[0]);
@@ -51,7 +50,6 @@ pub fn rnn_fwd<T: Num>(
         hy.to_ref_mut().as_mut_ptr(),
         std::ptr::null_mut(),
         std::ptr::null_mut(),
-        params.weight as *mut _,
     );
     RNNOutput { y, hy }
 }
@@ -117,7 +115,6 @@ pub fn rnn_bkwd_data<T: Num>(
     hx: Option<Matrix<Ref<&T>, DimDyn, Nvidia>>,
     dhy: Option<Matrix<Ref<&T>, DimDyn, Nvidia>>,
     desc: &mut RNNDescriptor<T>,
-    params: &RNNParameters,
 ) -> RNNBkwdDataOutput<T> {
     rnn_bkwd_data_shape_check(
         x_shape,
@@ -150,7 +147,6 @@ pub fn rnn_bkwd_data<T: Num>(
         std::ptr::null_mut(),
         std::ptr::null_mut(),
         std::ptr::null_mut(),
-        params.weight as *mut _,
     );
     RNNBkwdDataOutput { dx, dhx }
 }
