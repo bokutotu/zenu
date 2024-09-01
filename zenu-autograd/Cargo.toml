@@ -27,4 +27,5 @@ harness = false
 debug = true
 
 [features]
+default = ["nvidia"]
 nvidia = ["zenu-matrix/nvidia"]
