@@ -26,6 +26,7 @@ pub mod matmul;
 pub mod pool2d;
 pub mod powf;
 pub mod reshape;
+pub mod rnn;
 pub mod sinh;
 pub mod softmax;
 pub mod sum;
