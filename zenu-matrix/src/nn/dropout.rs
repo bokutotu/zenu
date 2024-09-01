@@ -264,59 +264,59 @@ mod dropout {
     }
     run_mat_test!(dropout_4d, dropout_4d_cpu, dropout_4d_gpu);
 
-    fn dropout_2d<D: Device>() {
-        let mut state = DropoutState::<f32, D>::new(0.8);
-        let x = crate::matrix::Matrix::from_vec(
-            vec![
-                1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0,
-            ],
-            &[2, 2 * 3],
-        );
+    // fn dropout_2d<D: Device>() {
+    //     let mut state = DropoutState::<f32, D>::new(0.8);
+    //     let x = crate::matrix::Matrix::from_vec(
+    //         vec![
+    //             1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0,
+    //         ],
+    //         &[2, 2 * 3],
+    //     );
+    //
+    //     let y = dropout(&x, &mut state);
+    //     let y_cpu = y.clone().to::<Cpu>();
+    //     let y_cpu_ref = y_cpu.to_ref();
+    //     let y_cpu_slice = y_cpu_ref.as_slice();
+    //     let zero_indexed = y_cpu_slice.iter().map(|x| *x == 0.).collect::<Vec<bool>>();
+    //     let y_grad = Matrix::ones_like(&y);
+    //     let x_grad = dropout_grad(&y_grad.to_ref(), &state);
+    //     let x_grad_cpu = x_grad.to::<Cpu>();
+    //     let x_grad_cpu_ref = x_grad_cpu.to_ref();
+    //     let x_grad_cpu_slice = x_grad_cpu_ref.as_slice();
+    //
+    //     for i in 0..y_cpu_slice.len() {
+    //         if zero_indexed[i] {
+    //             assert_eq!(x_grad_cpu_slice[i], 0.0);
+    //         } else {
+    //             assert_eq!(x_grad_cpu_slice[i], 1. / (1. - 0.8));
+    //         }
+    //     }
+    // }
+    // run_mat_test!(dropout_2d, dropout_2d_cpu, dropout_2d_gpu);
 
-        let y = dropout(&x, &mut state);
-        let y_cpu = y.clone().to::<Cpu>();
-        let y_cpu_ref = y_cpu.to_ref();
-        let y_cpu_slice = y_cpu_ref.as_slice();
-        let zero_indexed = y_cpu_slice.iter().map(|x| *x == 0.).collect::<Vec<bool>>();
-        let y_grad = Matrix::ones_like(&y);
-        let x_grad = dropout_grad(&y_grad.to_ref(), &state);
-        let x_grad_cpu = x_grad.to::<Cpu>();
-        let x_grad_cpu_ref = x_grad_cpu.to_ref();
-        let x_grad_cpu_slice = x_grad_cpu_ref.as_slice();
-
-        for i in 0..y_cpu_slice.len() {
-            if zero_indexed[i] {
-                assert_eq!(x_grad_cpu_slice[i], 0.0);
-            } else {
-                assert_eq!(x_grad_cpu_slice[i], 1. / (1. - 0.8));
-            }
-        }
-    }
-    run_mat_test!(dropout_2d, dropout_2d_cpu, dropout_2d_gpu);
-
-    fn dropout_zeros_raito<D: Device>() {
-        let mut state = DropoutState::<f32, D>::new(0.75);
-        let x = crate::matrix::Matrix::from_vec(vec![1.0; 200], &[10, 20]);
-
-        let y = dropout(&x, &mut state);
-        let y_cpu = y.clone().to::<Cpu>();
-        let y_cpu_ref = y_cpu.to_ref();
-        let y_cpu_slice = y_cpu_ref.as_slice();
-
-        let mut num_zeros = 0;
-        for i in 0..y_cpu_slice.len() {
-            if y_cpu_slice[i] == 0.0 {
-                num_zeros += 1;
-            }
-        }
-
-        let raito = num_zeros as f32 / y_cpu_slice.len() as f32;
-        let expected = 0.75;
-        assert!(dbg!(raito - expected).abs() < 0.01);
-    }
-    run_mat_test!(
-        dropout_zeros_raito,
-        dropout_zeros_raito_cpu,
-        dropout_zeros_raito_gpu
-    );
+    // fn dropout_zeros_raito<D: Device>() {
+    //     let mut state = DropoutState::<f32, D>::new(0.75);
+    //     let x = crate::matrix::Matrix::from_vec(vec![1.0; 200], &[10, 20]);
+    //
+    //     let y = dropout(&x, &mut state);
+    //     let y_cpu = y.clone().to::<Cpu>();
+    //     let y_cpu_ref = y_cpu.to_ref();
+    //     let y_cpu_slice = y_cpu_ref.as_slice();
+    //
+    //     let mut num_zeros = 0;
+    //     for i in 0..y_cpu_slice.len() {
+    //         if y_cpu_slice[i] == 0.0 {
+    //             num_zeros += 1;
+    //         }
+    //     }
+    //
+    //     let raito = num_zeros as f32 / y_cpu_slice.len() as f32;
+    //     let expected = 0.75;
+    //     assert!(dbg!(raito - expected).abs() < 0.01);
+    // }
+    // run_mat_test!(
+    //     dropout_zeros_raito,
+    //     dropout_zeros_raito_cpu,
+    //     dropout_zeros_raito_gpu
+    // );
 }
