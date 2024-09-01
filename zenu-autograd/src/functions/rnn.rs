@@ -1,4 +1,4 @@
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::RefCell, ops::DerefMut, rc::Rc};
 
 use zenu_matrix::{device::Device, nn::rnn::RNNDescriptor, num::Num};
 
@@ -14,29 +14,32 @@ struct CudnnRNN<T: Num> {
     hx: Option<Variable<T, Nvidia>>,
     hy: VariableWeak<T, Nvidia>,
     y: VariableWeak<T, Nvidia>,
+    is_training: bool,
 }
 
 #[cfg(feature = "nvidia")]
 impl<T: Num> Function<T, Nvidia> for CudnnRNN<T> {
     fn forward(&self) {
-        let rnn_desc = self.rnn_desc.borrow_mut();
-        rnn_desc.forward(
-            &self.x,
-            self.hx.as_ref(),
-            &self.hy.upgrade().unwrap(),
-            &self.y.upgrade().unwrap(),
-        );
+        let mut rnn_desc = self.rnn_desc.borrow_mut();
+        let rnn_desc = rnn_desc.deref_mut();
+        let hx = val_option_to_ref_mat_option(&self.hx);
+        let output = rnn_desc.rnn_fwd(self.x.get_data().to_ref(), hx, self.is_training);
+        self.hy
+            .upgrade()
+            .unwrap()
+            .get_data_mut()
+            .to_ref_mut()
+            .copy_from(&output.hy);
+        self.y
+            .upgrade()
+            .unwrap()
+            .get_data_mut()
+            .to_ref_mut()
+            .copy_from(&output.y);
     }
 
     fn backward(&self) {
-        let rnn_desc = self.rnn_desc.borrow();
-        let mut rnn = rnn_desc.borrow_mut();
-        rnn.backward(
-            &self.x,
-            self.hx.as_ref(),
-            &self.hy.upgrade().unwrap(),
-            &self.y.upgrade().unwrap(),
-        );
+        todo!();
     }
 
     fn get_inputs(&self) -> Vec<Variable<T, Nvidia>> {
@@ -53,25 +56,29 @@ pub fn cudnn_rnn_fwd<T: Num>(
     rnn_desc: Rc<RefCell<RNNDescriptor<T>>>,
     x: Variable<T, Nvidia>,
     hx: Option<Variable<T, Nvidia>>,
+    is_training: bool,
 ) -> RNNOutput<T, Nvidia> {
     let num_layers = rnn_desc.borrow().get_num_layers();
     let hidden_size = rnn_desc.borrow().get_hidden_size();
-    let seq_len = x.shape()[0];
-    let batch_size = x.shape()[1];
+    let x_shape = x.get_shape();
+    let seq_len = x_shape[0];
+    let batch_size = x_shape[1];
     let hy = alloc([num_layers, hidden_size]);
     let y = alloc([seq_len, batch_size, hidden_size]);
     let layer = CudnnRNN {
         rnn_desc,
         x,
         hx,
-        hy: VariableWeak::downgrade(&hy),
-        y: VariableWeak::downgrade(&y),
+        hy: hy.clone().downgrade(),
+        y: y.clone().downgrade(),
+        is_training,
     };
 
     layer.forward();
 
-    hy.set_creator(Rc::new(RefCell::new(Box::new(layer))));
-    y.set_creator(Rc::new(RefCell::new(Box::new(layer))));
+    let layer = Rc::new(RefCell::new(Box::new(layer) as Box<dyn Function<T, Nvidia>>));
+    hy.set_creator(layer.clone());
+    y.set_creator(layer);
 
     RNNOutput { y, hy }
 }
@@ -92,13 +99,18 @@ struct CudnnRnnBkwd<T: Num> {
 
 #[cfg(feature = "nvidia")]
 impl<T: Num> Function<T, Nvidia> for CudnnRnnBkwd<T> {
-    fn forward(&mut self) {
-        let rnn_desc = self.rnn_desc.borrow();
-        let mut rnn = rnn_desc.borrow_mut();
-        let dx = rnn.rnn_bkwd();
+    fn forward(&self) {
+        let mut rnn_desc = self.rnn_desc.borrow_mut();
+        let data = rnn_desc.rnn_bkwd_data(
+            self.x.get_shape(),
+            self.y.get_data().to_ref(),
+            self.dy.get_data().to_ref(),
+            self.hx.as_ref().map(|hx| hx.get_data().to_ref()),
+            self.dhy.as_ref().map(|dhy| dhy.get_data().to_ref()),
+        );
     }
 
-    fn backward(&mut self) {
+    fn backward(&self) {
         unimplemented!(
             "this rnn fucntionn is use cudnn. cudnn rnn backward is not implemented yet"
         );
