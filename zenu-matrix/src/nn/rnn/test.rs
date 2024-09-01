@@ -20,7 +20,7 @@ mod rnn {
         let output_size = hidden_weight.shape()[0];
         let batch_size = matrix_map.get("input").unwrap().shape()[1];
 
-        let mut config = RNNDescriptor::<f32>::new_rnn_relu(
+        let mut desc = RNNDescriptor::<f32>::new_rnn_relu(
             false,
             0.0,
             input_size,
@@ -28,9 +28,7 @@ mod rnn {
             num_layers,
             batch_size,
         );
-        // let weight_bytes = config.get_weight_bytes();
-        // let param = RNNParameters::new(weight_bytes);
-        config.alloc_weight();
+        desc.alloc_weight();
 
         let rnn_weights = RNNWeights::new(
             input_weight,
@@ -39,26 +37,19 @@ mod rnn {
             Some(hidden_bias),
         );
 
-        config.load_rnn_weights(vec![rnn_weights]).unwrap();
+        desc.load_rnn_weights(vec![rnn_weights]).unwrap();
 
         let x = matrix_map.get("input").unwrap().clone();
         let x = x.to::<Nvidia>();
 
-        let y = rnn_fwd(x.to_ref(), None, true, &mut config);
+        let y = desc.rnn_fwd(x.to_ref(), None, true);
         let output = matrix_map.get("output").unwrap().clone();
         let output = output.to::<Nvidia>();
         assert_mat_eq_epsilon!(y.y.to_ref(), output, 1e-5);
 
         let dy = Matrix::ones_like(&y.y);
 
-        let dx = rnn_bkwd_data(
-            x.shape(),
-            y.y.to_ref(),
-            dy.to_ref(),
-            None,
-            None,
-            &mut config,
-        );
+        let dx = desc.rnn_bkwd_data(x.shape(), y.y.to_ref(), dy.to_ref(), None, None);
 
         assert_mat_eq_epsilon!(
             dx.dx.to_ref(),
@@ -66,9 +57,9 @@ mod rnn {
             1e-5
         );
 
-        let dw = rnn_bkwd_weights(x.to_ref(), None, y.y.to_ref(), &mut config);
+        let dw = desc.rnn_bkwd_weights(x.to_ref(), None, y.y.to_ref());
 
-        let params = config.store_rnn_weights::<Cpu>(dw.weight as *mut u8);
+        let params = desc.store_rnn_weights::<Cpu>(dw.weight as *mut u8);
 
         for layer_id in 0..num_layers {
             let input_weight = params[layer_id].input_weight();

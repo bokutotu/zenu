@@ -5,4 +5,3 @@ mod test;
 
 pub use descriptor::*;
 pub use params::*;
-pub use rnn::*;
