@@ -12,17 +12,21 @@ use super::RNNWeights;
 
 pub struct RNNDescriptor<T: Num> {
     pub desc: RNNDesc<T>,
-    workspace: *mut u8,
-    reserve_space: *mut u8,
+    workspace: Option<*mut u8>,
+    reserve_space: Option<*mut u8>,
+    weight: Option<*mut u8>,
 }
 
 impl<T: Num> Drop for RNNDescriptor<T> {
     fn drop(&mut self) {
-        if !self.workspace.is_null() {
-            Nvidia::drop_ptr(self.workspace);
+        if self.workspace.is_some() {
+            Nvidia::drop_ptr(self.workspace.unwrap());
         }
-        if !self.reserve_space.is_null() {
-            Nvidia::drop_ptr(self.reserve_space);
+        if self.reserve_space.is_some() {
+            Nvidia::drop_ptr(self.reserve_space.unwrap());
+        }
+        if self.weight.is_some() {
+            Nvidia::drop_ptr(self.weight.unwrap());
         }
     }
 }
@@ -54,8 +58,9 @@ impl<T: Num> RNNDescriptor<T> {
         );
         Self {
             desc,
-            workspace: std::ptr::null_mut(),
-            reserve_space: std::ptr::null_mut(),
+            workspace: None,
+            reserve_space: None,
+            weight: None,
         }
     }
 
@@ -139,15 +144,22 @@ impl<T: Num> RNNDescriptor<T> {
         self.desc.get_weights_size()
     }
 
+    pub fn alloc_weight(&mut self) {
+        if self.weight.is_some() {
+            Nvidia::drop_ptr(self.weight.unwrap());
+        }
+        self.weight = Some(Nvidia::alloc(self.get_weight_bytes()).unwrap());
+    }
+
     /// this function set input sequence length
     /// if seq_length is different from the previous one, it will reallocate workspace
     pub fn config_seq_length(&mut self, is_training: bool, seq_length: usize) {
-        let prev_workspace_size = if self.workspace.is_null() {
+        let prev_workspace_size = if self.workspace.is_none() {
             0
         } else {
             self.desc.get_workspace_size()
         };
-        let prev_reserve_space_size = if self.reserve_space.is_null() {
+        let prev_reserve_space_size = if self.reserve_space.is_none() {
             0
         } else {
             self.desc.get_reserve_size()
@@ -169,15 +181,15 @@ impl<T: Num> RNNDescriptor<T> {
     }
 
     pub fn allocate_workspace(&mut self) {
-        if !self.workspace.is_null() {
-            Nvidia::drop_ptr(self.workspace);
+        if self.workspace.is_some() {
+            Nvidia::drop_ptr(self.workspace.unwrap());
         }
-        if !self.reserve_space.is_null() {
-            Nvidia::drop_ptr(self.reserve_space);
+        if self.reserve_space.is_some() {
+            Nvidia::drop_ptr(self.reserve_space.unwrap());
         }
 
-        self.workspace = Nvidia::alloc(self.desc.get_workspace_size()).unwrap();
-        self.reserve_space = Nvidia::alloc(self.desc.get_reserve_size()).unwrap();
+        self.workspace = Some(Nvidia::alloc(self.desc.get_workspace_size()).unwrap());
+        self.reserve_space = Some(Nvidia::alloc(self.desc.get_reserve_size()).unwrap());
     }
 
     pub fn get_input_size(&self) -> usize {
@@ -205,14 +217,14 @@ impl<T: Num> RNNDescriptor<T> {
     // TODO: ptrはRNNDescriptorのメンバにする
     pub fn load_rnn_weights<D: Device>(
         &self,
-        ptr: *mut u8,
+        // ptr: *mut u8,
         mut params: Vec<RNNWeights<T, D>>,
     ) -> Result<(), String> {
         if self.get_num_layers() != params.len() {
             return Err("Number of layers does not match".to_string());
         }
 
-        let rnn_params = self.desc.get_rnn_params(ptr as *mut _);
+        let rnn_params = self.desc.get_rnn_params(self.weight.unwrap() as *mut _);
 
         for idx in 0..self.get_num_layers() {
             let layer = &mut params[idx];
@@ -264,7 +276,6 @@ impl<T: Num> RNNDescriptor<T> {
         hy: *mut T,
         cx: *const T,
         cy: *mut T,
-        weight: *mut T,
     ) {
         self.desc.fwd(
             x,
@@ -273,9 +284,9 @@ impl<T: Num> RNNDescriptor<T> {
             hy,
             cx,
             cy,
-            weight,
-            self.workspace as *mut _,
-            self.reserve_space as *mut _,
+            self.weight.unwrap() as *mut _,
+            self.workspace.unwrap() as *mut _,
+            self.reserve_space.unwrap() as *mut _,
         );
     }
 
@@ -291,7 +302,7 @@ impl<T: Num> RNNDescriptor<T> {
         cx: *const T,
         dcy: *const T,
         dcx: *mut T,
-        weight: *const T,
+        // weight: *const T,
     ) {
         self.desc.bkwd_data(
             y,
@@ -303,9 +314,9 @@ impl<T: Num> RNNDescriptor<T> {
             cx,
             dcy,
             dcx,
-            weight,
-            self.workspace as *mut _,
-            self.reserve_space as *mut _,
+            self.weight.unwrap() as *mut _,
+            self.workspace.unwrap() as *mut _,
+            self.reserve_space.unwrap() as *mut _,
         )
     }
 
@@ -315,8 +326,8 @@ impl<T: Num> RNNDescriptor<T> {
             hx,
             y,
             dweight,
-            self.workspace as *mut _,
-            self.reserve_space as *mut _,
+            self.workspace.unwrap() as *mut _,
+            self.reserve_space.unwrap() as *mut _,
         )
     }
 }

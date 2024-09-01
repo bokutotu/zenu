@@ -28,8 +28,9 @@ mod rnn {
             num_layers,
             batch_size,
         );
-        let weight_bytes = config.get_weight_bytes();
-        let param = RNNParameters::new(weight_bytes);
+        // let weight_bytes = config.get_weight_bytes();
+        // let param = RNNParameters::new(weight_bytes);
+        config.alloc_weight();
 
         let rnn_weights = RNNWeights::new(
             input_weight,
@@ -38,14 +39,12 @@ mod rnn {
             Some(hidden_bias),
         );
 
-        config
-            .load_rnn_weights(param.weight, vec![rnn_weights])
-            .unwrap();
+        config.load_rnn_weights(vec![rnn_weights]).unwrap();
 
         let x = matrix_map.get("input").unwrap().clone();
         let x = x.to::<Nvidia>();
 
-        let y = rnn_fwd(x.to_ref(), None, true, &mut config, &param);
+        let y = rnn_fwd(x.to_ref(), None, true, &mut config);
         let output = matrix_map.get("output").unwrap().clone();
         let output = output.to::<Nvidia>();
         assert_mat_eq_epsilon!(y.y.to_ref(), output, 1e-5);
@@ -59,7 +58,6 @@ mod rnn {
             None,
             None,
             &mut config,
-            &param,
         );
 
         assert_mat_eq_epsilon!(
