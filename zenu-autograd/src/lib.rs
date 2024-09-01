@@ -18,7 +18,7 @@ use serde::{Deserialize, Serialize};
 use zenu_matrix::{
     device::Device,
     dim::{larger_shape, DimDyn, DimTrait},
-    matrix::{Matrix, Owned},
+    matrix::{Matrix, Owned, Ref as MRef},
     num::Num,
 };
 
@@ -434,6 +434,24 @@ impl<T: Num, D: Device> Variable<T, D> {
         Variable {
             inner: Rc::new(RefCell::new(self.inner.borrow().to())),
         }
+    }
+}
+
+pub(crate) fn val_option_to_ref_mat_option<T: Num, D: Device>(
+    val_option: &Option<Variable<T, D>>,
+) -> Option<Matrix<MRef<&T>, DimDyn, D>> {
+    match *val_option {
+        Some(ref val) => Some(val.get_data().to_ref()),
+        None => None,
+    }
+}
+
+pub(crate) fn val_option_to_ref_mat_option_mut<T: Num, D: Device>(
+    val_option: &Option<Variable<T, D>>,
+) -> Option<Matrix<MRef<&mut T>, DimDyn, D>> {
+    match *val_option {
+        Some(ref mut val) => Some(val.get_data().to_ref_mut()),
+        None => None,
     }
 }
 
