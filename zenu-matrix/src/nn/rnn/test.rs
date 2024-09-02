@@ -57,9 +57,9 @@ mod rnn {
             1e-5
         );
 
-        let dw = desc.rnn_bkwd_weights(x.to_ref(), None, y.y.to_ref());
+        let mut dw = desc.rnn_bkwd_weights(x.to_ref(), None, y.y.to_ref());
 
-        let params = desc.store_rnn_weights::<Cpu>(dw.weight as *mut u8);
+        let params = desc.store_rnn_weights::<Cpu>(dw.to_ref_mut().as_ptr() as *mut u8);
 
         for layer_id in 0..num_layers {
             let input_weight = params[layer_id].input_weight();

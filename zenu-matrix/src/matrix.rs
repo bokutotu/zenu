@@ -125,7 +125,7 @@ where
         D::get_item(self.ptr, offset + self.offset)
     }
 
-    fn to_ref(&self) -> Ptr<Ref<&R::Item>, D> {
+    fn to_ref<'a>(&self) -> Ptr<Ref<&'a R::Item>, D> {
         Ptr {
             ptr: self.ptr,
             len: self.len,
@@ -209,7 +209,7 @@ where
     R: OwnedRepr,
     D: DeviceBase,
 {
-    fn to_ref_mut(&mut self) -> Ptr<Ref<&mut R::Item>, D> {
+    fn to_ref_mut<'a>(&mut self) -> Ptr<Ref<&'a mut R::Item>, D> {
         Ptr {
             ptr: self.ptr,
             len: self.len,
@@ -410,7 +410,7 @@ where
         self.ptr.get_item(offset)
     }
 
-    pub fn to_ref(&self) -> Matrix<Ref<&R::Item>, S, D> {
+    pub fn to_ref<'a>(&self) -> Matrix<Ref<&'a R::Item>, S, D> {
         Matrix {
             ptr: self.ptr.to_ref(),
             shape: self.shape,
@@ -464,7 +464,7 @@ where
     D: DeviceBase,
     S: DimTrait,
 {
-    pub fn to_ref_mut(&mut self) -> Matrix<Ref<&mut T>, S, D> {
+    pub fn to_ref_mut<'a>(&mut self) -> Matrix<Ref<&'a mut T>, S, D> {
         Matrix {
             ptr: self.ptr.to_ref_mut(),
             shape: self.shape,
