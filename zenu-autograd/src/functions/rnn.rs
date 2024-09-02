@@ -11,6 +11,7 @@ use zenu_matrix::device::nvidia::Nvidia;
 struct CudnnRNN<T: Num> {
     rnn_desc: Rc<RefCell<RNNDescriptor<T>>>,
     x: Variable<T, Nvidia>,
+    weight: Variable<T, Nvidia>,
     hx: Option<Variable<T, Nvidia>>,
     hy: VariableWeak<T, Nvidia>,
     y: VariableWeak<T, Nvidia>,
@@ -22,24 +23,47 @@ impl<T: Num> Function<T, Nvidia> for CudnnRNN<T> {
     fn forward(&self) {
         let mut rnn_desc = self.rnn_desc.borrow_mut();
         let rnn_desc = rnn_desc.deref_mut();
-        let hx = val_option_to_ref_mat_option(&self.hx);
-        let output = rnn_desc.rnn_fwd(self.x.get_data().to_ref(), hx, self.is_training);
-        self.hy
-            .upgrade()
-            .unwrap()
-            .get_data_mut()
-            .to_ref_mut()
-            .copy_from(&output.hy);
-        self.y
-            .upgrade()
-            .unwrap()
-            .get_data_mut()
-            .to_ref_mut()
-            .copy_from(&output.y);
+        let hx = self.hx.as_ref().map(|hx| (*hx.get_data()).to_ref());
+        let output = rnn_desc.rnn_fwd(
+            self.x.get_as_ref(),
+            hx,
+            self.weight.get_as_ref(),
+            self.is_training,
+        );
+        self.hy.upgrade().unwrap().swap_inner(output.hy);
+        self.y.upgrade().unwrap().swap_inner(output.y);
     }
 
     fn backward(&self) {
-        todo!();
+        if !self.is_training {
+            panic!("backward is not allowed when is_training is false");
+        }
+
+        let mut rnn_desc = self.rnn_desc.borrow_mut();
+        let rnn_desc = rnn_desc.deref_mut();
+
+        let x = self.x.get_as_ref();
+        let y = self.y.upgrade().unwrap().get_as_ref();
+        let dy = self.y.upgrade().unwrap().get_grad().unwrap().get_as_ref();
+        let hx = self.hx.as_ref().map(|hx| (*hx.get_data()).to_ref());
+        let dhy = self
+            .hy
+            .upgrade()
+            .unwrap()
+            .get_grad()
+            .map(|dhy| dhy.get_as_ref());
+        let weight = self.weight.get_data().to_ref();
+        let ddata =
+            rnn_desc.rnn_bkwd_data(self.x.get_shape(), y.clone(), dy, hx.clone(), dhy, weight);
+
+        let dw = rnn_desc.rnn_bkwd_weights(x, hx, y);
+
+        self.x.set_grad(Variable::new(ddata.dx));
+        self.hx
+            .as_ref()
+            .map(|hx| hx.set_grad(Variable::new(ddata.dhx)));
+
+        self.weight.set_grad(Variable::new(dw));
     }
 
     fn get_inputs(&self) -> Vec<Variable<T, Nvidia>> {
@@ -56,6 +80,7 @@ pub fn cudnn_rnn_fwd<T: Num>(
     rnn_desc: Rc<RefCell<RNNDescriptor<T>>>,
     x: Variable<T, Nvidia>,
     hx: Option<Variable<T, Nvidia>>,
+    weight: Variable<T, Nvidia>,
     is_training: bool,
 ) -> RNNOutput<T, Nvidia> {
     let num_layers = rnn_desc.borrow().get_num_layers();
@@ -71,6 +96,7 @@ pub fn cudnn_rnn_fwd<T: Num>(
         hx,
         hy: hy.clone().downgrade(),
         y: y.clone().downgrade(),
+        weight,
         is_training,
     };
 
@@ -81,49 +107,4 @@ pub fn cudnn_rnn_fwd<T: Num>(
     y.set_creator(layer);
 
     RNNOutput { y, hy }
-}
-
-#[cfg(feature = "nvidia")]
-struct CudnnRnnBkwd<T: Num> {
-    rnn_desc: Rc<RefCell<RNNDescriptor<T>>>,
-    x: Variable<T, Nvidia>,
-    hx: Option<Variable<T, Nvidia>>,
-    hy: Variable<T, Nvidia>,
-    y: Variable<T, Nvidia>,
-    dy: Variable<T, Nvidia>,
-    dhy: Option<Variable<T, Nvidia>>,
-    dx: VariableWeak<T, Nvidia>,
-    dhx: VariableWeak<T, Nvidia>,
-    dw: VariableWeak<T, Nvidia>,
-}
-
-#[cfg(feature = "nvidia")]
-impl<T: Num> Function<T, Nvidia> for CudnnRnnBkwd<T> {
-    fn forward(&self) {
-        let mut rnn_desc = self.rnn_desc.borrow_mut();
-        let data = rnn_desc.rnn_bkwd_data(
-            self.x.get_shape(),
-            self.y.get_data().to_ref(),
-            self.dy.get_data().to_ref(),
-            self.hx.as_ref().map(|hx| hx.get_data().to_ref()),
-            self.dhy.as_ref().map(|dhy| dhy.get_data().to_ref()),
-        );
-    }
-
-    fn backward(&self) {
-        unimplemented!(
-            "this rnn fucntionn is use cudnn. cudnn rnn backward is not implemented yet"
-        );
-    }
-
-    fn get_inputs(&self) -> Vec<Variable<T, Nvidia>> {
-        vec![
-            self.x.clone(),
-            self.hx.clone().unwrap(),
-            self.hy.clone(),
-            self.y.clone(),
-            self.dy.clone(),
-            self.dhy.clone().unwrap(),
-        ]
-    }
 }
