@@ -18,12 +18,15 @@ impl<T: Num> RNNDescriptor<T> {
         if x[2] != self.get_input_size() {
             panic!("Input size mismatch");
         }
-        let d = self.get_num_layers() * if self.get_is_bidirectional() { 2 } else { 1 };
+        let num_layers = self.get_num_layers() * if self.get_is_bidirectional() { 2 } else { 1 };
         if let Some(hx) = hx {
-            if hx[0] != d {
+            if hx[0] != num_layers {
                 panic!("Number of layers mismatch");
             }
-            if hx[1] != self.get_hidden_size() {
+            if hx[1] != self.get_batch_size() {
+                panic!("Hidden size mismatch");
+            }
+            if hx[2] != self.get_hidden_size() {
                 panic!("Hidden size mismatch");
             }
         }
@@ -37,13 +40,14 @@ impl<T: Num> RNNDescriptor<T> {
         is_training: bool,
     ) -> RNNOutput<T> {
         self.rnn_fwd_shape_check(x.shape(), hx.as_ref().map(|hx| hx.to_ref().shape()));
-        self.config_seq_length(is_training, x.shape()[0]);
+        self.config_seq_length(is_training, x.shape()[0], x.shape()[1]);
 
-        let mut y = Matrix::alloc([x.shape()[0], x.shape()[1], self.get_hidden_size()]);
+        let hidden_size = self.get_hidden_size() * if self.get_is_bidirectional() { 2 } else { 1 };
+        let mut y = Matrix::alloc([x.shape()[0], x.shape()[1], hidden_size]);
 
-        let d = self.get_num_layers() * if self.get_is_bidirectional() { 2 } else { 1 };
+        let num_layers = self.get_num_layers() * if self.get_is_bidirectional() { 2 } else { 1 };
 
-        let mut hy = Matrix::alloc([d, self.get_hidden_size()]);
+        let mut hy = Matrix::zeros([num_layers, self.get_batch_size(), self.get_hidden_size()]);
 
         self.fwd(
             x.as_ptr(),
@@ -80,7 +84,8 @@ impl<T: Num> RNNDescriptor<T> {
         if y[1] != self.get_batch_size() {
             panic!("Batch size mismatch");
         }
-        if y[2] != self.get_hidden_size() {
+        let hidden_size = self.get_hidden_size() * if self.get_is_bidirectional() { 2 } else { 1 };
+        if y[2] != hidden_size {
             panic!("Hidden size mismatch");
         }
         if y.slice() != dy.slice() {
@@ -102,11 +107,14 @@ impl<T: Num> RNNDescriptor<T> {
             panic!("hx and dhy shape mismatch");
         }
 
-        let d = self.get_num_layers() * if self.get_is_bidirectional() { 2 } else { 1 };
-        if hx[0] != d {
+        let num_layers = self.get_num_layers() * if self.get_is_bidirectional() { 2 } else { 1 };
+        if hx[0] != num_layers {
             panic!("Number of layers mismatch");
         }
-        if hx[1] != self.get_hidden_size() {
+        if hx[1] != self.get_batch_size() {
+            panic!("Batch size mismatch");
+        }
+        if hx[2] != self.get_hidden_size() {
             panic!("Hidden size mismatch");
         }
     }
@@ -127,7 +135,7 @@ impl<T: Num> RNNDescriptor<T> {
             hx.as_ref().map(|hx| hx.shape()),
             dhy.as_ref().map(|dhy| dhy.shape()),
         );
-        self.config_seq_length(true, x_shape[0]);
+        self.config_seq_length(true, x_shape[0], x_shape[1]);
 
         let mut dx = Matrix::alloc(x_shape);
         let mut dhx = {
@@ -171,16 +179,20 @@ impl<T: Num> RNNDescriptor<T> {
         if y[1] != self.get_batch_size() {
             panic!("Batch size mismatch");
         }
-        if y[2] != self.get_hidden_size() {
+        let hidden_size = self.get_hidden_size() * if self.get_is_bidirectional() { 2 } else { 1 };
+        if y[2] != hidden_size {
             panic!("Hidden size mismatch");
         }
 
-        let d = self.get_num_layers() * if self.get_is_bidirectional() { 2 } else { 1 };
+        let num_layers = self.get_num_layers() * if self.get_is_bidirectional() { 2 } else { 1 };
         if let Some(hx) = hx {
-            if hx[0] != d {
+            if hx[0] != num_layers {
                 panic!("Number of layers mismatch");
             }
-            if hx[1] != self.get_hidden_size() {
+            if hx[1] != self.get_batch_size() {
+                panic!("Batch size mismatch");
+            }
+            if hx[2] != self.get_hidden_size() {
                 panic!("Hidden size mismatch");
             }
         }
@@ -193,7 +205,7 @@ impl<T: Num> RNNDescriptor<T> {
         y: Matrix<Ref<&T>, DimDyn, Nvidia>,
     ) -> Matrix<Owned<T>, DimDyn, Nvidia> {
         self.rnn_bkwd_weights_shape_check(x.shape(), hx.as_ref().map(|hx| hx.shape()), y.shape());
-        self.config_seq_length(true, x.shape()[0]);
+        self.config_seq_length(true, x.shape()[0], x.shape()[1]);
 
         let dweight = Nvidia::alloc(self.desc.get_weights_size()).unwrap();
 

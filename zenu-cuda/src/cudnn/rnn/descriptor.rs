@@ -79,14 +79,15 @@ impl<T: 'static + Copy> RNNDescriptor<T> {
         num_layers: usize,
         batch_size: usize,
     ) -> Self {
+        let h_num_layers = num_layers * if bidirectional { 2 } else { 1 };
         let h_desc = tensor_descriptor_nd::<T>(
-            &[num_layers as i32, batch_size as i32, hidden_size as i32],
+            &[h_num_layers as i32, batch_size as i32, hidden_size as i32],
             &[(batch_size * hidden_size) as i32, hidden_size as i32, 1],
         )
         .unwrap();
 
         let c_desc = tensor_descriptor_nd::<T>(
-            &[num_layers as i32, batch_size as i32, hidden_size as i32],
+            &[h_num_layers as i32, batch_size as i32, hidden_size as i32],
             &[(batch_size * hidden_size) as i32, hidden_size as i32, 1],
         )
         .unwrap();
@@ -185,7 +186,9 @@ impl<T: 'static + Copy> RNNDescriptor<T> {
         }
         let mut params = Vec::new();
 
-        for layer_idx in 0..self.num_layers {
+        let num_layers = self.num_layers * if self.bidirectional { 2 } else { 1 };
+
+        for layer_idx in 0..num_layers {
             let input_params =
                 rnn_weight_params(self.rnn_desc, layer_idx, self.weights_size, weight_ptr, 0)
                     .unwrap();
@@ -366,10 +369,12 @@ impl<T: 'static + Copy> RNNDescriptor<T> {
         )
         .unwrap();
 
+        let hidden_size = self.hidden_size * if self.bidirectional { 2 } else { 1 };
+
         let y_desc = rnn_data_descriptor::<T>(
             seq_length as i32,
             self.batch_size as i32,
-            self.hidden_size as i32,
+            hidden_size as i32,
             &seq_len_array,
             layout,
             fill_value,
