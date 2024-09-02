@@ -33,6 +33,7 @@ impl<T: Num> RNNDescriptor<T> {
         &mut self,
         x: Matrix<Ref<&T>, DimDyn, Nvidia>,
         hx: Option<Matrix<Ref<&T>, DimDyn, Nvidia>>,
+        weight: Matrix<Ref<&T>, DimDyn, Nvidia>,
         is_training: bool,
     ) -> RNNOutput<T> {
         self.rnn_fwd_shape_check(x.shape(), hx.as_ref().map(|hx| hx.to_ref().shape()));
@@ -51,6 +52,7 @@ impl<T: Num> RNNDescriptor<T> {
             hy.to_ref_mut().as_mut_ptr(),
             std::ptr::null_mut(),
             std::ptr::null_mut(),
+            weight.as_ptr(),
         );
         RNNOutput { y, hy }
     }
@@ -116,6 +118,7 @@ impl<T: Num> RNNDescriptor<T> {
         dy: Matrix<Ref<&T>, DimDyn, Nvidia>,
         hx: Option<Matrix<Ref<&T>, DimDyn, Nvidia>>,
         dhy: Option<Matrix<Ref<&T>, DimDyn, Nvidia>>,
+        weight: Matrix<Ref<&T>, DimDyn, Nvidia>,
     ) -> RNNBkwdDataOutput<T> {
         self.rnn_bkwd_data_shape_check(
             x_shape,
@@ -147,6 +150,7 @@ impl<T: Num> RNNDescriptor<T> {
             std::ptr::null_mut(),
             std::ptr::null_mut(),
             std::ptr::null_mut(),
+            weight.as_ptr(),
         );
         RNNBkwdDataOutput { dx, dhx }
     }

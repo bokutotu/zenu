@@ -28,7 +28,8 @@ mod rnn {
             num_layers,
             batch_size,
         );
-        desc.alloc_weight();
+        let weight_num_elm = desc.get_weight_num_elems();
+        let mut weight = Matrix::<Owned<f32>, DimDyn, Nvidia>::alloc([weight_num_elm]);
 
         let rnn_weights = RNNWeights::new(
             input_weight,
@@ -37,19 +38,30 @@ mod rnn {
             Some(hidden_bias),
         );
 
-        desc.load_rnn_weights(vec![rnn_weights]).unwrap();
+        desc.load_rnn_weights(
+            weight.to_ref_mut().as_mut_ptr() as *mut _,
+            vec![rnn_weights],
+        )
+        .unwrap();
 
         let x = matrix_map.get("input").unwrap().clone();
         let x = x.to::<Nvidia>();
 
-        let y = desc.rnn_fwd(x.to_ref(), None, true);
+        let y = desc.rnn_fwd(x.to_ref(), None, weight.to_ref(), true);
         let output = matrix_map.get("output").unwrap().clone();
         let output = output.to::<Nvidia>();
         assert_mat_eq_epsilon!(y.y.to_ref(), output, 1e-5);
 
         let dy = Matrix::ones_like(&y.y);
 
-        let dx = desc.rnn_bkwd_data(x.shape(), y.y.to_ref(), dy.to_ref(), None, None);
+        let dx = desc.rnn_bkwd_data(
+            x.shape(),
+            y.y.to_ref(),
+            dy.to_ref(),
+            None,
+            None,
+            weight.to_ref(),
+        );
 
         assert_mat_eq_epsilon!(
             dx.dx.to_ref(),

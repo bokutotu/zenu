@@ -311,9 +311,23 @@ impl<T: Num, D: Device> Variable<T, D> {
         }
     }
 
+    pub fn swap_inner(&self, inner: Matrix<Owned<T>, DimDyn, D>) {
+        self.inner.borrow_mut().data = inner;
+    }
+
     pub fn get_data<'a>(&'a self) -> Ref<'a, Matrix<Owned<T>, DimDyn, D>> {
         let reference: Ref<'a, VariableInner<T, D>> = self.inner.borrow();
         Ref::map(reference, |r| &r.data)
+    }
+
+    pub fn get_as_ref<'a>(&self) -> Matrix<MRef<&'a T>, DimDyn, D> {
+        let data = self.get_data();
+        data.to_ref()
+    }
+
+    pub fn get_as_mut<'a>(&self) -> Matrix<MRef<&'a mut T>, DimDyn, D> {
+        let mut data = self.get_data_mut();
+        data.to_ref_mut()
     }
 
     pub fn get_data_mut<'a>(&'a self) -> RefMut<'a, Matrix<Owned<T>, DimDyn, D>> {
@@ -434,24 +448,6 @@ impl<T: Num, D: Device> Variable<T, D> {
         Variable {
             inner: Rc::new(RefCell::new(self.inner.borrow().to())),
         }
-    }
-}
-
-pub(crate) fn val_option_to_ref_mat_option<T: Num, D: Device>(
-    val_option: &Option<Variable<T, D>>,
-) -> Option<Matrix<MRef<&T>, DimDyn, D>> {
-    match *val_option {
-        Some(ref val) => Some(val.get_data().to_ref()),
-        None => None,
-    }
-}
-
-pub(crate) fn val_option_to_ref_mat_option_mut<T: Num, D: Device>(
-    val_option: &Option<Variable<T, D>>,
-) -> Option<Matrix<MRef<&mut T>, DimDyn, D>> {
-    match *val_option {
-        Some(ref mut val) => Some(val.get_data().to_ref_mut()),
-        None => None,
     }
 }
 
