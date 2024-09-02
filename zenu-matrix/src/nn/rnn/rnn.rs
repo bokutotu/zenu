@@ -1,11 +1,11 @@
 use crate::{
     device::{nvidia::Nvidia, DeviceBase},
     dim::{DimDyn, DimTrait},
-    matrix::{Matrix, Ref},
+    matrix::{Matrix, Owned, Ptr, Ref},
     num::Num,
 };
 
-use super::{RNNBkwdDataOutput, RNNDescriptor, RNNOutput, RNNParameters};
+use super::{RNNBkwdDataOutput, RNNDescriptor, RNNOutput};
 
 impl<T: Num> RNNDescriptor<T> {
     fn rnn_fwd_shape_check(&self, x: DimDyn, hx: Option<DimDyn>) {
@@ -187,7 +187,7 @@ impl<T: Num> RNNDescriptor<T> {
         x: Matrix<Ref<&T>, DimDyn, Nvidia>,
         hx: Option<Matrix<Ref<&T>, DimDyn, Nvidia>>,
         y: Matrix<Ref<&T>, DimDyn, Nvidia>,
-    ) -> RNNParameters {
+    ) -> Matrix<Owned<T>, DimDyn, Nvidia> {
         self.rnn_bkwd_weights_shape_check(x.shape(), hx.as_ref().map(|hx| hx.shape()), y.shape());
         self.config_seq_length(true, x.shape()[0]);
 
@@ -199,6 +199,11 @@ impl<T: Num> RNNDescriptor<T> {
             y.as_ptr(),
             dweight as *mut _,
         );
-        RNNParameters { weight: dweight }
+        let weight_size = self.get_weight_bytes() / std::mem::size_of::<T>();
+        Matrix::new(
+            Ptr::new(dweight as *mut T, weight_size, 0),
+            DimDyn::new(&[weight_size]),
+            DimDyn::new(&[1]),
+        )
     }
 }
