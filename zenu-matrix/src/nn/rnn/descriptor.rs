@@ -145,7 +145,7 @@ impl<T: Num> RNNDescriptor<T> {
 
     /// this function set input sequence length
     /// if seq_length is different from the previous one, it will reallocate workspace
-    pub fn config_seq_length(&mut self, is_training: bool, seq_length: usize) {
+    pub fn config_seq_length(&mut self, is_training: bool, seq_length: usize, batch_size: usize) {
         let prev_workspace_size = if self.workspace.is_none() {
             0
         } else {
@@ -159,7 +159,7 @@ impl<T: Num> RNNDescriptor<T> {
 
         self.desc.set_input_size(
             seq_length,
-            &vec![seq_length; self.desc.get_num_layers()],
+            &vec![seq_length; batch_size],
             RNNDataLayout::SeqMajorUnpacked,
             is_training,
             T::zero(),
@@ -212,13 +212,15 @@ impl<T: Num> RNNDescriptor<T> {
         weight_ptr: *mut u8,
         mut params: Vec<RNNWeights<T, D>>,
     ) -> Result<(), String> {
-        if self.get_num_layers() != params.len() {
+        let expected_size = self.get_num_layers() * if self.get_is_bidirectional() { 2 } else { 1 };
+
+        if expected_size != params.len() {
             return Err("Number of layers does not match".to_string());
         }
 
         let rnn_params = self.desc.get_rnn_params(weight_ptr as *mut _);
 
-        for idx in 0..self.get_num_layers() {
+        for idx in 0..params.len() {
             let layer = &mut params[idx];
             let layer_params = &rnn_params[idx];
 
@@ -229,7 +231,8 @@ impl<T: Num> RNNDescriptor<T> {
     }
 
     pub fn store_rnn_weights<D: Device>(&self, weight_ptr: *mut u8) -> Vec<RNNWeights<T, D>> {
-        let mut params = Vec::with_capacity(self.get_num_layers());
+        let num_layers = self.get_num_layers() * if self.get_is_bidirectional() { 2 } else { 1 };
+        let mut params = Vec::with_capacity(num_layers);
 
         let rnn_params = self.desc.get_rnn_params(weight_ptr as *mut _);
 
@@ -238,7 +241,9 @@ impl<T: Num> RNNDescriptor<T> {
                 let input_shape = &[self.get_hidden_size(), self.get_input_size()];
                 Matrix::alloc(input_shape)
             } else {
-                let input_shape = &[self.get_hidden_size(), self.get_hidden_size()];
+                let input_len =
+                    self.get_hidden_size() * if self.get_is_bidirectional() { 2 } else { 1 };
+                let input_shape = &[self.get_hidden_size(), input_len];
                 Matrix::alloc(input_shape)
             };
             let hidden_weight = Matrix::alloc([self.get_hidden_size(), self.get_hidden_size()]);
