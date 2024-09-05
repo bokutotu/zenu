@@ -22,7 +22,7 @@ pub use zenu_matrix as matrix;
 pub use zenu_optimizer as optimizer;
 
 pub fn update_parameters<T: Num, D: Device, O: Optimizer<T, D>>(
-    loss: Variable<T, D>,
+    loss: &Variable<T, D>,
     optimizer: &O,
 ) {
     loss.backward();
@@ -60,7 +60,7 @@ pub fn load_model<
     let state_dict: HashMap<String, Variable<T, D>> =
         bincode::deserialize(&bin).map_err(|_| "Failed to load model")?;
     let model_state_dict = model.parameters();
-    for (key, value) in state_dict.iter() {
+    for (key, value) in &state_dict {
         if let Some(parameter) = model_state_dict.get(key) {
             parameter
                 .get_data_mut()
@@ -133,7 +133,7 @@ mod save_and_load_paramters {
         };
         load_model(save_path, &new_model).unwrap();
 
-        let fake_input = rand::normal(1.0, 1.0, Some(42), &[1, 2]);
+        let fake_input = rand::normal(1.0, 1.0, Some(42), [1, 2]);
         let original = model.call(fake_input.clone());
         let loaded = model.call(fake_input);
 
@@ -211,14 +211,14 @@ mod save_and_load_paramters {
         let save_path = "test.json";
         save_model(&model, save_path).unwrap();
 
-        let _model = ConvNet::<f32, D> {
+        let model = ConvNet::<f32, D> {
             conv1: zenu_layer::layers::conv2d::Conv2d::new(1, 20, (5, 5), (1, 1), (0, 0), true),
             conv2: zenu_layer::layers::conv2d::Conv2d::new(20, 50, (5, 5), (1, 1), (0, 0), true),
             fc1: Linear::new(4 * 4 * 50, 500, true),
             fc2: Linear::new(500, 10, true),
         };
 
-        let _model = load_model(save_path, &_model).unwrap();
+        let _ = load_model::<f32, D, ConvNet<f32, D>, _>(save_path, &model).unwrap();
 
         std::fs::remove_file(save_path).unwrap();
     }
