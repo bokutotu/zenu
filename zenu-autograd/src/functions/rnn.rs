@@ -1,4 +1,4 @@
-use std::{cell::RefCell, ops::DerefMut, rc::Rc};
+use std::{cell::RefCell, rc::Rc};
 
 use zenu_matrix::{device::Device, nn::rnn::RNNDescriptor, num::Num};
 
@@ -22,7 +22,6 @@ struct CudnnRNN<T: Num> {
 impl<T: Num> Function<T, Nvidia> for CudnnRNN<T> {
     fn forward(&self) {
         let mut rnn_desc = self.rnn_desc.borrow_mut();
-        let rnn_desc = rnn_desc.deref_mut();
         let hx = self.hx.as_ref().map(|hx| (*hx.get_data()).to_ref());
         let output = rnn_desc.rnn_fwd(
             self.x.get_as_ref(),
@@ -35,12 +34,12 @@ impl<T: Num> Function<T, Nvidia> for CudnnRNN<T> {
     }
 
     fn backward(&self) {
-        if !self.is_training {
-            panic!("backward is not allowed when is_training is false");
-        }
+        assert!(
+            self.is_training,
+            "backward is not allowed when is_training is false"
+        );
 
         let mut rnn_desc = self.rnn_desc.borrow_mut();
-        let rnn_desc = rnn_desc.deref_mut();
 
         let x = self.x.get_as_ref();
         let y = self.y.upgrade().unwrap().get_as_ref();
@@ -59,9 +58,9 @@ impl<T: Num> Function<T, Nvidia> for CudnnRNN<T> {
         let dw = rnn_desc.rnn_bkwd_weights(x, hx, y);
 
         self.x.set_grad(Variable::new(ddata.dx));
-        self.hx
-            .as_ref()
-            .map(|hx| hx.set_grad(Variable::new(ddata.dhx)));
+        if let Some(hx) = self.hx.as_ref() {
+            hx.set_grad(Variable::new(ddata.dhx));
+        }
 
         self.weight.set_grad(Variable::new(dw));
     }
@@ -107,4 +106,14 @@ pub fn cudnn_rnn_fwd<T: Num>(
     y.set_creator(layer);
 
     RNNOutput { y, hy }
+}
+
+#[cfg(test)]
+mod rnn {
+    use zenu_matrix::nn::rnn::RNNDescriptor;
+
+    #[test]
+    fn rnn() {
+        // let rnn_desc = RNNDescriptor::<f32>::new(RNNCell::RNN)
+    }
 }

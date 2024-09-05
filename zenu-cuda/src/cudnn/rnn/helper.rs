@@ -13,6 +13,7 @@ use crate::ZENU_CUDA_STATE;
 
 use super::super::error::ZenuCudnnError;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RNNAlgo {
     Standard,
     PersistStatic,
@@ -27,6 +28,7 @@ pub enum RNNCell {
     RNNTanh,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RNNBias {
     NoBias,
     SingleInpBias,
@@ -34,6 +36,7 @@ pub enum RNNBias {
     DoubleBias,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RNNMathType {
     Default,
     TensorOp,
@@ -125,10 +128,10 @@ pub fn rnn_descriptor<Data: 'static, Math: 'static>(
             data_type,
             math_prec,
             math_type,
-            input_size as i32,
-            hidden_size as i32,
-            hidden_size as i32,
-            num_layers as i32,
+            i32::try_from(input_size).unwrap(),
+            i32::try_from(hidden_size).unwrap(),
+            i32::try_from(hidden_size).unwrap(),
+            i32::try_from(num_layers).unwrap(),
             dropout,
             CUDNN_RNN_PADDED_IO_DISABLED,
         )
@@ -146,7 +149,8 @@ pub fn rnn_weight_space(rnn_desc: cudnnRNNDescriptor_t) -> Result<usize, ZenuCud
 
     let handle = ZENU_CUDA_STATE.lock().unwrap().get_cudnn().as_ptr();
 
-    let status = unsafe { cudnnGetRNNWeightSpaceSize(handle, rnn_desc, &mut size as *mut usize) };
+    let status =
+        unsafe { cudnnGetRNNWeightSpaceSize(handle, rnn_desc, std::ptr::from_mut(&mut size)) };
     if status != zenu_cudnn_sys::cudnnStatus_t::CUDNN_STATUS_SUCCESS {
         return Err(ZenuCudnnError::from(status));
     }
@@ -190,21 +194,21 @@ pub fn rnn_fwd<T: 'static>(
             fwd_mode,
             std::ptr::null_mut(),
             x_desc,
-            x as *const ::libc::c_void,
+            x.cast::<::libc::c_void>(),
             y_desc,
-            y as *mut ::libc::c_void,
+            y.cast::<::libc::c_void>(),
             h_desc,
-            hx as *const ::libc::c_void,
-            hy as *mut ::libc::c_void,
+            hx.cast::<::libc::c_void>(),
+            hy.cast::<::libc::c_void>(),
             c_desc,
-            cx as *const ::libc::c_void,
-            cy as *mut ::libc::c_void,
+            cx.cast::<::libc::c_void>(),
+            cy.cast::<::libc::c_void>(),
             weight_size,
-            weight as *const ::libc::c_void,
+            weight.cast::<::libc::c_void>(),
             workspace_size,
-            workspace as *mut ::libc::c_void,
+            workspace.cast::<::libc::c_void>(),
             reserve_size,
-            reserve as *mut ::libc::c_void,
+            reserve.cast::<::libc::c_void>(),
         )
     };
 
@@ -215,7 +219,7 @@ pub fn rnn_fwd<T: 'static>(
     Ok(())
 }
 
-#[allow(clippy::too_many_arguments)]
+#[allow(clippy::too_many_arguments, clippy::similar_names)]
 pub fn rnn_bkwd_data<T: 'static>(
     rnn_desc: cudnnRNNDescriptor_t,
     y_desc: cudnnRNNDataDescriptor_t,
@@ -246,24 +250,24 @@ pub fn rnn_bkwd_data<T: 'static>(
             rnn_desc,
             std::ptr::null_mut(),
             y_desc,
-            y as *const ::libc::c_void,
-            dy as *const ::libc::c_void,
+            y.cast::<::libc::c_void>(),
+            dy.cast::<::libc::c_void>(),
             x_desc,
-            dx as *mut ::libc::c_void,
+            dx.cast::<::libc::c_void>(),
             h_desc,
-            hx as *const ::libc::c_void,
-            dhy as *const ::libc::c_void,
-            dhx as *mut ::libc::c_void,
+            hx.cast::<::libc::c_void>(),
+            dhy.cast::<::libc::c_void>(),
+            dhx.cast::<::libc::c_void>(),
             c_desc,
-            cx as *const ::libc::c_void,
-            dcy as *const ::libc::c_void,
-            dcx as *mut ::libc::c_void,
+            cx.cast::<::libc::c_void>(),
+            dcy.cast::<::libc::c_void>(),
+            dcx.cast::<::libc::c_void>(),
             weight_size,
-            weight as *const ::libc::c_void,
+            weight.cast::<::libc::c_void>(),
             workspace_size,
-            workspace as *mut ::libc::c_void,
+            workspace.cast::<::libc::c_void>(),
             reserve_size,
-            reserve as *mut ::libc::c_void,
+            reserve.cast::<::libc::c_void>(),
         )
     };
 
@@ -299,17 +303,17 @@ pub fn rnn_bkwd_weight<T: 'static>(
             cudnnWgradMode_t::CUDNN_WGRAD_MODE_ADD,
             std::ptr::null_mut(),
             x_desc,
-            x as *const ::libc::c_void,
+            x.cast::<::libc::c_void>(),
             h_desc,
-            hx as *const ::libc::c_void,
+            hx.cast::<::libc::c_void>(),
             y_desc,
-            y as *const ::libc::c_void,
+            y.cast::<::libc::c_void>(),
             weight_size,
-            dweight as *mut ::libc::c_void,
+            dweight.cast::<::libc::c_void>(),
             workspace_size,
-            workspace as *mut ::libc::c_void,
+            workspace.cast::<::libc::c_void>(),
             reserve_size,
-            reserve as *mut ::libc::c_void,
+            reserve.cast::<::libc::c_void>(),
         )
     };
 
@@ -356,19 +360,22 @@ pub fn rnn_data_descriptor<T: 'static>(
     };
 
     assert!(
-        seq_len_array.len() == batch_size as usize,
+        seq_len_array.len() == usize::try_from(batch_size).unwrap(),
         "seq_len_array length must be equal to batch_size"
     );
 
     for seq_i in seq_len_array {
-        if *seq_i > max_seq_len {
-            panic!("seq_len_array contains a value greater than max_req_len");
-        }
+        assert!(
+            *seq_i <= max_seq_len,
+            "seq_len_array contains a value greater than max_req_len"
+        );
     }
 
     let mut tensor: cudnnRNNDataDescriptor_t = std::ptr::null_mut();
     let status = unsafe {
-        zenu_cudnn_sys::cudnnCreateRNNDataDescriptor(&mut tensor as *mut cudnnRNNDataDescriptor_t)
+        zenu_cudnn_sys::cudnnCreateRNNDataDescriptor(
+            std::ptr::from_mut::<cudnnRNNDataDescriptor_t>(&mut tensor),
+        )
     };
     if status != zenu_cudnn_sys::cudnnStatus_t::CUDNN_STATUS_SUCCESS {
         return Err(ZenuCudnnError::from(status));
@@ -382,8 +389,8 @@ pub fn rnn_data_descriptor<T: 'static>(
             max_seq_len as ::libc::c_int,
             batch_size as ::libc::c_int,
             vector_size as ::libc::c_int,
-            seq_len_array.as_ptr() as *const &[i32] as *const i32,
-            &mut fill_value as *mut T as *mut ::libc::c_void,
+            seq_len_array.as_ptr(),
+            std::ptr::from_mut::<T>(&mut fill_value).cast::<::libc::c_void>(),
         )
     };
     if status != zenu_cudnn_sys::cudnnStatus_t::CUDNN_STATUS_SUCCESS {
@@ -411,14 +418,12 @@ pub fn rnn_weight_params<T: 'static>(
     let mut weight_desc: cudnnTensorDescriptor_t = std::ptr::null_mut();
     let mut bias_desc: cudnnTensorDescriptor_t = std::ptr::null_mut();
 
-    let status =
-        unsafe { cudnnCreateTensorDescriptor(&mut weight_desc as *mut cudnnTensorDescriptor_t) };
+    let status = unsafe { cudnnCreateTensorDescriptor(std::ptr::from_mut(&mut weight_desc)) };
     if status != zenu_cudnn_sys::cudnnStatus_t::CUDNN_STATUS_SUCCESS {
         return Err(ZenuCudnnError::from(status));
     }
 
-    let status =
-        unsafe { cudnnCreateTensorDescriptor(&mut bias_desc as *mut cudnnTensorDescriptor_t) };
+    let status = unsafe { cudnnCreateTensorDescriptor(std::ptr::from_mut(&mut bias_desc)) };
     if status != zenu_cudnn_sys::cudnnStatus_t::CUDNN_STATUS_SUCCESS {
         return Err(ZenuCudnnError::from(status));
     }
@@ -433,10 +438,11 @@ pub fn rnn_weight_params<T: 'static>(
         cudnnGetRNNWeightParams(
             handle,
             rnn_desc,
-            pseudo_layer as i32,
+            i32::try_from(pseudo_layer).unwrap(),
             weight_size,
-            weight as *mut ::libc::c_void,
-            leyer_id as i32,
+            // weight as *mut ::libc::c_void,
+            weight.cast::<::libc::c_void>(),
+            i32::try_from(leyer_id).unwrap(),
             weight_desc,
             m_addr_addr,
             bias_desc,
@@ -457,8 +463,6 @@ pub fn rnn_weight_params<T: 'static>(
 
 #[cfg(test)]
 mod rnn {
-    use std::usize;
-
     use zenu_cudnn_sys::{
         cudnnForwardMode_t, cudnnGetRNNTempSpaceSizes, cudnnGetRNNWeightSpaceSize,
         cudnnRNNDataDescriptor_t, cudnnRNNDescriptor_t,
@@ -474,10 +478,11 @@ mod rnn {
         rnn_data_descriptor, rnn_descriptor, rnn_fwd, RNNAlgo, RNNBias, RNNCell, RNNDataLayout,
         RNNMathType,
     };
+
     pub struct RNNBytes {
-        weights_size: usize,
-        workspace_size: usize,
-        reserve_size: usize,
+        weights: usize,
+        workspace: usize,
+        reserve: usize,
     }
 
     impl RNNBytes {
@@ -490,22 +495,22 @@ mod rnn {
             let (workspace_size, reserve_size) =
                 Self::rnn_tmp_space(rnn_desc, is_training, x_desc).unwrap();
             Self {
-                weights_size,
-                workspace_size,
-                reserve_size,
+                weights: weights_size,
+                workspace: workspace_size,
+                reserve: reserve_size,
             }
         }
 
         pub fn weights_size(&self) -> usize {
-            self.weights_size
+            self.weights
         }
 
         pub fn workspace_size(&self) -> usize {
-            self.workspace_size
+            self.workspace
         }
 
         pub fn reserve_size(&self) -> usize {
-            self.reserve_size
+            self.reserve
         }
 
         fn rnn_weight_space(rnn_desc: cudnnRNNDescriptor_t) -> Result<usize, ZenuCudnnError> {
@@ -513,8 +518,9 @@ mod rnn {
 
             let handle = ZENU_CUDA_STATE.lock().unwrap().get_cudnn().as_ptr();
 
-            let status =
-                unsafe { cudnnGetRNNWeightSpaceSize(handle, rnn_desc, &mut size as *mut usize) };
+            let status = unsafe {
+                cudnnGetRNNWeightSpaceSize(handle, rnn_desc, std::ptr::from_mut(&mut size))
+            };
             if status != zenu_cudnn_sys::cudnnStatus_t::CUDNN_STATUS_SUCCESS {
                 return Err(ZenuCudnnError::from(status));
             }
@@ -544,8 +550,8 @@ mod rnn {
                     rnn_desc,
                     fwd_mode,
                     x_desc,
-                    &mut workspace_size as *mut usize,
-                    &mut reserve_size as *mut usize,
+                    std::ptr::from_mut(&mut workspace_size),
+                    std::ptr::from_mut(&mut reserve_size),
                 )
             };
             if status != zenu_cudnn_sys::cudnnStatus_t::CUDNN_STATUS_SUCCESS {
@@ -580,8 +586,8 @@ mod rnn {
 
         let x_data_desc = rnn_data_descriptor::<f32>(
             seq_len,
-            batch_size as i32,
-            input_size as i32,
+            i32::try_from(batch_size).unwrap(),
+            i32::try_from(input_size).unwrap(),
             &seq_len_array,
             RNNDataLayout::SeqMajorUnpacked,
             0.,
@@ -590,8 +596,8 @@ mod rnn {
 
         let y_data_desc = rnn_data_descriptor::<f32>(
             seq_len,
-            batch_size as i32,
-            hidden_size as i32,
+            i32::try_from(batch_size).unwrap(),
+            i32::try_from(hidden_size).unwrap(),
             &seq_len_array,
             RNNDataLayout::SeqMajorUnpacked,
             0.,
@@ -599,31 +605,37 @@ mod rnn {
         .unwrap();
 
         let x_data =
-            cuda_malloc::<f32>((seq_len as usize * batch_size * input_size) as usize).unwrap();
+            cuda_malloc::<f32>(usize::try_from(seq_len).unwrap() * batch_size * input_size)
+                .unwrap();
 
         let y_data =
-            cuda_malloc::<f32>((seq_len as usize * batch_size * hidden_size) as usize).unwrap();
+            cuda_malloc::<f32>(usize::try_from(seq_len).unwrap() * batch_size * hidden_size)
+                .unwrap();
 
         let bytes = RNNBytes::new(rnn_desc, true, x_data_desc);
 
-        let workspace = cuda_malloc::<u8>(bytes.workspace_size()).unwrap() as *mut f32;
-        let reserve = cuda_malloc::<u8>(bytes.reserve_size()).unwrap() as *mut f32;
-        let weight = cuda_malloc::<u8>(bytes.weights_size()).unwrap() as *mut f32;
+        let workspace = cuda_malloc::<f32>(bytes.workspace_size() / size_of::<f32>()).unwrap();
+        let reserve = cuda_malloc::<f32>(bytes.reserve_size() / size_of::<f32>()).unwrap();
+        let weight = cuda_malloc::<f32>(bytes.weights_size() / size_of::<f32>()).unwrap();
 
         let hx = cuda_malloc::<f32>(256).unwrap();
         let hy = cuda_malloc::<f32>(256).unwrap();
         let cx = cuda_malloc::<f32>(256).unwrap();
         let cy = cuda_malloc::<f32>(256).unwrap();
 
+        let num_layers = i32::try_from(num_layers).unwrap();
+        let batch_size = i32::try_from(batch_size).unwrap();
+        let hidden_size = i32::try_from(hidden_size).unwrap();
+
         let h_desc = tensor_descriptor_nd::<f32>(
-            &[num_layers as i32, batch_size as i32, hidden_size as i32],
-            &[(batch_size * hidden_size) as i32, hidden_size as i32, 1],
+            &[num_layers, batch_size, hidden_size],
+            &[batch_size * hidden_size, hidden_size, 1],
         )
         .unwrap();
 
         let c_desc = tensor_descriptor_nd::<f32>(
-            &[num_layers as i32, batch_size as i32, hidden_size as i32],
-            &[(batch_size * hidden_size) as i32, hidden_size as i32, 1],
+            &[num_layers, batch_size, hidden_size],
+            &[(batch_size * hidden_size), hidden_size, 1],
         )
         .unwrap();
 
