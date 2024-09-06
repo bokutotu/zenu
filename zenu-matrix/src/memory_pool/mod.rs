@@ -78,9 +78,9 @@ pub const MIDDLE_BUFFER_SIZE: usize = 10 * 1024;
 
 #[derive(Default)]
 pub struct MemPool<D: DeviceBase> {
-    small_pool: Arc<Mutex<StaticMemPool<D, SMALL_BUFFER_SIZE>>>,
-    large_pool: Arc<Mutex<StaticMemPool<D, LARGE_BUFFER_SIZE>>>,
-    dynamic_pool: Arc<Mutex<DynMemPool<D>>>,
+    small: Arc<Mutex<StaticMemPool<D, SMALL_BUFFER_SIZE>>>,
+    large: Arc<Mutex<StaticMemPool<D, LARGE_BUFFER_SIZE>>>,
+    dynamic: Arc<Mutex<DynMemPool<D>>>,
 }
 
 unsafe impl<D: DeviceBase> Send for MemPool<D> {}
@@ -120,18 +120,18 @@ impl<D: DeviceBase> MemPool<D> {
     pub fn try_alloc(&self, bytes: usize) -> Result<*mut u8, MemPoolError> {
         // 1mbまではsmall_poolを使用する
         if bytes <= 1024 * 1024 {
-            self.small_pool.lock().unwrap().try_alloc(bytes)
+            self.small.lock().unwrap().try_alloc(bytes)
         } else if bytes <= LARGE_BUFFER_SIZE {
-            self.large_pool.lock().unwrap().try_alloc(bytes)
+            self.large.lock().unwrap().try_alloc(bytes)
         } else {
-            self.dynamic_pool.lock().unwrap().try_alloc(bytes)
+            self.dynamic.lock().unwrap().try_alloc(bytes)
         }
     }
 
     pub fn try_free(&self, ptr: *mut u8) -> Result<(), MemPoolError> {
-        let mut small_pool = self.small_pool.lock().unwrap();
-        let mut large_pool = self.large_pool.lock().unwrap();
-        let mut dynamic_pool = self.dynamic_pool.lock().unwrap();
+        let mut small_pool = self.small.lock().unwrap();
+        let mut large_pool = self.large.lock().unwrap();
+        let mut dynamic_pool = self.dynamic.lock().unwrap();
         if small_pool.contains(ptr) {
             small_pool.try_free(ptr).unwrap();
         } else if large_pool.contains(ptr) {
