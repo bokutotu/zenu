@@ -6,6 +6,7 @@ mod rnn {
     };
 
     #[test]
+    #[allow(clippy::too_many_lines, clippy::unreadable_literal, clippy::cast_ptr_alignment)]
     fn rnn() {
         let input_size = 2;
         let output_size = 4;
@@ -27,11 +28,11 @@ mod rnn {
 
         let weight_bytes = config.get_weights_size();
 
-        let weight_ptr = cuda_malloc_bytes(weight_bytes).unwrap() as *mut f32;
+        let weight_ptr = cuda_malloc_bytes(weight_bytes).unwrap().cast::<f32>();
 
         let rnn_params = &config.get_rnn_params(weight_ptr)[0];
 
-        let input_weight = vec![
+        let input_weight = [
             -0.00374341,
             0.2682218,
             -0.41152257,
@@ -41,9 +42,9 @@ mod rnn {
             -0.00990659,
             0.39644474,
         ];
-        let input_bias = vec![-0.08059168, 0.05290705, 0.4527381, -0.46383518];
+        let input_bias = [-0.08059168, 0.05290705, 0.4527381, -0.46383518];
 
-        let hidden_weight = vec![
+        let hidden_weight = [
             -0.044372022,
             0.13230628,
             -0.15110654,
@@ -61,38 +62,38 @@ mod rnn {
             -0.10290009,
             0.37415588,
         ];
-        let hidden_bias = vec![-0.31476897, -0.12658262, -0.19489998, 0.4320004];
+        let hidden_bias = [-0.31476897, -0.12658262, -0.19489998, 0.4320004];
 
         cuda_copy(
-            rnn_params.input_weight.ptr as *mut f32,
+            rnn_params.input_weight.ptr.cast::<f32>(),
             input_weight.as_ptr(),
             input_size * output_size,
             ZenuCudaMemCopyKind::HostToDevice,
         )
         .unwrap();
         cuda_copy(
-            rnn_params.input_bias.ptr as *mut f32,
+            rnn_params.input_bias.ptr.cast::<f32>(),
             input_bias.as_ptr(),
             output_size,
             ZenuCudaMemCopyKind::HostToDevice,
         )
         .unwrap();
         cuda_copy(
-            rnn_params.hidden_weight.ptr as *mut f32,
+            rnn_params.hidden_weight.ptr.cast::<f32>(),
             hidden_weight.as_ptr(),
             output_size * output_size,
             ZenuCudaMemCopyKind::HostToDevice,
         )
         .unwrap();
         cuda_copy(
-            rnn_params.hidden_bias.ptr as *mut f32,
+            rnn_params.hidden_bias.ptr.cast::<f32>(),
             hidden_bias.as_ptr(),
             output_size,
             ZenuCudaMemCopyKind::HostToDevice,
         )
         .unwrap();
 
-        let input = vec![
+        let input = [
             -0.5663175, 0.37311465, -0.8919953, -1.5091077, 0.37039354, 1.4565026, 0.9398099,
             0.7748488, 0.19186942, 1.2637948,
         ];
@@ -138,11 +139,11 @@ mod rnn {
             std::ptr::null_mut(),
             std::ptr::null_mut(),
             weight_ptr,
-            workspace as *mut f32,
-            reserve as *mut f32,
+            workspace.cast(),
+            reserve.cast(),
         );
 
-        let mut output: Vec<f32> = vec![0.0; 20];
+        let mut output  = [0.0; 20];
         cuda_copy(
             output.as_mut_ptr(),
             output_gpu,
@@ -151,7 +152,7 @@ mod rnn {
         )
         .unwrap();
 
-        let ans = vec![
+        let ans = [
             0.0,
             0.022082046,
             0.41692466,

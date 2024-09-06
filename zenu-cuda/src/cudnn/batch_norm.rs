@@ -1,9 +1,10 @@
-use crate::ZENU_CUDA_STATE;
+use zenu_cudnn_sys::{cudnnBatchNormMode_t, cudnnBatchNormalizationBackward, cudnnBatchNormalizationForwardInference, cudnnBatchNormalizationForwardTraining, cudnnDestroyTensorDescriptor, cudnnStatus_t, cudnnTensorDescriptor_t};
 
-use zenu_cudnn_sys::*;
+use crate::ZENU_CUDA_STATE;
 
 use super::{error::ZenuCudnnError, tensor_descriptor_4d, TensorFormat};
 
+#[allow(clippy::module_name_repetitions)]
 pub struct BatchNorm2d<T> {
     input: cudnnTensorDescriptor_t,
     output: cudnnTensorDescriptor_t,
@@ -12,6 +13,7 @@ pub struct BatchNorm2d<T> {
     _phantom: std::marker::PhantomData<T>,
 }
 
+#[allow(clippy::module_name_repetitions)]
 #[derive(Debug, Default)]
 pub struct BatchNorm2dBuilder<T> {
     input: Option<cudnnTensorDescriptor_t>,
@@ -21,7 +23,7 @@ pub struct BatchNorm2dBuilder<T> {
     _phantom: std::marker::PhantomData<T>,
 }
 
-impl<T: 'static> BatchNorm2d<T> {
+impl<T: 'static + Copy> BatchNorm2d<T> {
     pub fn new(
         input: cudnnTensorDescriptor_t,
         output: cudnnTensorDescriptor_t,
@@ -37,7 +39,7 @@ impl<T: 'static> BatchNorm2d<T> {
         }
     }
 
-    #[allow(clippy::too_many_arguments)]
+    #[allow(clippy::too_many_arguments, clippy::missing_errors_doc, clippy::missing_panics_doc)]
     pub fn forward_train(
         &self,
         alpha: T,
@@ -167,6 +169,7 @@ impl<T: 'static> BatchNorm2dBuilder<T> {
     }
 }
 
+#[allow(clippy::module_name_repetitions)]
 pub struct BatchNorm2dBackward<T> {
     input: cudnnTensorDescriptor_t,
     input_grad: cudnnTensorDescriptor_t,
@@ -176,6 +179,7 @@ pub struct BatchNorm2dBackward<T> {
     _phantom: std::marker::PhantomData<T>,
 }
 
+#[allow(clippy::module_name_repetitions)]
 #[derive(Debug, Default)]
 pub struct BatchNorm2dBackwardBuilder<T> {
     input: Option<cudnnTensorDescriptor_t>,
@@ -186,7 +190,7 @@ pub struct BatchNorm2dBackwardBuilder<T> {
     _phantom: std::marker::PhantomData<T>,
 }
 
-impl<T: 'static> BatchNorm2dBackward<T> {
+impl<T: 'static + Copy> BatchNorm2dBackward<T> {
     #[allow(clippy::too_many_arguments)]
     pub fn backward(
         &self,
@@ -246,6 +250,7 @@ impl<T> Drop for BatchNorm2dBackward<T> {
 }
 
 impl<T: 'static> BatchNorm2dBackwardBuilder<T> {
+    #[must_use]
     pub fn new() -> Self {
         Self {
             input: None,
@@ -338,6 +343,7 @@ impl<T: 'static> BatchNorm2dBackwardBuilder<T> {
     }
 }
 
+#[allow(clippy::module_name_repetitions)]
 pub struct BatchNorm2dInference<T> {
     input: cudnnTensorDescriptor_t,
     output: cudnnTensorDescriptor_t,
@@ -346,6 +352,7 @@ pub struct BatchNorm2dInference<T> {
     _phantom: std::marker::PhantomData<T>,
 }
 
+#[allow(clippy::module_name_repetitions)]
 #[derive(Debug, Default)]
 pub struct BatchNorm2dInferenceBuilder<T> {
     input: Option<cudnnTensorDescriptor_t>,
@@ -355,7 +362,7 @@ pub struct BatchNorm2dInferenceBuilder<T> {
     _phantom: std::marker::PhantomData<T>,
 }
 
-impl<T: 'static> BatchNorm2dInference<T> {
+impl<T: 'static + Copy> BatchNorm2dInference<T> {
     #[allow(clippy::too_many_arguments)]
     pub fn forward_inference(
         &self,
@@ -453,6 +460,7 @@ impl<T: 'static> BatchNorm2dInferenceBuilder<T> {
         })
     }
 
+    #[must_use]
     pub fn mode(self, mode: cudnnBatchNormMode_t) -> Self {
         Self {
             mode: Some(mode),
@@ -460,6 +468,7 @@ impl<T: 'static> BatchNorm2dInferenceBuilder<T> {
         }
     }
 
+    #[must_use]
     pub fn build(self) -> BatchNorm2dInference<T> {
         let input = self.input.expect("input is required");
         let output = self.output.expect("output is required");
@@ -480,7 +489,7 @@ impl<T: 'static> BatchNorm2dInferenceBuilder<T> {
 }
 
 #[cfg(test)]
-mod batch_norm {
+mod batch_norm_test {
     use zenu_cudnn_sys::cudnnBatchNormMode_t;
 
     use crate::{
@@ -515,6 +524,7 @@ mod batch_norm {
     }
 
     #[test]
+    #[allow(clippy::too_many_lines)]
     fn forward() {
         // import torch
         // import torch.nn as nn

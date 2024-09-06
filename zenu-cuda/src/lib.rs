@@ -68,18 +68,22 @@ impl ZenuCudaState {
         }
     }
 
+    #[must_use]
     pub fn get_cublas(&self) -> NonNull<cublasContext> {
         self.cublas
     }
 
+    #[must_use]
     pub fn get_cudnn(&self) -> NonNull<cudnnContext> {
         self.cudnn
     }
 
+    #[must_use]
     pub fn get_stream(&self) -> cudaStream_t {
         self.stream
     }
 
+    #[must_use]
     pub fn get_mem_pool(&self) -> cudaMemPool_t {
         self.mem_pool
     }

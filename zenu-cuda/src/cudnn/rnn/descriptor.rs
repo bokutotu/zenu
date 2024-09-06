@@ -1,6 +1,6 @@
 use zenu_cudnn_sys::{
     cudnnDropoutDescriptor_t, cudnnForwardMode_t, cudnnGetRNNTempSpaceSizes,
-    cudnnRNNDataDescriptor_t, cudnnRNNDescriptor_t, cudnnTensorDescriptor_t,
+    cudnnRNNDataDescriptor_t, cudnnRNNDescriptor_t, cudnnStatus_t, cudnnTensorDescriptor_t,
 };
 
 use crate::{cudnn::tensor_descriptor_nd, ZENU_CUDA_STATE};
@@ -13,6 +13,7 @@ use super::{
     RNNAlgo, RNNBias, RNNCell, RNNDataLayout, RNNMathType,
 };
 
+#[allow(clippy::module_name_repetitions)]
 pub struct RNNDescriptor<T: 'static + Copy> {
     rnn_desc: cudnnRNNDescriptor_t,
     h_desc: cudnnTensorDescriptor_t,
@@ -66,7 +67,11 @@ pub struct GRUParams {
 }
 
 impl<T: 'static + Copy> RNNDescriptor<T> {
+    /// # Panics
+    /// * rnn descriptor is not created successfully
+    /// * weights size is not calculated successfully
     #[allow(clippy::too_many_arguments)]
+    #[must_use]
     pub fn new(
         algo: RNNAlgo,
         cell: RNNCell,
@@ -79,18 +84,25 @@ impl<T: 'static + Copy> RNNDescriptor<T> {
         num_layers: usize,
         batch_size: usize,
     ) -> Self {
-        let h_num_layers = num_layers * if bidirectional { 2 } else { 1 };
-        let h_desc = tensor_descriptor_nd::<T>(
-            &[h_num_layers as i32, batch_size as i32, hidden_size as i32],
-            &[(batch_size * hidden_size) as i32, hidden_size as i32, 1],
-        )
-        .unwrap();
+        let (h_desc, c_desc) = {
+            let num_layers = i32::try_from(num_layers).unwrap();
+            let batch_size = i32::try_from(batch_size).unwrap();
+            let hidden_size = i32::try_from(hidden_size).unwrap();
 
-        let c_desc = tensor_descriptor_nd::<T>(
-            &[h_num_layers as i32, batch_size as i32, hidden_size as i32],
-            &[(batch_size * hidden_size) as i32, hidden_size as i32, 1],
-        )
-        .unwrap();
+            let h_num_layers = num_layers * if bidirectional { 2 } else { 1 };
+            let h_desc = tensor_descriptor_nd::<T>(
+                &[h_num_layers, batch_size, hidden_size],
+                &[batch_size * hidden_size, hidden_size, 1],
+            )
+            .unwrap();
+
+            let c_desc = tensor_descriptor_nd::<T>(
+                &[h_num_layers, batch_size, hidden_size],
+                &[batch_size * hidden_size, hidden_size, 1],
+            )
+            .unwrap();
+            (h_desc, c_desc)
+        };
 
         let rnn_desc = rnn_descriptor::<T, T>(
             algo,
@@ -123,6 +135,9 @@ impl<T: 'static + Copy> RNNDescriptor<T> {
         }
     }
 
+    /// # Panics
+    /// *cudnn context is not created successfully
+    /// * cudnn failed to get RNN temp space sizes
     #[allow(clippy::not_unsafe_ptr_arg_deref)]
     pub fn get_workspace_reserve_size(
         &self,
@@ -146,13 +161,13 @@ impl<T: 'static + Copy> RNNDescriptor<T> {
                 self.rnn_desc,
                 fwd_mode,
                 x_desc,
-                &mut workspace_size as *mut usize,
-                &mut reserve_size as *mut usize,
+                std::ptr::from_mut(&mut workspace_size),
+                std::ptr::from_mut(&mut reserve_size),
             )
         };
-        if status != zenu_cudnn_sys::cudnnStatus_t::CUDNN_STATUS_SUCCESS {
-            panic!("Failed to get RNN temp space sizes: {:?}", status);
-        }
+
+        let error_message = format!("Failed to get RNN temp space sizes: {status:?}");
+        assert_eq!(status, cudnnStatus_t::CUDNN_STATUS_SUCCESS, "{error_message}");
 
         RnnWorkspace {
             workspace_size,
@@ -160,30 +175,36 @@ impl<T: 'static + Copy> RNNDescriptor<T> {
         }
     }
 
+    #[must_use]
     pub fn get_input_size(&self) -> usize {
         self.input_size
     }
 
+    #[must_use]
     pub fn get_hidden_size(&self) -> usize {
         self.hidden_size
     }
 
+    #[must_use]
     pub fn get_num_layers(&self) -> usize {
         self.num_layers
     }
 
+    #[must_use]
     pub fn get_batch_size(&self) -> usize {
         self.batch_size
     }
 
+    #[must_use]
     pub fn get_is_bidirectional(&self) -> bool {
         self.bidirectional
     }
 
+    /// # Panics
+    /// * cell type is not `RNNCell::RNNRelu` or `RNNCell::RNNTanh`
     pub fn get_rnn_params(&self, weight_ptr: *mut T) -> Vec<RNNParams> {
-        if self.cell != RNNCell::RNNRelu && self.cell != RNNCell::RNNTanh {
-            panic!("Only RNN cell is supported");
-        }
+        assert!(!(self.cell != RNNCell::RNNRelu && self.cell != RNNCell::RNNTanh), "Only RNN cell is supported");
+
         let mut params = Vec::new();
 
         let num_layers = self.num_layers * if self.bidirectional { 2 } else { 1 };
@@ -219,10 +240,10 @@ impl<T: 'static + Copy> RNNDescriptor<T> {
         params
     }
 
+    /// # Panics
+    /// * cell type is not `RNNCell::LSTM`
     pub fn get_lstm_params(&self, weight_ptr: *mut T) -> Vec<LstmParams> {
-        if self.cell != RNNCell::LSTM {
-            panic!("Only LSTM cell is supported");
-        }
+        assert!(!(self.cell != RNNCell::LSTM), "Only LSTM cell is supported");
         let mut params = Vec::new();
 
         for layer_idx in 0..self.num_layers {
@@ -290,10 +311,10 @@ impl<T: 'static + Copy> RNNDescriptor<T> {
         params
     }
 
+    /// # Panics
+    /// * cell type is not `RNNCell::GRU`
     pub fn get_gru_params(&self, weight_ptr: *mut T) -> Vec<GRUParams> {
-        if self.cell != RNNCell::GRU {
-            panic!("Only GRU cell is supported");
-        }
+        assert!(!(self.cell != RNNCell::GRU), "Only GRU cell is supported");
         let mut params = Vec::new();
 
         for layer_idx in 0..self.num_layers {
@@ -347,6 +368,8 @@ impl<T: 'static + Copy> RNNDescriptor<T> {
         params
     }
 
+    /// # Panics
+    /// * rnn context is not created successfully
     pub fn set_input_size(
         &mut self,
         seq_length: usize,
@@ -355,14 +378,17 @@ impl<T: 'static + Copy> RNNDescriptor<T> {
         is_training: bool,
         fill_value: T,
     ) {
+        let seq_length = i32::try_from(seq_length).unwrap();
+        let batch_size = i32::try_from(self.batch_size).unwrap();
+        let input_size = i32::try_from(self.input_size).unwrap();
         let seq_len_array = seq_length_array
             .iter()
-            .map(|&x| x as i32)
+            .map(|&x| i32::try_from(x).unwrap())
             .collect::<Vec<i32>>();
         let x_desc = rnn_data_descriptor::<T>(
-            seq_length as i32,
-            self.batch_size as i32,
-            self.input_size as i32,
+            seq_length,
+            batch_size,
+            input_size,
             &seq_len_array,
             layout,
             fill_value,
@@ -370,11 +396,12 @@ impl<T: 'static + Copy> RNNDescriptor<T> {
         .unwrap();
 
         let hidden_size = self.hidden_size * if self.bidirectional { 2 } else { 1 };
+        let hidden_size = i32::try_from(hidden_size).unwrap();
 
         let y_desc = rnn_data_descriptor::<T>(
-            seq_length as i32,
-            self.batch_size as i32,
-            hidden_size as i32,
+            seq_length,
+            batch_size,
+            hidden_size,
             &seq_len_array,
             layout,
             fill_value,
@@ -389,6 +416,9 @@ impl<T: 'static + Copy> RNNDescriptor<T> {
         });
     }
 
+    /// # Panics
+    /// * rnn context is not created successfully
+    /// * rnn forward failed
     #[allow(clippy::too_many_arguments)]
     pub fn fwd(
         &self,
@@ -425,7 +455,10 @@ impl<T: 'static + Copy> RNNDescriptor<T> {
         .unwrap();
     }
 
-    #[allow(clippy::too_many_arguments)]
+    /// # Panics
+    /// * rnn context is not created successfully
+    /// * rnn backward failed
+    #[allow(clippy::too_many_arguments, clippy::similar_names)]
     pub fn bkwd_data(
         &self,
         y: *const T,
@@ -466,6 +499,9 @@ impl<T: 'static + Copy> RNNDescriptor<T> {
         .unwrap();
     }
 
+    /// # Panics
+    /// * rnn context is not created successfully
+    /// * rnn backward failed
     pub fn bkwd_weights(
         &self,
         x: *const T,
@@ -493,18 +529,24 @@ impl<T: 'static + Copy> RNNDescriptor<T> {
         .unwrap();
     }
 
+    #[must_use]
     pub fn get_weights_size(&self) -> usize {
         self.weights_size
     }
 
+    #[allow(clippy::missing_panics_doc)]
+    #[must_use]
     pub fn get_workspace_size(&self) -> usize {
         self.context.as_ref().unwrap().get_workspace_size()
     }
 
+    #[allow(clippy::missing_panics_doc)]
+    #[must_use]
     pub fn get_reserve_size(&self) -> usize {
         self.context.as_ref().unwrap().get_reserve_size()
     }
 
+    #[must_use]
     pub fn context_is_none(&self) -> bool {
         self.context.is_none()
     }
@@ -528,10 +570,12 @@ pub struct RNNContext {
 }
 
 impl RNNContext {
+    #[must_use]
     pub fn get_reserve_size(&self) -> usize {
         self.workspace.reserve_size
     }
 
+    #[must_use]
     pub fn get_workspace_size(&self) -> usize {
         self.workspace.workspace_size
     }
