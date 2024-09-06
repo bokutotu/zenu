@@ -27,9 +27,7 @@ pub trait DimTrait:
     fn len(&self) -> usize;
     fn is_empty(&self) -> bool;
     fn is_overflow<D: DimTrait>(&self, index: D) -> bool {
-        if self.len() < index.len() {
-            panic!("Dimension mismatch");
-        }
+        assert!(self.len() >= index.len(), "Dimension mismatch");
 
         index.into_iter().zip(*self).any(|(x, y)| x >= y)
     }
@@ -63,10 +61,9 @@ pub trait GreaterDimTrait: DimTrait {
     type GreaterDim: DimTrait;
 }
 
+#[allow(clippy::missing_panics_doc)]
 pub fn cal_offset<D1: DimTrait, D2: DimTrait>(shape: D1, stride: D2) -> usize {
-    if shape.len() != stride.len() {
-        panic!("Dimension mismatch");
-    }
+    assert!(shape.len() == stride.len(), "Dimension mismatch");
     shape.into_iter().zip(stride).map(|(x, y)| x * y).sum()
 }
 
