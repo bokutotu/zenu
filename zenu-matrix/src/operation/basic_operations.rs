@@ -13,7 +13,19 @@ use crate::{
 use crate::device::nvidia::Nvidia;
 
 #[cfg(feature = "nvidia")]
-use zenu_cuda::kernel::*;
+use zenu_cuda::kernel::{
+    array_abs, array_abs_assign, array_acos, array_acos_assign, array_add, array_array_add_assign,
+    array_array_div_assign, array_array_mul_assign, array_array_sub_assign, array_asin,
+    array_asin_assign, array_atan, array_atan_assign, array_cos, array_cos_assign, array_cosh,
+    array_cosh_assign, array_div, array_exp, array_exp_assign, array_log, array_log_assign,
+    array_mul, array_pow, array_pow_assign, array_scalar_add, array_scalar_add_assign,
+    array_scalar_add_assign_ptr, array_scalar_add_ptr, array_scalar_div, array_scalar_div_assign,
+    array_scalar_div_assign_ptr, array_scalar_div_ptr, array_scalar_mul, array_scalar_mul_assign,
+    array_scalar_mul_assign_ptr, array_scalar_mul_ptr, array_scalar_sub, array_scalar_sub_assign,
+    array_scalar_sub_assign_ptr, array_scalar_sub_ptr, array_sin, array_sin_assign, array_sinh,
+    array_sinh_assign, array_sqrt, array_sqrt_assign, array_sub, array_tan, array_tan_assign,
+    array_tanh, array_tanh_assign,
+};
 
 use super::copy_from::CopyBlas;
 
@@ -571,10 +583,12 @@ impl<R: Repr, S: DimTrait, D: DeviceBase + PowOws + CopyBlas> Matrix<R, S, D> {
 }
 
 impl<T: Num, S: DimTrait, D: DeviceBase + PowOws + CopyBlas> Matrix<Ref<&mut T>, S, D> {
+    #[allow(clippy::missing_panics_doc)]
     pub fn powf<R: Repr<Item = T>, SO: DimTrait>(&self, other: &Matrix<R, SO, D>, scalar: T) {
-        if self.shape().slice() != other.shape().slice() {
-            panic!("Matrix shape mismatch");
-        }
+        assert!(
+            self.shape().slice() == other.shape().slice(),
+            "Matrix shape mismatch"
+        );
 
         if self.shape().is_empty() {
             D::array(self.as_mut_ptr(), other.as_ptr(), scalar, 1, 1, 1);
@@ -619,6 +633,7 @@ impl<T: Num, S: DimTrait, D: DeviceBase + PowOws + CopyBlas> Matrix<Ref<&mut T>,
 
 #[cfg(test)]
 mod basic_ops {
+    #![allow(clippy::float_cmp, clippy::cast_precision_loss)]
     use crate::{
         device::Device,
         dim::DimDyn,
@@ -938,7 +953,6 @@ mod basic_ops {
         let b: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(vec![1.], []);
         let mut ans: Matrix<Owned<f32>, DimDyn, D> = Matrix::zeros([2, 2, 2]);
         ans.to_ref_mut().add_array(&a, &b);
-        println!("{:?}", ans);
         assert_eq!(ans.index_item([0, 0, 0]), 2.);
         assert_eq!(ans.index_item([0, 0, 1]), 3.);
         assert_eq!(ans.index_item([0, 1, 0]), 4.);

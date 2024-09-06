@@ -15,6 +15,7 @@ impl<R: Repr, S: DimTrait, D: Device> Matrix<R, S, D> {
     }
 }
 
+#[allow(clippy::float_cmp)]
 #[cfg(test)]
 mod to_default_stride {
     use crate::{
