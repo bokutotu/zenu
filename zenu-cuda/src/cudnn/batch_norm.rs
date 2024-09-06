@@ -1,4 +1,8 @@
-use zenu_cudnn_sys::{cudnnBatchNormMode_t, cudnnBatchNormalizationBackward, cudnnBatchNormalizationForwardInference, cudnnBatchNormalizationForwardTraining, cudnnDestroyTensorDescriptor, cudnnStatus_t, cudnnTensorDescriptor_t};
+use zenu_cudnn_sys::{
+    cudnnBatchNormMode_t, cudnnBatchNormalizationBackward, cudnnBatchNormalizationForwardInference,
+    cudnnBatchNormalizationForwardTraining, cudnnDestroyTensorDescriptor, cudnnStatus_t,
+    cudnnTensorDescriptor_t,
+};
 
 use crate::ZENU_CUDA_STATE;
 
@@ -39,7 +43,11 @@ impl<T: 'static + Copy> BatchNorm2d<T> {
         }
     }
 
-    #[allow(clippy::too_many_arguments, clippy::missing_errors_doc, clippy::missing_panics_doc)]
+    #[allow(
+        clippy::too_many_arguments,
+        clippy::missing_errors_doc,
+        clippy::missing_panics_doc
+    )]
     pub fn forward_train(
         &self,
         alpha: T,

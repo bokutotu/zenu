@@ -167,7 +167,11 @@ impl<T: 'static + Copy> RNNDescriptor<T> {
         };
 
         let error_message = format!("Failed to get RNN temp space sizes: {status:?}");
-        assert_eq!(status, cudnnStatus_t::CUDNN_STATUS_SUCCESS, "{error_message}");
+        assert_eq!(
+            status,
+            cudnnStatus_t::CUDNN_STATUS_SUCCESS,
+            "{error_message}"
+        );
 
         RnnWorkspace {
             workspace_size,
@@ -203,7 +207,10 @@ impl<T: 'static + Copy> RNNDescriptor<T> {
     /// # Panics
     /// * cell type is not `RNNCell::RNNRelu` or `RNNCell::RNNTanh`
     pub fn get_rnn_params(&self, weight_ptr: *mut T) -> Vec<RNNParams> {
-        assert!(!(self.cell != RNNCell::RNNRelu && self.cell != RNNCell::RNNTanh), "Only RNN cell is supported");
+        assert!(
+            !(self.cell != RNNCell::RNNRelu && self.cell != RNNCell::RNNTanh),
+            "Only RNN cell is supported"
+        );
 
         let mut params = Vec::new();
 
