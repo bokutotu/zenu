@@ -32,11 +32,7 @@ impl From<ZenuCublasOperation> for cublasOperation_t {
     }
 }
 
-/// # Panics
-/// Panics if the type is not supported
-/// # Errors
-/// Returns an error if cublas error occurs
-#[allow(clippy::module_name_repetitions, clippy::similar_names)]
+#[allow(clippy::similar_names)]
 pub fn cublas_copy<T: 'static>(
     n: usize,
     x: *const T,
@@ -80,15 +76,10 @@ pub fn cublas_copy<T: 'static>(
     }
 }
 
-/// # Panics
-/// Panics if the type is not supported
-/// # Errors
-/// Returns an error if cublas error occurs
 #[allow(
     clippy::too_many_arguments,
     clippy::similar_names,
     clippy::many_single_char_names,
-    clippy::module_name_repetitions
 )]
 pub fn cublas_gemm<T: 'static + Copy>(
     transa: ZenuCublasOperation,
@@ -168,11 +159,6 @@ pub fn cublas_gemm<T: 'static + Copy>(
     }
 }
 
-/// # Panics
-/// Panics if the type is not supported
-/// # Errors
-/// Returns an error if cublas error occurs
-#[allow(clippy::module_name_repetitions)]
 pub fn cublas_asum<T: Default + 'static>(
     n: usize,
     x: *const T,
@@ -215,11 +201,6 @@ pub fn cublas_asum<T: Default + 'static>(
     }
 }
 
-/// # Panics
-/// Panics if the type is not supported and cublas context is not available
-/// # Errors
-/// Returns an error if cublas error occurs
-#[allow(clippy::module_name_repetitions)]
 pub fn cublas_amax<T: Default + 'static>(
     n: usize,
     x: *const T,
@@ -262,12 +243,7 @@ pub fn cublas_amax<T: Default + 'static>(
     }
 }
 
-/// # Panics
-/// Panics if the type is not supported, cublas state
-/// is not available and the type is not supported
-/// # Errors
-/// Returns an error if cublas error occurs
-#[allow(clippy::module_name_repetitions, clippy::similar_names)]
+#[allow(clippy::similar_names)]
 pub fn cublas_dot<T: 'static + Default>(
     n: usize,
     x: *const T,
@@ -317,12 +293,6 @@ pub fn cublas_dot<T: 'static + Default>(
     }
 }
 
-/// # Panics
-/// Panics if the type is not supported, cublas state
-/// is not available and the type is not supported
-/// # Errors
-/// Returns an error if cublas error occurs
-#[allow(clippy::module_name_repetitions)]
 pub fn cublas_scal<T: 'static + Copy>(
     n: usize,
     alpha: T,

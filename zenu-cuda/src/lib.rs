@@ -1,3 +1,7 @@
+#![allow(clippy::missing_panics_doc, clippy::missing_safety_doc, clippy::missing_errors_doc)]
+#![allow(clippy::unreadable_literal, clippy::approx_constant, clippy::excessive_precision)]
+#![allow(clippy::module_name_repetitions)]
+
 pub mod cublas;
 pub mod cudnn;
 pub mod kernel;

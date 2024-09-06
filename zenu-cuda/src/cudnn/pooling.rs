@@ -19,7 +19,8 @@ fn pooling_descriptor(
 ) -> Result<cudnnPoolingDescriptor_t, ZenuCudnnError> {
     let mut pooling: cudnnPoolingDescriptor_t = std::ptr::null_mut();
     unsafe {
-        let status = cudnnCreatePoolingDescriptor(&mut pooling as *mut cudnnPoolingDescriptor_t);
+        // let status = cudnnCreatePoolingDescriptor(&mut pooling as *mut cudnnPoolingDescriptor_t);
+        let status = cudnnCreatePoolingDescriptor(std::ptr::from_mut(&mut pooling));
         if status != cudnnStatus_t::CUDNN_STATUS_SUCCESS {
             return Err(ZenuCudnnError::from(status));
         }
@@ -27,12 +28,12 @@ fn pooling_descriptor(
             pooling,
             mode,
             cudnnNanPropagation_t::CUDNN_NOT_PROPAGATE_NAN,
-            window_h as i32,
-            window_w as i32,
-            pad_h as i32,
-            pad_w as i32,
-            stride_h as i32,
-            stride_w as i32,
+            i32::try_from(window_h).unwrap(),
+            i32::try_from(window_w).unwrap(),
+            i32::try_from(pad_h).unwrap(),
+            i32::try_from(pad_w).unwrap(),
+            i32::try_from(stride_h).unwrap(),
+            i32::try_from(stride_w).unwrap(),
         );
         if status != cudnnStatus_t::CUDNN_STATUS_SUCCESS {
             return Err(ZenuCudnnError::from(status));
@@ -78,7 +79,7 @@ impl From<PoolType> for cudnnPoolingMode_t {
     }
 }
 
-impl<T: 'static> Pool2d<T> {
+impl<T: 'static + Copy> Pool2d<T> {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         pool_type: PoolType,
@@ -135,12 +136,12 @@ impl<T: 'static> Pool2d<T> {
             cudnnPoolingForward(
                 handle.as_ptr(),
                 self.pooling as cudnnPoolingDescriptor_t,
-                &alpha as *const T as *const std::ffi::c_void,
+                std::ptr::from_ref(&alpha).cast::<std::ffi::c_void>(),
                 self.input_desc,
-                input as *const std::ffi::c_void,
-                &beta as *const T as *const std::ffi::c_void,
+                input.cast(),
+                std::ptr::from_ref(&beta).cast::<std::ffi::c_void>(),
                 self.output_desc,
-                output as *mut std::ffi::c_void,
+                output.cast()
             )
         };
         if status != cudnnStatus_t::CUDNN_STATUS_SUCCESS {
@@ -164,16 +165,16 @@ impl<T: 'static> Pool2d<T> {
             cudnnPoolingBackward(
                 handle.as_ptr(),
                 self.pooling as cudnnPoolingDescriptor_t,
-                &alpha as *const T as *const std::ffi::c_void,
+                std::ptr::from_ref(&alpha).cast::<std::ffi::c_void>(),
                 self.output_desc,
-                output as *const std::ffi::c_void,
+                output.cast(),
                 self.output_desc,
-                output_grad as *const std::ffi::c_void,
+                output_grad.cast(),
                 self.input_desc,
-                input as *const std::ffi::c_void,
-                &beta as *const T as *const std::ffi::c_void,
+                input.cast(),
+                std::ptr::from_ref(&beta).cast::<std::ffi::c_void>(),
                 self.input_desc,
-                input_grad as *mut std::ffi::c_void,
+                input_grad.cast()
             )
         };
 
@@ -190,6 +191,7 @@ mod pool2d {
 
     use super::Pool2d;
 
+    #[allow(clippy::too_many_lines)]
     #[test]
     fn max_pool_2d() {
         let input = vec![
@@ -269,7 +271,7 @@ mod pool2d {
             2.3025165,
             -1.8816892,
         ];
-        let output = vec![
+        let output = [
             0.69200915, 1.2376579, 0.59883946, 1.8530061, 0.94629836, 1.5863342, 2.3022053,
             0.8728312, 1.0553575, 2.3803675, 0.6870502, 2.3025165,
         ];
@@ -288,7 +290,7 @@ mod pool2d {
             (1, 3, 2, 2),
         )
         .unwrap();
-        let input_gpu = vec_to_gpu(input.clone());
+        let input_gpu = vec_to_gpu(&input);
         let output_gpu = cuda_malloc::<f32>(output.len()).unwrap();
 
         pool.forward(input_gpu, output_gpu, 1.0, 0.0).unwrap();
@@ -299,7 +301,7 @@ mod pool2d {
         }
 
         let output_grad = vec![1.0; output.len()];
-        let output_grad_gpu = vec_to_gpu(output_grad);
+        let output_grad_gpu = vec_to_gpu(&output_grad);
 
         let input_grad_gpu = cuda_malloc::<f32>(input.len()).unwrap();
 
@@ -327,7 +329,7 @@ mod pool2d {
         }
     }
 
-    fn vec_to_gpu(vec: Vec<f32>) -> *mut f32 {
+    fn vec_to_gpu(vec: &[f32]) -> *mut f32 {
         let gpu_ptr = cuda_malloc::<f32>(vec.len()).unwrap();
         cuda_copy(
             gpu_ptr,

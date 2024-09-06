@@ -67,9 +67,6 @@ pub struct GRUParams {
 }
 
 impl<T: 'static + Copy> RNNDescriptor<T> {
-    /// # Panics
-    /// * rnn descriptor is not created successfully
-    /// * weights size is not calculated successfully
     #[allow(clippy::too_many_arguments)]
     #[must_use]
     pub fn new(
@@ -135,9 +132,6 @@ impl<T: 'static + Copy> RNNDescriptor<T> {
         }
     }
 
-    /// # Panics
-    /// *cudnn context is not created successfully
-    /// * cudnn failed to get RNN temp space sizes
     #[allow(clippy::not_unsafe_ptr_arg_deref)]
     pub fn get_workspace_reserve_size(
         &self,
@@ -204,8 +198,6 @@ impl<T: 'static + Copy> RNNDescriptor<T> {
         self.bidirectional
     }
 
-    /// # Panics
-    /// * cell type is not `RNNCell::RNNRelu` or `RNNCell::RNNTanh`
     pub fn get_rnn_params(&self, weight_ptr: *mut T) -> Vec<RNNParams> {
         assert!(
             !(self.cell != RNNCell::RNNRelu && self.cell != RNNCell::RNNTanh),
@@ -247,8 +239,6 @@ impl<T: 'static + Copy> RNNDescriptor<T> {
         params
     }
 
-    /// # Panics
-    /// * cell type is not `RNNCell::LSTM`
     pub fn get_lstm_params(&self, weight_ptr: *mut T) -> Vec<LstmParams> {
         assert!(!(self.cell != RNNCell::LSTM), "Only LSTM cell is supported");
         let mut params = Vec::new();
@@ -318,8 +308,6 @@ impl<T: 'static + Copy> RNNDescriptor<T> {
         params
     }
 
-    /// # Panics
-    /// * cell type is not `RNNCell::GRU`
     pub fn get_gru_params(&self, weight_ptr: *mut T) -> Vec<GRUParams> {
         assert!(!(self.cell != RNNCell::GRU), "Only GRU cell is supported");
         let mut params = Vec::new();
@@ -375,8 +363,6 @@ impl<T: 'static + Copy> RNNDescriptor<T> {
         params
     }
 
-    /// # Panics
-    /// * rnn context is not created successfully
     pub fn set_input_size(
         &mut self,
         seq_length: usize,
@@ -423,9 +409,6 @@ impl<T: 'static + Copy> RNNDescriptor<T> {
         });
     }
 
-    /// # Panics
-    /// * rnn context is not created successfully
-    /// * rnn forward failed
     #[allow(clippy::too_many_arguments)]
     pub fn fwd(
         &self,
@@ -462,9 +445,6 @@ impl<T: 'static + Copy> RNNDescriptor<T> {
         .unwrap();
     }
 
-    /// # Panics
-    /// * rnn context is not created successfully
-    /// * rnn backward failed
     #[allow(clippy::too_many_arguments, clippy::similar_names)]
     pub fn bkwd_data(
         &self,
@@ -506,9 +486,6 @@ impl<T: 'static + Copy> RNNDescriptor<T> {
         .unwrap();
     }
 
-    /// # Panics
-    /// * rnn context is not created successfully
-    /// * rnn backward failed
     pub fn bkwd_weights(
         &self,
         x: *const T,

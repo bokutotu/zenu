@@ -23,7 +23,7 @@ pub fn cuda_stream_sync() -> Result<(), ZenuCudaRuntimeError> {
 
 pub fn cuda_malloc<T>(size: usize) -> Result<*mut T, ZenuCudaRuntimeError> {
     let bytes = size * std::mem::size_of::<T>();
-    let ptr = cuda_malloc_bytes(bytes).map(|ptr| ptr as *mut T)?;
+    let ptr = cuda_malloc_bytes(bytes).map(<*mut u8>::cast::<T>)?;
     Ok(ptr)
 }
 
@@ -32,7 +32,7 @@ pub fn cuda_malloc_bytes(bytes: usize) -> Result<*mut u8, ZenuCudaRuntimeError> 
     let stream = ZENU_CUDA_STATE.lock().unwrap().get_stream();
     let err = unsafe {
         cudaMallocAsync(
-            &mut ptr as *mut *mut u8 as *mut *mut std::ffi::c_void,
+            std::ptr::from_mut::<*mut u8>(&mut ptr).cast::<*mut ::libc::c_void>(),
             bytes,
             stream,
         )
@@ -47,7 +47,7 @@ pub fn cuda_malloc_bytes(bytes: usize) -> Result<*mut u8, ZenuCudaRuntimeError> 
 
 pub fn cuda_free<T>(ptr: *mut T) -> Result<(), ZenuCudaRuntimeError> {
     let stream = ZENU_CUDA_STATE.lock().unwrap().get_stream();
-    let err = unsafe { cudaFreeAsync(ptr as *mut std::ffi::c_void, stream) } as u32;
+    let err = unsafe { cudaFreeAsync(ptr.cast(), stream) } as u32;
     let err = ZenuCudaRuntimeError::from(err);
     cuda_stream_sync()?;
     match err {
@@ -86,8 +86,8 @@ pub fn cuda_copy<T>(
     let size = size * std::mem::size_of::<T>();
     let err = unsafe {
         cudaMemcpy(
-            dst as *mut std::ffi::c_void,
-            src as *const std::ffi::c_void,
+            dst.cast(),
+            src.cast(),
             size,
             cudaMemcpyKind::from(kind),
         )
@@ -123,6 +123,7 @@ pub fn cuda_create_stream() -> Result<cudaStream_t, ZenuCudaRuntimeError> {
     }
 }
 
+#[must_use]
 pub fn cuda_create_pool_props() -> cudaMemPoolProps {
     let cuda_location = cudaMemLocation {
         type_: cudaMemLocationType::cudaMemLocationTypeDevice,
@@ -144,7 +145,9 @@ pub struct MemoryInfo {
 pub fn cuda_get_memory_info() -> Result<MemoryInfo, ZenuCudaRuntimeError> {
     let mut free = 0;
     let mut total = 0;
-    let err = unsafe { cudaMemGetInfo(&mut free as *mut usize, &mut total as *mut usize) } as u32;
+    let free_ptr = std::ptr::from_mut(&mut free);
+    let total_ptr = std::ptr::from_mut(&mut total);
+    let err = unsafe { cudaMemGetInfo(free_ptr, total_ptr) } as u32;
     let err = ZenuCudaRuntimeError::from(err);
     match err {
         ZenuCudaRuntimeError::CudaSuccess => Ok(MemoryInfo { free, total }),
@@ -157,7 +160,7 @@ pub fn cuda_set_mem_pool(
     dev_id: usize,
     mempool: cudaMemPool_t,
 ) -> Result<(), ZenuCudaRuntimeError> {
-    let dev_id = dev_id as ::libc::c_int;
+    let dev_id = ::libc::c_int::try_from(dev_id).unwrap();
     let err = unsafe { cudaDeviceSetMemPool(dev_id, mempool) } as u32;
     let err = ZenuCudaRuntimeError::from(err);
     match err {
@@ -176,7 +179,7 @@ pub fn cuda_set_mem_pool_atribute_mem_max(
         cudaMemPoolSetAttribute(
             mempool,
             cudaMemPoolAttr::cudaMemPoolAttrReleaseThreshold,
-            &poolsize as *const ::libc::size_t as *mut std::ffi::c_void,
+            std::ptr::from_ref(&poolsize).cast::<std::ffi::c_void>().cast_mut(),
         )
     } as u32;
     let err = ZenuCudaRuntimeError::from(err);
@@ -192,8 +195,8 @@ pub fn cuda_create_mem_pool() -> Result<cudaMemPool_t, ZenuCudaRuntimeError> {
     let mempool_ptr = &mut addr_of_cumempoolhandle as *mut *mut CUmemPoolHandle_st;
     let err = unsafe {
         cudaMemPoolCreate(
-            mempool_ptr as *mut cudaMemPool_t,
-            &props as *const cudaMemPoolProps,
+            mempool_ptr.cast(),
+            std::ptr::from_ref(&props).cast(),
         )
     } as u32;
     match err {
@@ -202,6 +205,7 @@ pub fn cuda_create_mem_pool() -> Result<cudaMemPool_t, ZenuCudaRuntimeError> {
     }
 }
 
+#[allow(clippy::cast_precision_loss, clippy::cast_sign_loss, clippy::cast_possible_truncation)]
 pub fn set_up_mempool() -> Result<cudaMemPool_t, ZenuCudaRuntimeError> {
     let mempool = cuda_create_mem_pool()?;
     cuda_set_mem_pool(0, mempool)?;
