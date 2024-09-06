@@ -218,7 +218,7 @@ mod save_and_load_paramters {
             fc2: Linear::new(500, 10, true),
         };
 
-        let _ = load_model::<f32, D, ConvNet<f32, D>, _>(save_path, &model).unwrap();
+        load_model::<f32, D, ConvNet<f32, D>, _>(save_path, &model).unwrap();
 
         std::fs::remove_file(save_path).unwrap();
     }
