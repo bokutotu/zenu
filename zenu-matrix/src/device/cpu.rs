@@ -9,12 +9,12 @@ pub struct Cpu;
 
 impl DeviceBase for Cpu {
     fn raw_drop_ptr<T>(ptr: *mut T) {
-        unsafe { libc::free(ptr as *mut libc::c_void) }
+        unsafe { libc::free(ptr.cast::<::libc::c_void>()) }
     }
 
     fn mem_pool_drop_ptr(ptr: *mut u8) -> Result<(), MemPoolError> {
         let state = &ZENU_MATRIX_STATE;
-        state.cpu_mem_pool.try_free(ptr)
+        state.cpu.try_free(ptr)
     }
 
     #[allow(clippy::not_unsafe_ptr_arg_deref)]
@@ -40,21 +40,23 @@ impl DeviceBase for Cpu {
         unsafe { ptr.add(offset).read() }
     }
 
-    fn from_vec<T>(vec: Vec<T>) -> *mut T {
-        let ptr = vec.as_ptr() as *mut T;
+    fn from_vec<T>(mut vec: Vec<T>) -> *mut T {
+        let ptr = vec.as_mut_ptr().cast::<T>();
         std::mem::forget(vec);
         ptr
     }
 
     fn zeros<T: Num>(len: usize) -> *mut T {
-        use cblas::*;
-        let ptr = Self::alloc(len * std::mem::size_of::<T>()).unwrap() as *mut T;
+        use cblas::{dscal, sscal};
+        let ptr = Self::alloc(len * std::mem::size_of::<T>())
+            .unwrap()
+            .cast::<T>();
         if T::is_f32() {
-            let slice = unsafe { std::slice::from_raw_parts_mut(ptr as *mut f32, 1) };
-            unsafe { sscal(len as i32, 0.0, slice, 1) };
+            let slice = unsafe { std::slice::from_raw_parts_mut(ptr.cast(), 1) };
+            unsafe { sscal(i32::try_from(len).unwrap(), 0.0, slice, 1) };
         } else {
-            let slice = unsafe { std::slice::from_raw_parts_mut(ptr as *mut f64, 1) };
-            unsafe { dscal(len as i32, 0.0, slice, 1) };
+            let slice = unsafe { std::slice::from_raw_parts_mut(ptr.cast(), 1) };
+            unsafe { dscal(i32::try_from(len).unwrap(), 0.0, slice, 1) };
         }
         ptr
     }
@@ -64,13 +66,13 @@ impl DeviceBase for Cpu {
         if ptr.is_null() {
             Err("null pointer".to_string())
         } else {
-            Ok(ptr as *mut u8)
+            Ok(ptr.cast())
         }
     }
 
     fn mem_pool_alloc(num_bytes: usize) -> Result<*mut u8, MemPoolError> {
         let state = &ZENU_MATRIX_STATE;
-        state.cpu_mem_pool.try_alloc(num_bytes)
+        state.cpu.try_alloc(num_bytes)
     }
 }
 

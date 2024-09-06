@@ -25,20 +25,20 @@ mod with_clousers;
 use device::nvidia::Nvidia;
 
 pub(crate) struct ZenuMatrixState {
-    pub(crate) use_mem_pool: bool,
-    pub(crate) cpu_mem_pool: MemPool<Cpu>,
+    pub(crate) is_used: bool,
+    pub(crate) cpu: MemPool<Cpu>,
     #[cfg(feature = "nvidia")]
-    pub(crate) nvidia_mem_pool: MemPool<Nvidia>,
+    pub(crate) nvidia: MemPool<Nvidia>,
 }
 
 impl Default for ZenuMatrixState {
     fn default() -> Self {
         let use_mem_pool = std::env::var("ZENU_USE_MEMPOOL").unwrap_or("1".to_string()) == "1";
         ZenuMatrixState {
-            use_mem_pool,
-            cpu_mem_pool: MemPool::default(),
+            is_used: use_mem_pool,
+            cpu: MemPool::default(),
             #[cfg(feature = "nvidia")]
-            nvidia_mem_pool: MemPool::default(),
+            nvidia: MemPool::default(),
         }
     }
 }

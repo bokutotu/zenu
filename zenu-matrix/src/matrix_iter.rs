@@ -45,7 +45,7 @@ where
         self.matrix.shape()[self.axis]
     }
 
-    /// fn_mapを適応する際に切り出すMatrixの一つ目の要素のIndexのVecを返す
+    /// `fn_map`を適応する際に切り出す`Matrix`の一つ目の要素の`Index`の`Vec`を返す
     fn get_index(&self) -> Vec<DimDyn> {
         // axisのIndexを除いたIndexのVecを返す
         let mut candidates = Vec::with_capacity(self.matrix.shape().len() - 1);
@@ -132,14 +132,16 @@ impl<T: Num, D: Device> MatrixIter<T, D> for Matrix<Ref<&mut T>, DimDyn, D> {
     where
         F: FnMut(Matrix<Ref<&mut T>, DimDyn, D>),
     {
-        if self.shape().len() <= 1 {
-            panic!("shape.len() <= 1");
-        }
+        // if self.shape().len() <= 1 {
+        //     panic!("shape.len() <= 1");
+        // }
+        assert!(self.shape().len() > 1, "shape.len() <= 1");
         let mut map_axis = MapAxis::new(self, axis, fn_map);
         map_axis.apply();
     }
 }
 
+#[allow(clippy::float_cmp)]
 #[cfg(test)]
 mod map_axis {
     use crate::{

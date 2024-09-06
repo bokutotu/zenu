@@ -38,6 +38,7 @@ impl<R: Repr, D: Device> Serialize for Matrix<R, DimDyn, D> {
 }
 
 impl<'de, T: Num + Deserialize<'de>, D: Device> Deserialize<'de> for Matrix<Owned<T>, DimDyn, D> {
+    #[allow(clippy::too_many_lines)]
     fn deserialize<Ds>(deserializer: Ds) -> Result<Self, Ds::Error>
     where
         Ds: serde::Deserializer<'de>,
@@ -88,6 +89,7 @@ impl<'de, T: Num + Deserialize<'de>, D: Device> Deserialize<'de> for Matrix<Owne
 
         struct MatrixVisitor<T: Num, D: Device>(std::marker::PhantomData<(T, D)>);
 
+        #[allow(clippy::similar_names)]
         impl<'de, T: Num + Deserialize<'de>, D: Device> Visitor<'de> for MatrixVisitor<T, D> {
             type Value = Matrix<Owned<T>, DimDyn, D>;
 
@@ -216,7 +218,6 @@ impl<'de, T: Num + Deserialize<'de>, D: Device> Deserialize<'de> for Matrix<Owne
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serde_json;
     use zenu_test::assert_mat_eq_epsilon;
 
     #[test]

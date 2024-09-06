@@ -6,18 +6,26 @@ use crate::{
     num::Num,
 };
 
+/// Matrix concatenation
+/// # Arguments
+/// * `matrix` - A slice of matrices to concatenate
+/// # Panics
+/// * If the matrices do not have the same shape
+/// * If the matrices are 4D
 pub fn concat<T: Num, R: Repr<Item = T>, S: DimTrait, D: Device>(
     matrix: &[Matrix<R, S, D>],
 ) -> Matrix<Owned<T>, DimDyn, D> {
     let first_shape = matrix[0].shape();
     for m in matrix.iter().skip(1) {
-        if m.shape() != first_shape {
-            panic!("All matrices must have the same shape");
-        }
+        assert!(
+            m.shape() == first_shape,
+            "All matrices must have the same shape"
+        );
     }
-    if first_shape.len() == 4 {
-        panic!("Concatenation of 4D matrices is not supported");
-    }
+    assert!(
+        first_shape.len() != 4,
+        "Concatenation of 4D matrices is not supported"
+    );
 
     let mut shape = DimDyn::default();
     shape.push_dim(matrix.len());
@@ -38,8 +46,9 @@ pub fn concat<T: Num, R: Repr<Item = T>, S: DimTrait, D: Device>(
     result
 }
 
+#[allow(clippy::float_cmp)]
 #[cfg(test)]
-mod concat {
+mod concat_test {
     use crate::{
         device::Device,
         dim::DimDyn,
