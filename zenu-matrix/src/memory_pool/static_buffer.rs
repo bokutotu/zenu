@@ -28,16 +28,18 @@ impl<D: DeviceBase, const N: usize> StaticSizeBuffer<D, N> {
     fn start_end_ptr(&self, bytes: usize) -> (*mut u8, *mut u8) {
         let (start, end) = self
             .last_ptr()
-            .map(|end| {
-                let start = unsafe { end.add(MIDDLE_BUFFER_SIZE) };
-                let end = unsafe { start.add(bytes) };
-                (start, end)
-            })
-            .unwrap_or_else(|| {
-                let start = self.data.ptr;
-                let end = unsafe { start.add(bytes) };
-                (start, end)
-            });
+            .map_or_else(
+                || {
+                    let start = self.data.ptr;
+                    let end = unsafe { start.add(bytes) };
+                    (start, end)
+                },
+                |end| {
+                    let start = unsafe { end.add(MIDDLE_BUFFER_SIZE) };
+                    let end = unsafe { start.add(bytes) };
+                    (start, end)
+                }
+            );
         // 最初と最後のポインタが正しいかチェック
         assert!(start >= self.data.ptr);
         assert!(end <= unsafe { self.data.ptr.add(N) });

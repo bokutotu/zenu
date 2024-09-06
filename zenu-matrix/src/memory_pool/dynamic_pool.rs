@@ -16,27 +16,24 @@ pub struct DynMemPool<D: DeviceBase> {
 
 impl<D: DeviceBase> DynMemPool<D> {
     pub fn try_alloc(&mut self, bytes: usize) -> Result<*mut u8, MemPoolError> {
-        match self.smallest_unused_bytes_over_request(bytes) {
-            Some(smallest_unused_bytes_over_request) => {
-                let buffers = self
-                    .unused_buffers
-                    .get_mut(&smallest_unused_bytes_over_request)
-                    .unwrap();
-                let buffer = buffers.pop().unwrap();
-                let ptr = buffer.lock().unwrap().start_ptr();
-                self.used_buffers.insert(ptr, buffer);
-                if buffers.is_empty() {
-                    self.unused_buffers
-                        .remove(&smallest_unused_bytes_over_request);
-                }
-                Ok(ptr)
+        if let Some(smallest_unused_bytes_over_request) = self.smallest_unused_bytes_over_request(bytes) {
+            let buffers = self
+                .unused_buffers
+                .get_mut(&smallest_unused_bytes_over_request)
+                .unwrap();
+            let buffer = buffers.pop().unwrap();
+            let ptr = buffer.lock().unwrap().start_ptr();
+            self.used_buffers.insert(ptr, buffer);
+            if buffers.is_empty() {
+                self.unused_buffers
+                    .remove(&smallest_unused_bytes_over_request);
             }
-            None => {
-                let buffer = Arc::new(Mutex::new(DynBuffer::new(bytes)?));
-                let ptr = buffer.lock().unwrap().start_ptr();
-                self.used_buffers.insert(ptr, buffer);
-                Ok(ptr)
-            }
+            Ok(ptr)
+        } else {
+            let buffer = Arc::new(Mutex::new(DynBuffer::new(bytes)?));
+            let ptr = buffer.lock().unwrap().start_ptr();
+            self.used_buffers.insert(ptr, buffer);
+            Ok(ptr)
         }
     }
 
