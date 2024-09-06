@@ -107,25 +107,25 @@ impl ReluOps for Nvidia {
         output_stride: usize,
     ) {
         if TypeId::of::<T>() == TypeId::of::<f32>() {
-            let alpha: f32 = unsafe { *(&alpha as *const T as *const f32) };
+            let alpha = alpha.to_f32().unwrap();
             relu(
-                input as *mut f32,
-                output as *mut f32,
+                input.cast_mut().cast::<f32>(),
+                output.cast(),
                 alpha,
                 size,
                 input_stride,
                 output_stride,
-            )
+            );
         } else if TypeId::of::<T>() == TypeId::of::<f64>() {
-            let alpha: f64 = unsafe { *(&alpha as *const T as *const f64) };
+            let alpha = alpha.to_f64().unwrap();
             relu(
-                input as *mut f64,
-                output as *mut f64,
+                input.cast_mut().cast::<f64>(),
+                output.cast(),
                 alpha,
                 size,
                 input_stride,
                 output_stride,
-            )
+            );
         } else {
             panic!("Unsupported data type");
         }
@@ -140,25 +140,26 @@ impl ReluOps for Nvidia {
         mask_stride: usize,
     ) {
         if TypeId::of::<T>() == TypeId::of::<f32>() {
-            let alpha: f32 = unsafe { *(&alpha as *const T as *const f32) };
+            // let alpha: f32 = unsafe { *(&alpha as *const T as *const f32) };
+            let alpha = alpha.to_f32().unwrap();
             relu_backward_mask(
-                input as *mut f32,
-                mask as *mut f32,
+                input.cast_mut().cast(),
+                mask.cast(),
                 alpha,
                 size,
                 input_stride,
                 mask_stride,
-            )
+            );
         } else if TypeId::of::<T>() == TypeId::of::<f64>() {
-            let alpha: f64 = unsafe { *(&alpha as *const T as *const f64) };
+            let alpha = alpha.to_f64().unwrap();
             relu_backward_mask(
-                input as *mut f64,
-                mask as *mut f64,
+                input.cast_mut().cast(),
+                mask.cast(),
                 alpha,
                 size,
                 input_stride,
                 mask_stride,
-            )
+            );
         } else {
             panic!("Unsupported data type");
         }
@@ -166,10 +167,12 @@ impl ReluOps for Nvidia {
 }
 
 impl<T: Num, S: DimTrait, D: Device> Matrix<Ref<&mut T>, S, D> {
+    #[allow(clippy::missing_panics_doc)]
     pub fn relu<R: Repr<Item = T>, SO: DimTrait>(&self, other: &Matrix<R, SO, D>, alpha: T) {
-        if self.shape().slice() != other.shape().slice() {
-            panic!("shape mismatch");
-        }
+        assert!(
+            self.shape().slice() == other.shape().slice(),
+            "shape mismatch"
+        );
 
         let len = self.shape().len();
         let is_self_default_stride = self.shape_stride().is_default_stride();
@@ -199,14 +202,16 @@ impl<T: Num, S: DimTrait, D: Device> Matrix<Ref<&mut T>, S, D> {
         }
     }
 
+    #[allow(clippy::missing_panics_doc)]
     pub fn relu_backward_mask<R: Repr<Item = T>, SO: DimTrait>(
         &self,
         other: &Matrix<R, SO, D>,
         alpha: T,
     ) {
-        if self.shape().slice() != other.shape().slice() {
-            panic!("shape mismatch");
-        }
+        assert!(
+            self.shape().slice() == other.shape().slice(),
+            "shape mismatch"
+        );
 
         let len = self.shape().len();
         let is_self_default_stride = self.stride() == default_stride(self.shape());

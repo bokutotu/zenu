@@ -41,6 +41,7 @@ impl MaxIdx for Nvidia {
 }
 
 impl<T: Num, R: Repr<Item = T>, D: Device> Matrix<R, DimDyn, D> {
+    #[must_use]
     pub fn max_idx(&self) -> DimDyn {
         let default_stride = self.to_default_stride();
         let idx = <D as MaxIdx>::max_idx(
@@ -51,16 +52,17 @@ impl<T: Num, R: Repr<Item = T>, D: Device> Matrix<R, DimDyn, D> {
         default_stride.shape_stride().get_dim_by_offset(idx)
     }
 
+    #[must_use]
     pub fn max_item(&self) -> T {
         let idx = self.max_idx();
         self.index_item(idx)
     }
 
     /// selfはdefault stride
+    #[allow(clippy::missing_panics_doc)]
+    #[must_use]
     pub fn max_axis(&self, axis: usize, keep_dim: bool) -> Matrix<Owned<T>, DimDyn, D> {
-        if axis >= self.shape().len() {
-            panic!("max_axis: Axis out of bounds");
-        }
+        assert!(axis < self.shape().len(), "max_axis: Axis out of bounds");
 
         let mut output_shape = Vec::new();
         for i in 0..self.shape().len() {
@@ -93,10 +95,10 @@ impl<T: Num, R: Repr<Item = T>, D: Device> Matrix<R, DimDyn, D> {
         output
     }
 
+    #[allow(clippy::missing_panics_doc)]
+    #[must_use]
     pub fn max_axis_idx_ravel(&self, axis: usize) -> Vec<usize> {
-        if axis >= self.shape().len() {
-            panic!("max_axis: Axis out of bounds");
-        }
+        assert!(axis < self.shape().len(), "max_axis: Axis out of bounds");
 
         let mut output_shape = Vec::new();
         for i in 0..self.shape().len() {
@@ -131,6 +133,15 @@ impl<T: Num, R: Repr<Item = T>, D: Device> Matrix<R, DimDyn, D> {
 
 #[cfg(test)]
 mod max_idx {
+    #![allow(
+        clippy::float_cmp,
+        clippy::unreadable_literal,
+        clippy::cast_precision_loss,
+        clippy::cast_possible_truncation,
+        clippy::too_many_lines,
+        clippy::excessive_precision
+    )]
+
     use crate::{
         device::Device,
         dim::DimDyn,

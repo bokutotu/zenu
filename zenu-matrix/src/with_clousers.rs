@@ -243,7 +243,11 @@ pub(crate) fn array_array_array<T, D, FMatMat, FMatSca>(
 
 #[cfg(test)]
 mod basic_ops {
-    #![allow(clippy::float_cmp, clippy::cast_precision_loss, clippy::cast_possible_truncation)]
+    #![allow(
+        clippy::float_cmp,
+        clippy::cast_precision_loss,
+        clippy::cast_possible_truncation
+    )]
 
     use std::{cell::RefCell, rc::Rc};
 

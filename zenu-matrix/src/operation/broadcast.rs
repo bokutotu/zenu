@@ -7,6 +7,7 @@ use crate::{
 };
 
 impl<T: Num, D: Device> Matrix<Ref<&mut T>, DimDyn, D> {
+    #[allow(clippy::missing_panics_doc)]
     pub fn broadcast<R: Repr<Item = T>>(&self, source: &Matrix<R, DimDyn, D>) {
         let source = source.to_ref();
         if !(self.shape().is_include(source.shape())
@@ -41,7 +42,8 @@ impl<T: Num, D: Device> Matrix<Ref<&mut T>, DimDyn, D> {
 }
 
 #[cfg(test)]
-mod broadcast {
+mod broadcast_test {
+    #![allow(clippy::float_cmp)]
     use crate::{
         device::Device,
         dim::DimDyn,
@@ -49,10 +51,10 @@ mod broadcast {
     };
 
     fn broadcast_1d_0d<D: Device>() {
-        let source: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(vec![1.], &[]);
+        let source: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(vec![1.], []);
         let mut res: Matrix<Owned<f32>, DimDyn, D> = Matrix::zeros([3]);
         res.to_ref_mut().broadcast(&source.to_ref());
-        let ans: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(vec![1., 1., 1.], &[3]);
+        let ans: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(vec![1., 1., 1.], [3]);
         let diff = ans.to_ref() - res.to_ref();
         let diff_sum = diff.to_ref().asum();
         assert_eq!(diff_sum, 0.);
@@ -69,11 +71,11 @@ mod broadcast {
 
     // #[test]
     fn broadcast_2d_0d<D: Device>() {
-        let source: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(vec![1.], &[]);
+        let source: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(vec![1.], []);
         let mut res: Matrix<Owned<f32>, DimDyn, D> = Matrix::zeros([2, 3]);
         res.to_ref_mut().broadcast(&source.to_ref());
         let ans: Matrix<Owned<f32>, DimDyn, D> =
-            Matrix::from_vec(vec![1., 1., 1., 1., 1., 1.], &[2, 3]);
+            Matrix::from_vec(vec![1., 1., 1., 1., 1., 1.], [2, 3]);
         let diff = ans.to_ref() - res.to_ref();
         let diff_sum = diff.to_ref().asum();
         assert_eq!(diff_sum, 0.);
@@ -90,11 +92,11 @@ mod broadcast {
 
     // #[test]
     fn broadcast_2d_1d<D: Device>() {
-        let source: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(vec![1., 2., 3.], &[3]);
+        let source: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(vec![1., 2., 3.], [3]);
         let mut res: Matrix<Owned<f32>, DimDyn, D> = Matrix::zeros([2, 3]);
         res.to_ref_mut().broadcast(&source.to_ref());
         let ans: Matrix<Owned<f32>, DimDyn, D> =
-            Matrix::from_vec(vec![1., 2., 3., 1., 2., 3.], &[2, 3]);
+            Matrix::from_vec(vec![1., 2., 3., 1., 2., 3.], [2, 3]);
         let diff = ans.to_ref() - res.to_ref();
         let diff_sum = diff.to_ref().asum();
         assert_eq!(diff_sum, 0.);
@@ -110,12 +112,12 @@ mod broadcast {
     }
 
     fn broadcast_4d_2d<D: Device>() {
-        let source: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(vec![1., 2.], &[1, 2]);
+        let source: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(vec![1., 2.], [1, 2]);
         let mut res: Matrix<Owned<f32>, DimDyn, D> = Matrix::zeros([2, 3, 1, 2]);
         res.to_ref_mut().broadcast(&source.to_ref());
         let ans: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(
             vec![1., 2., 1., 2., 1., 2., 1., 2., 1., 2., 1., 2.],
-            &[2, 3, 1, 2],
+            [2, 3, 1, 2],
         );
         let diff = ans.to_ref() - res.to_ref();
         let diff_sum = diff.to_ref().asum();
@@ -134,7 +136,7 @@ mod broadcast {
     // #[test]
     fn broadcast_4d_4d<D: Device>() {
         let source: Matrix<Owned<f32>, DimDyn, D> =
-            Matrix::from_vec(vec![1., 2., 3., 4.], &[1, 1, 1, 4]);
+            Matrix::from_vec(vec![1., 2., 3., 4.], [1, 1, 1, 4]);
         let mut res: Matrix<Owned<f32>, DimDyn, D> = Matrix::zeros([2, 3, 4, 4]);
         res.to_ref_mut().broadcast(&source.to_ref());
         let ans: Matrix<_, DimDyn, D> = Matrix::from_vec(

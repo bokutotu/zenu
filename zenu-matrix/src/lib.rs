@@ -1,3 +1,5 @@
+#![allow(clippy::module_name_repetitions, clippy::module_inception)]
+
 use device::cpu::Cpu;
 use memory_pool::MemPool;
 
