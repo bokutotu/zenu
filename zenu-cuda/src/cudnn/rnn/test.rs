@@ -6,7 +6,11 @@ mod rnn {
     };
 
     #[test]
-    #[allow(clippy::too_many_lines, clippy::unreadable_literal, clippy::cast_ptr_alignment)]
+    #[allow(
+        clippy::too_many_lines,
+        clippy::unreadable_literal,
+        clippy::cast_ptr_alignment
+    )]
     fn rnn() {
         let input_size = 2;
         let output_size = 4;
@@ -143,7 +147,7 @@ mod rnn {
             reserve.cast(),
         );
 
-        let mut output  = [0.0; 20];
+        let mut output = [0.0; 20];
         cuda_copy(
             output.as_mut_ptr(),
             output_gpu,
