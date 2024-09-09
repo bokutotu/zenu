@@ -95,10 +95,10 @@ impl<T: Num, D: Device> RNNWeights<T, D> {
 
     #[expect(clippy::missing_panics_doc)]
     pub fn set_weight(&self, params: &RNNParams) {
-        let input_weight_ptr = params.input_weight.ptr .cast();
-        let hidden_weight_ptr = params.hidden_weight.ptr .cast();
-        let input_bias_ptr = params.input_bias.ptr .cast();
-        let hidden_bias_ptr = params.hidden_bias.ptr .cast();
+        let input_weight_ptr = params.input_weight.ptr.cast();
+        let hidden_weight_ptr = params.hidden_weight.ptr.cast();
+        let input_bias_ptr = params.input_bias.ptr.cast();
+        let hidden_bias_ptr = params.hidden_bias.ptr.cast();
 
         let input_weight_numelm = self.input_weight().shape().num_elm();
         let hidden_weight_numelm = self.hidden_weight().shape().num_elm();

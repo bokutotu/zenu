@@ -61,7 +61,11 @@ impl<T: Num, D: DeviceBase> DropoutState<T, D> {
     }
 }
 
-#[expect(clippy::cast_precision_loss, clippy::cast_sign_loss, clippy::cast_possible_truncation)]
+#[expect(
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss,
+    clippy::cast_possible_truncation
+)]
 fn dropout_mask_inner<T>(input: &mut [T], dropout_ratio: f32)
 where
     T: Copy + std::ops::Mul<T, Output = T> + std::ops::AddAssign + Num,
@@ -204,7 +208,10 @@ where
     R: Repr,
     D: Dropout + DeviceBase,
 {
-    assert!((x.shape().len() == 2) || (x.shape().len() == 4), "Only 2D and 4D tensors are supported");
+    assert!(
+        (x.shape().len() == 2) || (x.shape().len() == 4),
+        "Only 2D and 4D tensors are supported"
+    );
     D::dropout(&x.to_ref(), state)
 }
 

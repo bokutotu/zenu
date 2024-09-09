@@ -424,11 +424,11 @@ pub fn set_memory<T: 'static + Copy>(array: *mut T, offset: usize, value: T) {
     let offset = ::libc::c_int::try_from(offset).unwrap();
     if TypeId::of::<T>() == TypeId::of::<f32>() {
         let array = array.cast::<f32>();
-        let value = unsafe {*std::ptr::from_ref(&value).cast::<f32>()};
+        let value = unsafe { *std::ptr::from_ref(&value).cast::<f32>() };
         unsafe { memory_set_float(array, offset, value) };
     } else if TypeId::of::<T>() == TypeId::of::<f64>() {
         let array = array.cast::<f64>();
-        let value = unsafe {*std::ptr::from_ref(&value).cast::<f64>()};
+        let value = unsafe { *std::ptr::from_ref(&value).cast::<f64>() };
         unsafe { memory_set_double(array, offset, value) };
     }
 }
@@ -506,7 +506,13 @@ pub fn clip_backward<T: 'static + Copy>(
     }
 }
 
-pub fn clip_backward_assign<T: 'static + Copy>(mask: *mut T, max: T, min: T, size: usize, stride: usize) {
+pub fn clip_backward_assign<T: 'static + Copy>(
+    mask: *mut T,
+    max: T,
+    min: T,
+    size: usize,
+    stride: usize,
+) {
     let size = ::libc::c_int::try_from(size).unwrap();
     let stride = ::libc::c_int::try_from(stride).unwrap();
     if TypeId::of::<T>() == TypeId::of::<f32>() {
@@ -568,22 +574,12 @@ pub fn array_max_idx<T: 'static>(input: *const T, size: usize, stride: usize) ->
     if TypeId::of::<T>() == TypeId::of::<f32>() {
         let input = input.cast::<f32>().cast_mut();
         unsafe {
-            array_max_idx_float(
-                input,
-                size,
-                stride,
-                std::ptr::from_mut(&mut ans).cast(),
-            );
+            array_max_idx_float(input, size, stride, std::ptr::from_mut(&mut ans).cast());
         };
     } else if TypeId::of::<T>() == TypeId::of::<f64>() {
         let input = input.cast::<f64>().cast_mut();
         unsafe {
-            array_max_idx_double(
-                input,
-                size,
-                stride,
-                std::ptr::from_mut(&mut ans).cast(),
-            );
+            array_max_idx_double(input, size, stride, std::ptr::from_mut(&mut ans).cast());
         };
     } else {
         panic!("Not supported type");
@@ -848,10 +844,14 @@ mod array_array {
     );
 }
 
-#[expect(clippy::unreadable_literal, clippy::approx_constant, clippy::excessive_precision)]
+#[expect(
+    clippy::unreadable_literal,
+    clippy::approx_constant,
+    clippy::excessive_precision
+)]
 #[cfg(test)]
 mod array_scalar {
-    
+
     use crate::runtime::{cuda_copy, cuda_malloc, ZenuCudaMemCopyKind};
 
     use super::*;

@@ -141,7 +141,7 @@ impl<T: 'static + Copy> Pool2d<T> {
                 input.cast(),
                 std::ptr::from_ref(&beta).cast::<std::ffi::c_void>(),
                 self.output_desc,
-                output.cast()
+                output.cast(),
             )
         };
         if status != cudnnStatus_t::CUDNN_STATUS_SUCCESS {
@@ -174,7 +174,7 @@ impl<T: 'static + Copy> Pool2d<T> {
                 input.cast(),
                 std::ptr::from_ref(&beta).cast::<std::ffi::c_void>(),
                 self.input_desc,
-                input_grad.cast()
+                input_grad.cast(),
             )
         };
 

@@ -37,10 +37,7 @@ fn from_trans(value: BlasTrans) -> Transpose {
 }
 
 impl Gemm for Cpu {
-    #[expect(
-        clippy::many_single_char_names,
-        clippy::similar_names
-    )]
+    #[expect(clippy::many_single_char_names, clippy::similar_names)]
     fn gemm_unchecked<T: Num>(
         transa: BlasTrans,
         transb: BlasTrans,
@@ -114,10 +111,7 @@ use zenu_cuda::cublas::{cublas_gemm, ZenuCublasOperation};
 
 #[cfg(feature = "nvidia")]
 impl Gemm for Nvidia {
-    #[expect(
-        clippy::many_single_char_names,
-        clippy::similar_names
-    )]
+    #[expect(clippy::many_single_char_names, clippy::similar_names)]
     fn gemm_unchecked<T: Num>(
         transa: BlasTrans,
         transb: BlasTrans,

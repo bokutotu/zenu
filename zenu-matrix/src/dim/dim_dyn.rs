@@ -141,7 +141,7 @@ impl DimDyn {
                 || other.dim[other.len() - i - 1] == 1
             {
                 continue;
-            } 
+            }
             return false;
         }
         true

@@ -79,7 +79,7 @@ pub fn cublas_copy<T: 'static>(
 #[expect(
     clippy::too_many_arguments,
     clippy::similar_names,
-    clippy::many_single_char_names,
+    clippy::many_single_char_names
 )]
 pub fn cublas_gemm<T: 'static + Copy>(
     transa: ZenuCublasOperation,

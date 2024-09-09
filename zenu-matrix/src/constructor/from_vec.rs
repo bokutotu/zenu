@@ -14,7 +14,12 @@ where
     #[expect(clippy::missing_panics_doc)]
     pub fn from_vec<I: Into<S>>(vec: Vec<T>, shape: I) -> Self {
         let shape = shape.into();
-        assert!(vec.len() == shape.num_elm(), "Invalid Shape, vec.len() = {}, shape.num_elm() = {}", vec.len(), shape.num_elm());
+        assert!(
+            vec.len() == shape.num_elm(),
+            "Invalid Shape, vec.len() = {}, shape.num_elm() = {}",
+            vec.len(),
+            shape.num_elm()
+        );
 
         let len = vec.len();
 

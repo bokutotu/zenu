@@ -6,7 +6,13 @@ use crate::{
 };
 
 #[cfg(feature = "nvidia")]
-use zenu_cuda::cudnn::{batch_norm::{BatchNorm2d, BatchNorm2dBackward, BatchNorm2dBackwardBuilder, BatchNorm2dBuilder, BatchNorm2dInference, BatchNorm2dInferenceBuilder}, TensorFormat};
+use zenu_cuda::cudnn::{
+    batch_norm::{
+        BatchNorm2d, BatchNorm2dBackward, BatchNorm2dBackwardBuilder, BatchNorm2dBuilder,
+        BatchNorm2dInference, BatchNorm2dInferenceBuilder,
+    },
+    TensorFormat,
+};
 
 #[cfg(feature = "nvidia")]
 use crate::device::nvidia::Nvidia;

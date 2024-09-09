@@ -66,7 +66,11 @@ impl<T: Num> RNNDescriptor<T> {
         let hidden_size = self.get_hidden_size() * if self.get_is_bidirectional() { 2 } else { 1 };
         assert_eq!(y[2], hidden_size, "Hidden size mismatch");
         assert_eq!(y.slice(), dy.slice(), "Output and dy shape mismatch");
-        assert_eq!(hx.is_some(), dhy.is_some(), "hx and dhy must be both None or both Some");
+        assert_eq!(
+            hx.is_some(),
+            dhy.is_some(),
+            "hx and dhy must be both None or both Some"
+        );
 
         if hx.is_none() && dhy.is_none() {
             return;

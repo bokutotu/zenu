@@ -16,7 +16,9 @@ pub struct DynMemPool<D: DeviceBase> {
 
 impl<D: DeviceBase> DynMemPool<D> {
     pub fn try_alloc(&mut self, bytes: usize) -> Result<*mut u8, MemPoolError> {
-        if let Some(smallest_unused_bytes_over_request) = self.smallest_unused_bytes_over_request(bytes) {
+        if let Some(smallest_unused_bytes_over_request) =
+            self.smallest_unused_bytes_over_request(bytes)
+        {
             let buffers = self
                 .unused_buffers
                 .get_mut(&smallest_unused_bytes_over_request)

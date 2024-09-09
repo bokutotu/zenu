@@ -47,7 +47,7 @@ impl<R: Repr, D: Device> Matrix<R, DimDyn, D> {
         a: usize,
         b: usize,
     ) -> Matrix<Owned<R::Item>, DimDyn, D> {
-        assert!(a!=b, "Index must be different");
+        assert!(a != b, "Index must be different");
         if a < b {
             return self.transpose_swap_index_new_matrix(b, a);
         }

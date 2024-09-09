@@ -31,6 +31,7 @@ pub fn update_parameters<T: Num, D: Device, O: Optimizer<T, D>>(
     loss.clear_grad();
 }
 
+#[expect(clippy::missing_errors_doc)]
 pub fn save_model<T: Num, D: Device, M: Parameters<T, D>, P: AsRef<Path>>(
     model: &M,
     path: P,
@@ -43,6 +44,7 @@ pub fn save_model<T: Num, D: Device, M: Parameters<T, D>, P: AsRef<Path>>(
     Ok(())
 }
 
+#[expect(clippy::missing_errors_doc)]
 pub fn load_model<
     T: Num + for<'de> Deserialize<'de>,
     D: Device,

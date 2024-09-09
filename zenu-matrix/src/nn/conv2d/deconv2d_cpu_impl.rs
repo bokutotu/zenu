@@ -65,7 +65,12 @@ pub(crate) fn deconv2d_inner<T: Num, D: Device>(
     result
 }
 
-#[expect(clippy::cast_precision_loss, clippy::unreadable_literal, clippy::too_many_lines, clippy::excessive_precision)]
+#[expect(
+    clippy::cast_precision_loss,
+    clippy::unreadable_literal,
+    clippy::too_many_lines,
+    clippy::excessive_precision
+)]
 #[cfg(test)]
 mod deconv2d {
 
