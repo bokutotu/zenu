@@ -45,6 +45,7 @@ impl<T: Num, D: Device> Function<T, D> for SoftMax<T, D> {
     }
 }
 
+#[must_use]
 pub fn softmax<T: Num, D: Device>(input: Variable<T, D>, axis: usize) -> Variable<T, D> {
     let output = alloc(input.get_shape());
     let softmax = SoftMax::new(input, output.clone().downgrade(), axis);
@@ -67,6 +68,7 @@ mod softmax {
 
     use super::softmax;
 
+    #[expect(clippy::unreadable_literal)]
     fn softmax_2d_1d<D: Device>() {
         let input: Matrix<Owned<f64>, DimDyn, D> =
             Matrix::from_vec(vec![1.0, 2.0, 3.0, 4., 5., 6., 7., 8.], [2, 4]);

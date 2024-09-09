@@ -5,6 +5,8 @@ use crate::{
     Variable,
 };
 
+#[expect(clippy::needless_pass_by_value)]
+#[must_use]
 pub fn cross_entropy<T: Num, D: Device>(
     pred: Variable<T, D>,
     ans: Variable<T, D>,
@@ -36,7 +38,7 @@ mod cross_entropy {
         let ans = from_vec(vec![0.0, 1.0, 0.0, 0.0], [1, 4]);
         let loss = super::cross_entropy(pred.clone(), ans);
         loss.backward();
-        let ans = Matrix::<Owned<f64>, DimDyn, D>::from_vec(vec![0.8536], &[]);
+        let ans = Matrix::<Owned<f64>, DimDyn, D>::from_vec(vec![0.8536], []);
         assert_val_eq!(loss, ans, 1e-4);
         let pred_ans = Matrix::<Owned<f64>, DimDyn, D>::from_vec(
             vec![0.1914, -0.5741, 0.1914, 0.1914],

@@ -15,6 +15,7 @@ pub struct DropoutConfig<T: Num, D: Device> {
 }
 
 impl<T: Num, D: Device> DropoutConfig<T, D> {
+    #[must_use]
     pub fn new(rate: f32) -> Self {
         let inner = Rc::new(RefCell::new(DropoutState::new(rate)));
         Self { inner }
@@ -78,6 +79,7 @@ impl<T: Num, D: Device> Function<T, D> for DropoutBackward<T, D> {
     }
 }
 
+#[must_use]
 pub fn dropout<T: Num, D: Device>(
     input: Variable<T, D>,
     rate: f32,
@@ -138,6 +140,7 @@ mod dropout {
 
     use super::dropout;
 
+    #[expect(clippy::float_cmp)]
     fn dropout_4d_train<D: Device>() {
         let input = normal::<f32, _, D>(1f32, 1f32, None, [3, 3, 3, 3]);
         let output = dropout(input.clone(), 0.8, None);
@@ -161,9 +164,7 @@ mod dropout {
         let input_slice = input_mat_cpu.as_slice();
 
         for idx in 0..output_slice.len() {
-            if !mask[idx] {
-                assert_eq!(output_slice[idx], 0f32);
-            } else {
+            if mask[idx] {
                 let diff = output_slice[idx] - input_slice[idx] / 0.2;
                 assert!(
                     diff.abs() < 1e-5,
@@ -173,6 +174,8 @@ mod dropout {
                     input_slice[idx],
                     diff
                 );
+            } else {
+                assert_eq!(output_slice[idx], 0f32);
             }
         }
 
@@ -182,11 +185,11 @@ mod dropout {
             input_grad.to::<Cpu>()
         };
 
-        for idx in 0..output_slice.len() {
-            if !mask[idx] {
-                assert_eq!(input_grad_cpu.as_slice()[idx], 0f32);
-            } else {
+        for (idx, mask) in mask.iter().enumerate().take(output_slice.len()) {
+            if *mask {
                 assert_eq!(input_grad_cpu.as_slice()[idx], 1f32 / (1f32 - 0.8));
+            } else {
+                assert_eq!(input_grad_cpu.as_slice()[idx], 0f32);
             }
         }
     }

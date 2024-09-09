@@ -110,7 +110,6 @@ pub fn cudnn_rnn_fwd<T: Num>(
 
 #[cfg(test)]
 mod rnn {
-    use zenu_matrix::nn::rnn::RNNDescriptor;
 
     #[test]
     fn rnn() {

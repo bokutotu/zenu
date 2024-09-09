@@ -17,6 +17,7 @@ pub struct Conv2dConfigsInner<T: Num> {
 }
 
 impl<T: Num> Conv2dConfigsInner<T> {
+    #[must_use]
     pub fn new(
         input: DimDyn,
         output: DimDyn,
@@ -47,6 +48,7 @@ pub struct Conv2dConfigs<T: Num> {
 }
 
 impl<T: Num> Conv2dConfigs<T> {
+    #[must_use]
     pub fn new(
         input: DimDyn,
         output: DimDyn,
@@ -62,6 +64,7 @@ impl<T: Num> Conv2dConfigs<T> {
         }
     }
 
+    #[must_use]
     pub fn get_inner(&self) -> &Conv2dConfig<T> {
         &self.inner.conv2d_forward
     }
@@ -265,7 +268,7 @@ impl<T: Num, D: Device> Function<T, D> for Conv2dBiasAdd<T, D> {
             self.y.get_data().to_ref(),
             self.bias.get_data().to_ref(),
             output.to_ref_mut(),
-        )
+        );
     }
 
     fn backward(&self) {
@@ -285,7 +288,7 @@ impl<T: Num, D: Device> Function<T, D> for Conv2dBiasBackward<T, D> {
     fn forward(&self) {
         let bias_grad = self.bias_grad.upgrade().unwrap();
         let mut bias_grad = bias_grad.get_data_mut();
-        conv2d_bckwd_data_bias(self.y_grad.get_data().to_ref(), bias_grad.to_ref_mut())
+        conv2d_bckwd_data_bias(self.y_grad.get_data().to_ref(), bias_grad.to_ref_mut());
     }
 
     fn backward(&self) {
@@ -342,6 +345,7 @@ fn conv2d_inner<T: Num, D: Device>(
     y
 }
 
+#[must_use]
 pub fn conv2d<T: Num, D: Device>(
     x: Variable<T, D>,
     filter: Variable<T, D>,
@@ -395,6 +399,7 @@ fn deconv2d_inner<T: Num, D: Device>(
     y
 }
 
+    #[must_use]
 pub fn deconv2d<T: Num, D: Device>(
     x: Variable<T, D>,
     filter: Variable<T, D>,
@@ -410,6 +415,7 @@ pub fn deconv2d<T: Num, D: Device>(
     }
 }
 
+    #[must_use]
 pub fn conv2d_filter_grad<T: Num, D: Device>(
     x: Variable<T, D>,
     y_grad: Variable<T, D>,
@@ -485,12 +491,13 @@ mod conv2d {
 
     use super::conv2d;
 
+    #[expect(clippy::cast_precision_loss, clippy::unreadable_literal)]
     fn conv2d_2x3x5x5_image_4x3x3x3_kernel_1x1_stride_1x1_padding<D: Device>() {
-        let kernel = (1..(4 * 3 * 3 * 3 + 1))
+        let kernel = (1..=(4 * 3 * 3 * 3 ))
             .map(|x| x as f32)
             .collect::<Vec<f32>>();
         let kernel = from_vec(kernel, [4, 3, 3, 3]);
-        let image = (1..(2 * 3 * 5 * 5 + 1))
+        let image = (1..=(2 * 3 * 5 * 5))
             .map(|x| x as f32)
             .collect::<Vec<f32>>();
         let image = from_vec(image, [2, 3, 5, 5]);
@@ -564,6 +571,7 @@ mod conv2d {
         nn
     );
 
+    #[expect(clippy::too_many_lines, clippy::unreadable_literal)]
     fn conv2d_with_bias<D: Device>() {
         // Input shape [1, 2, 4, 4]
         // Weight Shape:  torch.Size([3, 2, 3, 3])
