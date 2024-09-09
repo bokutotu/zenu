@@ -10,7 +10,7 @@ use crate::{
 };
 
 pub trait Gemm: DeviceBase {
-    #[allow(clippy::too_many_arguments)]
+    #[expect(clippy::too_many_arguments)]
     fn gemm_unchecked<T: Num>(
         transa: BlasTrans,
         transb: BlasTrans,
@@ -37,8 +37,7 @@ fn from_trans(value: BlasTrans) -> Transpose {
 }
 
 impl Gemm for Cpu {
-    #[allow(
-        clippy::too_many_arguments,
+    #[expect(
         clippy::many_single_char_names,
         clippy::similar_names
     )]
@@ -115,8 +114,7 @@ use zenu_cuda::cublas::{cublas_gemm, ZenuCublasOperation};
 
 #[cfg(feature = "nvidia")]
 impl Gemm for Nvidia {
-    #[allow(
-        clippy::too_many_arguments,
+    #[expect(
         clippy::many_single_char_names,
         clippy::similar_names
     )]
@@ -213,7 +211,7 @@ fn gemm_shape_check<SA: DimTrait, SB: DimTrait, SC: DimTrait>(
     Ok(())
 }
 
-#[allow(clippy::missing_panics_doc, clippy::similar_names)]
+#[expect(clippy::missing_panics_doc, clippy::similar_names)]
 pub fn gemm_assign<T, D, RA, RB, SA, SB, SC>(
     a: &Matrix<RA, SA, D>,
     b: &Matrix<RB, SB, D>,

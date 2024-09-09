@@ -10,7 +10,7 @@ use crate::ZENU_CUDA_STATE;
 
 use self::cublas_error::ZenuCublasError;
 
-#[allow(clippy::module_name_repetitions)]
+#[expect(clippy::module_name_repetitions)]
 pub mod cublas_error;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -32,7 +32,7 @@ impl From<ZenuCublasOperation> for cublasOperation_t {
     }
 }
 
-#[allow(clippy::similar_names)]
+#[expect(clippy::similar_names)]
 pub fn cublas_copy<T: 'static>(
     n: usize,
     x: *const T,
@@ -76,7 +76,7 @@ pub fn cublas_copy<T: 'static>(
     }
 }
 
-#[allow(
+#[expect(
     clippy::too_many_arguments,
     clippy::similar_names,
     clippy::many_single_char_names,
@@ -243,7 +243,7 @@ pub fn cublas_amax<T: Default + 'static>(
     }
 }
 
-#[allow(clippy::similar_names)]
+#[expect(clippy::similar_names)]
 pub fn cublas_dot<T: 'static + Default>(
     n: usize,
     x: *const T,
@@ -374,7 +374,7 @@ mod cublas_tests {
     }
 
     #[test]
-    #[allow(clippy::many_single_char_names)]
+    #[expect(clippy::many_single_char_names)]
     fn gemm_f32() {
         let m: i32 = 2;
         let n: i32 = 2;
@@ -565,7 +565,7 @@ mod cublas_tests {
         assert_eq!(c, vec![50., 114., 178., 60., 140., 220.]);
     }
 
-    #[allow(clippy::float_cmp)]
+    #[expect(clippy::float_cmp)]
     #[test]
     fn axum_f32() {
         let x: Vec<f32> = vec![1.0, 2.0, 3.0, 4.0];
@@ -582,7 +582,7 @@ mod cublas_tests {
         assert_eq!(result, 10.0);
     }
 
-    #[allow(clippy::float_cmp)]
+    #[expect(clippy::float_cmp)]
     #[test]
     fn axum_f64() {
         let x: Vec<f64> = vec![1.0, 2.0, 3.0, 4.0];
@@ -600,7 +600,7 @@ mod cublas_tests {
         assert_eq!(result, 10.0);
     }
 
-    #[allow(clippy::float_cmp)]
+    #[expect(clippy::float_cmp)]
     #[test]
     fn amax_f32() {
         let x: Vec<f32> = vec![1.0, 2.0, 3.0, 4.0];
@@ -618,7 +618,7 @@ mod cublas_tests {
         assert_eq!(result, 3);
     }
 
-    #[allow(clippy::float_cmp)]
+    #[expect(clippy::float_cmp)]
     #[test]
     fn amax_f64() {
         let x: Vec<f64> = vec![1.0, 2.0, 3.0, 4.0];
@@ -636,7 +636,7 @@ mod cublas_tests {
         assert_eq!(result, 3);
     }
 
-    #[allow(clippy::float_cmp)]
+    #[expect(clippy::float_cmp)]
     #[test]
     fn dot_f32() {
         let x: Vec<f32> = vec![1.0, 2.0, 3.0, 4.0];
@@ -664,7 +664,7 @@ mod cublas_tests {
         assert_eq!(result, 30.0);
     }
 
-    #[allow(clippy::float_cmp)]
+    #[expect(clippy::float_cmp)]
     #[test]
     fn dot_f64() {
         let x: Vec<f64> = vec![1.0, 2.0, 3.0, 4.0];

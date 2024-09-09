@@ -80,7 +80,7 @@ impl From<PoolType> for cudnnPoolingMode_t {
 }
 
 impl<T: 'static + Copy> Pool2d<T> {
-    #[allow(clippy::too_many_arguments)]
+    #[expect(clippy::too_many_arguments)]
     pub fn new(
         pool_type: PoolType,
         window_h: usize,
@@ -191,7 +191,7 @@ mod pool2d {
 
     use super::Pool2d;
 
-    #[allow(clippy::too_many_lines)]
+    #[expect(clippy::too_many_lines)]
     #[test]
     fn max_pool_2d() {
         let input = vec![

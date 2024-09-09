@@ -264,7 +264,7 @@ impl Workspace {
         }
     }
 
-    #[allow(clippy::missing_panics_doc)]
+    #[expect(clippy::missing_panics_doc)]
     pub fn workspace(&self) -> *mut libc::c_void {
         let workspace = unsafe { &mut *self.workspace.get() };
         if workspace.is_none() {
@@ -318,7 +318,7 @@ pub struct ConvolutionConfig<T> {
 }
 
 impl<T: Copy> ConvolutionConfig<T> {
-    #[allow(clippy::missing_panics_doc)]
+    #[expect(clippy::missing_panics_doc)]
     pub fn forward(&self, alpha: T, input: *const T, filter: *const T, beta: T, output: *mut T) {
         let state = ZENU_CUDA_STATE.lock().unwrap();
         let handle = state.get_cudnn();
@@ -341,7 +341,7 @@ impl<T: Copy> ConvolutionConfig<T> {
         }
     }
 
-    #[allow(clippy::missing_panics_doc)]
+    #[expect(clippy::missing_panics_doc)]
     pub fn backward_data(
         &self,
         alpha: T,
@@ -371,7 +371,7 @@ impl<T: Copy> ConvolutionConfig<T> {
         }
     }
 
-    #[allow(clippy::missing_panics_doc)]
+    #[expect(clippy::missing_panics_doc)]
     pub fn backward_filter(
         &self,
         alpha: T,
@@ -426,7 +426,7 @@ pub struct ConvolutionBuilder<T> {
 }
 
 impl<T: 'static> ConvolutionBuilder<T> {
-    #[allow(clippy::missing_errors_doc)]
+    #[expect(clippy::missing_errors_doc)]
     pub fn input(
         mut self,
         n: i32,
@@ -439,7 +439,7 @@ impl<T: 'static> ConvolutionBuilder<T> {
         Ok(self)
     }
 
-    #[allow(clippy::missing_errors_doc)]
+    #[expect(clippy::missing_errors_doc)]
     pub fn filter(
         mut self,
         k: i32,
@@ -452,7 +452,7 @@ impl<T: 'static> ConvolutionBuilder<T> {
         Ok(self)
     }
 
-    #[allow(clippy::missing_errors_doc)]
+    #[expect(clippy::missing_errors_doc)]
     pub fn conv(
         mut self,
         pad_h: i32,
@@ -468,7 +468,7 @@ impl<T: 'static> ConvolutionBuilder<T> {
         Ok(self)
     }
 
-    #[allow(clippy::missing_errors_doc)]
+    #[expect(clippy::missing_errors_doc)]
     pub fn output(
         mut self,
         n: i32,
@@ -481,7 +481,7 @@ impl<T: 'static> ConvolutionBuilder<T> {
         Ok(self)
     }
 
-    #[allow(clippy::missing_panics_doc)]
+    #[expect(clippy::missing_panics_doc)]
     #[must_use]
     pub fn algorithms(mut self, requested_algo_count: usize) -> Self {
         let input = self.input.unwrap();
@@ -509,7 +509,7 @@ impl<T: 'static> ConvolutionBuilder<T> {
         self
     }
 
-    #[allow(clippy::missing_panics_doc)]
+    #[expect(clippy::missing_panics_doc)]
     #[must_use]
     pub fn build(self) -> ConvolutionConfig<T> {
         let input = self.input.unwrap();
@@ -543,7 +543,7 @@ impl<T: 'static> ConvolutionBuilder<T> {
     }
 }
 
-#[allow(clippy::missing_panics_doc)]
+#[expect(clippy::missing_panics_doc)]
 pub fn backward_bias<T: 'static + Copy>(
     alpha: T,
     d_output: *const T,
@@ -588,7 +588,7 @@ pub fn backward_bias<T: 'static + Copy>(
 }
 
 #[cfg(test)]
-#[allow(
+#[expect(
     clippy::too_many_lines,
     clippy::unreadable_literal,
     clippy::cast_ptr_alignment
@@ -597,7 +597,7 @@ mod cudnn {
     use super::*;
     use crate::runtime::{cuda_copy, cuda_malloc, ZenuCudaMemCopyKind};
 
-    #[allow(clippy::similar_names)]
+    #[expect(clippy::similar_names)]
     #[test]
     fn random() {
         let input = [
@@ -890,7 +890,7 @@ mod cudnn {
     }
 
     #[test]
-    #[allow(
+    #[expect(
         clippy::many_single_char_names,
         clippy::cast_precision_loss,
         clippy::cast_sign_loss,

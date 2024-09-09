@@ -43,7 +43,7 @@ pub enum RNNMathType {
     TensorOpAllowConversion,
 }
 
-#[allow(clippy::too_many_arguments)]
+#[expect(clippy::too_many_arguments)]
 pub fn rnn_descriptor<Data: 'static, Math: 'static>(
     algo: RNNAlgo,
     cell: RNNCell,
@@ -158,7 +158,7 @@ pub fn rnn_weight_space(rnn_desc: cudnnRNNDescriptor_t) -> Result<usize, ZenuCud
     Ok(size)
 }
 
-#[allow(clippy::too_many_arguments)]
+#[expect(clippy::too_many_arguments)]
 pub fn rnn_fwd<T: 'static>(
     rnn_desc: cudnnRNNDescriptor_t,
     is_training: bool,
@@ -219,7 +219,7 @@ pub fn rnn_fwd<T: 'static>(
     Ok(())
 }
 
-#[allow(clippy::too_many_arguments, clippy::similar_names)]
+#[expect(clippy::too_many_arguments, clippy::similar_names)]
 pub fn rnn_bkwd_data<T: 'static>(
     rnn_desc: cudnnRNNDescriptor_t,
     y_desc: cudnnRNNDataDescriptor_t,
@@ -278,7 +278,7 @@ pub fn rnn_bkwd_data<T: 'static>(
     Ok(())
 }
 
-#[allow(clippy::too_many_arguments)]
+#[expect(clippy::too_many_arguments)]
 pub fn rnn_bkwd_weight<T: 'static>(
     rnn_desc: cudnnRNNDescriptor_t,
     x_desc: cudnnRNNDataDescriptor_t,

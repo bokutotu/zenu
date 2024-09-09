@@ -17,7 +17,7 @@ pub trait MaxIdx: DeviceBase {
 }
 
 impl MaxIdx for Cpu {
-    #[allow(clippy::not_unsafe_ptr_arg_deref)]
+    #[expect(clippy::not_unsafe_ptr_arg_deref)]
     fn max_idx<T: Num>(input: *const T, size: usize, stride: usize) -> usize {
         let tmep_v = unsafe { std::slice::from_raw_parts(input, size * stride) };
         let mut max_idx = 0;
@@ -59,7 +59,7 @@ impl<T: Num, R: Repr<Item = T>, D: Device> Matrix<R, DimDyn, D> {
     }
 
     /// selfはdefault stride
-    #[allow(clippy::missing_panics_doc)]
+    #[expect(clippy::missing_panics_doc)]
     #[must_use]
     pub fn max_axis(&self, axis: usize, keep_dim: bool) -> Matrix<Owned<T>, DimDyn, D> {
         assert!(axis < self.shape().len(), "max_axis: Axis out of bounds");
@@ -95,7 +95,7 @@ impl<T: Num, R: Repr<Item = T>, D: Device> Matrix<R, DimDyn, D> {
         output
     }
 
-    #[allow(clippy::missing_panics_doc)]
+    #[expect(clippy::missing_panics_doc)]
     #[must_use]
     pub fn max_axis_idx_ravel(&self, axis: usize) -> Vec<usize> {
         assert!(axis < self.shape().len(), "max_axis: Axis out of bounds");
@@ -133,7 +133,7 @@ impl<T: Num, R: Repr<Item = T>, D: Device> Matrix<R, DimDyn, D> {
 
 #[cfg(test)]
 mod max_idx {
-    #![allow(
+    #![expect(
         clippy::float_cmp,
         clippy::unreadable_literal,
         clippy::cast_precision_loss,

@@ -7,7 +7,7 @@ use crate::{
 };
 
 impl<T: Num, D: Device> Matrix<Ref<&mut T>, DimDyn, D> {
-    #[allow(clippy::missing_panics_doc)]
+    #[expect(clippy::missing_panics_doc)]
     pub fn broadcast<R: Repr<Item = T>>(&self, source: &Matrix<R, DimDyn, D>) {
         let source = source.to_ref();
         if !(self.shape().is_include(source.shape())
@@ -43,7 +43,7 @@ impl<T: Num, D: Device> Matrix<Ref<&mut T>, DimDyn, D> {
 
 #[cfg(test)]
 mod broadcast_test {
-    #![allow(clippy::float_cmp)]
+    #![expect(clippy::float_cmp)]
     use crate::{
         device::Device,
         dim::DimDyn,

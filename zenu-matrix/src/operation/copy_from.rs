@@ -11,7 +11,7 @@ pub trait CopyBlas: DeviceBase {
 }
 
 impl CopyBlas for Cpu {
-    #[allow(clippy::similar_names)]
+    #[expect(clippy::similar_names)]
     fn copy_raw<T: Num>(n: usize, x: *const T, incx: usize, y: *mut T, incy: usize) {
         extern crate openblas_src;
         use cblas::{dcopy, scopy};
@@ -48,13 +48,13 @@ use crate::device::nvidia::Nvidia;
 
 #[cfg(feature = "nvidia")]
 impl CopyBlas for Nvidia {
-    #[allow(clippy::similar_names)]
+    #[expect(clippy::similar_names)]
     fn copy_raw<T: Num>(n: usize, x: *const T, incx: usize, y: *mut T, incy: usize) {
         zenu_cuda::cublas::cublas_copy(n, x, incx, y, incy).unwrap();
     }
 }
 
-#[allow(clippy::similar_names, clippy::needless_pass_by_value)]
+#[expect(clippy::similar_names, clippy::needless_pass_by_value)]
 pub fn copy_unchecked<T, SA, SB, RB, D>(x: Matrix<Ref<&T>, SA, D>, y: Matrix<Ref<&mut T>, SB, D>)
 where
     T: Num,
@@ -207,7 +207,7 @@ impl Iterator for PointerOffsetIter {
     }
 }
 
-#[allow(clippy::needless_pass_by_value)]
+#[expect(clippy::needless_pass_by_value)]
 fn copy<T: Num, D: DeviceBase + CopyBlas>(
     to: Matrix<Ref<&mut T>, DimDyn, D>,
     source: Matrix<Ref<&T>, DimDyn, D>,
@@ -259,7 +259,7 @@ where
     SA: DimTrait,
     D: DeviceBase + CopyBlas,
 {
-    #[allow(clippy::missing_panics_doc)]
+    #[expect(clippy::missing_panics_doc)]
     pub fn copy_from<R: Repr<Item = T>, SB: DimTrait>(&self, source: &Matrix<R, SB, D>) {
         assert!(self.shape().slice() == source.shape().slice());
         copy(self.clone().into_dyn_dim(), source.to_ref().into_dyn_dim());
@@ -268,7 +268,7 @@ where
 
 #[cfg(test)]
 mod deep_copy {
-    #![allow(clippy::float_cmp)]
+    #![expect(clippy::float_cmp)]
 
     use super::*;
     use crate::{

@@ -66,7 +66,7 @@ pub struct Conv2dConfig<T: Num> {
     _phantom: std::marker::PhantomData<T>,
 }
 
-#[expect(clippy::too_many_arguments, unused_variables)]
+#[expect(clippy::too_many_arguments, clippy::missing_panics_doc)]
 #[must_use]
 pub fn create_conv_descriptor<T: Num>(
     input_shape: &[usize],
@@ -150,7 +150,7 @@ pub fn create_conv_descriptor<T: Num>(
 }
 
 pub trait Conv2d: DeviceBase {
-    #[allow(clippy::too_many_arguments)]
+    #[expect(clippy::too_many_arguments)]
     fn conv2d<T: Num>(
         input: Matrix<Ref<&T>, DimDyn, Self>,
         y: Matrix<Ref<&mut T>, DimDyn, Self>,
@@ -164,7 +164,7 @@ pub trait Conv2d: DeviceBase {
         config: Option<&Conv2dConfig<T>>,
     );
 
-    #[allow(clippy::too_many_arguments)]
+    #[expect(clippy::too_many_arguments)]
     fn conv2d_bckwd_data<T: Num>(
         dy: Matrix<Ref<&T>, DimDyn, Self>,
         dx: Matrix<Ref<&mut T>, DimDyn, Self>,
@@ -178,7 +178,7 @@ pub trait Conv2d: DeviceBase {
         config: Option<&Conv2dConfig<T>>,
     );
 
-    #[allow(clippy::too_many_arguments)]
+    #[expect(clippy::too_many_arguments)]
     fn conv2d_bckwd_filter<T: Num>(
         input: Matrix<Ref<&T>, DimDyn, Self>,
         dy: Matrix<Ref<&T>, DimDyn, Self>,
@@ -192,14 +192,12 @@ pub trait Conv2d: DeviceBase {
         config: Option<&Conv2dConfig<T>>,
     );
 
-    #[allow(clippy::too_many_arguments)]
     fn conv2d_forward_bias<T: Num>(
         input: Matrix<Ref<&T>, DimDyn, Self>,
         y: Matrix<Ref<&mut T>, DimDyn, Self>,
         bias: Matrix<Ref<&T>, DimDyn, Self>,
     );
 
-    #[allow(clippy::too_many_arguments)]
     fn conv2d_bckwd_bias<T: Num>(
         dy: Matrix<Ref<&T>, DimDyn, Self>,
         dx: Matrix<Ref<&mut T>, DimDyn, Self>,
@@ -448,7 +446,7 @@ impl Conv2d for Nvidia {
     }
 }
 
-#[allow(clippy::too_many_arguments)]
+#[expect(clippy::too_many_arguments)]
 #[must_use]
 pub fn conv2d_forward<T: Num, D: Device>(
     input: Matrix<Ref<&T>, DimDyn, D>,
@@ -483,7 +481,7 @@ pub fn conv2d_forward<T: Num, D: Device>(
     y
 }
 
-#[allow(clippy::too_many_arguments)]
+#[expect(clippy::too_many_arguments)]
 #[must_use]
 pub fn conv2d_bckwd_data<T: Num, D: Device>(
     dy: Matrix<Ref<&T>, DimDyn, D>,
@@ -518,7 +516,7 @@ pub fn conv2d_bckwd_data<T: Num, D: Device>(
     dx
 }
 
-#[allow(clippy::too_many_arguments)]
+#[expect(clippy::too_many_arguments)]
 #[must_use]
 pub fn conv2d_bckwd_filter<T: Num, D: Device>(
     input: Matrix<Ref<&T>, DimDyn, D>,
@@ -576,7 +574,7 @@ mod conv2d {
 
     use super::{conv2d_bckwd_data, conv2d_bckwd_filter, conv2d_forward};
 
-    #[allow(dead_code)]
+    #[expect(dead_code)]
     struct Conv2dTestCase<D: Device> {
         input: Matrix<Owned<f32>, DimDyn, D>,
         filter: Matrix<Owned<f32>, DimDyn, D>,

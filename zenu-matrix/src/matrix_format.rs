@@ -21,7 +21,7 @@ const AXIS_LIMIT_ROW: usize = 11;
 /// The string used as an ellipsis.
 const ELLIPSIS: &str = "...";
 
-#[allow(clippy::struct_field_names)]
+#[expect(clippy::struct_field_names)]
 #[derive(Clone, Debug)]
 struct FormatOptions {
     axis_collapse_limit: usize,
@@ -234,7 +234,7 @@ where
 
 #[cfg(test)]
 mod matrix_format_test {
-    #![allow(clippy::uninlined_format_args)]
+    #![expect(clippy::uninlined_format_args)]
     use crate::{
         device::DeviceBase,
         dim::{Dim2, Dim4, DimDyn},
@@ -280,7 +280,7 @@ mod matrix_format_test {
         mid_array_1d::<crate::device::nvidia::Nvidia>();
     }
 
-    #[allow(clippy::cast_precision_loss)]
+    #[expect(clippy::cast_precision_loss)]
     fn large_array_1d<D: DeviceBase>() {
         let mut v = Vec::new();
         for i in 1..=1000 {
@@ -329,7 +329,7 @@ mod matrix_format_test {
         dim_2_last_axis_overflow::<crate::device::nvidia::Nvidia>();
     }
 
-    #[allow(clippy::cast_lossless)]
+    #[expect(clippy::cast_lossless)]
     fn dim_3_overflow_most<D: DeviceBase>() {
         let mut v = Vec::new();
         for i in 0..7 {
@@ -437,7 +437,7 @@ mod matrix_format_test {
         dim_3_overflow_most::<crate::device::nvidia::Nvidia>();
     }
 
-    #[allow(clippy::too_many_lines, clippy::cast_precision_loss)]
+    #[expect(clippy::too_many_lines, clippy::cast_precision_loss)]
     fn dim_4_overflow_outer<D: DeviceBase>() {
         // let a = Array4::from_shape_fn((10, 10, 3, 3), |(i, j, k, l)| i + j + k + l);
         let mut v = Vec::new();

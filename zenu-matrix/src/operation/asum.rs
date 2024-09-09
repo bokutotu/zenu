@@ -69,7 +69,7 @@ impl<T: Num, R: Repr<Item = T>, S: DimTrait, D: DeviceBase + Asum> Matrix<R, S, 
 
 #[cfg(test)]
 mod asum_test {
-    #![allow(clippy::float_cmp)]
+    #![expect(clippy::float_cmp)]
 
     use crate::{dim::DimDyn, matrix::Owned, slice_dynamic};
 

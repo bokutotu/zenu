@@ -15,7 +15,7 @@ impl<R: Repr, D: Device> Matrix<R, DimDyn, D> {
 
 #[cfg(test)]
 mod add_axis_test {
-    #![allow(clippy::float_cmp)]
+    #![expect(clippy::float_cmp)]
     use crate::{
         device::Device,
         dim::{DimDyn, DimTrait},

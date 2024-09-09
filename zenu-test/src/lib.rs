@@ -74,7 +74,7 @@ macro_rules! run_test {
     };
 }
 
-#[allow(clippy::crate_in_macro_def)]
+#[expect(clippy::crate_in_macro_def)]
 #[macro_export]
 macro_rules! run_mat_test {
     ($test_func:ident, $cpu_name:ident, $gpu_name:ident) => {
@@ -90,7 +90,7 @@ macro_rules! run_mat_test {
     };
 }
 
-#[allow(clippy::crate_in_macro_def)]
+#[expect(clippy::crate_in_macro_def)]
 #[macro_export]
 macro_rules! read_test_case_from_json {
     ($path:expr) => {{

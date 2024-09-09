@@ -46,7 +46,7 @@ pub fn concat<T: Num, R: Repr<Item = T>, S: DimTrait, D: Device>(
     result
 }
 
-#[allow(clippy::float_cmp)]
+#[expect(clippy::float_cmp)]
 #[cfg(test)]
 mod concat_test {
     use crate::{

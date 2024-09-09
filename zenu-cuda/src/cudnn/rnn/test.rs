@@ -6,7 +6,7 @@ mod rnn {
     };
 
     #[test]
-    #[allow(
+    #[expect(
         clippy::too_many_lines,
         clippy::unreadable_literal,
         clippy::cast_ptr_alignment

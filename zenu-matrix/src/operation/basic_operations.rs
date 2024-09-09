@@ -89,7 +89,7 @@ macro_rules! impl_basic_op_trait {
         }
 
         impl$name for Cpu {
-            #[allow(clippy::not_unsafe_ptr_arg_deref)]
+            #[expect(clippy::not_unsafe_ptr_arg_deref)]
             fn array_array<T: Num>(
                 to: *mut T,
                 lhs: *const T,
@@ -107,7 +107,7 @@ macro_rules! impl_basic_op_trait {
                 }
             }
 
-            #[allow(clippy::not_unsafe_ptr_arg_deref)]
+            #[expect(clippy::not_unsafe_ptr_arg_deref)]
             fn array_assign<T: Num>(
                 to: *mut T,
                 rhs: *const T,
@@ -125,7 +125,7 @@ macro_rules! impl_basic_op_trait {
                 }
             }
 
-            #[allow(clippy::not_unsafe_ptr_arg_deref)]
+            #[expect(clippy::not_unsafe_ptr_arg_deref)]
             fn scalar<T: Num>(
                 to: *mut T,
                 lhs: *const T,
@@ -141,7 +141,7 @@ macro_rules! impl_basic_op_trait {
                 }
             }
 
-            #[allow(clippy::not_unsafe_ptr_arg_deref)]
+            #[expect(clippy::not_unsafe_ptr_arg_deref)]
             fn scalar_assign<T: Num>(to: *mut T, rhs: T, num_elm: usize, to_stride: usize) {
                 for i in 0..num_elm {
                     unsafe {
@@ -150,7 +150,7 @@ macro_rules! impl_basic_op_trait {
                 }
             }
 
-            #[allow(clippy::not_unsafe_ptr_arg_deref)]
+            #[expect(clippy::not_unsafe_ptr_arg_deref)]
             fn scalar_ptr<T: Num>(
                 to: *mut T,
                 lhs: *const T,
@@ -166,7 +166,7 @@ macro_rules! impl_basic_op_trait {
                 }
             }
 
-            #[allow(clippy::not_unsafe_ptr_arg_deref)]
+            #[expect(clippy::not_unsafe_ptr_arg_deref)]
             fn scalar_assign_ptr<T: Num>(
                 to: *mut T,
                 scalar: *const T,
@@ -395,7 +395,7 @@ macro_rules! impl_basic_ops_no_inputs {
         }
 
         impl $name for Cpu {
-            #[allow(clippy::not_unsafe_ptr_arg_deref)]
+            #[expect(clippy::not_unsafe_ptr_arg_deref)]
             fn array<T: Num>(
                 to: *mut T,
                 other: *const T,
@@ -410,7 +410,7 @@ macro_rules! impl_basic_ops_no_inputs {
                 }
             }
 
-            #[allow(clippy::not_unsafe_ptr_arg_deref)]
+            #[expect(clippy::not_unsafe_ptr_arg_deref)]
             fn array_assign<T: Num>(to: *mut T, num_elm: usize, to_stride: usize) {
                 for i in 0..num_elm {
                     unsafe {
@@ -465,7 +465,7 @@ pub trait PowOws: DeviceBase {
     fn array_assign<T: Num>(to: *mut T, scalar: T, num_elm: usize, to_stride: usize);
 }
 impl PowOws for Cpu {
-    #[allow(clippy::not_unsafe_ptr_arg_deref)]
+    #[expect(clippy::not_unsafe_ptr_arg_deref)]
     fn array<T: Num>(
         to: *mut T,
         other: *const T,
@@ -481,7 +481,7 @@ impl PowOws for Cpu {
         }
     }
 
-    #[allow(clippy::not_unsafe_ptr_arg_deref)]
+    #[expect(clippy::not_unsafe_ptr_arg_deref)]
     fn array_assign<T: Num>(to: *mut T, scalar: T, num_elm: usize, to_stride: usize) {
         for i in 0..num_elm {
             unsafe {
@@ -583,7 +583,7 @@ impl<R: Repr, S: DimTrait, D: DeviceBase + PowOws + CopyBlas> Matrix<R, S, D> {
 }
 
 impl<T: Num, S: DimTrait, D: DeviceBase + PowOws + CopyBlas> Matrix<Ref<&mut T>, S, D> {
-    #[allow(clippy::missing_panics_doc)]
+    #[expect(clippy::missing_panics_doc)]
     pub fn powf<R: Repr<Item = T>, SO: DimTrait>(&self, other: &Matrix<R, SO, D>, scalar: T) {
         assert!(
             self.shape().slice() == other.shape().slice(),
@@ -633,7 +633,7 @@ impl<T: Num, S: DimTrait, D: DeviceBase + PowOws + CopyBlas> Matrix<Ref<&mut T>,
 
 #[cfg(test)]
 mod basic_ops {
-    #![allow(clippy::float_cmp, clippy::cast_precision_loss)]
+    #![expect(clippy::float_cmp, clippy::cast_precision_loss)]
     use crate::{
         device::Device,
         dim::DimDyn,

@@ -17,7 +17,7 @@ impl DeviceBase for Cpu {
         state.cpu.try_free(ptr)
     }
 
-    #[allow(clippy::not_unsafe_ptr_arg_deref)]
+    #[expect(clippy::not_unsafe_ptr_arg_deref)]
     fn clone_ptr<T>(ptr: *const T, len: usize) -> *mut T {
         let mut vec = Vec::with_capacity(len);
         for i in 0..len {
@@ -28,14 +28,14 @@ impl DeviceBase for Cpu {
         ptr
     }
 
-    #[allow(clippy::not_unsafe_ptr_arg_deref)]
+    #[expect(clippy::not_unsafe_ptr_arg_deref)]
     fn assign_item<T>(ptr: *mut T, offset: usize, value: T) {
         unsafe {
             ptr.add(offset).write(value);
         }
     }
 
-    #[allow(clippy::not_unsafe_ptr_arg_deref)]
+    #[expect(clippy::not_unsafe_ptr_arg_deref)]
     fn get_item<T>(ptr: *const T, offset: usize) -> T {
         unsafe { ptr.add(offset).read() }
     }
