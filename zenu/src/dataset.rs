@@ -84,7 +84,7 @@ impl<T: Num, D: Dataset<T>> Iterator for DataLoader<T, D> {
 
         let k = batch[0].len();
         for v in batch.iter().skip(1) {
-            assert_ne!(v.len(), k, "All dataset's output size must be same");
+            assert_eq!(v.len(), k, "All dataset's output size must be same");
         }
 
         let mut result = vec![vec![]; k];

@@ -215,7 +215,6 @@ impl<T: Num> RNNDescriptor<T> {
 
     /// this function not check shape of params
     /// make sure that params has the same shape as the config
-    // TODO: ptrはRNNDescriptorのメンバにする
     #[expect(clippy::missing_errors_doc)]
     pub fn load_rnn_weights<D: Device>(
         &self,

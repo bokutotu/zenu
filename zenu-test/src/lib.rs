@@ -109,3 +109,23 @@ macro_rules! read_test_case_from_json {
         map
     }};
 }
+
+#[expect(clippy::crate_in_macro_def)]
+#[macro_export]
+macro_rules! read_test_case_from_json_val {
+    ($path:expr) => {{
+        let json = std::fs::read_to_string($path).unwrap();
+        let json: serde_json::Value = serde_json::from_str(&json).unwrap();
+        let mut map = std::collections::HashMap::new();
+        for (key, value) in json.as_object().unwrap() {
+            let value = value.to_string();
+            let data: zenu_matrix::matrix::Matrix<
+                zenu_matrix::matrix::Owned<f32>,
+                zenu_matrix::dim::DimDyn,
+                zenu_matrix::device::cpu::Cpu,
+            > = serde_json::from_str(&value).unwrap();
+            map.insert(key.to_string(), data);
+        }
+        map
+    }};
+}

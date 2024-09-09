@@ -7,25 +7,26 @@ mod rnn {
     use crate::matrix::Owned;
     use crate::{device::nvidia::Nvidia, dim::DimDyn, matrix::Matrix, nn::rnn::*};
 
+    #[expect(clippy::too_many_lines)]
     fn test_json_single(json_path: String, num_layers: usize, bidirectional: bool) {
         let matrix_map = read_test_case_from_json!(json_path);
 
         let mut weights = Vec::new();
         for layer_id in 0..num_layers {
             let input_weight: Matrix<Owned<f32>, DimDyn, Cpu> = matrix_map
-                .get(&format!("rnn.weight_ih_l{}", layer_id))
+                .get(&format!("rnn.weight_ih_l{layer_id}"))
                 .unwrap()
                 .clone();
             let hidden_weight = matrix_map
-                .get(&format!("rnn.weight_hh_l{}", layer_id))
+                .get(&format!("rnn.weight_hh_l{layer_id}"))
                 .unwrap()
                 .clone();
             let input_bias = matrix_map
-                .get(&format!("rnn.bias_ih_l{}", layer_id))
+                .get(&format!("rnn.bias_ih_l{layer_id}"))
                 .unwrap()
                 .clone();
             let hidden_bias = matrix_map
-                .get(&format!("rnn.bias_hh_l{}", layer_id))
+                .get(&format!("rnn.bias_hh_l{layer_id}"))
                 .unwrap()
                 .clone();
 
@@ -39,19 +40,19 @@ mod rnn {
 
             if bidirectional {
                 let input_weight: Matrix<Owned<f32>, DimDyn, Cpu> = matrix_map
-                    .get(&format!("rnn.weight_ih_l{}_reverse", layer_id))
+                    .get(&format!("rnn.weight_ih_l{layer_id}_reverse"))
                     .unwrap()
                     .clone();
                 let hidden_weight = matrix_map
-                    .get(&format!("rnn.weight_hh_l{}_reverse", layer_id))
+                    .get(&format!("rnn.weight_hh_l{layer_id}_reverse"))
                     .unwrap()
                     .clone();
                 let input_bias = matrix_map
-                    .get(&format!("rnn.bias_ih_l{}_reverse", layer_id))
+                    .get(&format!("rnn.bias_ih_l{layer_id}_reverse"))
                     .unwrap()
                     .clone();
                 let hidden_bias = matrix_map
-                    .get(&format!("rnn.bias_hh_l{}_reverse", layer_id))
+                    .get(&format!("rnn.bias_hh_l{layer_id}_reverse"))
                     .unwrap()
                     .clone();
 
@@ -82,7 +83,7 @@ mod rnn {
 
         let weight_num_elm = desc.get_weight_num_elems();
         let mut weight = Matrix::<Owned<f32>, DimDyn, Nvidia>::alloc([weight_num_elm]);
-        desc.load_rnn_weights(weight.to_ref_mut().as_mut_ptr() as *mut _, weights)
+        desc.load_rnn_weights(weight.to_ref_mut().as_mut_ptr().cast(), weights)
             .unwrap();
 
         let x = matrix_map.get("input").unwrap().clone();
@@ -125,19 +126,19 @@ mod rnn {
             let hidden_bias = params[layer_id * 2].hidden_bias().unwrap();
 
             let input_weight_expected = matrix_map
-                .get(&format!("rnn.weight_ih_l{}_grad", layer_id))
+                .get(&format!("rnn.weight_ih_l{layer_id}_grad"))
                 .unwrap()
                 .clone();
             let hidden_weight_expected = matrix_map
-                .get(&format!("rnn.weight_hh_l{}_grad", layer_id))
+                .get(&format!("rnn.weight_hh_l{layer_id}_grad"))
                 .unwrap()
                 .clone();
             let input_bias_expected = matrix_map
-                .get(&format!("rnn.bias_ih_l{}_grad", layer_id))
+                .get(&format!("rnn.bias_ih_l{layer_id}_grad"))
                 .unwrap()
                 .clone();
             let hidden_bias_expected = matrix_map
-                .get(&format!("rnn.bias_hh_l{}_grad", layer_id))
+                .get(&format!("rnn.bias_hh_l{layer_id}_grad"))
                 .unwrap()
                 .clone();
 
@@ -153,19 +154,19 @@ mod rnn {
                 let hidden_bias = params[layer_id * 2 + 1].hidden_bias().unwrap();
 
                 let input_weight_expected = matrix_map
-                    .get(&format!("rnn.weight_ih_l{}_reverse_grad", layer_id))
+                    .get(&format!("rnn.weight_ih_l{layer_id}_reverse_grad"))
                     .unwrap()
                     .clone();
                 let hidden_weight_expected = matrix_map
-                    .get(&format!("rnn.weight_hh_l{}_reverse_grad", layer_id))
+                    .get(&format!("rnn.weight_hh_l{layer_id}_reverse_grad"))
                     .unwrap()
                     .clone();
                 let input_bias_expected = matrix_map
-                    .get(&format!("rnn.bias_ih_l{}_reverse_grad", layer_id))
+                    .get(&format!("rnn.bias_ih_l{layer_id}_reverse_grad"))
                     .unwrap()
                     .clone();
                 let hidden_bias_expected = matrix_map
-                    .get(&format!("rnn.bias_hh_l{}_reverse_grad", layer_id))
+                    .get(&format!("rnn.bias_hh_l{layer_id}_reverse_grad"))
                     .unwrap()
                     .clone();
 
