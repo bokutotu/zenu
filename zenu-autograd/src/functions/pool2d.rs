@@ -42,6 +42,7 @@ impl<T: Num> MaxPool2dConfig<T> {
         *self.config.borrow_mut() = Some(config);
     }
 
+    #[must_use]
     pub fn is_none(&self) -> bool {
         self.config.borrow().is_none()
     }
@@ -87,7 +88,7 @@ where
                 self.stride,
                 self.pad,
                 config,
-            ))
+            ));
     }
 
     fn backward(&self) {
@@ -132,7 +133,7 @@ where
                 self.stride,
                 self.pad,
                 config,
-            ))
+            ));
     }
 
     fn backward(&self) {
@@ -144,6 +145,7 @@ where
     }
 }
 
+#[must_use]
 pub fn max_pool_2d<T: Num, D: Device>(
     input: Variable<T, D>,
     kernel_size: (usize, usize),
@@ -173,7 +175,7 @@ pub fn max_pool_2d<T: Num, D: Device>(
     output.set_creator(Rc::new(RefCell::new(Box::new(function))));
     output
 }
-
+#[must_use]
 pub fn max_pool_2d_grad<T: Num, D: Device>(
     input: Variable<T, D>,
     output: Variable<T, D>,
@@ -215,6 +217,7 @@ mod pool2d {
 
     use super::max_pool_2d;
 
+    #[expect(clippy::unreadable_literal, clippy::too_many_lines)]
     fn _pool2d<D: Device>() {
         let input = vec![
             -1.1258398,

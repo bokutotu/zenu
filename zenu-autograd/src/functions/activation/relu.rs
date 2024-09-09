@@ -50,6 +50,7 @@ impl<T: Num, D: Device> Function<T, D> for Relu<T, D> {
     }
 }
 
+#[must_use]
 pub fn relu<T: Num, D: Device>(input: Variable<T, D>) -> Variable<T, D> {
     let output = alloc(input.get_shape());
     let relu = Relu::new(input, output.clone());

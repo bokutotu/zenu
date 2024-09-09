@@ -12,6 +12,8 @@ pub fn zeros<T: Num, I: Into<DimDyn>, D: Device>(dim: I) -> Variable<T, D> {
     Variable::new(matrix)
 }
 
+#[expect(clippy::module_name_repetitions)]
+#[must_use]
 pub fn zeros_like<T: Num, D: Device>(a: &Variable<T, D>) -> Variable<T, D> {
     zeros(a.get_data().shape())
 }

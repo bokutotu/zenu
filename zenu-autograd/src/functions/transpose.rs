@@ -44,10 +44,10 @@ impl<T: Num, D: Device> Function<T, D> for Transpose<T, D> {
     }
 }
 
+#[expect(clippy::missing_panics_doc)]
+#[must_use]
 pub fn transpose<T: Num, D: Device>(x: Variable<T, D>) -> Variable<T, D> {
-    if x.get_data().shape().len() < 2 {
-        panic!("Not implemented yet");
-    }
+    assert!(x.get_data().shape().len() >= 2, "Not implemented yet");
     let output_shape = x.get_data().shape_stride().transpose().shape();
     let output = alloc(output_shape);
     let transpose = Transpose::new(x, output.clone());
@@ -63,6 +63,7 @@ pub struct TransposeByIndex<T: Num, D: Device> {
 }
 
 impl<T: Num, D: Device> TransposeByIndex<T, D> {
+    #[must_use]
     pub fn new(x: Variable<T, D>, output: Variable<T, D>, index: Vec<usize>) -> Self {
         let output = output.downgrade();
         Self { x, output, index }
@@ -94,6 +95,7 @@ impl<T: Num, D: Device> Function<T, D> for TransposeByIndex<T, D> {
     }
 }
 
+#[must_use]
 pub fn transpose_by_index<T: Num, D: Device>(
     x: Variable<T, D>,
     index: Vec<usize>,

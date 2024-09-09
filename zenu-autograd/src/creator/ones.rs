@@ -12,6 +12,8 @@ pub fn ones<T: Num, I: Into<DimDyn>, D: Device>(dim: I) -> Variable<T, D> {
     Variable::new(matrix)
 }
 
+#[expect(clippy::module_name_repetitions)]
+#[must_use]
 pub fn ones_like<T: Num, D: Device>(a: &Variable<T, D>) -> Variable<T, D> {
     ones(a.get_data().shape())
 }
