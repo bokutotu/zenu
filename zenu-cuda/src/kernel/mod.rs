@@ -401,7 +401,7 @@ impl_array_scalar_sin_assign!(
     array_log_assign_float
 );
 
-#[allow(clippy::missing_panics_doc)]
+#[expect(clippy::missing_panics_doc)]
 pub fn get_memory<T: 'static + Default>(array: *const T, offset: usize) -> T {
     let mut out: T = Default::default();
     let offset = ::libc::c_int::try_from(offset).unwrap();
@@ -419,7 +419,7 @@ pub fn get_memory<T: 'static + Default>(array: *const T, offset: usize) -> T {
     out
 }
 
-#[allow(clippy::missing_panics_doc)]
+#[expect(clippy::missing_panics_doc)]
 pub fn set_memory<T: 'static + Copy>(array: *mut T, offset: usize, value: T) {
     let offset = ::libc::c_int::try_from(offset).unwrap();
     if TypeId::of::<T>() == TypeId::of::<f32>() {
@@ -433,7 +433,7 @@ pub fn set_memory<T: 'static + Copy>(array: *mut T, offset: usize, value: T) {
     }
 }
 
-#[allow(clippy::missing_panics_doc)]
+#[expect(clippy::missing_panics_doc)]
 pub fn clip<T: 'static + Copy>(
     input: *const T,
     output: *mut T,
@@ -461,7 +461,7 @@ pub fn clip<T: 'static + Copy>(
     }
 }
 
-#[allow(clippy::missing_panics_doc)]
+#[expect(clippy::missing_panics_doc)]
 pub fn clip_assign<T: 'static + Copy>(input: *mut T, size: usize, stride: usize, min: T, max: T) {
     let size = ::libc::c_int::try_from(size).unwrap();
     let stride = ::libc::c_int::try_from(stride).unwrap();
@@ -848,7 +848,7 @@ mod array_array {
     );
 }
 
-#[allow(clippy::unreadable_literal, clippy::approx_constant, clippy::excessive_precision)]
+#[expect(clippy::unreadable_literal, clippy::approx_constant, clippy::excessive_precision)]
 #[cfg(test)]
 mod array_scalar {
     
@@ -1217,7 +1217,7 @@ mod array_scalar {
         array_log
     );
 
-    #[allow(clippy::float_cmp)]
+    #[expect(clippy::float_cmp)]
     #[test]
     fn set_value_f32() {
         let a = [0.0, 0.0, 0.0, 0.0];

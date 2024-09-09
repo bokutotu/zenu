@@ -7,7 +7,7 @@ use crate::{
 };
 
 impl<T: Num, D: Device> Matrix<Ref<&T>, DimDyn, D> {
-    #[allow(clippy::missing_panics_doc)]
+    #[expect(clippy::missing_panics_doc)]
     #[must_use]
     pub fn sum(&self, axis: usize, keep_dim: bool) -> Matrix<Owned<T>, DimDyn, D> {
         let shape = self.shape();
@@ -31,7 +31,7 @@ impl<T: Num, D: Device> Matrix<Ref<&T>, DimDyn, D> {
     }
 }
 
-#[allow(clippy::missing_panics_doc, clippy::needless_pass_by_value)]
+#[expect(clippy::missing_panics_doc, clippy::needless_pass_by_value)]
 pub fn sum_to<T: Num, D: Device>(
     source: Matrix<Ref<&T>, DimDyn, D>,
     target: Matrix<Ref<&mut T>, DimDyn, D>,
@@ -95,7 +95,7 @@ pub fn sum_to<T: Num, D: Device>(
 
 #[cfg(test)]
 mod sum {
-    #![allow(clippy::float_cmp, clippy::cast_precision_loss, clippy::cast_possible_truncation)]
+    #![expect(clippy::float_cmp, clippy::cast_precision_loss, clippy::cast_possible_truncation)]
     use crate::{
         device::Device,
         dim::{DimDyn, DimTrait},

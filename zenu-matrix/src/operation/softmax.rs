@@ -6,7 +6,7 @@ use crate::{
 };
 
 impl<T: Num, D: Device> Matrix<Ref<&mut T>, DimDyn, D> {
-    #[allow(clippy::missing_panics_doc)]
+    #[expect(clippy::missing_panics_doc)]
     pub fn softmax_assign<R: Repr<Item = T>>(&self, source: &Matrix<R, DimDyn, D>, axis: usize) {
         assert!(
             axis < self.shape().len(),
@@ -27,7 +27,7 @@ impl<T: Num, D: Device> Matrix<Ref<&mut T>, DimDyn, D> {
 
 #[cfg(test)]
 mod softmax {
-    #![allow(clippy::unreadable_literal)]
+    #![expect(clippy::unreadable_literal)]
     use crate::{
         device::Device,
         dim::DimDyn,

@@ -69,7 +69,7 @@ pub(crate) fn smaller_shape<D1: DimTrait, D2: DimTrait>(x: D1, y: D2) -> DimDyn 
 }
 
 impl DimDyn {
-    #[allow(clippy::missing_panics_doc)]
+    #[expect(clippy::missing_panics_doc)]
     #[must_use]
     pub fn new(dim: &[usize]) -> Self {
         assert!(dim.len() <= 6, "Dim must be smaller than 6");
@@ -132,7 +132,7 @@ impl DimDyn {
     // selfとotherがadd, sub, mul, divで演算可能かを調べる
     // [10, 10, 1, 10]と[10, 1, 1, 10]は演算可能である
     // is_includeではfalseになるが演算可能なものを調べる
-    #[allow(clippy::missing_panics_doc)]
+    #[expect(clippy::missing_panics_doc)]
     #[must_use]
     pub fn is_include_bradcast(&self, other: DimDyn) -> bool {
         assert!(self.len() >= other.len(), "this is bug please make issue");
@@ -209,7 +209,7 @@ impl IntoIterator for DimDyn {
     type Item = usize;
     type IntoIter = std::vec::IntoIter<Self::Item>;
 
-    #[allow(clippy::unnecessary_to_owned)]
+    #[expect(clippy::unnecessary_to_owned)]
     fn into_iter(self) -> Self::IntoIter {
         self.dim[0..self.len()].to_vec().into_iter()
     }

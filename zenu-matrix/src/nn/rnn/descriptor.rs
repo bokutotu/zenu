@@ -274,7 +274,7 @@ impl<T: Num> RNNDescriptor<T> {
         params
     }
 
-    #[allow(clippy::too_many_arguments)]
+    #[expect(clippy::too_many_arguments)]
     pub(crate) fn fwd(
         &self,
         x: *const T,

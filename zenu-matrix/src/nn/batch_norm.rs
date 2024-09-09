@@ -18,7 +18,6 @@ pub struct BatchNorm2dConfig<T: Num> {
 }
 
 impl<T: Num> BatchNorm2dConfig<T> {
-    #[expect(unused_variables)]
     #[must_use]
     pub fn new(dim: DimDyn) -> Self {
         BatchNorm2dConfig::<T> {
@@ -36,7 +35,6 @@ pub struct BatchNorm2dBackwardConfig<T> {
 }
 
 impl<T: Num> BatchNorm2dBackwardConfig<T> {
-    #[expect(unused_variables)]
     #[must_use]
     pub fn new(dim: DimDyn) -> Self {
         BatchNorm2dBackwardConfig::<T> {
@@ -54,7 +52,6 @@ pub struct BatchNorm2dInferenceConfig<T> {
 }
 
 impl<T: Num> BatchNorm2dInferenceConfig<T> {
-    #[expect(unused_variables)]
     #[must_use]
     pub fn new(dim: DimDyn) -> Self {
         BatchNorm2dInferenceConfig::<T> {
@@ -122,7 +119,7 @@ fn create_batch_norm_inference_gpu<T: Num>(input: DimDyn) -> BatchNorm2dInferenc
 }
 
 pub trait BatchNormalization: DeviceBase {
-    #[allow(clippy::too_many_arguments)]
+    #[expect(clippy::too_many_arguments)]
     fn batch_norm_2d_forward_train<T: Num>(
         momentum: f64,
         x: Matrix<Ref<&T>, DimDyn, Self>,
@@ -136,7 +133,7 @@ pub trait BatchNormalization: DeviceBase {
         device_batch_norm: &Option<BatchNorm2dConfig<T>>,
     );
 
-    #[allow(clippy::too_many_arguments)]
+    #[expect(clippy::too_many_arguments)]
     fn batch_norm_2d_backward<T: Num>(
         x: Matrix<Ref<&T>, DimDyn, Self>,
         y_grad: Matrix<Ref<&T>, DimDyn, Self>,
@@ -414,7 +411,7 @@ impl BatchNormalization for Cpu {
     }
 }
 
-#[allow(clippy::too_many_arguments)]
+#[expect(clippy::too_many_arguments)]
 fn batch_norm_2d_shape_check(
     x: DimDyn,
     y: DimDyn,
@@ -480,7 +477,7 @@ fn batch_norm_2d_shape_check(
     Ok(())
 }
 
-#[allow(clippy::too_many_arguments)]
+#[expect(clippy::too_many_arguments)]
 fn batch_norm_2d_backward_shape_check(
     x: DimDyn,
     y_grad: DimDyn,

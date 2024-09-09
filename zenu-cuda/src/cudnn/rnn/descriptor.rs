@@ -13,7 +13,7 @@ use super::{
     RNNAlgo, RNNBias, RNNCell, RNNDataLayout, RNNMathType,
 };
 
-#[allow(clippy::module_name_repetitions)]
+#[expect(clippy::module_name_repetitions)]
 pub struct RNNDescriptor<T: 'static + Copy> {
     rnn_desc: cudnnRNNDescriptor_t,
     h_desc: cudnnTensorDescriptor_t,
@@ -67,7 +67,7 @@ pub struct GRUParams {
 }
 
 impl<T: 'static + Copy> RNNDescriptor<T> {
-    #[allow(clippy::too_many_arguments)]
+    #[expect(clippy::too_many_arguments)]
     #[must_use]
     pub fn new(
         algo: RNNAlgo,
@@ -132,7 +132,7 @@ impl<T: 'static + Copy> RNNDescriptor<T> {
         }
     }
 
-    #[allow(clippy::not_unsafe_ptr_arg_deref)]
+    #[expect(clippy::not_unsafe_ptr_arg_deref)]
     pub fn get_workspace_reserve_size(
         &self,
         is_training: bool,
@@ -409,7 +409,7 @@ impl<T: 'static + Copy> RNNDescriptor<T> {
         });
     }
 
-    #[allow(clippy::too_many_arguments)]
+    #[expect(clippy::too_many_arguments)]
     pub fn fwd(
         &self,
         x: *const T,
@@ -445,7 +445,7 @@ impl<T: 'static + Copy> RNNDescriptor<T> {
         .unwrap();
     }
 
-    #[allow(clippy::too_many_arguments, clippy::similar_names)]
+    #[expect(clippy::too_many_arguments, clippy::similar_names)]
     pub fn bkwd_data(
         &self,
         y: *const T,
@@ -518,13 +518,13 @@ impl<T: 'static + Copy> RNNDescriptor<T> {
         self.weights_size
     }
 
-    #[allow(clippy::missing_panics_doc)]
+    #[expect(clippy::missing_panics_doc)]
     #[must_use]
     pub fn get_workspace_size(&self) -> usize {
         self.context.as_ref().unwrap().get_workspace_size()
     }
 
-    #[allow(clippy::missing_panics_doc)]
+    #[expect(clippy::missing_panics_doc)]
     #[must_use]
     pub fn get_reserve_size(&self) -> usize {
         self.context.as_ref().unwrap().get_reserve_size()

@@ -75,7 +75,7 @@ impl Dataset<f32> for MnistDataset {
     }
 }
 
-#[allow(clippy::cast_precision_loss)]
+#[expect(clippy::cast_precision_loss)]
 fn main() {
     let model = SimpleModel::<Cpu>::new();
     let (train, test) = mnist_dataset().unwrap();

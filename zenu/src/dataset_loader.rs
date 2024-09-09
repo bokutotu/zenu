@@ -35,7 +35,7 @@ const CIFAR10_URLS: [&str; 1] = ["https://www.cs.toronto.edu/~kriz/cifar-10-pyth
 
 const CIFAR10_FILENAMES: [&str; 1] = ["cifar-10-binary.tar.gz"];
 
-#[allow(clippy::type_complexity)]
+#[expect(clippy::type_complexity)]
 pub fn mnist_dataset(
 ) -> Result<(Vec<(Vec<u8>, u8)>, Vec<(Vec<u8>, u8)>), Box<dyn std::error::Error>> {
     let dataset_dir = create_dataset_dir("mnist")?;
@@ -44,7 +44,7 @@ pub fn mnist_dataset(
     Ok((train_data, test_data))
 }
 
-#[allow(clippy::type_complexity)]
+#[expect(clippy::type_complexity)]
 pub fn cifar10_dataset(
 ) -> Result<(Vec<(Vec<u8>, u8)>, Vec<(Vec<u8>, u8)>), Box<dyn std::error::Error>> {
     let dataset_dir = create_dataset_dir("cifar10")?;
@@ -165,7 +165,7 @@ fn create_dataset_dir(dataset_name: &str) -> Result<PathBuf, std::io::Error> {
     Ok(target_dir)
 }
 
-#[allow(clippy::type_complexity)]
+#[expect(clippy::type_complexity)]
 fn extract_image_label_pairs(
     dataset: &Dataset,
     dataset_dir: &Path,
@@ -180,7 +180,7 @@ fn extract_image_label_pairs(
     }
 }
 
-#[allow(clippy::type_complexity)]
+#[expect(clippy::type_complexity)]
 fn extract_mnist_image_label_pairs(
     dataset_dir: &Path,
 ) -> Result<(Vec<(Vec<u8>, u8)>, Vec<(Vec<u8>, u8)>), Box<dyn std::error::Error>> {
@@ -239,7 +239,7 @@ fn extract_mnist_image_label_pairs(
     Ok((train_data, test_data))
 }
 
-#[allow(clippy::type_complexity)]
+#[expect(clippy::type_complexity)]
 fn extract_cifar10_image_label_pairs(
     dataset_dir: &Path,
 ) -> Result<Vec<(Vec<u8>, u8)>, Box<dyn std::error::Error>> {

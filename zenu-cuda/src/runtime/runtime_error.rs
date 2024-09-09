@@ -1,4 +1,4 @@
-#[allow(clippy::module_name_repetitions)]
+#[expect(clippy::module_name_repetitions)]
 #[derive(Debug, Copy, Clone)]
 pub enum ZenuCudaRuntimeError {
     CudaSuccess,
@@ -133,7 +133,7 @@ pub enum ZenuCudaRuntimeError {
 }
 
 impl From<u32> for ZenuCudaRuntimeError {
-    #[allow(clippy::too_many_lines)]
+    #[expect(clippy::too_many_lines)]
     fn from(error: u32) -> Self {
         match error {
             0 => ZenuCudaRuntimeError::CudaSuccess,
@@ -270,7 +270,7 @@ impl From<u32> for ZenuCudaRuntimeError {
 }
 
 impl From<ZenuCudaRuntimeError> for u32 {
-    #[allow(clippy::too_many_lines)]
+    #[expect(clippy::too_many_lines)]
     fn from(error: ZenuCudaRuntimeError) -> Self {
         match error {
             ZenuCudaRuntimeError::CudaSuccess => 0,

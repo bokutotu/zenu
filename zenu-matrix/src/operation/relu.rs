@@ -29,7 +29,7 @@ pub trait ReluOps {
 }
 
 impl ReluOps for Cpu {
-    #[allow(clippy::not_unsafe_ptr_arg_deref)]
+    #[expect(clippy::not_unsafe_ptr_arg_deref)]
     fn relu<T: Num>(
         input: *const T,
         output: *mut T,
@@ -59,7 +59,7 @@ impl ReluOps for Cpu {
         }
     }
 
-    #[allow(clippy::not_unsafe_ptr_arg_deref)]
+    #[expect(clippy::not_unsafe_ptr_arg_deref)]
     fn relu_backward_mask<T: Num>(
         input: *const T,
         mask: *mut T,
@@ -167,7 +167,7 @@ impl ReluOps for Nvidia {
 }
 
 impl<T: Num, S: DimTrait, D: Device> Matrix<Ref<&mut T>, S, D> {
-    #[allow(clippy::missing_panics_doc)]
+    #[expect(clippy::missing_panics_doc)]
     pub fn relu<R: Repr<Item = T>, SO: DimTrait>(&self, other: &Matrix<R, SO, D>, alpha: T) {
         assert!(
             self.shape().slice() == other.shape().slice(),
@@ -202,7 +202,7 @@ impl<T: Num, S: DimTrait, D: Device> Matrix<Ref<&mut T>, S, D> {
         }
     }
 
-    #[allow(clippy::missing_panics_doc)]
+    #[expect(clippy::missing_panics_doc)]
     pub fn relu_backward_mask<R: Repr<Item = T>, SO: DimTrait>(
         &self,
         other: &Matrix<R, SO, D>,

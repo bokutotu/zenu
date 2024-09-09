@@ -134,7 +134,6 @@ fn dropout_state_size() -> Result<i32, ZenuCudnnError> {
     Ok(i32::try_from(size_in_bytes).unwrap())
 }
 
-#[allow(clippy::cast_possible_wrap)]
 pub struct DropoutConfig<T: 'static> {
     dropout_desc: cudnnDropoutDescriptor_t,
     tensor_desc: cudnnTensorDescriptor_t,
@@ -250,7 +249,7 @@ mod dropout_test {
 
     use super::*;
 
-    #[allow(clippy::similar_names)]
+    #[expect(clippy::similar_names)]
     #[test]
     fn test_dropout_4d() {
         let dropout = DropoutConfig::<f32>::new(&[2, 3, 2, 2]).unwrap();

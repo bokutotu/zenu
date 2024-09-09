@@ -36,7 +36,7 @@ pub trait ClipOps {
 }
 
 impl ClipOps for Cpu {
-    #[allow(clippy::not_unsafe_ptr_arg_deref)]
+    #[expect(clippy::not_unsafe_ptr_arg_deref)]
     fn clip<T: Num>(
         input: *const T,
         output: *mut T,
@@ -59,7 +59,7 @@ impl ClipOps for Cpu {
         }
     }
 
-    #[allow(clippy::not_unsafe_ptr_arg_deref)]
+    #[expect(clippy::not_unsafe_ptr_arg_deref)]
     fn clip_assign<T: Num>(input: *mut T, size: usize, stride: usize, min: T, max: T) {
         let input = unsafe { std::slice::from_raw_parts_mut(input, size * stride) };
         for i in 0..size {
@@ -73,7 +73,7 @@ impl ClipOps for Cpu {
         }
     }
 
-    #[allow(clippy::not_unsafe_ptr_arg_deref)]
+    #[expect(clippy::not_unsafe_ptr_arg_deref)]
     fn clip_backward<T: Num>(
         input: *const T,
         mask: *mut T,
@@ -95,7 +95,7 @@ impl ClipOps for Cpu {
         }
     }
 
-    #[allow(clippy::not_unsafe_ptr_arg_deref)]
+    #[expect(clippy::not_unsafe_ptr_arg_deref)]
     fn clip_backward_assign<T: Num>(mask: *mut T, max: T, min: T, size: usize, stride: usize) {
         let mask = unsafe { std::slice::from_raw_parts_mut(mask, size * stride) };
         for i in 0..size {
@@ -311,7 +311,7 @@ impl<T: Num, D: Device> Matrix<Ref<&mut T>, DimDyn, D> {
 
 #[cfg(test)]
 mod clip {
-    #![allow(clippy::float_cmp)]
+    #![expect(clippy::float_cmp)]
 
     use crate::{
         device::Device,

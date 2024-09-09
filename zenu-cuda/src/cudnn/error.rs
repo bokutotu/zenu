@@ -49,7 +49,7 @@ pub enum ZenuCudnnError {
 }
 
 impl From<cudnnStatus_t> for ZenuCudnnError {
-    #[allow(clippy::too_many_lines)]
+    #[expect(clippy::too_many_lines)]
     fn from(status: cudnnStatus_t) -> Self {
         match status {
             cudnnStatus_t::CUDNN_STATUS_NOT_INITIALIZED => ZenuCudnnError::NotInitialized,
@@ -163,7 +163,7 @@ impl From<cudnnStatus_t> for ZenuCudnnError {
 }
 
 impl From<ZenuCudnnError> for cudnnStatus_t {
-    #[allow(clippy::too_many_lines)]
+    #[expect(clippy::too_many_lines)]
     fn from(error: ZenuCudnnError) -> Self {
         match error {
             ZenuCudnnError::NotInitialized => cudnnStatus_t::CUDNN_STATUS_NOT_INITIALIZED,

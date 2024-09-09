@@ -22,7 +22,7 @@ pub struct Pool2dConfig<T: Num> {
 
 impl<T: Num> Pool2dConfig<T> {
     #[must_use]
-    #[expect(unused_variables)]
+    #[expect(clippy::missing_panics_doc)]
     pub fn new(
         kernel: (usize, usize),
         stride: (usize, usize),
@@ -60,7 +60,7 @@ pub trait Pool2dImpl: DeviceBase {
         config: &Pool2dConfig<T>,
     ) -> Result<(), String>;
 
-    #[allow(clippy::too_many_arguments)]
+    #[expect(clippy::too_many_arguments)]
     fn pool2d_backward<T: Num>(
         input: Matrix<Ref<&T>, DimDyn, Self>,
         input_grad: Matrix<Ref<&mut T>, DimDyn, Self>,

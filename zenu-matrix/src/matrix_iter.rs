@@ -141,7 +141,7 @@ impl<T: Num, D: Device> MatrixIter<T, D> for Matrix<Ref<&mut T>, DimDyn, D> {
     }
 }
 
-#[allow(clippy::float_cmp)]
+#[expect(clippy::float_cmp)]
 #[cfg(test)]
 mod map_axis {
     use crate::{

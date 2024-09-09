@@ -4,7 +4,7 @@ use zenu_cuda_kernel_sys::{
     relu_backward_mask_double, relu_backward_mask_float, relu_double, relu_float,
 };
 
-#[allow(clippy::missing_panics_doc)]
+#[expect(clippy::missing_panics_doc)]
 pub fn relu<T: 'static + Copy>(
     input: *const T,
     output: *mut T,
@@ -42,7 +42,7 @@ pub fn relu<T: 'static + Copy>(
     }
 }
 
-#[allow(clippy::missing_panics_doc)]
+#[expect(clippy::missing_panics_doc)]
 pub fn relu_backward_mask<T: 'static + Copy>(
     input: *const T,
     mask: *mut T,

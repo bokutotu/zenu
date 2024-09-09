@@ -61,7 +61,7 @@ pub trait GreaterDimTrait: DimTrait {
     type GreaterDim: DimTrait;
 }
 
-#[allow(clippy::missing_panics_doc)]
+#[expect(clippy::missing_panics_doc)]
 pub fn cal_offset<D1: DimTrait, D2: DimTrait>(shape: D1, stride: D2) -> usize {
     assert!(shape.len() == stride.len(), "Dimension mismatch");
     shape.into_iter().zip(stride).map(|(x, y)| x * y).sum()

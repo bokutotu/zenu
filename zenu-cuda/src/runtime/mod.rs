@@ -155,7 +155,7 @@ pub fn cuda_get_memory_info() -> Result<MemoryInfo, ZenuCudaRuntimeError> {
     }
 }
 
-#[allow(clippy::not_unsafe_ptr_arg_deref)]
+#[expect(clippy::not_unsafe_ptr_arg_deref)]
 pub fn cuda_set_mem_pool(
     dev_id: usize,
     mempool: cudaMemPool_t,
@@ -169,7 +169,7 @@ pub fn cuda_set_mem_pool(
     }
 }
 
-#[allow(clippy::not_unsafe_ptr_arg_deref)]
+#[expect(clippy::not_unsafe_ptr_arg_deref)]
 pub fn cuda_set_mem_pool_atribute_mem_max(
     mempool: cudaMemPool_t,
     poolsize: usize,
@@ -205,7 +205,7 @@ pub fn cuda_create_mem_pool() -> Result<cudaMemPool_t, ZenuCudaRuntimeError> {
     }
 }
 
-#[allow(clippy::cast_precision_loss, clippy::cast_sign_loss, clippy::cast_possible_truncation)]
+#[expect(clippy::cast_precision_loss, clippy::cast_sign_loss, clippy::cast_possible_truncation)]
 pub fn set_up_mempool() -> Result<cudaMemPool_t, ZenuCudaRuntimeError> {
     let mempool = cuda_create_mem_pool()?;
     cuda_set_mem_pool(0, mempool)?;
