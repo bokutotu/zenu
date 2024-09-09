@@ -21,7 +21,8 @@ pub struct Pool2dConfig<T: Num> {
 }
 
 impl<T: Num> Pool2dConfig<T> {
-    #[allow(unused_variables)]
+    #[must_use]
+    #[expect(unused_variables)]
     pub fn new(
         kernel: (usize, usize),
         stride: (usize, usize),
@@ -49,6 +50,7 @@ impl<T: Num> Pool2dConfig<T> {
 }
 
 pub trait Pool2dImpl: DeviceBase {
+    #[expect(clippy::missing_errors_doc)]
     fn pool2d<T: Num>(
         input: Matrix<Ref<&T>, DimDyn, Self>,
         output: Matrix<Ref<&mut T>, DimDyn, Self>,
@@ -186,6 +188,7 @@ impl Pool2dImpl for Nvidia {
     }
 }
 
+#[must_use]
 pub fn max_pool_2d_output_shape(
     input_shape: &[usize],
     kernel: (usize, usize),
@@ -200,6 +203,8 @@ pub fn max_pool_2d_output_shape(
     ]
 }
 
+#[expect(clippy::missing_panics_doc, clippy::needless_pass_by_value)]
+#[must_use]
 pub fn max_pool_2d<T: Num, D: Device>(
     input: Matrix<Ref<&T>, DimDyn, D>,
     kernel: (usize, usize),
@@ -221,6 +226,8 @@ pub fn max_pool_2d<T: Num, D: Device>(
     output
 }
 
+#[expect(clippy::needless_pass_by_value)]
+#[must_use]
 pub fn max_pool_2d_grad<T: Num, D: Device>(
     input: Matrix<Ref<&T>, DimDyn, D>,
     output: Matrix<Ref<&T>, DimDyn, D>,
@@ -244,6 +251,7 @@ pub fn max_pool_2d_grad<T: Num, D: Device>(
     input_grad
 }
 
+#[expect(clippy::unreadable_literal, clippy::too_many_lines)]
 #[cfg(test)]
 mod pool2d {
     use zenu_test::{assert_mat_eq_epsilon, run_mat_test};
@@ -339,10 +347,10 @@ mod pool2d {
             0.8728312, 1.0553575, 2.3803675, 0.6870502, 2.3025165,
         ];
 
-        let input = Matrix::<Owned<f32>, DimDyn, D>::from_vec(input, &[1, 3, 5, 5]);
-        let ans = Matrix::<Owned<f32>, DimDyn, D>::from_vec(output, &[1, 3, 2, 2]);
+        let input = Matrix::<Owned<f32>, DimDyn, D>::from_vec(input, [1, 3, 5, 5]);
+        let ans = Matrix::<Owned<f32>, DimDyn, D>::from_vec(output, [1, 3, 2, 2]);
 
-        let mut result = Matrix::<Owned<f32>, DimDyn, D>::zeros(&[1, 3, 2, 2]);
+        let mut result = Matrix::<Owned<f32>, DimDyn, D>::zeros([1, 3, 2, 2]);
 
         let config = Pool2dConfig::new((3, 3), (2, 2), (0, 0), (1, 3, 5, 5), (1, 3, 2, 2));
 
@@ -380,7 +388,7 @@ mod pool2d {
             0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0,
         ];
         let input_grad_ans =
-            Matrix::<Owned<f32>, DimDyn, D>::from_vec(input_grad_ans, &[1, 3, 5, 5]);
+            Matrix::<Owned<f32>, DimDyn, D>::from_vec(input_grad_ans, [1, 3, 5, 5]);
         assert_mat_eq_epsilon!(input_grad, input_grad_ans, 1e-6);
     }
     run_mat_test!(device_forward, device_forward_cpu, device_forward_nvidia);

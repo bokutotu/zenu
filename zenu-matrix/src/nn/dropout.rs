@@ -28,6 +28,7 @@ pub struct DropoutState<T: Num, D: DeviceBase> {
 }
 
 impl<T: Num, D: DeviceBase> DropoutState<T, D> {
+    #[must_use]
     pub fn new(rate: f32) -> Self {
         Self {
             rate,
@@ -42,14 +43,14 @@ impl<T: Num, D: DeviceBase> DropoutState<T, D> {
         }
     }
 
-    #[allow(unused_variables)]
+    #[expect(unused_variables, clippy::missing_panics_doc)]
     pub fn gpu_init(&mut self, shape: DimDyn) {
         #[cfg(feature = "nvidia")]
         {
             let gpu_state = DropoutConfig::new(shape.slice()).unwrap();
             let state_size = gpu_state.get_state_size();
             let cache = NNCache::<D>::new(state_size);
-            gpu_state.set(self.rate, 0, cache.ptr as *mut _).unwrap();
+            gpu_state.set(self.rate, 0, cache.ptr.cast()).unwrap();
             self.gpu_state = Some(gpu_state);
             self.state_cache = Some(cache);
         }
@@ -60,6 +61,7 @@ impl<T: Num, D: DeviceBase> DropoutState<T, D> {
     }
 }
 
+#[expect(clippy::cast_precision_loss, clippy::cast_sign_loss, clippy::cast_possible_truncation)]
 fn dropout_mask_inner<T>(input: &mut [T], dropout_ratio: f32)
 where
     T: Copy + std::ops::Mul<T, Output = T> + std::ops::AddAssign + Num,
@@ -79,6 +81,7 @@ where
     }
 }
 
+#[expect(clippy::needless_pass_by_value)]
 fn dropout_mask<T>(input: Matrix<Ref<&mut T>, DimDyn, Cpu>, dropout_ratio: f32)
 where
     T: Copy + std::ops::Mul<T, Output = T> + std::ops::AddAssign + Num,
@@ -144,17 +147,14 @@ impl Dropout for Nvidia {
             }
         };
 
-        match state.space_cache {
-            Some(_) => {}
-            None => {
-                let space_cache = NNCache::<Self>::new(0);
-                state.space_cache = Some(space_cache);
-            }
-        };
+        if state.space_cache.is_none() {
+            let space_cache = NNCache::<Self>::new(0);
+            state.space_cache = Some(space_cache);
+        }
 
-        let mut y = Matrix::alloc(x.shape().slice());
+        let mut y = Matrix::<Owned<T>, _, _>::alloc(x.shape().slice());
         let space_cache = state.space_cache.as_ref().unwrap();
-        let spcace_cache_ptr = space_cache.ptr as *mut _;
+        let spcace_cache_ptr = space_cache.ptr.cast();
 
         {
             let y_mut_ref = y.to_ref_mut();
@@ -163,8 +163,8 @@ impl Dropout for Nvidia {
                 .as_ref()
                 .unwrap()
                 .forward(
-                    x.as_ptr() as *const _,
-                    y_mut_ref.as_mut_ptr() as *mut _,
+                    x.as_ptr().cast(),
+                    y_mut_ref.as_mut_ptr().cast(),
                     spcace_cache_ptr,
                 )
                 .unwrap();
@@ -179,15 +179,15 @@ impl Dropout for Nvidia {
         let gpu_state = state.gpu_state.as_ref().unwrap();
         let space_cache = state.space_cache.as_ref().unwrap();
 
-        let mut dx = Matrix::alloc(dy.shape().slice());
+        let mut dx = Matrix::<Owned<T>, _, _>::alloc(dy.shape().slice());
 
         {
             let dx_mut_ref = dx.to_ref_mut();
             gpu_state
                 .backward(
-                    dy.as_ptr() as *const _,
-                    dx_mut_ref.as_mut_ptr() as *mut _,
-                    space_cache.ptr as *mut _,
+                    dy.as_ptr().cast(),
+                    dx_mut_ref.as_mut_ptr().cast(),
+                    space_cache.ptr.cast(),
                 )
                 .unwrap();
         }
@@ -195,6 +195,7 @@ impl Dropout for Nvidia {
     }
 }
 
+#[expect(clippy::missing_panics_doc)]
 pub fn dropout<R, D>(
     x: &Matrix<R, DimDyn, D>,
     state: &mut DropoutState<R::Item, D>,
@@ -203,12 +204,12 @@ where
     R: Repr,
     D: Dropout + DeviceBase,
 {
-    if x.shape().len() != 2 && x.shape().len() != 4 {
-        panic!("Only 2D and 4D tensors are supported");
-    }
+    assert!((x.shape().len() == 2) || (x.shape().len() == 4), "Only 2D and 4D tensors are supported");
     D::dropout(&x.to_ref(), state)
 }
 
+#[expect(clippy::missing_panics_doc)]
+#[must_use]
 pub fn dropout_grad<R, D>(
     dy: &Matrix<R, DimDyn, D>,
     state: &DropoutState<R::Item, D>,
@@ -217,9 +218,10 @@ where
     R: Repr,
     D: Dropout + DeviceBase,
 {
-    if dy.shape().len() != 2 && dy.shape().len() != 4 {
-        panic!("Only 2D and 4D tensors are supported");
-    }
+    assert!(
+        (dy.shape().len() == 2) || (dy.shape().len() == 4),
+        "Only 2D and 4D tensors are supported"
+    );
     D::dropout_grad(&dy.to_ref(), state)
 }
 
@@ -234,13 +236,14 @@ mod dropout {
 
     use super::{dropout, dropout_grad, DropoutState};
 
+    #[expect(clippy::float_cmp)]
     fn dropout_4d<D: Device>() {
         let mut state = DropoutState::<f32, D>::new(0.8);
         let x = crate::matrix::Matrix::from_vec(
             vec![
                 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0,
             ],
-            &[1, 2, 2, 3],
+            [1, 2, 2, 3],
         );
 
         let y = dropout(&x, &mut state);

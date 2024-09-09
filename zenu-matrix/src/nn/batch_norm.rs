@@ -6,7 +6,7 @@ use crate::{
 };
 
 #[cfg(feature = "nvidia")]
-use zenu_cuda::cudnn::{batch_norm::*, TensorFormat};
+use zenu_cuda::cudnn::{batch_norm::{BatchNorm2d, BatchNorm2dBackward, BatchNorm2dBackwardBuilder, BatchNorm2dBuilder, BatchNorm2dInference, BatchNorm2dInferenceBuilder}, TensorFormat};
 
 #[cfg(feature = "nvidia")]
 use crate::device::nvidia::Nvidia;
@@ -18,7 +18,8 @@ pub struct BatchNorm2dConfig<T: Num> {
 }
 
 impl<T: Num> BatchNorm2dConfig<T> {
-    #[allow(unused_variables)]
+    #[expect(unused_variables)]
+    #[must_use]
     pub fn new(dim: DimDyn) -> Self {
         BatchNorm2dConfig::<T> {
             #[cfg(feature = "nvidia")]
@@ -35,7 +36,8 @@ pub struct BatchNorm2dBackwardConfig<T> {
 }
 
 impl<T: Num> BatchNorm2dBackwardConfig<T> {
-    #[allow(unused_variables)]
+    #[expect(unused_variables)]
+    #[must_use]
     pub fn new(dim: DimDyn) -> Self {
         BatchNorm2dBackwardConfig::<T> {
             #[cfg(feature = "nvidia")]
@@ -52,7 +54,8 @@ pub struct BatchNorm2dInferenceConfig<T> {
 }
 
 impl<T: Num> BatchNorm2dInferenceConfig<T> {
-    #[allow(unused_variables)]
+    #[expect(unused_variables)]
+    #[must_use]
     pub fn new(dim: DimDyn) -> Self {
         BatchNorm2dInferenceConfig::<T> {
             #[cfg(feature = "nvidia")]
@@ -537,7 +540,7 @@ fn batch_norm_2d_backward_shape_check(
     Ok(())
 }
 
-#[allow(clippy::too_many_arguments)]
+#[expect(clippy::too_many_arguments, clippy::missing_errors_doc)]
 pub fn try_batch_norm_2d_forward_trian<T: Num, D: Device>(
     momentum: f64,
     x: Matrix<Ref<&T>, DimDyn, D>,
@@ -556,8 +559,8 @@ pub fn try_batch_norm_2d_forward_trian<T: Num, D: Device>(
     let bias_shape = bias.shape();
     let mean_shape = mean.shape();
     let variance_shape = variance.shape();
-    let saving_mean_shape = saving_mean.as_ref().map(|x| x.shape());
-    let saving_inv_variance_shape = saving_inv_variance.as_ref().map(|x| x.shape());
+    let saving_mean_shape = saving_mean.as_ref().map(Matrix::shape);
+    let saving_inv_variance_shape = saving_inv_variance.as_ref().map(Matrix::shape);
 
     batch_norm_2d_shape_check(
         x_shape,
@@ -586,6 +589,7 @@ pub fn try_batch_norm_2d_forward_trian<T: Num, D: Device>(
     Ok(())
 }
 
+#[expect(clippy::missing_errors_doc)]
 pub fn try_batch_norm_2d_forward_inference<T: Num, D: Device>(
     x: Matrix<Ref<&T>, DimDyn, D>,
     y: Matrix<Ref<&mut T>, DimDyn, D>,
@@ -626,7 +630,7 @@ pub fn try_batch_norm_2d_forward_inference<T: Num, D: Device>(
     Ok(())
 }
 
-#[allow(clippy::too_many_arguments)]
+#[expect(clippy::too_many_arguments, clippy::missing_errors_doc)]
 pub fn try_batch_norm_2d_backward<T: Num, D: Device>(
     x: Matrix<Ref<&T>, DimDyn, D>,
     y_grad: Matrix<Ref<&T>, DimDyn, D>,
@@ -644,8 +648,8 @@ pub fn try_batch_norm_2d_backward<T: Num, D: Device>(
     let scale_shape = scale.shape();
     let scale_grad_shape = scale_grad.shape();
     let bias_grad_shape = bias_grad.shape();
-    let saving_mean_shape = saving_mean.as_ref().map(|x| x.shape());
-    let saving_inv_variance_shape = saving_inv_variance.as_ref().map(|x| x.shape());
+    let saving_mean_shape = saving_mean.as_ref().map(Matrix::shape);
+    let saving_inv_variance_shape = saving_inv_variance.as_ref().map(Matrix::shape);
 
     batch_norm_2d_backward_shape_check(
         x_shape,
@@ -673,7 +677,7 @@ pub fn try_batch_norm_2d_backward<T: Num, D: Device>(
     Ok(())
 }
 
-#[allow(clippy::too_many_arguments)]
+#[expect(clippy::too_many_arguments, clippy::missing_panics_doc)]
 pub fn batch_norm_2d_forward_train<T: Num, D: Device>(
     momentum: f64,
     x: Matrix<Ref<&T>, DimDyn, D>,
@@ -701,6 +705,7 @@ pub fn batch_norm_2d_forward_train<T: Num, D: Device>(
     .unwrap();
 }
 
+#[expect(clippy::missing_panics_doc)]
 pub fn batch_norm_2d_forward_inference<T: Num, D: Device>(
     x: Matrix<Ref<&T>, DimDyn, D>,
     y: Matrix<Ref<&mut T>, DimDyn, D>,
@@ -722,7 +727,7 @@ pub fn batch_norm_2d_forward_inference<T: Num, D: Device>(
     .unwrap();
 }
 
-#[allow(clippy::too_many_arguments)]
+#[expect(clippy::too_many_arguments, clippy::missing_panics_doc)]
 pub fn batch_norm_2d_backward<T: Num, D: Device>(
     x: Matrix<Ref<&T>, DimDyn, D>,
     y_grad: Matrix<Ref<&T>, DimDyn, D>,
@@ -748,6 +753,7 @@ pub fn batch_norm_2d_backward<T: Num, D: Device>(
     .unwrap();
 }
 
+#[expect(clippy::unreadable_literal)]
 #[cfg(test)]
 mod batch_norm {
     use crate::{
@@ -792,7 +798,7 @@ mod batch_norm {
                 1.1167772,
                 -0.24727815,
             ],
-            &[2, 2, 2, 2],
+            [2, 2, 2, 2],
         );
         let y = vec![
             -1.0970649,
@@ -818,13 +824,13 @@ mod batch_norm {
         let saved_variance = vec![1.5234232, 0.97564316];
         let scale = vec![1.0, 1.0];
         let bias = vec![0.0, 0.0];
-        let y = Matrix::<Owned<f32>, DimDyn, D>::from_vec(y, &[2, 2, 2, 2]);
-        let mean = Matrix::<Owned<f32>, DimDyn, D>::from_vec(running_mean, &[2]);
-        let variance = Matrix::<Owned<f32>, DimDyn, D>::from_vec(running_variance, &[2]);
-        let scale = Matrix::<Owned<f32>, DimDyn, D>::from_vec(scale, &[2]);
-        let bias = Matrix::<Owned<f32>, DimDyn, D>::from_vec(bias, &[2]);
-        let saved_mean = Matrix::<Owned<f32>, DimDyn, D>::from_vec(saved_mean, &[2]);
-        let saved_variance = Matrix::<Owned<f32>, DimDyn, D>::from_vec(saved_variance, &[2]);
+        let y = Matrix::<Owned<f32>, DimDyn, D>::from_vec(y, [2, 2, 2, 2]);
+        let mean = Matrix::<Owned<f32>, DimDyn, D>::from_vec(running_mean, [2]);
+        let variance = Matrix::<Owned<f32>, DimDyn, D>::from_vec(running_variance, [2]);
+        let scale = Matrix::<Owned<f32>, DimDyn, D>::from_vec(scale, [2]);
+        let bias = Matrix::<Owned<f32>, DimDyn, D>::from_vec(bias, [2]);
+        let saved_mean = Matrix::<Owned<f32>, DimDyn, D>::from_vec(saved_mean, [2]);
+        let saved_variance = Matrix::<Owned<f32>, DimDyn, D>::from_vec(saved_variance, [2]);
         BatchNormInputs {
             x,
             y,
@@ -920,11 +926,11 @@ mod batch_norm {
         let saved_mean = vec![-0.04057, 0.01670607];
         let saved_variance = vec![0.9492437, 1.0200632];
         let scale = vec![1.0, 1.0];
-        let x = Matrix::<Owned<f32>, DimDyn, D>::from_vec(x, &[2, 2, 2, 2]);
-        let y_grad = Matrix::<Owned<f32>, DimDyn, D>::from_vec(y_grad, &[2, 2, 2, 2]);
-        let scale = Matrix::<Owned<f32>, DimDyn, D>::from_vec(scale, &[2]);
-        let saved_mean = Matrix::<Owned<f32>, DimDyn, D>::from_vec(saved_mean, &[2]);
-        let saved_variance = Matrix::<Owned<f32>, DimDyn, D>::from_vec(saved_variance, &[2]);
+        let x = Matrix::<Owned<f32>, DimDyn, D>::from_vec(x, [2, 2, 2, 2]);
+        let y_grad = Matrix::<Owned<f32>, DimDyn, D>::from_vec(y_grad, [2, 2, 2, 2]);
+        let scale = Matrix::<Owned<f32>, DimDyn, D>::from_vec(scale, [2]);
+        let saved_mean = Matrix::<Owned<f32>, DimDyn, D>::from_vec(saved_mean, [2]);
+        let saved_variance = Matrix::<Owned<f32>, DimDyn, D>::from_vec(saved_variance, [2]);
         BatchNormBackward {
             x,
             y_grad,
@@ -972,9 +978,9 @@ mod batch_norm {
         ];
         let scale_grad_ans = vec![2.0560942, 1.352522];
         let bias_grad_ans = vec![-4.6919003, 0.9442612];
-        let x_grad_ans = Matrix::<Owned<f32>, DimDyn, D>::from_vec(x_grad_ans, &[2, 2, 2, 2]);
-        let scale_grad_ans = Matrix::<Owned<f32>, DimDyn, D>::from_vec(scale_grad_ans, &[2]);
-        let bias_grad_ans = Matrix::<Owned<f32>, DimDyn, D>::from_vec(bias_grad_ans, &[2]);
+        let x_grad_ans = Matrix::<Owned<f32>, DimDyn, D>::from_vec(x_grad_ans, [2, 2, 2, 2]);
+        let scale_grad_ans = Matrix::<Owned<f32>, DimDyn, D>::from_vec(scale_grad_ans, [2]);
+        let bias_grad_ans = Matrix::<Owned<f32>, DimDyn, D>::from_vec(bias_grad_ans, [2]);
         assert_mat_eq_epsilon!(x_grad.to_ref(), x_grad_ans.to_ref(), 2e-4);
         assert_mat_eq_epsilon!(scale_grad.to_ref(), scale_grad_ans.to_ref(), 2e-4);
         assert_mat_eq_epsilon!(bias_grad.to_ref(), bias_grad_ans.to_ref(), 2e-4);
@@ -1048,12 +1054,12 @@ mod batch_norm {
         let scale = scale.into_iter().map(T::from_f64).collect();
         let bias = bias.into_iter().map(T::from_f64).collect();
 
-        let x = Matrix::<Owned<T>, DimDyn, D>::from_vec(x, &[2, 2, 2, 2]);
-        let y = Matrix::<Owned<T>, DimDyn, D>::from_vec(y, &[2, 2, 2, 2]);
-        let mean = Matrix::<Owned<T>, DimDyn, D>::from_vec(mean, &[2]);
-        let variance = Matrix::<Owned<T>, DimDyn, D>::from_vec(variance, &[2]);
-        let scale = Matrix::<Owned<T>, DimDyn, D>::from_vec(scale, &[2]);
-        let bias = Matrix::<Owned<T>, DimDyn, D>::from_vec(bias, &[2]);
+        let x = Matrix::<Owned<T>, DimDyn, D>::from_vec(x, [2, 2, 2, 2]);
+        let y = Matrix::<Owned<T>, DimDyn, D>::from_vec(y, [2, 2, 2, 2]);
+        let mean = Matrix::<Owned<T>, DimDyn, D>::from_vec(mean, [2]);
+        let variance = Matrix::<Owned<T>, DimDyn, D>::from_vec(variance, [2]);
+        let scale = Matrix::<Owned<T>, DimDyn, D>::from_vec(scale, [2]);
+        let bias = Matrix::<Owned<T>, DimDyn, D>::from_vec(bias, [2]);
         ForwardInputs {
             x,
             y,
