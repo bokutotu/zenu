@@ -66,7 +66,12 @@ impl<T: Num> Function<T, Nvidia> for CudnnRNN<T> {
     }
 
     fn get_inputs(&self) -> Vec<Variable<T, Nvidia>> {
-        vec![self.x.clone(), self.hx.clone().unwrap()]
+        let mut inputs = vec![self.x.clone()];
+        if let Some(hx) = &self.hx {
+            inputs.push(hx.clone());
+        }
+        inputs.push(self.weight.clone());
+        inputs
     }
 }
 
@@ -109,10 +114,131 @@ pub fn cudnn_rnn_fwd<T: Num>(
 }
 
 #[cfg(test)]
-mod rnn {
+mod rnn_test {
+    use std::{cell::RefCell, rc::Rc};
 
+    use zenu_matrix::{
+        device::{cpu::Cpu, nvidia::Nvidia},
+        dim::DimDyn,
+        matrix::{Matrix, Owned},
+        nn::rnn::{RNNDescriptor, RNNWeights},
+    };
+    use zenu_test::{
+        assert_mat_eq_epsilon, assert_val_eq, assert_val_eq_grad, read_test_case_from_json_val,
+    };
+
+    use crate::Variable;
+
+    use super::cudnn_rnn_fwd;
+
+    #[cfg(feature = "nvidia")]
     #[test]
     fn rnn() {
-        // let rnn_desc = RNNDescriptor::<f32>::new(RNNCell::RNN)
+        let matrix_map =
+            read_test_case_from_json_val!("../test_data_json/rnn_fwd_bkwd_single_seq_len_1.json");
+
+        let mut weights = Vec::new();
+        let input_weight: Matrix<Owned<f32>, DimDyn, Cpu> =
+            matrix_map.get("rnn.weight_ih_l0").unwrap().clone();
+        let hidden_weight = matrix_map.get("rnn.weight_hh_l0").unwrap().clone();
+        let input_bias = matrix_map.get("rnn.bias_ih_l0").unwrap().clone();
+        let hidden_bias = matrix_map.get("rnn.bias_hh_l0").unwrap().clone();
+
+        let rnn_weights = RNNWeights::new(
+            input_weight,
+            hidden_weight,
+            Some(input_bias),
+            Some(hidden_bias),
+        );
+        weights.push(rnn_weights);
+
+        let input = matrix_map.get("input").unwrap().clone();
+        let output = matrix_map.get("output").unwrap().clone();
+        let input_size = input.shape()[2];
+        let hidden_size = output.shape()[2];
+        let batch_size = input.shape()[1];
+
+        let rnn_desc =
+            RNNDescriptor::<f32>::new_rnn_relu(false, 0.0, input_size, hidden_size, 1, batch_size);
+
+        let input = matrix_map.get("input").unwrap().clone();
+        let input = Variable::new(input.to::<Nvidia>());
+
+        let weight_num_elm = rnn_desc.get_weight_num_elems();
+        let weight = Matrix::<Owned<f32>, DimDyn, Nvidia>::alloc([weight_num_elm]);
+        let weight = Variable::new(weight);
+
+        rnn_desc
+            .load_rnn_weights(weight.get_as_mut().as_mut_ptr().cast(), weights)
+            .unwrap();
+
+        let rnn_desc = Rc::new(RefCell::new(rnn_desc));
+
+        let result = cudnn_rnn_fwd(rnn_desc.clone(), input.clone(), None, weight.clone(), true);
+
+        result.y.backward();
+
+        let expected_output = matrix_map.get("output").unwrap();
+
+        assert_val_eq!(result.y, expected_output.clone().to::<Nvidia>(), 1e-5);
+        assert_val_eq_grad!(
+            input.clone(),
+            matrix_map.get("input_grad").unwrap().clone().to::<Nvidia>(),
+            1e-5
+        );
+
+        let params = rnn_desc.borrow().store_rnn_weights::<Cpu>(
+            weight
+                .get_grad()
+                .unwrap()
+                .get_as_mut()
+                .as_mut_ptr()
+                .cast::<u8>(),
+        );
+
+        let g_input_weight = params[0].input_weight();
+        let g_hidden_weight = params[0].hidden_weight();
+        let g_input_bias = params[0].input_bias();
+        let g_hidden_bias = params[0].hidden_bias();
+
+        assert_mat_eq_epsilon!(
+            g_input_weight,
+            matrix_map
+                .get("rnn.weight_ih_l0_grad")
+                .unwrap()
+                .clone()
+                .to::<Cpu>(),
+            1e-5
+        );
+
+        assert_mat_eq_epsilon!(
+            g_hidden_weight,
+            matrix_map
+                .get("rnn.weight_hh_l0_grad")
+                .unwrap()
+                .clone()
+                .to::<Cpu>(),
+            1e-5
+        );
+
+        assert_mat_eq_epsilon!(
+            g_input_bias.unwrap(),
+            matrix_map
+                .get("rnn.bias_ih_l0_grad")
+                .unwrap()
+                .clone()
+                .to::<Cpu>(),
+            1e-5
+        );
+
+        assert_mat_eq_epsilon!(
+            g_hidden_bias.unwrap(),
+            matrix_map
+                .get("rnn.bias_hh_l0_grad")
+                .unwrap()
+                .clone()
+                .to::<Cpu>(),
+            1e-5
+        );
     }
 }
