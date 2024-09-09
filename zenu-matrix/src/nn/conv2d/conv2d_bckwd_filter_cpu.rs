@@ -7,6 +7,7 @@ use crate::{
     operation::mul::matmul,
 };
 
+#[expect(clippy::needless_pass_by_value)]
 pub(super) fn conv2d_bckwd_fileter<T: Num, D: Device>(
     input: Matrix<Ref<&T>, DimDyn, D>,
     kernel_shape: DimDyn,

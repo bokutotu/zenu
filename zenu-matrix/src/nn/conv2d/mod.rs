@@ -16,13 +16,14 @@ use self::{
 
 #[cfg(feature = "nvidia")]
 use zenu_cuda::{
-    cudnn::{conv::*, TensorFormat},
+    cudnn::{conv::{ConvolutionBuilder, ConvolutionConfig, backward_bias}, TensorFormat},
     kernel::conv_bias_add,
 };
 
 #[cfg(feature = "nvidia")]
 use crate::device::nvidia::Nvidia;
 
+#[must_use]
 pub fn conv2d_out_size(
     img_shape: &[usize],
     kernel_shape: &[usize],
@@ -41,6 +42,7 @@ pub(super) fn get_deconv_outsize_(size: usize, k: usize, s: usize, p: usize) -> 
     s * (size - 1) + k - 2 * p
 }
 
+#[must_use]
 pub fn deconv2d_out_size(
     img_shape: &[usize],
     kernel_shape: &[usize],
@@ -64,7 +66,8 @@ pub struct Conv2dConfig<T: Num> {
     _phantom: std::marker::PhantomData<T>,
 }
 
-#[allow(clippy::too_many_arguments, unused_variables)]
+#[expect(clippy::too_many_arguments, unused_variables)]
+#[must_use]
 pub fn create_conv_descriptor<T: Num>(
     input_shape: &[usize],
     output_shape: &[usize],
@@ -79,29 +82,33 @@ pub fn create_conv_descriptor<T: Num>(
 ) -> Conv2dConfig<T> {
     #[cfg(feature = "nvidia")]
     let conv = {
-        let input_shape_0: i32 = input_shape[0] as i32;
-        let input_shape_1: i32 = input_shape[1] as i32;
-        let input_shape_2: i32 = input_shape[2] as i32;
-        let input_shape_3: i32 = input_shape[3] as i32;
+        let input_shape = input_shape.iter().map(|x| i32::try_from(*x).unwrap()).collect::<Vec<_>>();
+        let output_shape = output_shape.iter().map(|x| i32::try_from(*x).unwrap()).collect::<Vec<_>>();
+        let filter_shape = filter_shape.iter().map(|x| i32::try_from(*x).unwrap()).collect::<Vec<_>>();
 
-        let output_shape_0: i32 = output_shape[0] as i32;
-        let output_shape_1: i32 = output_shape[1] as i32;
-        let output_shape_2: i32 = output_shape[2] as i32;
-        let output_shape_3: i32 = output_shape[3] as i32;
+        let input_shape_0: i32 = input_shape[0] ;
+        let input_shape_1: i32 = input_shape[1] ;
+        let input_shape_2: i32 = input_shape[2] ;
+        let input_shape_3: i32 = input_shape[3] ;
 
-        let filter_shape_0: i32 = filter_shape[0] as i32;
-        let filter_shape_1: i32 = filter_shape[1] as i32;
-        let filter_shape_2: i32 = filter_shape[2] as i32;
-        let filter_shape_3: i32 = filter_shape[3] as i32;
+        let output_shape_0: i32 = output_shape[0] ;
+        let output_shape_1: i32 = output_shape[1] ;
+        let output_shape_2: i32 = output_shape[2] ;
+        let output_shape_3: i32 = output_shape[3] ;
 
-        let pad_h: i32 = pad_h as i32;
-        let pad_w: i32 = pad_w as i32;
+        let filter_shape_0: i32 = filter_shape[0] ;
+        let filter_shape_1: i32 = filter_shape[1] ;
+        let filter_shape_2: i32 = filter_shape[2] ;
+        let filter_shape_3: i32 = filter_shape[3] ;
 
-        let stride_h: i32 = stride_h as i32;
-        let stride_w: i32 = stride_w as i32;
+        let pad_h: i32 = pad_h.try_into().unwrap();
+        let pad_w: i32 = pad_w.try_into().unwrap();
 
-        let dilation_h: i32 = dilation_h as i32;
-        let dilation_w: i32 = dilation_w as i32;
+        let stride_h: i32 = stride_h.try_into().unwrap(); 
+        let stride_w: i32 = stride_w.try_into().unwrap();
+
+        let dilation_h: i32 = dilation_h.try_into().unwrap();
+        let dilation_w: i32 = dilation_w.try_into().unwrap(); 
 
         let conv = ConvolutionBuilder::<T>::default()
             .input(
@@ -329,7 +336,7 @@ impl Conv2d for Nvidia {
             filter.as_ptr(),
             T::zero(),
             y.as_mut_ptr(),
-        )
+        );
     }
 
     fn conv2d_bckwd_data<T: Num>(
@@ -369,7 +376,7 @@ impl Conv2d for Nvidia {
             dy.as_ptr(),
             T::zero(),
             dx.as_mut_ptr(),
-        )
+        );
     }
 
     fn conv2d_bckwd_filter<T: Num>(
@@ -409,7 +416,7 @@ impl Conv2d for Nvidia {
             dy.as_ptr(),
             T::zero(),
             df.as_mut_ptr(),
-        )
+        );
     }
 
     fn conv2d_forward_bias<T: Num>(
@@ -442,6 +449,7 @@ impl Conv2d for Nvidia {
 }
 
 #[allow(clippy::too_many_arguments)]
+#[must_use]
 pub fn conv2d_forward<T: Num, D: Device>(
     input: Matrix<Ref<&T>, DimDyn, D>,
     filter: Matrix<Ref<&T>, DimDyn, D>,
@@ -476,6 +484,7 @@ pub fn conv2d_forward<T: Num, D: Device>(
 }
 
 #[allow(clippy::too_many_arguments)]
+#[must_use]
 pub fn conv2d_bckwd_data<T: Num, D: Device>(
     dy: Matrix<Ref<&T>, DimDyn, D>,
     filter: Matrix<Ref<&T>, DimDyn, D>,
@@ -510,6 +519,7 @@ pub fn conv2d_bckwd_data<T: Num, D: Device>(
 }
 
 #[allow(clippy::too_many_arguments)]
+#[must_use]
 pub fn conv2d_bckwd_filter<T: Num, D: Device>(
     input: Matrix<Ref<&T>, DimDyn, D>,
     dy: Matrix<Ref<&T>, DimDyn, D>,
@@ -553,6 +563,7 @@ pub fn conv2d_bckwd_data_bias<T: Num, D: Device>(
     D::conv2d_bckwd_bias(dy, dx);
 }
 
+#[expect(clippy::unreadable_literal, clippy::too_many_lines)]
 #[cfg(test)]
 mod conv2d {
     use zenu_test::{assert_mat_eq_epsilon, run_mat_test};
@@ -618,7 +629,7 @@ mod conv2d {
             test_case.stride_w,
             test_case.dilation_h,
             test_case.dilation_w,
-            test_case.filter.shape().clone(),
+            test_case.filter.shape(),
             None,
         );
         assert_mat_eq_epsilon!(filter_grad, test_case.filter_grad, 1e-4);

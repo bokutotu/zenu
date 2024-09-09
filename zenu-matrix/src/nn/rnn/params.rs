@@ -25,6 +25,8 @@ pub struct RNNParameters {
 }
 
 impl RNNParameters {
+    #[expect(clippy::missing_panics_doc)]
+    #[must_use]
     pub fn new(bytes: usize) -> Self {
         let weight = Nvidia::alloc(bytes).unwrap();
         Self { weight }
@@ -46,6 +48,7 @@ pub struct RNNWeights<T: Num, D: Device> {
 }
 
 impl<T: Num, D: Device> RNNWeights<T, D> {
+    #[must_use]
     pub fn new(
         input_weight: Matrix<Owned<T>, DimDyn, D>,
         hidden_weight: Matrix<Owned<T>, DimDyn, D>,
@@ -60,35 +63,42 @@ impl<T: Num, D: Device> RNNWeights<T, D> {
         }
     }
 
+    #[must_use]
     pub fn input_weight(&self) -> Matrix<Ref<&T>, DimDyn, D> {
         self.input_weight.to_ref()
     }
 
+    #[must_use]
     pub fn hidden_weight(&self) -> Matrix<Ref<&T>, DimDyn, D> {
         self.hidden_weight.to_ref()
     }
 
+    #[must_use]
     pub fn input_bias(&self) -> Option<Matrix<Ref<&T>, DimDyn, D>> {
-        self.input_bias.as_ref().map(|b| b.to_ref())
+        self.input_bias.as_ref().map(Matrix::to_ref)
     }
 
+    #[must_use]
     pub fn hidden_bias(&self) -> Option<Matrix<Ref<&T>, DimDyn, D>> {
-        self.hidden_bias.as_ref().map(|b| b.to_ref())
+        self.hidden_bias.as_ref().map(Matrix::to_ref)
     }
 
+    #[must_use]
     pub fn input_bias_mut(&mut self) -> Option<Matrix<Ref<&mut T>, DimDyn, D>> {
-        self.input_bias.as_mut().map(|b| b.to_ref_mut())
+        self.input_bias.as_mut().map(Matrix::to_ref_mut)
     }
 
+    #[must_use]
     pub fn hidden_bias_mut(&mut self) -> Option<Matrix<Ref<&mut T>, DimDyn, D>> {
-        self.hidden_bias.as_mut().map(|b| b.to_ref_mut())
+        self.hidden_bias.as_mut().map(Matrix::to_ref_mut)
     }
 
+    #[expect(clippy::missing_panics_doc)]
     pub fn set_weight(&self, params: &RNNParams) {
-        let input_weight_ptr = params.input_weight.ptr as *mut T;
-        let hidden_weight_ptr = params.hidden_weight.ptr as *mut T;
-        let input_bias_ptr = params.input_bias.ptr as *mut T;
-        let hidden_bias_ptr = params.hidden_bias.ptr as *mut T;
+        let input_weight_ptr = params.input_weight.ptr .cast();
+        let hidden_weight_ptr = params.hidden_weight.ptr .cast();
+        let input_bias_ptr = params.input_bias.ptr .cast();
+        let hidden_bias_ptr = params.hidden_bias.ptr .cast();
 
         let input_weight_numelm = self.input_weight().shape().num_elm();
         let hidden_weight_numelm = self.hidden_weight().shape().num_elm();
@@ -138,6 +148,7 @@ impl<T: Num, D: Device> RNNWeights<T, D> {
         }
     }
 
+    #[expect(clippy::missing_panics_doc)]
     pub fn load_from_params(&mut self, params: &RNNParams) {
         let input_weight_ptr = params.input_weight.ptr as *const T;
         let hidden_weight_ptr = params.hidden_weight.ptr as *const T;

@@ -37,9 +37,7 @@ impl<T: Num> RNNDescriptor<T> {
         num_layers: usize,
         batch_size: usize,
     ) -> Self {
-        if dropout != 0.0 {
-            panic!("Dropout is not supported in this version");
-        }
+        assert!(dropout ==  0.0, "Dropout is not supported in this version");
         let desc = RNNDesc::new(
             RNNAlgo::Standard,
             cell,
@@ -59,6 +57,7 @@ impl<T: Num> RNNDescriptor<T> {
         }
     }
 
+    #[must_use]
     pub fn new_rnn_relu(
         bidirectional: bool,
         dropout: f64,
@@ -78,6 +77,7 @@ impl<T: Num> RNNDescriptor<T> {
         )
     }
 
+    #[must_use]
     pub fn new_rnn_tanh(
         bidirectional: bool,
         dropout: f64,
@@ -97,6 +97,7 @@ impl<T: Num> RNNDescriptor<T> {
         )
     }
 
+    #[must_use]
     pub fn lstm(
         bidirectional: bool,
         dropout: f64,
@@ -116,6 +117,7 @@ impl<T: Num> RNNDescriptor<T> {
         )
     }
 
+    #[must_use]
     pub fn gru(
         bidirectional: bool,
         dropout: f64,
@@ -139,12 +141,13 @@ impl<T: Num> RNNDescriptor<T> {
         self.desc.get_weights_size()
     }
 
+    #[must_use]
     pub fn get_weight_num_elems(&self) -> usize {
         self.get_weight_bytes() / std::mem::size_of::<T>()
     }
 
     /// this function set input sequence length
-    /// if seq_length is different from the previous one, it will reallocate workspace
+    /// if `seq_length` is different from the previous one, it will reallocate workspace
     pub fn config_seq_length(&mut self, is_training: bool, seq_length: usize, batch_size: usize) {
         let prev_workspace_size = if self.workspace.is_none() {
             0
@@ -172,6 +175,7 @@ impl<T: Num> RNNDescriptor<T> {
         }
     }
 
+    #[expect(clippy::missing_panics_doc)]
     pub fn allocate_workspace(&mut self) {
         if self.workspace.is_some() {
             Nvidia::drop_ptr(self.workspace.unwrap());
@@ -184,22 +188,27 @@ impl<T: Num> RNNDescriptor<T> {
         self.reserve_space = Some(Nvidia::alloc(self.desc.get_reserve_size()).unwrap());
     }
 
+    #[must_use]
     pub fn get_input_size(&self) -> usize {
         self.desc.get_input_size()
     }
 
+    #[must_use]
     pub fn get_hidden_size(&self) -> usize {
         self.desc.get_hidden_size()
     }
 
+    #[must_use]
     pub fn get_num_layers(&self) -> usize {
         self.desc.get_num_layers()
     }
 
+    #[must_use]
     pub fn get_batch_size(&self) -> usize {
         self.desc.get_batch_size()
     }
 
+    #[must_use]
     pub fn get_is_bidirectional(&self) -> bool {
         self.desc.get_is_bidirectional()
     }
@@ -207,6 +216,7 @@ impl<T: Num> RNNDescriptor<T> {
     /// this function not check shape of params
     /// make sure that params has the same shape as the config
     // TODO: ptrはRNNDescriptorのメンバにする
+    #[expect(clippy::missing_errors_doc)]
     pub fn load_rnn_weights<D: Device>(
         &self,
         weight_ptr: *mut u8,
@@ -218,7 +228,7 @@ impl<T: Num> RNNDescriptor<T> {
             return Err("Number of layers does not match".to_string());
         }
 
-        let rnn_params = self.desc.get_rnn_params(weight_ptr as *mut _);
+        let rnn_params = self.desc.get_rnn_params(weight_ptr.cast());
 
         for idx in 0..params.len() {
             let layer = &mut params[idx];
@@ -234,7 +244,7 @@ impl<T: Num> RNNDescriptor<T> {
         let num_layers = self.get_num_layers() * if self.get_is_bidirectional() { 2 } else { 1 };
         let mut params = Vec::with_capacity(num_layers);
 
-        let rnn_params = self.desc.get_rnn_params(weight_ptr as *mut _);
+        let rnn_params = self.desc.get_rnn_params(weight_ptr.cast());
 
         for (idx, layer) in rnn_params.iter().enumerate() {
             let input_weight = if idx == 0 || (idx == 1 && self.get_is_bidirectional()) {
@@ -282,13 +292,13 @@ impl<T: Num> RNNDescriptor<T> {
             hy,
             cx,
             cy,
-            weight as *mut _,
-            self.workspace.unwrap() as *mut _,
-            self.reserve_space.unwrap() as *mut _,
+            weight.cast_mut(),
+            self.workspace.unwrap().cast(),
+            self.reserve_space.unwrap().cast(),
         );
     }
 
-    #[allow(clippy::too_many_arguments)]
+    #[expect(clippy::too_many_arguments, clippy::similar_names)]
     pub(crate) fn bkwd_data(
         &self,
         y: *const T,
@@ -312,10 +322,10 @@ impl<T: Num> RNNDescriptor<T> {
             cx,
             dcy,
             dcx,
-            weight as *mut _,
-            self.workspace.unwrap() as *mut _,
-            self.reserve_space.unwrap() as *mut _,
-        )
+            weight.cast_mut(),
+            self.workspace.unwrap().cast(),
+            self.reserve_space.unwrap().cast(),
+        );
     }
 
     pub(crate) fn bkwd_weights(&self, x: *const T, hx: *const T, y: *const T, dweight: *mut T) {
@@ -324,8 +334,8 @@ impl<T: Num> RNNDescriptor<T> {
             hx,
             y,
             dweight,
-            self.workspace.unwrap() as *mut _,
-            self.reserve_space.unwrap() as *mut _,
-        )
+            self.workspace.unwrap().cast(),
+            self.reserve_space.unwrap().cast(),
+        );
     }
 }
