@@ -37,7 +37,7 @@ impl<T: Num> RNNDescriptor<T> {
         num_layers: usize,
         batch_size: usize,
     ) -> Self {
-        assert!(dropout ==  0.0, "Dropout is not supported in this version");
+        assert!(dropout == 0.0, "Dropout is not supported in this version");
         let desc = RNNDesc::new(
             RNNAlgo::Standard,
             cell,

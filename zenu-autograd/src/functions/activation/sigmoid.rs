@@ -56,12 +56,12 @@ mod sigmoid {
     fn sigmoid_2d<D: Device>() {
         let x: Variable<f32, D> = from_vec(vec![0.0, 0.5, 0.1, 0.2, 0.3, 0.4], [2, 3]);
         let y = sigmoid(x);
-        assert!(y.get_data().index_item([0, 0]) - 0.5 < 1e-6, );
-        assert!(y.get_data().index_item([0, 1]) - 0.62245935 < 1e-6, );
-        assert!(y.get_data().index_item([0, 2]) - 0.52497919 < 1e-6, );
-        assert!(y.get_data().index_item([1, 0]) - 0.54983399 < 1e-6, );
-        assert!(y.get_data().index_item([1, 1]) - 0.57444252 < 1e-6, );
-        assert!(y.get_data().index_item([1, 2]) - 0.59868766 < 1e-6, );
+        assert!(y.get_data().index_item([0, 0]) - 0.5 < 1e-6,);
+        assert!(y.get_data().index_item([0, 1]) - 0.62245935 < 1e-6,);
+        assert!(y.get_data().index_item([0, 2]) - 0.52497919 < 1e-6,);
+        assert!(y.get_data().index_item([1, 0]) - 0.54983399 < 1e-6,);
+        assert!(y.get_data().index_item([1, 1]) - 0.57444252 < 1e-6,);
+        assert!(y.get_data().index_item([1, 2]) - 0.59868766 < 1e-6,);
     }
     run_test!(sigmoid_2d, sigmoid_2d_cpu, sigmoid_2d_nvidia);
 }

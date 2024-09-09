@@ -399,7 +399,7 @@ fn deconv2d_inner<T: Num, D: Device>(
     y
 }
 
-    #[must_use]
+#[must_use]
 pub fn deconv2d<T: Num, D: Device>(
     x: Variable<T, D>,
     filter: Variable<T, D>,
@@ -415,7 +415,7 @@ pub fn deconv2d<T: Num, D: Device>(
     }
 }
 
-    #[must_use]
+#[must_use]
 pub fn conv2d_filter_grad<T: Num, D: Device>(
     x: Variable<T, D>,
     y_grad: Variable<T, D>,
@@ -493,7 +493,7 @@ mod conv2d {
 
     #[expect(clippy::cast_precision_loss, clippy::unreadable_literal)]
     fn conv2d_2x3x5x5_image_4x3x3x3_kernel_1x1_stride_1x1_padding<D: Device>() {
-        let kernel = (1..=(4 * 3 * 3 * 3 ))
+        let kernel = (1..=(4 * 3 * 3 * 3))
             .map(|x| x as f32)
             .collect::<Vec<f32>>();
         let kernel = from_vec(kernel, [4, 3, 3, 3]);

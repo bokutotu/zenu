@@ -144,7 +144,10 @@ pub struct DropoutConfig<T: 'static> {
 
 impl<T: 'static> DropoutConfig<T> {
     pub fn new(shape: &[usize]) -> Result<Self, ZenuCudnnError> {
-        let shape = shape.iter().map(|x| i32::try_from(*x).unwrap()).collect::<Vec<i32>>();
+        let shape = shape
+            .iter()
+            .map(|x| i32::try_from(*x).unwrap())
+            .collect::<Vec<i32>>();
         let tensor_desc = if shape.len() == 4 {
             tensor_descriptor_4d::<T>(
                 shape[0],
@@ -301,11 +304,7 @@ mod dropout_test {
         .unwrap();
 
         dropout
-            .backward(
-                output_grad_gpu,
-                input_grad_gpu,
-                space.cast(),
-            )
+            .backward(output_grad_gpu, input_grad_gpu, space.cast())
             .unwrap();
 
         cuda_copy(

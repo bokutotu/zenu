@@ -16,7 +16,10 @@ use self::{
 
 #[cfg(feature = "nvidia")]
 use zenu_cuda::{
-    cudnn::{conv::{ConvolutionBuilder, ConvolutionConfig, backward_bias}, TensorFormat},
+    cudnn::{
+        conv::{backward_bias, ConvolutionBuilder, ConvolutionConfig},
+        TensorFormat,
+    },
     kernel::conv_bias_add,
 };
 
@@ -82,33 +85,42 @@ pub fn create_conv_descriptor<T: Num>(
 ) -> Conv2dConfig<T> {
     #[cfg(feature = "nvidia")]
     let conv = {
-        let input_shape = input_shape.iter().map(|x| i32::try_from(*x).unwrap()).collect::<Vec<_>>();
-        let output_shape = output_shape.iter().map(|x| i32::try_from(*x).unwrap()).collect::<Vec<_>>();
-        let filter_shape = filter_shape.iter().map(|x| i32::try_from(*x).unwrap()).collect::<Vec<_>>();
+        let input_shape = input_shape
+            .iter()
+            .map(|x| i32::try_from(*x).unwrap())
+            .collect::<Vec<_>>();
+        let output_shape = output_shape
+            .iter()
+            .map(|x| i32::try_from(*x).unwrap())
+            .collect::<Vec<_>>();
+        let filter_shape = filter_shape
+            .iter()
+            .map(|x| i32::try_from(*x).unwrap())
+            .collect::<Vec<_>>();
 
-        let input_shape_0: i32 = input_shape[0] ;
-        let input_shape_1: i32 = input_shape[1] ;
-        let input_shape_2: i32 = input_shape[2] ;
-        let input_shape_3: i32 = input_shape[3] ;
+        let input_shape_0: i32 = input_shape[0];
+        let input_shape_1: i32 = input_shape[1];
+        let input_shape_2: i32 = input_shape[2];
+        let input_shape_3: i32 = input_shape[3];
 
-        let output_shape_0: i32 = output_shape[0] ;
-        let output_shape_1: i32 = output_shape[1] ;
-        let output_shape_2: i32 = output_shape[2] ;
-        let output_shape_3: i32 = output_shape[3] ;
+        let output_shape_0: i32 = output_shape[0];
+        let output_shape_1: i32 = output_shape[1];
+        let output_shape_2: i32 = output_shape[2];
+        let output_shape_3: i32 = output_shape[3];
 
-        let filter_shape_0: i32 = filter_shape[0] ;
-        let filter_shape_1: i32 = filter_shape[1] ;
-        let filter_shape_2: i32 = filter_shape[2] ;
-        let filter_shape_3: i32 = filter_shape[3] ;
+        let filter_shape_0: i32 = filter_shape[0];
+        let filter_shape_1: i32 = filter_shape[1];
+        let filter_shape_2: i32 = filter_shape[2];
+        let filter_shape_3: i32 = filter_shape[3];
 
         let pad_h: i32 = pad_h.try_into().unwrap();
         let pad_w: i32 = pad_w.try_into().unwrap();
 
-        let stride_h: i32 = stride_h.try_into().unwrap(); 
+        let stride_h: i32 = stride_h.try_into().unwrap();
         let stride_w: i32 = stride_w.try_into().unwrap();
 
         let dilation_h: i32 = dilation_h.try_into().unwrap();
-        let dilation_w: i32 = dilation_w.try_into().unwrap(); 
+        let dilation_w: i32 = dilation_w.try_into().unwrap();
 
         let conv = ConvolutionBuilder::<T>::default()
             .input(
@@ -574,7 +586,6 @@ mod conv2d {
 
     use super::{conv2d_bckwd_data, conv2d_bckwd_filter, conv2d_forward};
 
-    #[expect(dead_code)]
     struct Conv2dTestCase<D: Device> {
         input: Matrix<Owned<f32>, DimDyn, D>,
         filter: Matrix<Owned<f32>, DimDyn, D>,

@@ -59,7 +59,7 @@ pub fn sum_to<T: Num, D: Device>(
         {
             if *s == *t {
                 continue;
-            } 
+            }
             if *t == 1 {
                 diff_axis.push(idx);
             } else {
@@ -95,7 +95,11 @@ pub fn sum_to<T: Num, D: Device>(
 
 #[cfg(test)]
 mod sum {
-    #![expect(clippy::float_cmp, clippy::cast_precision_loss, clippy::cast_possible_truncation)]
+    #![expect(
+        clippy::float_cmp,
+        clippy::cast_precision_loss,
+        clippy::cast_possible_truncation
+    )]
     use crate::{
         device::Device,
         dim::{DimDyn, DimTrait},

@@ -84,14 +84,8 @@ pub fn cuda_copy<T>(
     kind: ZenuCudaMemCopyKind,
 ) -> Result<(), ZenuCudaRuntimeError> {
     let size = size * std::mem::size_of::<T>();
-    let err = unsafe {
-        cudaMemcpy(
-            dst.cast(),
-            src.cast(),
-            size,
-            cudaMemcpyKind::from(kind),
-        )
-    } as u32;
+    let err =
+        unsafe { cudaMemcpy(dst.cast(), src.cast(), size, cudaMemcpyKind::from(kind)) } as u32;
     let err = ZenuCudaRuntimeError::from(err);
     match err {
         ZenuCudaRuntimeError::CudaSuccess => Ok(()),
@@ -179,7 +173,9 @@ pub fn cuda_set_mem_pool_atribute_mem_max(
         cudaMemPoolSetAttribute(
             mempool,
             cudaMemPoolAttr::cudaMemPoolAttrReleaseThreshold,
-            std::ptr::from_ref(&poolsize).cast::<std::ffi::c_void>().cast_mut(),
+            std::ptr::from_ref(&poolsize)
+                .cast::<std::ffi::c_void>()
+                .cast_mut(),
         )
     } as u32;
     let err = ZenuCudaRuntimeError::from(err);
@@ -193,19 +189,19 @@ pub fn cuda_create_mem_pool() -> Result<cudaMemPool_t, ZenuCudaRuntimeError> {
     let props = cuda_create_pool_props();
     let mut addr_of_cumempoolhandle: *mut CUmemPoolHandle_st = std::ptr::null_mut();
     let mempool_ptr = &mut addr_of_cumempoolhandle as *mut *mut CUmemPoolHandle_st;
-    let err = unsafe {
-        cudaMemPoolCreate(
-            mempool_ptr.cast(),
-            std::ptr::from_ref(&props).cast(),
-        )
-    } as u32;
+    let err =
+        unsafe { cudaMemPoolCreate(mempool_ptr.cast(), std::ptr::from_ref(&props).cast()) } as u32;
     match err {
         0 => Ok(unsafe { *mempool_ptr }),
         _ => Err(ZenuCudaRuntimeError::from(err as u32)),
     }
 }
 
-#[expect(clippy::cast_precision_loss, clippy::cast_sign_loss, clippy::cast_possible_truncation)]
+#[expect(
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss,
+    clippy::cast_possible_truncation
+)]
 pub fn set_up_mempool() -> Result<cudaMemPool_t, ZenuCudaRuntimeError> {
     let mempool = cuda_create_mem_pool()?;
     cuda_set_mem_pool(0, mempool)?;
