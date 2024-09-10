@@ -1,11 +1,13 @@
 use std::{cell::RefCell, rc::Rc};
 
-use zenu_matrix::{device::Device, nn::rnn::RNNDescriptor, num::Num};
+use zenu_matrix::{nn::rnn::RNNDescriptor, num::Num};
 
 use crate::{creator::alloc::alloc, Function, Variable, VariableWeak};
 
 #[cfg(feature = "nvidia")]
 use zenu_matrix::device::nvidia::Nvidia;
+
+use super::RNNOutput;
 
 #[cfg(feature = "nvidia")]
 struct CudnnRNN<T: Num> {
@@ -75,11 +77,6 @@ impl<T: Num> Function<T, Nvidia> for CudnnRNN<T> {
     }
 }
 
-pub struct RNNOutput<T: Num, D: Device> {
-    pub y: Variable<T, D>,
-    pub hy: Variable<T, D>,
-}
-
 pub fn cudnn_rnn_fwd<T: Num>(
     rnn_desc: Rc<RefCell<RNNDescriptor<T>>>,
     x: Variable<T, Nvidia>,
@@ -92,7 +89,7 @@ pub fn cudnn_rnn_fwd<T: Num>(
     let x_shape = x.get_shape();
     let seq_len = x_shape[0];
     let batch_size = x_shape[1];
-    let hy = alloc([num_layers, hidden_size]);
+    let hy = alloc([num_layers, batch_size, hidden_size]);
     let y = alloc([seq_len, batch_size, hidden_size]);
     let layer = CudnnRNN {
         rnn_desc,
@@ -123,6 +120,7 @@ mod rnn_test {
         matrix::{Matrix, Owned},
         nn::rnn::{RNNDescriptor, RNNWeights},
     };
+
     use zenu_test::{
         assert_mat_eq_epsilon, assert_val_eq, assert_val_eq_grad, read_test_case_from_json_val,
     };

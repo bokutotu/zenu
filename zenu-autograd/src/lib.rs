@@ -321,7 +321,13 @@ impl<T: Num, D: Device> Variable<T, D> {
         }
     }
 
+    #[expect(clippy::missing_panics_doc)]
     pub fn swap_inner(&self, inner: Matrix<Owned<T>, DimDyn, D>) {
+        assert_eq!(
+            self.get_shape(),
+            inner.shape(),
+            "`Variable::swap_inner`, shape must be same"
+        );
         self.inner.borrow_mut().data = inner;
     }
 
