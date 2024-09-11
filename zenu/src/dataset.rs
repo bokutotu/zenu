@@ -117,6 +117,7 @@ mod dataset_tests {
         dim::{DimDyn, DimTrait},
         matrix::{Matrix, Owned},
     };
+    use zenu_test::assert_val_eq;
 
     use super::{DataLoader, Dataset};
 
@@ -195,26 +196,22 @@ mod dataset_tests {
         let batch = &dataloader.next().unwrap()[0];
         let expected_batch =
             Matrix::<Owned<f64>, DimDyn, Cpu>::from_vec(vec![1., 2., 3., 4., 5., 6.], [2, 3]);
-        let diff = batch.get_data().to_ref() - expected_batch;
-        assert_eq!(diff.asum(), 0.);
+        assert_val_eq!(batch, expected_batch, 1e-5);
 
         let batch = &dataloader.next().unwrap()[0];
         let expected_batch =
             Matrix::<Owned<f64>, DimDyn, Cpu>::from_vec(vec![7., 8., 9., 10., 11., 12.], [2, 3]);
-        let diff = batch.get_data().to_ref() - expected_batch;
-        assert_eq!(diff.asum(), 0.);
+        assert_val_eq!(batch, expected_batch, 1e-5);
 
         let batch = &dataloader.next().unwrap()[0];
         let expected_batch =
             Matrix::<Owned<f64>, DimDyn, Cpu>::from_vec(vec![13., 14., 15., 16., 17., 18.], [2, 3]);
-        let diff = batch.get_data().to_ref() - expected_batch;
-        assert_eq!(diff.asum(), 0.);
+        assert_val_eq!(batch, expected_batch, 1e-5);
 
         let batch = &dataloader.next().unwrap()[0];
         let expected_batch =
             Matrix::<Owned<f64>, DimDyn, Cpu>::from_vec(vec![19., 20., 21.], [1, 3]);
-        let diff = batch.get_data().to_ref() - expected_batch;
-        assert_eq!(diff.asum(), 0.);
+        assert_val_eq!(batch, expected_batch, 1e-5);
     }
 
     #[test]

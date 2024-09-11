@@ -20,6 +20,7 @@ pub mod cosh;
 pub mod dropout;
 pub mod exp;
 pub mod flatten;
+pub mod index_axis;
 pub mod log;
 pub mod loss;
 pub mod matmul;

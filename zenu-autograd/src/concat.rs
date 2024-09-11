@@ -8,7 +8,10 @@ use zenu_matrix::{
     num::Num,
 };
 
-use crate::{creator::zeros::zeros, Function, Variable, VariableWeak};
+use crate::{
+    creator::{alloc::alloc, zeros::zeros},
+    Function, Variable, VariableWeak,
+};
 
 struct Concat<T: Num, D: Device> {
     vars: Vec<Variable<T, D>>,
@@ -77,15 +80,18 @@ impl<T: Num, D: Device> Function<T, D> for ConcatGrad<T, D> {
 
 #[must_use]
 pub fn concat<T: Num, D: Device>(vars: &[Variable<T, D>]) -> Variable<T, D> {
-    let output = Variable::new(c(&vars
-        .iter()
-        .map(|v| v.get_data().clone())
-        .collect::<Vec<_>>()));
+    let input_shape = vars[0].get_shape();
+    let mut output_shape_slice = vec![vars.len()];
+    output_shape_slice.extend_from_slice(input_shape.slice());
+    let output_shape = DimDyn::from(&output_shape_slice as &[usize]);
+    let output = alloc(output_shape);
 
     let concat = Concat {
         vars: vars.to_vec(),
         output: output.clone().downgrade(),
     };
+
+    concat.forward();
 
     output.set_creator(Rc::new(RefCell::new(Box::new(concat))));
     output
@@ -106,6 +112,8 @@ fn concat_grad<T: Num, D: Device>(input: Variable<T, D>) -> Vec<Variable<T, D>> 
         output: output.iter().map(|v| v.clone().downgrade()).collect(),
     };
 
+    concat_grad.forward();
+
     let layer = Rc::new(RefCell::new(
         Box::new(concat_grad) as Box<dyn Function<T, D>>
     ));
@@ -120,7 +128,7 @@ mod concat_test {
         dim::DimDyn,
         matrix::{Matrix, Owned},
     };
-    use zenu_test::assert_val_eq;
+    use zenu_test::{assert_val_eq, assert_val_eq_grad};
 
     use crate::Variable;
 
@@ -142,5 +150,11 @@ mod concat_test {
         let z_expected = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(vec![1., 1., 0., 0.], [2, 2]);
 
         assert_val_eq!(z, z_expected, 1e-5);
+
+        let x_grad_expected = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(vec![1., 2.], [2]);
+        let y_grad_expected = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(vec![3., 4.], [2]);
+
+        assert_val_eq_grad!(x, x_grad_expected, 1e-5);
+        assert_val_eq_grad!(y, y_grad_expected, 1e-5);
     }
 }
