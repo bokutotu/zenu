@@ -32,6 +32,7 @@ impl<T: Num, D: Device> Function<T, D> for Relu<T, D> {
 
     fn backward(&self) {
         // リファレンスカウンタの関係でスコープを切る必要がある
+        // TODO: 複数回微分の場合に対応する
         let input_grad = {
             let input = self.input.get_data();
             let output = self.output.upgrade().unwrap();
@@ -60,7 +61,7 @@ pub fn relu<T: Num, D: Device>(input: Variable<T, D>) -> Variable<T, D> {
 }
 
 #[cfg(test)]
-mod relu {
+mod relu_test {
 
     use zenu_matrix::{
         device::Device,
