@@ -137,4 +137,16 @@ mod index_axis_test {
         assert_val_eq_grad!(input, expected_input_grad, 1e-5);
     }
     run_test!(fwd, fwd_cpu, fwd_gpu);
+
+    fn two_layers_test<D: Device>() {
+        let x: Variable<f32, D> = from_vec(vec![1., 2., 3., 4.], [2, 2]);
+        let y: Variable<f32, D> = from_vec(vec![5., 6., 7., 8.], [2, 2]);
+        let z = x.clone() * y.clone();
+        let output = index_axis(z, Index::new(0, 0));
+        output.backward();
+
+        assert!(x.get_grad().is_some());
+        assert!(y.get_grad().is_some());
+    }
+    run_test!(two_layers_test, two_layers_test_cpu, two_layers_test_gpu);
 }

@@ -45,12 +45,12 @@ impl<T: Num, D: Device> Function<T, D> for Concat<T, D> {
 
 struct ConcatGrad<T: Num, D: Device> {
     input: Variable<T, D>,
-    output: Vec<VariableWeak<T, D>>,
+    outputs: Vec<VariableWeak<T, D>>,
 }
 
 impl<T: Num, D: Device> Function<T, D> for ConcatGrad<T, D> {
     fn forward(&self) {
-        for (i, output) in self.output.iter().enumerate() {
+        for (i, output) in self.outputs.iter().enumerate() {
             let input_mat = self.input.get_as_ref();
             let input_slice = input_mat.index_axis(Index::new(0, i));
 
@@ -64,7 +64,7 @@ impl<T: Num, D: Device> Function<T, D> for ConcatGrad<T, D> {
 
     fn backward(&self) {
         let output_grads = self
-            .output
+            .outputs
             .iter()
             .map(|v| v.upgrade().unwrap().get_grad().unwrap().clone())
             .collect::<Vec<_>>();
@@ -102,14 +102,14 @@ fn concat_grad<T: Num, D: Device>(input: Variable<T, D>) -> Vec<Variable<T, D>> 
     let output_shape_slice = &input_shape.slice()[1..];
     let output_shape = DimDyn::from(output_shape_slice);
 
-    let mut output = Vec::with_capacity(output_shape[0]);
-    for _ in 0..output_shape[0] {
-        output.push(zeros(output_shape));
+    let mut outputs = Vec::with_capacity(output_shape[0]);
+    for _ in 0..input_shape[0] {
+        outputs.push(zeros(output_shape));
     }
 
     let concat_grad = ConcatGrad {
         input,
-        output: output.iter().map(|v| v.clone().downgrade()).collect(),
+        outputs: outputs.iter().map(|v| v.clone().downgrade()).collect(),
     };
 
     concat_grad.forward();
@@ -117,18 +117,18 @@ fn concat_grad<T: Num, D: Device>(input: Variable<T, D>) -> Vec<Variable<T, D>> 
     let layer = Rc::new(RefCell::new(
         Box::new(concat_grad) as Box<dyn Function<T, D>>
     ));
-    output.iter().for_each(|v| v.set_creator(layer.clone()));
-    output
+    outputs.iter().for_each(|v| v.set_creator(layer.clone()));
+    outputs
 }
 
 #[cfg(test)]
 mod concat_test {
     use zenu_matrix::{
-        device::cpu::Cpu,
+        device::{cpu::Cpu, Device},
         dim::DimDyn,
         matrix::{Matrix, Owned},
     };
-    use zenu_test::{assert_val_eq, assert_val_eq_grad};
+    use zenu_test::{assert_val_eq, assert_val_eq_grad, run_test};
 
     use crate::Variable;
 
@@ -157,4 +157,22 @@ mod concat_test {
         assert_val_eq_grad!(x, x_grad_expected, 1e-5);
         assert_val_eq_grad!(y, y_grad_expected, 1e-5);
     }
+
+    #[expect(clippy::many_single_char_names)]
+    fn two_layers_test<D: Device>() {
+        let x: Variable<f32, D> = super::zeros([2, 2]);
+        let y: Variable<f32, D> = super::zeros([2, 2]);
+        let z: Variable<f32, D> = super::zeros([2, 2]);
+        let t: Variable<f32, D> = super::zeros([2, 2]);
+        let u = x.clone() + y.clone();
+        let v = z.clone() + t.clone();
+        let w = super::concat(&[u.clone(), v.clone()]);
+        w.backward();
+
+        assert!(x.get_grad().is_some());
+        assert!(y.get_grad().is_some());
+        assert!(z.get_grad().is_some());
+        assert!(t.get_grad().is_some());
+    }
+    run_test!(two_layers_test, two_layers_test_cpu, two_layers_test_gpu);
 }
