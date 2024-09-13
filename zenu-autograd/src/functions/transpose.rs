@@ -113,7 +113,7 @@ pub fn transpose_by_index<T: Num, D: Device>(
 }
 
 #[cfg(test)]
-mod transpose {
+mod transpose_test {
     use zenu_matrix::{
         device::Device,
         dim::DimDyn,
