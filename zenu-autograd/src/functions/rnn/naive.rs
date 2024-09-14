@@ -10,87 +10,51 @@ use crate::{
 };
 
 #[must_use]
-pub fn rnn_tanh_single_time_step<T: Num, D: Device>(
+pub fn rnn_single_time_step<T: Num, D: Device, F>(
     x: Variable<T, D>,
     h: Variable<T, D>,
     weight_input: Variable<T, D>,
     weight_hidden: Variable<T, D>,
     bias_input: Variable<T, D>,
     bias_hidden: Variable<T, D>,
-) -> Variable<T, D> {
+    activation: F,
+) -> Variable<T, D>
+where
+    F: Fn(Variable<T, D>) -> Variable<T, D>,
+{
     let weight_input = transpose(weight_input);
     let weight_hidden = transpose(weight_hidden);
-    tanh(matmul(x, weight_input) + matmul(h, weight_hidden) + bias_input + bias_hidden)
-}
-
-#[must_use]
-pub fn rnn_relu_single_time_step<T: Num, D: Device>(
-    x: Variable<T, D>,
-    h: Variable<T, D>,
-    weight_input: Variable<T, D>,
-    weight_hidden: Variable<T, D>,
-    bias_input: Variable<T, D>,
-    bias_hidden: Variable<T, D>,
-) -> Variable<T, D> {
-    let weight_input = transpose(weight_input);
-    let weight_hidden = transpose(weight_hidden);
-    relu(matmul(x, weight_input) + matmul(h, weight_hidden) + bias_input + bias_hidden)
+    activation(matmul(x, weight_input) + matmul(h, weight_hidden) + bias_input + bias_hidden)
 }
 
 #[expect(clippy::needless_pass_by_value)]
 #[must_use]
-pub fn rnn_tanh_single_layer<T: Num, D: Device>(
+pub fn rnn_single_layer<T: Num, D: Device, F>(
     x: Variable<T, D>,
     mut h: Variable<T, D>,
     weight_input: Variable<T, D>,
     weight_hidden: Variable<T, D>,
     bias_input: Variable<T, D>,
     bias_hidden: Variable<T, D>,
-) -> Variable<T, D> {
+    activation: F,
+) -> Variable<T, D>
+where
+    F: Fn(Variable<T, D>) -> Variable<T, D> + Copy,
+{
     let seq_len = x.get_shape()[0];
     let mut out = Vec::new();
 
     for time_step in 0..seq_len {
         let x_t = index_axis(x.clone(), Index::new(0, time_step));
         let h_t = h.clone();
-        let out_t = rnn_tanh_single_time_step(
+        let out_t = rnn_single_time_step(
             x_t,
             h_t,
             weight_input.clone(),
             weight_hidden.clone(),
             bias_input.clone(),
             bias_hidden.clone(),
-        );
-        out.push(out_t.clone());
-        h = out_t;
-    }
-
-    concat(&out)
-}
-
-#[expect(clippy::needless_pass_by_value)]
-#[must_use]
-pub fn rnn_relu_single_layer<T: Num, D: Device>(
-    x: Variable<T, D>,
-    mut h: Variable<T, D>,
-    weight_input: Variable<T, D>,
-    weight_hidden: Variable<T, D>,
-    bias_input: Variable<T, D>,
-    bias_hidden: Variable<T, D>,
-) -> Variable<T, D> {
-    let seq_len = x.get_shape()[0];
-    let mut out = Vec::new();
-
-    for time_step in 0..seq_len {
-        let x_t = index_axis(x.clone(), Index::new(0, time_step));
-        let h_t = h.clone();
-        let out_t = rnn_relu_single_time_step(
-            x_t,
-            h_t,
-            weight_input.clone(),
-            weight_hidden.clone(),
-            bias_input.clone(),
-            bias_hidden.clone(),
+            activation,
         );
         out.push(out_t.clone());
         h = out_t;
@@ -109,47 +73,47 @@ pub struct RNNWeights<T: Num, D: Device> {
 /// h shape is [`num_layers`, `batch_size`, `hidden_size`]
 #[expect(clippy::needless_pass_by_value)]
 #[must_use]
-pub fn rnn_tanh<T: Num, D: Device>(
+pub fn rnn<T: Num, D: Device, F>(
     mut x: Variable<T, D>,
     h: Variable<T, D>,
     weights: &[RNNWeights<T, D>],
-) -> Variable<T, D> {
+    activation: F,
+) -> Variable<T, D>
+where
+    F: Fn(Variable<T, D>) -> Variable<T, D> + Copy,
+{
     for (idx, weight) in weights.iter().enumerate() {
         let h_sliced = index_axis(h.clone(), Index::new(0, idx));
-        x = rnn_tanh_single_layer(
+        x = rnn_single_layer(
             x,
             h_sliced,
             weight.weight_input.clone(),
             weight.weight_hidden.clone(),
             weight.bias_input.clone(),
             weight.bias_hidden.clone(),
+            activation,
         );
     }
 
     x
 }
 
-/// h shape is [`num_layers`, `batch_size`, `hidden_size`]
-#[expect(clippy::needless_pass_by_value)]
 #[must_use]
-pub fn rnn_relu<T: Num, D: Device>(
-    mut x: Variable<T, D>,
+pub fn rnn_tanh<T: Num, D: Device>(
+    x: Variable<T, D>,
     h: Variable<T, D>,
     weights: &[RNNWeights<T, D>],
 ) -> Variable<T, D> {
-    for (idx, weight) in weights.iter().enumerate() {
-        let h_sliced = index_axis(h.clone(), Index::new(0, idx));
-        x = rnn_relu_single_layer(
-            x,
-            h_sliced,
-            weight.weight_input.clone(),
-            weight.weight_hidden.clone(),
-            weight.bias_input.clone(),
-            weight.bias_hidden.clone(),
-        );
-    }
+    rnn(x, h, weights, tanh)
+}
 
-    x
+#[must_use]
+pub fn rnn_relu<T: Num, D: Device>(
+    x: Variable<T, D>,
+    h: Variable<T, D>,
+    weights: &[RNNWeights<T, D>],
+) -> Variable<T, D> {
+    rnn(x, h, weights, relu)
 }
 
 #[cfg(test)]
