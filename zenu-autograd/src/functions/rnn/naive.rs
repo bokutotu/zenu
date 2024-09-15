@@ -9,7 +9,6 @@ use crate::{
     Variable,
 };
 
-#[must_use]
 pub fn rnn_single_time_step<T: Num, D: Device, F>(
     x: Variable<T, D>,
     h: Variable<T, D>,
@@ -22,9 +21,14 @@ pub fn rnn_single_time_step<T: Num, D: Device, F>(
 where
     F: Fn(Variable<T, D>) -> Variable<T, D>,
 {
-    let weight_input = transpose(weight_input);
-    let weight_hidden = transpose(weight_hidden);
-    activation(matmul(x, weight_input) + matmul(h, weight_hidden) + bias_input + bias_hidden)
+    let input_state = matmul(x, weight_input);
+    let input_state = input_state + bias_input;
+
+    let hidden_state = matmul(h, weight_hidden);
+    let hidden_state = hidden_state + bias_hidden;
+
+    let state = input_state + hidden_state;
+    activation(state)
 }
 
 #[expect(clippy::needless_pass_by_value)]
@@ -44,6 +48,8 @@ where
     let seq_len = x.get_shape()[0];
     let mut out = Vec::new();
 
+    x.set_name("x");
+
     for time_step in 0..seq_len {
         let x_t = index_axis(x.clone(), Index::new(0, time_step));
         let h_t = h.clone();
@@ -56,6 +62,7 @@ where
             bias_hidden.clone(),
             activation,
         );
+        out_t.set_name(&format!("output_{time_step}"));
         out.push(out_t.clone());
         h = out_t;
     }
@@ -87,8 +94,8 @@ where
         x = rnn_single_layer(
             x,
             h_sliced,
-            weight.weight_input.clone(),
-            weight.weight_hidden.clone(),
+            transpose(weight.weight_input.clone()),
+            transpose(weight.weight_hidden.clone()),
             weight.bias_input.clone(),
             weight.bias_hidden.clone(),
             activation,
@@ -113,6 +120,7 @@ pub fn rnn_relu<T: Num, D: Device>(
     h: Variable<T, D>,
     weights: &[RNNWeights<T, D>],
 ) -> Variable<T, D> {
+    h.set_name("h");
     rnn(x, h, weights, relu)
 }
 
@@ -127,13 +135,17 @@ mod rnn_test {
     };
     use zenu_test::{assert_val_eq, assert_val_eq_grad, read_test_case_from_json_val, run_test};
 
-    use crate::{creator::zeros::zeros, functions::rnn::naive::rnn_relu, Variable};
+    use crate::{
+        creator::{ones::ones, zeros::zeros},
+        functions::rnn::naive::rnn_relu,
+        Variable,
+    };
 
     use super::RNNWeights;
 
-    fn rnn_single_layer<D: Device>() {
+    fn rnn_test_single_layer<D: Device>(path: &str) {
         let mats: HashMap<String, Matrix<Owned<f32>, DimDyn, Cpu>> =
-            read_test_case_from_json_val!("../test_data_json/rnn_fwd_bkwd_single.json");
+            read_test_case_from_json_val!(path);
 
         let input = mats.get("input").unwrap().clone();
         let input_weight = mats.get("rnn.weight_ih_l0").unwrap().clone();
@@ -169,5 +181,50 @@ mod rnn_test {
             1e-5
         );
     }
+
+    fn rnn_single_layer<D: Device>() {
+        rnn_test_single_layer::<D>("../test_data_json/rnn_fwd_bkwd_single.json");
+    }
     run_test!(rnn_single_layer, rnn_single_layer_cpu, rnn_single_layer_gpu);
+
+    fn rnn_single_layer_seq_1<D: Device>() {
+        rnn_test_single_layer::<D>("../test_data_json/rnn_fwd_bkwd_single_seq_len_1.json");
+    }
+    run_test!(
+        rnn_single_layer_seq_1,
+        rnn_single_layer_seq_1_cpu,
+        rnn_single_layer_seq_1_gpu
+    );
+
+    fn rnn_very_small_test<D: Device>() {
+        let input = ones::<f32, _, D>([3, 1, 1]);
+        let input_weight =
+            Variable::from(Matrix::<Owned<f32>, DimDyn, D>::from_vec(vec![0.5], [1, 1]));
+        let hidden_weight =
+            Variable::from(Matrix::<Owned<f32>, DimDyn, D>::from_vec(vec![2.], [1, 1]));
+        let input_bias = zeros([1]);
+        let hidden_bias = zeros([1]);
+
+        let output = rnn_relu(
+            input.clone(),
+            zeros([1, 1, 1]),
+            &[RNNWeights {
+                weight_input: input_weight,
+                weight_hidden: hidden_weight,
+                bias_input: input_bias,
+                bias_hidden: hidden_bias,
+            }],
+        );
+        output.backward();
+
+        let expected = Matrix::<Owned<f32>, DimDyn, D>::from_vec(vec![0.5, 1.5, 3.5], [3, 1, 1]);
+        assert_val_eq!(output.clone(), expected, 1e-5);
+        let input_grad = Matrix::<Owned<f32>, DimDyn, D>::from_vec(vec![3.5, 1.5, 0.5], [3, 1, 1]);
+        assert_val_eq_grad!(input, input_grad, 1e-5);
+    }
+    run_test!(
+        rnn_very_small_test,
+        rnn_very_small_test_cpu,
+        rnn_very_small_test_gpu
+    );
 }

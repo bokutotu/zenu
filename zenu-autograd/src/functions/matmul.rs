@@ -26,9 +26,6 @@ impl<T: Num, D: Device> MatMul<T, D> {
 
 impl<T: Num, D: Device> Function<T, D> for MatMul<T, D> {
     fn forward(&self) {
-        // if self.x.get_data().shape().len() != 2 || self.y.get_data().shape().len() != 2 {
-        //     panic!("x.shape().len() != 2 || y.shape().len() != 2");
-        // }
         assert_eq!(
             self.x.get_shape().len() == 2,
             self.y.get_shape().len() == 2,
@@ -70,7 +67,7 @@ pub fn matmul<T: Num, D: Device>(x: Variable<T, D>, y: Variable<T, D>) -> Variab
 }
 
 #[cfg(test)]
-mod matmul {
+mod matmul_test {
     use zenu_matrix::{
         device::Device,
         dim::DimDyn,
