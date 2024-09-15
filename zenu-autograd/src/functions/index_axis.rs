@@ -32,7 +32,7 @@ impl<T: Num, D: Device> Function<T, D> for IndexAxis<T, D> {
 
     fn backward(&self) {
         let output_grad = self.output.upgrade().unwrap().get_grad().unwrap();
-        let input_grad = index_axis_grad(output_grad, self.index, self.input.get_shape());
+        let input_grad = index_axis_grad(output_grad.clone(), self.index, self.input.get_shape());
         self.input.set_grad(input_grad);
     }
 
@@ -98,7 +98,7 @@ fn index_axis_grad<T: Num, D: Device>(
     index: Index,
     output_shape: DimDyn,
 ) -> Variable<T, D> {
-    let output = alloc(output_shape);
+    let output = zeros(output_shape);
 
     let index_axis_grad = IndexAxisGrad {
         input,
