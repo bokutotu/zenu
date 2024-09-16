@@ -11,6 +11,8 @@ pub mod norm2;
 pub mod relu;
 pub mod reshape;
 pub mod softmax;
+pub mod split;
+pub mod stack;
 pub mod sum;
 pub mod to_default_stride;
 pub mod transpose;
