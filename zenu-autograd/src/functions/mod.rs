@@ -30,6 +30,7 @@ pub mod reshape;
 pub mod rnn;
 pub mod sinh;
 pub mod softmax;
+pub mod stack;
 pub mod sum;
 pub mod sum_to;
 pub mod tanh;
