@@ -2,7 +2,6 @@ use std::{cell::RefCell, rc::Rc};
 
 use zenu_matrix::{
     device::Device,
-    dim::{DimDyn, DimTrait},
     num::Num,
     operation::{split::split as split_matrix, stack::stack as stack_matrices},
 };
@@ -122,7 +121,7 @@ fn stack_grad<T: Num, D: Device>(
 #[cfg(test)]
 mod stack_test {
     use zenu_matrix::{
-        device::{cpu::Cpu, Device},
+        device::Device,
         dim::DimDyn,
         matrix::{Matrix, Owned},
     };
@@ -130,11 +129,7 @@ mod stack_test {
 
     use crate::{creator::zeros::zeros, Variable};
 
-    #[test]
-    fn fwd_cpu() {
-        stack_fwd::<Cpu>();
-    }
-
+    #[expect(clippy::many_single_char_names)]
     fn stack_fwd<D: Device>() {
         let x_mat = Matrix::<Owned<f32>, _, D>::ones([2, 3]);
         let y_mat = Matrix::<Owned<f32>, _, D>::zeros([2, 3]);
@@ -166,12 +161,9 @@ mod stack_test {
         assert_val_eq_grad!(x, x_grad_expected, 1e-5);
         assert_val_eq_grad!(y, y_grad_expected, 1e-5);
     }
+    run_test!(stack_fwd, stack_fwd_cpu, stack_fwd_gpu);
 
-    #[test]
-    fn bwd_cpu() {
-        stack_bwd::<Cpu>();
-    }
-
+    #[expect(clippy::many_single_char_names)]
     fn stack_bwd<D: Device>() {
         let x: Variable<f32, D> = zeros([2, 2]);
         let y: Variable<f32, D> = zeros([2, 2]);
@@ -187,4 +179,5 @@ mod stack_test {
         assert!(z.get_grad().is_some());
         assert!(t.get_grad().is_some());
     }
+    run_test!(stack_bwd, stack_bwd_cpu, stack_bwd_gpu);
 }
