@@ -110,7 +110,6 @@ macro_rules! read_test_case_from_json {
     }};
 }
 
-#[expect(clippy::crate_in_macro_def)]
 #[macro_export]
 macro_rules! read_test_case_from_json_val {
     ($path:expr) => {{
