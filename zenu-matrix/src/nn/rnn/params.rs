@@ -40,14 +40,14 @@ impl Drop for RNNParameters {
 }
 
 #[derive(Debug, Clone)]
-pub struct RNNWeights<T: Num, D: Device> {
+pub struct RNNWeightsMat<T: Num, D: Device> {
     pub input_weight: Matrix<Owned<T>, DimDyn, D>,
     pub hidden_weight: Matrix<Owned<T>, DimDyn, D>,
     pub input_bias: Option<Matrix<Owned<T>, DimDyn, D>>,
     pub hidden_bias: Option<Matrix<Owned<T>, DimDyn, D>>,
 }
 
-impl<T: Num, D: Device> RNNWeights<T, D> {
+impl<T: Num, D: Device> RNNWeightsMat<T, D> {
     #[must_use]
     pub fn new(
         input_weight: Matrix<Owned<T>, DimDyn, D>,

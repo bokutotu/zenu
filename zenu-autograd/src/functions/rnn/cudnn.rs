@@ -4,12 +4,10 @@ use zenu_matrix::{nn::rnn::RNNDescriptor, num::Num};
 
 use crate::{creator::alloc::alloc, Function, Variable, VariableWeak};
 
-#[cfg(feature = "nvidia")]
 use zenu_matrix::device::nvidia::Nvidia;
 
 use super::RNNOutput;
 
-#[cfg(feature = "nvidia")]
 struct CudnnRNN<T: Num> {
     rnn_desc: Rc<RefCell<RNNDescriptor<T>>>,
     x: Variable<T, Nvidia>,
@@ -20,7 +18,6 @@ struct CudnnRNN<T: Num> {
     is_training: bool,
 }
 
-#[cfg(feature = "nvidia")]
 impl<T: Num> Function<T, Nvidia> for CudnnRNN<T> {
     fn forward(&self) {
         let mut rnn_desc = self.rnn_desc.borrow_mut();
@@ -118,7 +115,7 @@ mod rnn_test {
         device::{cpu::Cpu, nvidia::Nvidia},
         dim::DimDyn,
         matrix::{Matrix, Owned},
-        nn::rnn::{RNNDescriptor, RNNWeights},
+        nn::rnn::{RNNDescriptor, RNNWeightsMat},
     };
 
     use zenu_test::{
@@ -142,7 +139,7 @@ mod rnn_test {
         let input_bias = matrix_map.get("rnn.bias_ih_l0").unwrap().clone();
         let hidden_bias = matrix_map.get("rnn.bias_hh_l0").unwrap().clone();
 
-        let rnn_weights = RNNWeights::new(
+        let rnn_weights = RNNWeightsMat::new(
             input_weight,
             hidden_weight,
             Some(input_bias),

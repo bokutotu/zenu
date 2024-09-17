@@ -1,7 +1,9 @@
-use zenu_matrix::{device::Device, index::index_dyn_impl::Index, num::Num};
+use rand_distr::{Distribution, StandardNormal};
+use zenu_matrix::{device::Device, index::index_dyn_impl::Index, nn::rnn::RNNWeightsMat, num::Num};
 
 use crate::{
     concat::concat,
+    creator::{rand::normal, zeros::zeros},
     functions::{
         activation::relu::relu, index_axis::index_axis, matmul::matmul, stack::stack, tanh::tanh,
         transpose::transpose,
@@ -130,10 +132,62 @@ pub struct RNNWeights<T: Num, D: Device> {
     pub bias_hidden: Variable<T, D>,
 }
 
+impl<T: Num, D: Device> From<RNNWeightsMat<T, D>> for RNNWeights<T, D> {
+    fn from(weights: RNNWeightsMat<T, D>) -> Self {
+        Self {
+            weight_input: Variable::new(weights.input_weight),
+            weight_hidden: Variable::new(weights.hidden_weight),
+            bias_input: Variable::new(weights.input_bias.unwrap()),
+            bias_hidden: Variable::new(weights.hidden_bias.unwrap()),
+        }
+    }
+}
+
+impl<T: Num, D: Device> RNNWeights<T, D> {
+    #[must_use]
+    pub fn init(input_size: usize, hidden_size: usize) -> Self
+    where
+        StandardNormal: Distribution<T>,
+    {
+        let weight_input = normal(T::zero(), T::one(), None, [hidden_size, input_size]);
+        let weight_hidden = normal(T::zero(), T::one(), None, [hidden_size, hidden_size]);
+        let bias_input = zeros([hidden_size]);
+        let bias_hidden = zeros([hidden_size]);
+
+        RNNWeights {
+            weight_input,
+            weight_hidden,
+            bias_input,
+            bias_hidden,
+        }
+    }
+}
+
 #[derive(Clone)]
 pub struct RNNLayerWeights<T: Num, D: Device> {
     pub forward: RNNWeights<T, D>,
     pub backward: Option<RNNWeights<T, D>>,
+}
+
+impl<T: Num, D: Device> RNNLayerWeights<T, D> {
+    #[must_use]
+    pub fn init(input_size: usize, hidden_size: usize, is_bidirectional: bool) -> Self
+    where
+        StandardNormal: Distribution<T>,
+    {
+        let forward = RNNWeights::init(input_size, hidden_size);
+        let backward = if is_bidirectional {
+            Some(RNNWeights::init(input_size, hidden_size))
+        } else {
+            None
+        };
+        Self { forward, backward }
+    }
+
+    #[must_use]
+    pub fn new(forward: RNNWeights<T, D>, backward: Option<RNNWeights<T, D>>) -> Self {
+        Self { forward, backward }
+    }
 }
 
 /// h shape is [`num_layers` * `num_directions`, `batch_size`, `hidden_size`]
