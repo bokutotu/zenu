@@ -30,7 +30,7 @@ mod rnn {
                 .unwrap()
                 .clone();
 
-            let rnn_weights = RNNWeights::new(
+            let rnn_weights = RNNWeightsMat::new(
                 input_weight,
                 hidden_weight,
                 Some(input_bias),
@@ -56,7 +56,7 @@ mod rnn {
                     .unwrap()
                     .clone();
 
-                let rnn_weights = RNNWeights::new(
+                let rnn_weights = RNNWeightsMat::new(
                     input_weight,
                     hidden_weight,
                     Some(input_bias),

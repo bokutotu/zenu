@@ -473,6 +473,9 @@ impl<T: Num, D: Device> Variable<T, D> {
 
     #[must_use]
     pub fn to<DO: Device>(&self) -> Variable<T, DO> {
+        if std::any::TypeId::of::<D>() == std::any::TypeId::of::<DO>() {
+            return unsafe { std::mem::transmute::<Variable<T, D>, Variable<T, DO>>(self.clone()) };
+        }
         Variable {
             inner: Rc::new(RefCell::new(self.inner.borrow().to())),
         }
