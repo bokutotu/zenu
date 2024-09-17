@@ -65,11 +65,11 @@ where
         for t in 0..seq_len {
             let f = forward_output[t].clone();
             let b = backward_output_rev[t].clone();
-            let output_t = concat(&[f, b]); // Concatenate along the hidden_size dimension
+            let output_t = stack(&[f, b], 1); // Concatenate along the hidden_size dimension
             outputs.push(output_t);
         }
 
-        stack(&outputs, 0)
+        concat(&outputs)
     } else {
         concat(&forward_output)
     }
@@ -172,6 +172,7 @@ where
             activation,
             bidirectional,
         );
+        println!("output shape: {:?}", output.get_shape());
 
         // For the next layer, state is the output from this layer
         state = output;
@@ -359,5 +360,42 @@ mod rnn_test {
         rnn_very_small_test,
         rnn_very_small_test_cpu,
         rnn_very_small_test_gpu
+    );
+
+    fn bidirectional_2_layers<D: Device>() {
+        let mats: HashMap<String, Matrix<Owned<f32>, DimDyn, Cpu>> = read_test_case_from_json_val!(
+            "../test_data_json/rnn_fwd_bkwd_bidirectional_2_layers.json"
+        );
+        let first_layers = load_rnn_weight_from_json::<D>(
+            "../test_data_json/rnn_fwd_bkwd_bidirectional_2_layers.json",
+            0,
+            true,
+        );
+        let second_layers = load_rnn_weight_from_json::<D>(
+            "../test_data_json/rnn_fwd_bkwd_bidirectional_2_layers.json",
+            1,
+            true,
+        );
+
+        let input = mats.get("input").unwrap().clone();
+        let input = Variable::<f32, D>::new(input.to::<D>());
+
+        let batch_size = input.get_shape()[1];
+        let hidden_size = first_layers.forward.weight_hidden.get_shape()[0];
+
+        let output = rnn_relu(
+            input.clone(),
+            zeros([2 * 2, batch_size, hidden_size]),
+            &[first_layers.clone(), second_layers.clone()],
+            true,
+        );
+
+        let expected = mats.get("output").unwrap().clone();
+        assert_val_eq!(output, expected.to::<D>(), 1e-5);
+    }
+    run_test!(
+        bidirectional_2_layers,
+        bidirectional_2_layers_cpu,
+        bidirectional_2_layers_gpu
     );
 }
