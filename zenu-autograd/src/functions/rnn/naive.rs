@@ -122,6 +122,7 @@ where
     out
 }
 
+#[derive(Clone)]
 pub struct RNNWeights<T: Num, D: Device> {
     pub weight_input: Variable<T, D>,
     pub weight_hidden: Variable<T, D>,
@@ -129,6 +130,7 @@ pub struct RNNWeights<T: Num, D: Device> {
     pub bias_hidden: Variable<T, D>,
 }
 
+#[derive(Clone)]
 pub struct RNNLayerWeights<T: Num, D: Device> {
     pub forward: RNNWeights<T, D>,
     pub backward: Option<RNNWeights<T, D>>,
@@ -218,41 +220,80 @@ mod rnn_test {
 
     use super::RNNWeights;
 
+    fn load_rnn_weight_from_json<D: Device>(
+        path: &str,
+        idx: usize,
+        bidirectional: bool,
+    ) -> RNNLayerWeights<f32, D> {
+        let mats: HashMap<String, Matrix<Owned<f32>, DimDyn, Cpu>> =
+            read_test_case_from_json_val!(path);
+
+        let input_weight = mats
+            .get(&format!("rnn.weight_ih_l{}", idx))
+            .unwrap()
+            .clone();
+        let hidden_weight = mats
+            .get(&format!("rnn.weight_hh_l{}", idx))
+            .unwrap()
+            .clone();
+        let input_bias = mats.get(&format!("rnn.bias_ih_l{}", idx)).unwrap().clone();
+        let hidden_bias = mats.get(&format!("rnn.bias_hh_l{}", idx)).unwrap().clone();
+
+        let forward = RNNWeights {
+            weight_input: Variable::<f32, D>::new(input_weight.to::<D>()),
+            weight_hidden: Variable::<f32, D>::new(hidden_weight.to::<D>()),
+            bias_input: Variable::<f32, D>::new(input_bias.to::<D>()),
+            bias_hidden: Variable::<f32, D>::new(hidden_bias.to::<D>()),
+        };
+
+        let reverse = if bidirectional {
+            let input_weight_rev = mats
+                .get(&format!("rnn.weight_ih_l{}_reverse", idx))
+                .unwrap()
+                .clone();
+            let hidden_weight_rev = mats
+                .get(&format!("rnn.weight_hh_l{}_reverse", idx))
+                .unwrap()
+                .clone();
+            let input_bias_rev = mats
+                .get(&format!("rnn.bias_ih_l{}_reverse", idx))
+                .unwrap()
+                .clone();
+            let hidden_bias_rev = mats
+                .get(&format!("rnn.bias_hh_l{}_reverse", idx))
+                .unwrap()
+                .clone();
+            Some(RNNWeights {
+                weight_input: Variable::<f32, D>::new(input_weight_rev.to::<D>()),
+                weight_hidden: Variable::<f32, D>::new(hidden_weight_rev.to::<D>()),
+                bias_input: Variable::<f32, D>::new(input_bias_rev.to::<D>()),
+                bias_hidden: Variable::<f32, D>::new(hidden_bias_rev.to::<D>()),
+            })
+        } else {
+            None
+        };
+
+        RNNLayerWeights {
+            forward,
+            backward: reverse,
+        }
+    }
+
     fn rnn_test_single_layer<D: Device>(path: &str) {
         let mats: HashMap<String, Matrix<Owned<f32>, DimDyn, Cpu>> =
             read_test_case_from_json_val!(path);
 
         let input = mats.get("input").unwrap().clone();
-        let input_weight = mats.get("rnn.weight_ih_l0").unwrap().clone();
-        let hidden_weight = mats.get("rnn.weight_hh_l0").unwrap().clone();
-        let input_bias = mats.get("rnn.bias_ih_l0").unwrap().clone();
-        let hidden_bias = mats.get("rnn.bias_hh_l0").unwrap().clone();
-
         let input = Variable::<f32, D>::new(input.to::<D>());
-        let input_weight = Variable::<f32, D>::new(input_weight.to::<D>());
-        let hidden_weight = Variable::<f32, D>::new(hidden_weight.to::<D>());
-        let input_bias = Variable::<f32, D>::new(input_bias.to::<D>());
-        let hidden_bias = Variable::<f32, D>::new(hidden_bias.to::<D>());
-
-        let weight = RNNWeights {
-            weight_input: input_weight,
-            weight_hidden: hidden_weight.clone(),
-            bias_input: input_bias,
-            bias_hidden: hidden_bias,
-        };
-
-        let weight = RNNLayerWeights {
-            forward: weight,
-            backward: None,
-        };
+        let weight = load_rnn_weight_from_json::<D>(path, 0, false);
 
         let batch_size = input.get_shape()[1];
-        let hidden_size = hidden_weight.get_shape()[0];
+        let hidden_size = weight.forward.weight_hidden.get_shape()[0];
 
         let output = rnn_relu(
             input.clone(),
             zeros([1, batch_size, hidden_size]),
-            &[weight],
+            &[weight.clone()],
             false,
         );
         output.backward();
@@ -261,6 +302,12 @@ mod rnn_test {
         assert_val_eq_grad!(
             input,
             mats.get("input_grad").unwrap().clone().to::<D>(),
+            1e-5
+        );
+
+        assert_val_eq_grad!(
+            weight.forward.weight_input,
+            mats.get("rnn.weight_ih_l0_grad").unwrap().clone().to::<D>(),
             1e-5
         );
     }
