@@ -39,6 +39,15 @@ pub trait Parameters<T: Num, D: Device> {
         }
         parameters
     }
+    fn load_parameters(&self, parameters: HashMap<String, Variable<T, D>>) {
+        for (self_key, self_value) in self.parameters() {
+            if let Some(value) = parameters.get(&self_key) {
+                self_value.get_as_mut().copy_from(&value.get_as_ref());
+            } else {
+                panic!("Failed to load model");
+            }
+        }
+    }
 }
 
 impl<T: Num, D: Device> Parameters<T, D> for () {
