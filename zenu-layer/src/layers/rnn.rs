@@ -484,15 +484,21 @@ impl<T: Num, D: Device> RNNLayerBuilder<T, D> {
     }
 
     #[cfg(feature = "nvidia")]
-    fn load_cudnn_weights(&self, desc: &RNNDescriptor<T>, weights: Vec<RNNLayerWeights<T, D>>) {
+    fn load_cudnn_weights(
+        &self,
+        desc: &RNNDescriptor<T>,
+        weights: Vec<RNNLayerWeights<T, D>>,
+    ) -> Variable<T, Nvidia> {
         use zenu_autograd::creator::alloc::alloc;
         let cudnn_weight_bytes = desc.get_weight_num_elems();
-        let cudnn_weigght: Variable<T, D> = alloc([cudnn_weight_bytes]);
+        let cudnn_weight: Variable<T, Nvidia> = alloc([cudnn_weight_bytes]);
 
         let weights = rnn_weights_to_desc(weights, self.is_bidirectional.unwrap_or(false));
 
-        desc.load_rnn_weights(cudnn_weigght.get_as_mut().as_mut_ptr().cast(), weights)
+        desc.load_rnn_weights(cudnn_weight.get_as_mut().as_mut_ptr().cast(), weights)
             .unwrap();
+
+        cudnn_weight
     }
 
     #[expect(clippy::missing_panics_doc)]
@@ -520,11 +526,12 @@ impl<T: Num, D: Device> RNNLayerBuilder<T, D> {
         #[cfg(feature = "nvidia")]
         if self.is_cudnn.unwrap() {
             let desc = self.init_cudnn_desc();
-            self.load_cudnn_weights(&desc, weights);
+            let cudnn_weights = self.load_cudnn_weights(&desc, weights);
+            let cudnn_weights = cudnn_weights.to::<Nvidia>();
             return RNN {
                 weights: None,
                 desc: Some(Rc::new(RefCell::new(desc))),
-                cudnn_weights: None,
+                cudnn_weights: Some(cudnn_weights),
                 is_cudnn: self.is_cudnn.unwrap(),
                 is_bidirectional: self.is_bidirectional.unwrap(),
                 activation: self.activation.unwrap(),
@@ -604,4 +611,40 @@ mod rnn_layer_test {
         layer_save_load_test_not_cudnn_cpu,
         layer_save_load_test_not_cudnn_gpu
     );
+
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn layer_save_load_test_cudnn() {
+        use zenu_matrix::device::nvidia::Nvidia;
+
+        let layer = RNNLayerBuilder::<f32, Nvidia>::default()
+            .hidden_size(10)
+            .num_layers(3)
+            .input_size(5)
+            .batch_size(5)
+            .is_cudnn(true)
+            .build();
+
+        let mut new_layer = RNNLayerBuilder::<f32, Nvidia>::default()
+            .hidden_size(10)
+            .num_layers(3)
+            .input_size(5)
+            .batch_size(5)
+            .is_cudnn(true)
+            .build();
+
+        let layer_parameters = layer.parameters();
+
+        new_layer.load_parameters(layer_parameters.clone());
+
+        let new_layer_parameters = new_layer.parameters();
+
+        for (key, value) in &layer_parameters {
+            assert_val_eq!(
+                value,
+                new_layer_parameters.get(key).unwrap().get_as_ref(),
+                1e-4
+            );
+        }
+    }
 }
