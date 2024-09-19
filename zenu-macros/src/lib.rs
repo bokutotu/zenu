@@ -43,6 +43,13 @@ fn impl_parameters(input: &DeriveInput) -> TokenStream2 {
         }
     });
 
+    let load_parameters_code = fields.map(|field| {
+        let field_name = &field.ident;
+        quote! {
+            self.#field_name.load_parameters(parameters.clone());
+        }
+    });
+
     quote!(
         impl #impl_generics ::zenu_layer::Parameters #ty_generics for #name #ty_generics #where_clause {
             fn weights(&self) -> std::collections::HashMap<String, ::zenu_autograd::Variable<T, D>> {
@@ -59,6 +66,11 @@ fn impl_parameters(input: &DeriveInput) -> TokenStream2 {
                     #biases_code;
                 )*
                 params
+            }
+            fn load_parameters(&self, parameters: std::collections::HashMap<String, ::zenu_autograd::Variable<T, D>>) {
+                #(
+                    #load_parameters_code
+                )*
             }
         }
     )
