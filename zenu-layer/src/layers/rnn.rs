@@ -129,6 +129,10 @@ impl<T: Num, D: Device> Parameters<T, D> for RNN<T, D> {
 
         parameters
     }
+
+    fn load_parameters(&self, parameters: HashMap<String, Variable<T, D>>) {
+        todo!();
+    }
 }
 
 impl<T: Num, D: Device> RNN<T, D> {

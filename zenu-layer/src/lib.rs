@@ -44,7 +44,7 @@ pub trait Parameters<T: Num, D: Device> {
             if let Some(value) = parameters.get(&self_key) {
                 self_value.get_as_mut().copy_from(&value.get_as_ref());
             } else {
-                panic!("Failed to load model");
+                panic!("Failed to load model missing key: {self_key}");
             }
         }
     }

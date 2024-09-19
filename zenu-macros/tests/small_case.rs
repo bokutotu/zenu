@@ -1,6 +1,10 @@
 use zenu_layer::{layers::linear::Linear, Parameters};
 use zenu_macros::Parameters;
-use zenu_matrix::{device::cpu::Cpu, device::Device, num::Num};
+use zenu_matrix::{
+    device::{cpu::Cpu, Device},
+    matrix::Matrix,
+    num::Num,
+};
 use zenu_test::assert_val_eq;
 
 #[derive(Parameters)]
@@ -47,4 +51,43 @@ fn small_net() {
         1e-4
     );
     assert_val_eq!(parameters["linear.linear.bias"].clone(), linear_bias, 1e-4);
+}
+
+#[test]
+fn test_load_parameters() {
+    let base_model = Hoge::<f32, Cpu> {
+        linear: Linear::new(2, 2, true),
+    };
+
+    let base_model_parameters = base_model.parameters();
+
+    let new_model = Hoge::<f32, Cpu> {
+        linear: Linear::new(2, 2, true),
+    };
+
+    let new_model_weight = new_model.linear.weight.get_as_ref();
+
+    println!("{:?}", base_model_parameters.keys());
+
+    println!(
+        "new_model.parameters().keys(): {:?}",
+        new_model.parameters().keys()
+    );
+
+    new_model
+        .linear
+        .weight
+        .get_as_mut()
+        .copy_from(&Matrix::zeros_like(&new_model_weight));
+
+    let new_model_bias = new_model.linear.bias.clone().unwrap().get_as_ref();
+    new_model
+        .linear
+        .bias
+        .clone()
+        .unwrap()
+        .get_as_mut()
+        .copy_from(&Matrix::zeros_like(&new_model_bias));
+
+    new_model.load_parameters(base_model_parameters);
 }
