@@ -11,17 +11,20 @@ use zenu_matrix::{
 use zenu_test::assert_val_eq;
 
 #[derive(Parameters)]
-struct ConvBlock<T: Num, D: Device> {
-    pub conv2d: Conv2d<T, D>,
-    pub max_pool: MaxPool2d<T>,
+#[parameters(num = F, device = De)]
+struct ConvBlock<F: Num, De: Device> {
+    pub conv2d: Conv2d<F, De>,
+    pub max_pool: MaxPool2d<F>,
 }
 
 #[derive(Parameters)]
+#[parameters(num = T, device = D)]
 struct LinearBlock<T: Num, D: Device> {
     pub linear: Linear<T, D>,
 }
 
 #[derive(Parameters)]
+#[parameters(num = T, device = D)]
 struct ConvNet<T: Num, D: Device> {
     pub conv_block: ConvBlock<T, D>,
     pub linear_block: LinearBlock<T, D>,
@@ -88,7 +91,7 @@ fn test_load_parameters_convnet() {
     let model = ConvNet::<f32, Cpu>::new();
     let parameters = model.parameters();
 
-    let new_model = ConvNet::<f32, Cpu>::new();
+    let mut new_model = ConvNet::<f32, Cpu>::new();
 
     new_model.load_parameters(parameters.clone());
 

@@ -13,17 +13,20 @@ use zenu_matrix::{
 use zenu_test::assert_val_eq;
 
 #[derive(Parameters)]
+#[parameters(num = T, device = D)]
 struct ConvBlock<T: Num, D: Device> {
     conv2d: Conv2d<T, D>,
     max_pool: MaxPool2d<T>,
 }
 
 #[derive(Parameters)]
+#[parameters(num = T, device = D)]
 struct LinearBlock<T: Num, D: Device> {
     linear: Linear<T, D>,
 }
 
 #[derive(Parameters)]
+#[parameters(num = T, device = D)]
 struct ConvNet<T: Num, D: Device> {
     conv_blocks: Vec<ConvBlock<T, D>>,
     linear_block: HashMap<String, LinearBlock<T, D>>,
