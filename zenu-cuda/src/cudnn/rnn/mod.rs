@@ -4,4 +4,4 @@ mod test;
 
 pub use helper::{RNNAlgo, RNNBias, RNNCell, RNNDataLayout, RNNMathType};
 
-pub use descriptor::{RNNContext, RNNDescriptor, RNNParams};
+pub use descriptor::{GRUParams, LSTMParams, RNNContext, RNNDescriptor, RNNParams};

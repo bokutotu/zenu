@@ -139,12 +139,7 @@ mod rnn_test {
         let input_bias = matrix_map.get("rnn.bias_ih_l0").unwrap().clone();
         let hidden_bias = matrix_map.get("rnn.bias_hh_l0").unwrap().clone();
 
-        let rnn_weights = RNNWeightsMat::new(
-            input_weight,
-            hidden_weight,
-            Some(input_bias),
-            Some(hidden_bias),
-        );
+        let rnn_weights = RNNWeightsMat::new(input_weight, hidden_weight, input_bias, hidden_bias);
         weights.push(rnn_weights);
 
         let input = matrix_map.get("input").unwrap().clone();
@@ -217,7 +212,7 @@ mod rnn_test {
         );
 
         assert_mat_eq_epsilon!(
-            g_input_bias.unwrap(),
+            g_input_bias,
             matrix_map
                 .get("rnn.bias_ih_l0_grad")
                 .unwrap()
@@ -227,7 +222,7 @@ mod rnn_test {
         );
 
         assert_mat_eq_epsilon!(
-            g_hidden_bias.unwrap(),
+            g_hidden_bias,
             matrix_map
                 .get("rnn.bias_hh_l0_grad")
                 .unwrap()

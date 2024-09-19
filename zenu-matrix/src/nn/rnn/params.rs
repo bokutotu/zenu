@@ -1,5 +1,5 @@
 use zenu_cuda::{
-    cudnn::rnn::RNNParams,
+    cudnn::rnn::{GRUParams, LSTMParams, RNNParams},
     runtime::{cuda_copy, ZenuCudaMemCopyKind},
 };
 
@@ -43,8 +43,26 @@ impl Drop for RNNParameters {
 pub struct RNNWeightsMat<T: Num, D: Device> {
     pub input_weight: Matrix<Owned<T>, DimDyn, D>,
     pub hidden_weight: Matrix<Owned<T>, DimDyn, D>,
-    pub input_bias: Option<Matrix<Owned<T>, DimDyn, D>>,
-    pub hidden_bias: Option<Matrix<Owned<T>, DimDyn, D>>,
+    pub input_bias: Matrix<Owned<T>, DimDyn, D>,
+    pub hidden_bias: Matrix<Owned<T>, DimDyn, D>,
+}
+
+#[derive(Debug, Clone)]
+pub struct LSTMWeightsMat<T: Num, D: Device> {
+    pub input_weight: Matrix<Owned<T>, DimDyn, D>,
+    pub hidden_weight: Matrix<Owned<T>, DimDyn, D>,
+    pub input_bias: Matrix<Owned<T>, DimDyn, D>,
+    pub hidden_bias: Matrix<Owned<T>, DimDyn, D>,
+    pub cell_weight: Matrix<Owned<T>, DimDyn, D>,
+    pub cell_bias: Matrix<Owned<T>, DimDyn, D>,
+}
+
+#[derive(Debug, Clone)]
+pub struct GRUWeightsMat<T: Num, D: Device> {
+    pub input_weight: Matrix<Owned<T>, DimDyn, D>,
+    pub hidden_weight: Matrix<Owned<T>, DimDyn, D>,
+    pub input_bias: Matrix<Owned<T>, DimDyn, D>,
+    pub hidden_bias: Matrix<Owned<T>, DimDyn, D>,
 }
 
 impl<T: Num, D: Device> RNNWeightsMat<T, D> {
@@ -52,8 +70,8 @@ impl<T: Num, D: Device> RNNWeightsMat<T, D> {
     pub fn new(
         input_weight: Matrix<Owned<T>, DimDyn, D>,
         hidden_weight: Matrix<Owned<T>, DimDyn, D>,
-        input_bias: Option<Matrix<Owned<T>, DimDyn, D>>,
-        hidden_bias: Option<Matrix<Owned<T>, DimDyn, D>>,
+        input_bias: Matrix<Owned<T>, DimDyn, D>,
+        hidden_bias: Matrix<Owned<T>, DimDyn, D>,
     ) -> Self {
         Self {
             input_weight,
@@ -74,27 +92,27 @@ impl<T: Num, D: Device> RNNWeightsMat<T, D> {
     }
 
     #[must_use]
-    pub fn input_bias(&self) -> Option<Matrix<Ref<&T>, DimDyn, D>> {
-        self.input_bias.as_ref().map(Matrix::to_ref)
+    pub fn input_bias(&self) -> Matrix<Ref<&T>, DimDyn, D> {
+        self.input_bias.to_ref()
     }
 
     #[must_use]
-    pub fn hidden_bias(&self) -> Option<Matrix<Ref<&T>, DimDyn, D>> {
-        self.hidden_bias.as_ref().map(Matrix::to_ref)
+    pub fn hidden_bias(&self) -> Matrix<Ref<&T>, DimDyn, D> {
+        self.hidden_bias.to_ref()
     }
 
     #[must_use]
-    pub fn input_bias_mut(&mut self) -> Option<Matrix<Ref<&mut T>, DimDyn, D>> {
-        self.input_bias.as_mut().map(Matrix::to_ref_mut)
+    pub fn input_bias_mut(&mut self) -> Matrix<Ref<&mut T>, DimDyn, D> {
+        self.input_bias.to_ref_mut()
     }
 
     #[must_use]
-    pub fn hidden_bias_mut(&mut self) -> Option<Matrix<Ref<&mut T>, DimDyn, D>> {
-        self.hidden_bias.as_mut().map(Matrix::to_ref_mut)
+    pub fn hidden_bias_mut(&mut self) -> Matrix<Ref<&mut T>, DimDyn, D> {
+        self.hidden_bias.to_ref_mut()
     }
 
     #[expect(clippy::missing_panics_doc)]
-    pub fn set_weight(&self, params: &RNNParams) {
+    pub fn rnn_set_weight(&self, params: &RNNParams) {
         let input_weight_ptr = params.input_weight.ptr.cast();
         let hidden_weight_ptr = params.hidden_weight.ptr.cast();
         let input_bias_ptr = params.input_bias.ptr.cast();
@@ -102,8 +120,8 @@ impl<T: Num, D: Device> RNNWeightsMat<T, D> {
 
         let input_weight_numelm = self.input_weight().shape().num_elm();
         let hidden_weight_numelm = self.hidden_weight().shape().num_elm();
-        let input_bias_numelm = self.input_bias.as_ref().map(|b| b.shape().num_elm());
-        let hidden_bias_numelm = self.hidden_bias.as_ref().map(|b| b.shape().num_elm());
+        let input_bias_numelm = self.input_bias().shape().num_elm();
+        let hidden_bias_numelm = self.hidden_bias().shape().num_elm();
 
         let kind = if std::any::TypeId::of::<D>() == std::any::TypeId::of::<Nvidia>() {
             ZenuCudaMemCopyKind::HostToHost
@@ -127,29 +145,25 @@ impl<T: Num, D: Device> RNNWeightsMat<T, D> {
         )
         .unwrap();
 
-        if let Some(input_bias) = self.input_bias() {
-            cuda_copy(
-                input_bias_ptr,
-                input_bias.as_ptr(),
-                input_bias_numelm.unwrap(),
-                kind,
-            )
-            .unwrap();
-        }
+        cuda_copy(
+            input_bias_ptr,
+            self.input_bias.as_ptr(),
+            input_bias_numelm,
+            kind,
+        )
+        .unwrap();
 
-        if let Some(hidden_bias) = self.hidden_bias() {
-            cuda_copy(
-                hidden_bias_ptr,
-                hidden_bias.as_ptr(),
-                hidden_bias_numelm.unwrap(),
-                kind,
-            )
-            .unwrap();
-        }
+        cuda_copy(
+            hidden_bias_ptr,
+            self.hidden_bias.as_ptr(),
+            hidden_bias_numelm,
+            kind,
+        )
+        .unwrap();
     }
 
     #[expect(clippy::missing_panics_doc)]
-    pub fn load_from_params(&mut self, params: &RNNParams) {
+    pub fn rnn_load_from_params(&mut self, params: &RNNParams) {
         let input_weight_ptr = params.input_weight.ptr as *const T;
         let hidden_weight_ptr = params.hidden_weight.ptr as *const T;
         let input_bias_ptr = params.input_bias.ptr as *const T;
@@ -157,8 +171,8 @@ impl<T: Num, D: Device> RNNWeightsMat<T, D> {
 
         let input_weight_numelm = self.input_weight().shape().num_elm();
         let hidden_weight_numelm = self.hidden_weight().shape().num_elm();
-        let input_bias_numelm = self.input_bias.as_ref().map(|b| b.shape().num_elm());
-        let hidden_bias_numelm = self.hidden_bias.as_ref().map(|b| b.shape().num_elm());
+        let input_bias_numelm = self.input_bias().shape().num_elm();
+        let hidden_bias_numelm = self.hidden_bias().shape().num_elm();
 
         let kind = if std::any::TypeId::of::<D>() == std::any::TypeId::of::<Nvidia>() {
             ZenuCudaMemCopyKind::HostToHost
@@ -182,24 +196,20 @@ impl<T: Num, D: Device> RNNWeightsMat<T, D> {
         )
         .unwrap();
 
-        if let Some(input_bias) = self.input_bias_mut() {
-            cuda_copy(
-                input_bias.as_mut_ptr(),
-                input_bias_ptr,
-                input_bias_numelm.unwrap(),
-                kind,
-            )
-            .unwrap();
-        }
+        cuda_copy(
+            self.input_bias.to_ref_mut().as_mut_ptr(),
+            input_bias_ptr,
+            input_bias_numelm,
+            kind,
+        )
+        .unwrap();
 
-        if let Some(hidden_bias) = self.hidden_bias_mut() {
-            cuda_copy(
-                hidden_bias.as_mut_ptr(),
-                hidden_bias_ptr,
-                hidden_bias_numelm.unwrap(),
-                kind,
-            )
-            .unwrap();
-        }
+        cuda_copy(
+            self.hidden_bias.to_ref_mut().as_mut_ptr(),
+            hidden_bias_ptr,
+            hidden_bias_numelm,
+            kind,
+        )
+        .unwrap();
     }
 }

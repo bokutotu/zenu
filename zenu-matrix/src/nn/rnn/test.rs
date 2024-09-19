@@ -30,12 +30,8 @@ mod rnn {
                 .unwrap()
                 .clone();
 
-            let rnn_weights = RNNWeightsMat::new(
-                input_weight,
-                hidden_weight,
-                Some(input_bias),
-                Some(hidden_bias),
-            );
+            let rnn_weights =
+                RNNWeightsMat::new(input_weight, hidden_weight, input_bias, hidden_bias);
             weights.push(rnn_weights);
 
             if bidirectional {
@@ -56,12 +52,8 @@ mod rnn {
                     .unwrap()
                     .clone();
 
-                let rnn_weights = RNNWeightsMat::new(
-                    input_weight,
-                    hidden_weight,
-                    Some(input_bias),
-                    Some(hidden_bias),
-                );
+                let rnn_weights =
+                    RNNWeightsMat::new(input_weight, hidden_weight, input_bias, hidden_bias);
                 weights.push(rnn_weights);
             }
         }
@@ -122,8 +114,8 @@ mod rnn {
         for layer_id in 0..num_layers {
             let input_weight = params[layer_id * 2].input_weight();
             let hidden_weight = params[layer_id * 2].hidden_weight();
-            let input_bias = params[layer_id * 2].input_bias().unwrap();
-            let hidden_bias = params[layer_id * 2].hidden_bias().unwrap();
+            let input_bias = params[layer_id * 2].input_bias();
+            let hidden_bias = params[layer_id * 2].hidden_bias();
 
             let input_weight_expected = matrix_map
                 .get(&format!("rnn.weight_ih_l{layer_id}_grad"))
@@ -150,8 +142,8 @@ mod rnn {
             if bidirectional {
                 let input_weight = params[layer_id * 2 + 1].input_weight();
                 let hidden_weight = params[layer_id * 2 + 1].hidden_weight();
-                let input_bias = params[layer_id * 2 + 1].input_bias().unwrap();
-                let hidden_bias = params[layer_id * 2 + 1].hidden_bias().unwrap();
+                let input_bias = params[layer_id * 2 + 1].input_bias();
+                let hidden_bias = params[layer_id * 2 + 1].hidden_bias();
 
                 let input_weight_expected = matrix_map
                     .get(&format!("rnn.weight_ih_l{layer_id}_reverse_grad"))
