@@ -46,7 +46,18 @@ fn impl_parameters(input: &DeriveInput) -> TokenStream2 {
     let load_parameters_code = fields.map(|field| {
         let field_name = &field.ident;
         quote! {
-            self.#field_name.load_parameters(parameters.clone());
+            let filed_name_str= stringify!(#field_name);
+            let field_parameters: std::collections::HashMap<String, ::zenu_autograd::Variable<T, D>> = parameters
+                .clone()
+                .into_iter()
+                .filter(|(name, _)| name.starts_with(&format!("{}.", filed_name_str)))
+                .map(|(name, variable)| {
+                    let name = name.split(".").collect::<Vec<&str>>();
+                    let name = name[1..].join(".");
+                    (name, variable)
+                })
+                .collect();
+            self.#field_name.load_parameters(field_parameters.clone());
         }
     });
 

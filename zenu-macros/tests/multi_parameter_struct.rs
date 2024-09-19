@@ -82,3 +82,23 @@ fn multi_params() {
         1e-6
     );
 }
+
+#[test]
+fn test_load_parameters_convnet() {
+    let model = ConvNet::<f32, Cpu>::new();
+    let parameters = model.parameters();
+
+    let new_model = ConvNet::<f32, Cpu>::new();
+
+    new_model.load_parameters(parameters.clone());
+
+    let new_parameters = new_model.parameters();
+
+    for (key, value) in &parameters {
+        assert_val_eq!(
+            value.clone(),
+            new_parameters[key].clone().get_as_ref(),
+            1e-6
+        );
+    }
+}
