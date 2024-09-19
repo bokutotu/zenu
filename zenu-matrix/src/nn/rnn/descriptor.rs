@@ -233,7 +233,7 @@ impl<T: Num> RNNDescriptor<T> {
             let layer = &mut params[idx];
             let layer_params = &rnn_params[idx];
 
-            layer.set_weight(layer_params);
+            layer.rnn_set_weight(layer_params);
         }
 
         Ok(())
@@ -259,14 +259,10 @@ impl<T: Num> RNNDescriptor<T> {
             let input_bias = Matrix::alloc([self.get_hidden_size()]);
             let hidden_bias = Matrix::alloc([self.get_hidden_size()]);
 
-            let mut layer_params = RNNWeightsMat::new(
-                input_weight,
-                hidden_weight,
-                Some(input_bias),
-                Some(hidden_bias),
-            );
+            let mut layer_params =
+                RNNWeightsMat::new(input_weight, hidden_weight, input_bias, hidden_bias);
 
-            layer_params.load_from_params(layer);
+            layer_params.rnn_load_from_params(layer);
             params.push(layer_params);
         }
 

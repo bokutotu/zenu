@@ -301,8 +301,8 @@ fn rnn_weights_to_desc<T: Num, D: Device>(
         let weights = RNNWeightsMat::new(
             weight_input.new_matrix(),
             weight_hidden.new_matrix(),
-            Some(bias_input.new_matrix()),
-            Some(bias_hidden.new_matrix()),
+            bias_input.new_matrix(),
+            bias_hidden.new_matrix(),
         );
 
         rnn_weights.push(weights);
@@ -317,8 +317,8 @@ fn rnn_weights_to_desc<T: Num, D: Device>(
             let weights = RNNWeightsMat::new(
                 weight_input.new_matrix(),
                 weight_hidden.new_matrix(),
-                Some(bias_input.new_matrix()),
-                Some(bias_hidden.new_matrix()),
+                bias_input.new_matrix(),
+                bias_hidden.new_matrix(),
             );
 
             rnn_weights.push(weights);

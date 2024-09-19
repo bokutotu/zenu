@@ -137,8 +137,8 @@ impl<T: Num, D: Device> From<RNNWeightsMat<T, D>> for RNNWeights<T, D> {
         Self {
             weight_input: Variable::new(weights.input_weight),
             weight_hidden: Variable::new(weights.hidden_weight),
-            bias_input: Variable::new(weights.input_bias.unwrap()),
-            bias_hidden: Variable::new(weights.hidden_bias.unwrap()),
+            bias_input: Variable::new(weights.input_bias),
+            bias_hidden: Variable::new(weights.hidden_bias),
         }
     }
 }

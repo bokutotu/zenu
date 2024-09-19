@@ -39,7 +39,7 @@ pub struct RNNDescPtr {
     pub ptr: *mut std::ffi::c_void,
 }
 
-pub struct LstmParams {
+pub struct LSTMParams {
     pub input_gate_x: RNNDescPtr,
     pub input_gate_h: RNNDescPtr,
     pub forget_gate_x: RNNDescPtr,
@@ -239,7 +239,7 @@ impl<T: 'static + Copy> RNNDescriptor<T> {
         params
     }
 
-    pub fn get_lstm_params(&self, weight_ptr: *mut T) -> Vec<LstmParams> {
+    pub fn get_lstm_params(&self, weight_ptr: *mut T) -> Vec<LSTMParams> {
         assert!(!(self.cell != RNNCell::LSTM), "Only LSTM cell is supported");
         let mut params = Vec::new();
 
@@ -269,7 +269,7 @@ impl<T: 'static + Copy> RNNDescriptor<T> {
                 rnn_weight_params(self.rnn_desc, layer_idx, self.weights_size, weight_ptr, 7)
                     .unwrap();
 
-            params.push(LstmParams {
+            params.push(LSTMParams {
                 input_gate_x: RNNDescPtr {
                     desc: input_gate_x.weight_desc,
                     ptr: input_gate_x.weight,
