@@ -39,7 +39,7 @@ pub trait Parameters<T: Num, D: Device> {
         }
         parameters
     }
-    fn load_parameters(&self, parameters: HashMap<String, Variable<T, D>>) {
+    fn load_parameters(&mut self, parameters: HashMap<String, Variable<T, D>>) {
         for (self_key, self_value) in self.parameters() {
             if let Some(value) = parameters.get(&self_key) {
                 self_value.get_as_mut().copy_from(&value.get_as_ref());

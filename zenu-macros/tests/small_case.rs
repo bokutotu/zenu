@@ -8,6 +8,7 @@ use zenu_matrix::{
 use zenu_test::assert_val_eq;
 
 #[derive(Parameters)]
+#[parameters(num = T, device = D)]
 pub struct Hoge<T, D>
 where
     T: Num,
@@ -61,7 +62,7 @@ fn test_load_parameters() {
 
     let base_model_parameters = base_model.parameters();
 
-    let new_model = Hoge::<f32, Cpu> {
+    let mut new_model = Hoge::<f32, Cpu> {
         linear: Linear::new(2, 2, true),
     };
 
