@@ -5,18 +5,22 @@ use zenu_cuda::cudnn::rnn::{
 use crate::{
     device::{nvidia::Nvidia, Device, DeviceBase},
     matrix::Matrix,
+    nn::rnn::params::Params,
     num::Num,
 };
 
 use super::RNNWeightsMat;
 
-pub struct RNNDescriptor<T: Num> {
+pub struct Descriptor<T: Num, P: Params> {
     pub desc: RNNDesc<T>,
     workspace: Option<*mut u8>,
     reserve_space: Option<*mut u8>,
+    _phantom: std::marker::PhantomData<P>,
 }
 
-impl<T: Num> Drop for RNNDescriptor<T> {
+pub type RNNDescriptor<T> = Descriptor<T, RNNWeightsMat<T, Nvidia>>;
+
+impl<T: Num, P: Params> Drop for Descriptor<T, P> {
     fn drop(&mut self) {
         if self.workspace.is_some() {
             Nvidia::drop_ptr(self.workspace.unwrap());
@@ -27,7 +31,7 @@ impl<T: Num> Drop for RNNDescriptor<T> {
     }
 }
 
-impl<T: Num> RNNDescriptor<T> {
+impl<T: Num, P: Params> Descriptor<T, P> {
     fn new(
         cell: RNNCell,
         bidirectional: bool,
@@ -54,6 +58,7 @@ impl<T: Num> RNNDescriptor<T> {
             desc,
             workspace: None,
             reserve_space: None,
+            _phantom: std::marker::PhantomData,
         }
     }
 
@@ -233,7 +238,7 @@ impl<T: Num> RNNDescriptor<T> {
             let layer = &mut params[idx];
             let layer_params = &rnn_params[idx];
 
-            layer.rnn_set_weight(layer_params);
+            layer.set_weight(layer_params);
         }
 
         Ok(())
@@ -262,7 +267,7 @@ impl<T: Num> RNNDescriptor<T> {
             let mut layer_params =
                 RNNWeightsMat::new(input_weight, hidden_weight, input_bias, hidden_bias);
 
-            layer_params.rnn_load_from_params(layer);
+            layer_params.load_from_params(layer);
             params.push(layer_params);
         }
 
