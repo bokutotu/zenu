@@ -1,14 +1,16 @@
 use zenu_cuda::{
-    cudnn::rnn::{GRUParams, LSTMParams, RNNParams},
+    cudnn::rnn::RNNParams,
     runtime::{cuda_copy, ZenuCudaMemCopyKind},
 };
 
 use crate::{
-    device::{nvidia::Nvidia, Device, DeviceBase},
+    device::{nvidia::Nvidia, Device},
     dim::{DimDyn, DimTrait},
     matrix::{Matrix, Owned, Ref},
     num::Num,
 };
+
+use super::params::Params;
 
 pub struct RNNOutput<T: Num> {
     pub y: Matrix<Owned<T>, DimDyn, Nvidia>,
@@ -20,49 +22,12 @@ pub struct RNNBkwdDataOutput<T: Num> {
     pub dhx: Matrix<Owned<T>, DimDyn, Nvidia>,
 }
 
-pub struct RNNParameters {
-    pub weight: *mut u8,
-}
-
-impl RNNParameters {
-    #[expect(clippy::missing_panics_doc)]
-    #[must_use]
-    pub fn new(bytes: usize) -> Self {
-        let weight = Nvidia::alloc(bytes).unwrap();
-        Self { weight }
-    }
-}
-
-impl Drop for RNNParameters {
-    fn drop(&mut self) {
-        Nvidia::drop_ptr(self.weight);
-    }
-}
-
 #[derive(Debug, Clone)]
 pub struct RNNWeightsMat<T: Num, D: Device> {
-    pub input_weight: Matrix<Owned<T>, DimDyn, D>,
-    pub hidden_weight: Matrix<Owned<T>, DimDyn, D>,
-    pub input_bias: Matrix<Owned<T>, DimDyn, D>,
-    pub hidden_bias: Matrix<Owned<T>, DimDyn, D>,
-}
-
-#[derive(Debug, Clone)]
-pub struct LSTMWeightsMat<T: Num, D: Device> {
-    pub input_weight: Matrix<Owned<T>, DimDyn, D>,
-    pub hidden_weight: Matrix<Owned<T>, DimDyn, D>,
-    pub input_bias: Matrix<Owned<T>, DimDyn, D>,
-    pub hidden_bias: Matrix<Owned<T>, DimDyn, D>,
-    pub cell_weight: Matrix<Owned<T>, DimDyn, D>,
-    pub cell_bias: Matrix<Owned<T>, DimDyn, D>,
-}
-
-#[derive(Debug, Clone)]
-pub struct GRUWeightsMat<T: Num, D: Device> {
-    pub input_weight: Matrix<Owned<T>, DimDyn, D>,
-    pub hidden_weight: Matrix<Owned<T>, DimDyn, D>,
-    pub input_bias: Matrix<Owned<T>, DimDyn, D>,
-    pub hidden_bias: Matrix<Owned<T>, DimDyn, D>,
+    input_weight: Matrix<Owned<T>, DimDyn, D>,
+    hidden_weight: Matrix<Owned<T>, DimDyn, D>,
+    input_bias: Matrix<Owned<T>, DimDyn, D>,
+    hidden_bias: Matrix<Owned<T>, DimDyn, D>,
 }
 
 impl<T: Num, D: Device> RNNWeightsMat<T, D> {
@@ -100,19 +65,11 @@ impl<T: Num, D: Device> RNNWeightsMat<T, D> {
     pub fn hidden_bias(&self) -> Matrix<Ref<&T>, DimDyn, D> {
         self.hidden_bias.to_ref()
     }
+}
 
-    #[must_use]
-    pub fn input_bias_mut(&mut self) -> Matrix<Ref<&mut T>, DimDyn, D> {
-        self.input_bias.to_ref_mut()
-    }
-
-    #[must_use]
-    pub fn hidden_bias_mut(&mut self) -> Matrix<Ref<&mut T>, DimDyn, D> {
-        self.hidden_bias.to_ref_mut()
-    }
-
-    #[expect(clippy::missing_panics_doc)]
-    pub fn rnn_set_weight(&self, params: &RNNParams) {
+impl<T: Num, D: Device> Params for RNNWeightsMat<T, D> {
+    type Params = RNNParams;
+    fn set_weight(&self, params: &RNNParams) {
         let input_weight_ptr = params.input_weight.ptr.cast();
         let hidden_weight_ptr = params.hidden_weight.ptr.cast();
         let input_bias_ptr = params.input_bias.ptr.cast();
@@ -162,8 +119,7 @@ impl<T: Num, D: Device> RNNWeightsMat<T, D> {
         .unwrap();
     }
 
-    #[expect(clippy::missing_panics_doc)]
-    pub fn rnn_load_from_params(&mut self, params: &RNNParams) {
+    fn load_from_params(&mut self, params: &RNNParams) {
         let input_weight_ptr = params.input_weight.ptr as *const T;
         let hidden_weight_ptr = params.hidden_weight.ptr as *const T;
         let input_bias_ptr = params.input_bias.ptr as *const T;

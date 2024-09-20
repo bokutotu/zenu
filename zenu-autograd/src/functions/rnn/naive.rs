@@ -135,10 +135,10 @@ pub struct RNNWeights<T: Num, D: Device> {
 impl<T: Num, D: Device> From<RNNWeightsMat<T, D>> for RNNWeights<T, D> {
     fn from(weights: RNNWeightsMat<T, D>) -> Self {
         Self {
-            weight_input: Variable::new(weights.input_weight),
-            weight_hidden: Variable::new(weights.hidden_weight),
-            bias_input: Variable::new(weights.input_bias),
-            bias_hidden: Variable::new(weights.hidden_bias),
+            weight_input: Variable::new(weights.input_weight().new_matrix()),
+            weight_hidden: Variable::new(weights.hidden_weight().new_matrix()),
+            bias_input: Variable::new(weights.input_bias().new_matrix()),
+            bias_hidden: Variable::new(weights.hidden_bias().new_matrix()),
         }
     }
 }
@@ -283,16 +283,10 @@ mod rnn_test {
         let mats: HashMap<String, Matrix<Owned<f32>, DimDyn, Cpu>> =
             read_test_case_from_json_val!(path);
 
-        let input_weight = mats
-            .get(&format!("rnn.weight_ih_l{}", idx))
-            .unwrap()
-            .clone();
-        let hidden_weight = mats
-            .get(&format!("rnn.weight_hh_l{}", idx))
-            .unwrap()
-            .clone();
-        let input_bias = mats.get(&format!("rnn.bias_ih_l{}", idx)).unwrap().clone();
-        let hidden_bias = mats.get(&format!("rnn.bias_hh_l{}", idx)).unwrap().clone();
+        let input_weight = mats.get(&format!("rnn.weight_ih_l{idx}")).unwrap().clone();
+        let hidden_weight = mats.get(&format!("rnn.weight_hh_l{idx}")).unwrap().clone();
+        let input_bias = mats.get(&format!("rnn.bias_ih_l{idx}")).unwrap().clone();
+        let hidden_bias = mats.get(&format!("rnn.bias_hh_l{idx}")).unwrap().clone();
 
         let forward = RNNWeights {
             weight_input: Variable::<f32, D>::new(input_weight.to::<D>()),
@@ -303,19 +297,19 @@ mod rnn_test {
 
         let reverse = if bidirectional {
             let input_weight_rev = mats
-                .get(&format!("rnn.weight_ih_l{}_reverse", idx))
+                .get(&format!("rnn.weight_ih_l{idx}_reverse"))
                 .unwrap()
                 .clone();
             let hidden_weight_rev = mats
-                .get(&format!("rnn.weight_hh_l{}_reverse", idx))
+                .get(&format!("rnn.weight_hh_l{idx}_reverse"))
                 .unwrap()
                 .clone();
             let input_bias_rev = mats
-                .get(&format!("rnn.bias_ih_l{}_reverse", idx))
+                .get(&format!("rnn.bias_ih_l{idx}_reverse"))
                 .unwrap()
                 .clone();
             let hidden_bias_rev = mats
-                .get(&format!("rnn.bias_hh_l{}_reverse", idx))
+                .get(&format!("rnn.bias_hh_l{idx}_reverse"))
                 .unwrap()
                 .clone();
             Some(RNNWeights {
