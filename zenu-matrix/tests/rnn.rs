@@ -187,46 +187,50 @@ fn lstm(json_path: String, num_layers: usize, bidirectional: bool) {
 }
 
 #[test]
-fn test_rnn_seq_len_1() {
-    rnn(
-        "../test_data_json/rnn_fwd_bkwd_single_seq_len_1.json".to_string(),
-        1,
-        false,
-    );
-}
-
-#[test]
-fn test_rnn_seq_len_3() {
-    rnn(
-        "../test_data_json/rnn_fwd_bkwd_single_seq_len_3.json".to_string(),
-        1,
-        false,
-    );
-}
-
-#[test]
-fn test_rnn_seq_len_5() {
-    rnn(
-        "../test_data_json/rnn_fwd_bkwd_single.json".to_string(),
-        1,
-        false,
-    );
-}
-
-#[test]
-fn test_rnn_seq_len_5_num_layer_2_bidirectional() {
-    rnn(
-        "../test_data_json/rnn_fwd_bkwd_bidirectional_2_layers.json".to_string(),
-        2,
-        true,
-    );
-}
-
-#[test]
-fn lstm_small() {
+fn test_lstm_small() {
     lstm(
         "../test_data_json/lstm_fwd_bkwd_small.json".to_string(),
         1,
         false,
     );
+}
+
+mod rnn {
+    use crate::rnn;
+
+    #[test]
+    fn test_rnn_seq_len_1() {
+        rnn(
+            "../test_data_json/rnn_fwd_bkwd_single_seq_len_1.json".to_string(),
+            1,
+            false,
+        );
+    }
+
+    #[test]
+    fn test_rnn_seq_len_3() {
+        rnn(
+            "../test_data_json/rnn_fwd_bkwd_single_seq_len_3.json".to_string(),
+            1,
+            false,
+        );
+    }
+
+    #[test]
+    fn test_rnn_seq_len_5() {
+        rnn(
+            "../test_data_json/rnn_fwd_bkwd_single.json".to_string(),
+            1,
+            false,
+        );
+    }
+
+    #[test]
+    fn test_rnn_seq_len_5_num_layer_2_bidirectional() {
+        rnn(
+            "../test_data_json/rnn_fwd_bkwd_bidirectional_2_layers.json".to_string(),
+            2,
+            true,
+        );
+    }
 }
