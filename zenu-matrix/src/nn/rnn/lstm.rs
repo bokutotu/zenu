@@ -16,21 +16,21 @@ impl<T: Num, P: Params> Descriptor<T, P> {
         assert_eq!(x.len(), 3, "Input shape must be 3D");
         assert_eq!(x[1], self.get_batch_size(), "Batch size mismatch");
         assert_eq!(x[2], self.get_input_size(), "Input size mismatch");
-        let hidden_size = self.get_hidden_size() * if self.get_is_bidirectional() { 2 } else { 1 };
-        let num_layers = self.get_num_layers() * if self.get_is_bidirectional() { 2 } else { 1 };
+        let output_size = self.get_output_size();
+        let num_layers = self.get_output_num_layers();
         if let Some(hx) = hx {
             assert_eq!(hx[0], num_layers, "Number of layers mismatch");
             assert_eq!(hx[1], self.get_batch_size(), "Hidden size mismatch");
-            assert_eq!(hx[2], hidden_size, "Hidden size mismatch");
+            assert_eq!(hx[2], output_size, "Hidden size mismatch");
         }
         if let Some(cx) = cx {
             assert_eq!(cx[0], num_layers, "Number of layers mismatch");
             assert_eq!(cx[1], self.get_batch_size(), "Hidden size mismatch");
-            assert_eq!(cx[2], hidden_size, "Hidden size mismatch");
+            assert_eq!(cx[2], output_size, "Hidden size mismatch");
         }
     }
 
-    #[expect(clippy::too_many_arguments)]
+    #[expect(clippy::too_many_arguments, clippy::similar_names)]
     fn lstm_bkwd_data_shape_check(
         &self,
         x: DimDyn,
@@ -41,7 +41,37 @@ impl<T: Num, P: Params> Descriptor<T, P> {
         dhy: Option<DimDyn>,
         dcy: Option<DimDyn>,
     ) {
-        todo!();
+        assert_eq!(x.len(), 3, "Input shape must be 3D");
+        assert_eq!(x[1], self.get_batch_size(), "Batch size mismatch");
+        assert_eq!(x[2], self.get_input_size(), "Input size mismatch");
+        assert_eq!(y.len(), 3, "Output shape must be 3D");
+        assert_eq!(y[1], self.get_batch_size(), "Batch size mismatch");
+        assert_eq!(y[2], self.get_output_size(), "Output size mismatch");
+        assert_eq!(dy.len(), 3, "dy shape must be 3D");
+        assert_eq!(dy[1], self.get_batch_size(), "Batch size mismatch");
+        assert_eq!(dy[2], self.get_output_size(), "dy size mismatch");
+        let output_size = self.get_output_size();
+        let num_layers = self.get_output_num_layers();
+        if let Some(hx) = hx {
+            assert_eq!(hx[0], num_layers, "Number of layers mismatch");
+            assert_eq!(hx[1], self.get_batch_size(), "Hidden size mismatch");
+            assert_eq!(hx[2], output_size, "Hidden size mismatch");
+        }
+        if let Some(cx) = cx {
+            assert_eq!(cx[0], num_layers, "Number of layers mismatch");
+            assert_eq!(cx[1], self.get_batch_size(), "Hidden size mismatch");
+            assert_eq!(cx[2], output_size, "Hidden size mismatch");
+        }
+        if let Some(dhy) = dhy {
+            assert_eq!(dhy[0], num_layers, "Number of layers mismatch");
+            assert_eq!(dhy[1], self.get_batch_size(), "Hidden size mismatch");
+            assert_eq!(dhy[2], output_size, "Hidden size mismatch");
+        }
+        if let Some(dcy) = dcy {
+            assert_eq!(dcy[0], num_layers, "Number of layers mismatch");
+            assert_eq!(dcy[1], self.get_batch_size(), "Hidden size mismatch");
+            assert_eq!(dcy[2], output_size, "Hidden size mismatch");
+        }
     }
 
     fn lstm_bkwd_weights_shape_check(
@@ -51,7 +81,24 @@ impl<T: Num, P: Params> Descriptor<T, P> {
         cx: Option<DimDyn>,
         y: DimDyn,
     ) {
-        todo!();
+        assert_eq!(x.len(), 3, "Input shape must be 3D");
+        assert_eq!(x[1], self.get_batch_size(), "Batch size mismatch");
+        assert_eq!(x[2], self.get_input_size(), "Input size mismatch");
+        let output_size = self.get_output_size();
+        let num_layers = self.get_output_num_layers();
+        if let Some(hx) = hx {
+            assert_eq!(hx[0], num_layers, "Number of layers mismatch");
+            assert_eq!(hx[1], self.get_batch_size(), "Hidden size mismatch");
+            assert_eq!(hx[2], output_size, "Hidden size mismatch");
+        }
+        if let Some(cx) = cx {
+            assert_eq!(cx[0], num_layers, "Number of layers mismatch");
+            assert_eq!(cx[1], self.get_batch_size(), "Hidden size mismatch");
+            assert_eq!(cx[2], output_size, "Hidden size mismatch");
+        }
+        assert_eq!(y.len(), 3, "Output shape must be 3D");
+        assert_eq!(y[1], self.get_batch_size(), "Batch size mismatch");
+        assert_eq!(y[2], output_size, "Output size mismatch");
     }
 
     #[expect(clippy::needless_pass_by_value)]
@@ -71,9 +118,9 @@ impl<T: Num, P: Params> Descriptor<T, P> {
 
         self.config_seq_length(is_training, x.shape()[0], x.shape()[1]);
 
-        let hidden_size = self.get_hidden_size() * if self.get_is_bidirectional() { 2 } else { 1 };
-        let mut y = Matrix::alloc([x.shape()[0], x.shape()[1], hidden_size]);
-        let num_layers = self.get_num_layers() * if self.get_is_bidirectional() { 2 } else { 1 };
+        let output_size = self.get_output_size();
+        let mut y = Matrix::alloc([x.shape()[0], x.shape()[1], output_size]);
+        let num_layers = self.get_output_num_layers();
         let mut hy = Matrix::zeros([num_layers, self.get_batch_size(), self.get_hidden_size()]);
         let mut cy = Matrix::zeros([num_layers, self.get_batch_size(), self.get_hidden_size()]);
 
@@ -118,10 +165,10 @@ impl<T: Num, P: Params> Descriptor<T, P> {
 
         self.config_seq_length(true, x.shape()[0], x.shape()[1]);
 
-        let hidden_size = self.get_hidden_size() * if self.get_is_bidirectional() { 2 } else { 1 };
+        let output_size = self.get_output_size();
         let mut dx = Matrix::alloc([x.shape()[0], x.shape()[1], x.shape()[2]]);
-        let mut dhx = Matrix::zeros([self.get_num_layers(), self.get_batch_size(), hidden_size]);
-        let mut dcx = Matrix::zeros([self.get_num_layers(), self.get_batch_size(), hidden_size]);
+        let mut dhx = Matrix::zeros([self.get_num_layers(), self.get_batch_size(), output_size]);
+        let mut dcx = Matrix::zeros([self.get_num_layers(), self.get_batch_size(), output_size]);
         self.bkwd_data(
             y.as_ptr(),
             dy.as_ptr(),
