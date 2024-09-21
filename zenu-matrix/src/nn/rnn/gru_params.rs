@@ -10,6 +10,8 @@ use crate::{
     num::Num,
 };
 
+use super::params::Params;
+
 #[derive(Debug, Clone)]
 pub struct GRUWeightsMat<T: Num, D: Device> {
     reset_gate_x: Matrix<Owned<T>, DimDyn, D>,
@@ -69,9 +71,13 @@ impl<T: Num, D: Device> GRUWeightsMat<T, D> {
     pub fn cand_h(&self) -> &Matrix<Owned<T>, DimDyn, D> {
         &self.cell_h
     }
+}
 
-    #[expect(clippy::missing_panics_doc, clippy::similar_names)]
-    pub fn set_weight(&self, params: &GRUParams) {
+impl<T: Num, D: Device> Params for GRUWeightsMat<T, D> {
+    type Params = GRUParams;
+
+    #[expect(clippy::similar_names)]
+    fn set_weight(&self, params: &GRUParams) {
         let reset_gate_x_ptr = params.reset_gate_x.ptr.cast::<T>();
         let reset_gate_h_ptr = params.reset_gate_h.ptr.cast();
         let update_gate_x_ptr = params.update_gate_x.ptr.cast();
@@ -129,8 +135,8 @@ impl<T: Num, D: Device> GRUWeightsMat<T, D> {
         .unwrap();
     }
 
-    #[expect(clippy::missing_panics_doc, clippy::similar_names)]
-    pub fn load_from_params(&mut self, params: &GRUParams) {
+    #[expect(clippy::similar_names)]
+    fn load_from_params(&mut self, params: &GRUParams) {
         let reset_gate_x_ptr = params.reset_gate_x.ptr as *const T;
         let reset_gate_h_ptr = params.reset_gate_h.ptr as *const T;
         let update_gate_x_ptr = params.update_gate_x.ptr as *const T;

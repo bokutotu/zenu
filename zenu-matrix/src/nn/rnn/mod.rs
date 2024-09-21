@@ -6,7 +6,7 @@ mod lstm_params;
 pub mod params;
 mod rnn;
 mod rnn_params;
-mod test;
+mod rnn_test;
 
 pub use descriptor::*;
 pub use gru_params::GRUWeightsMat;
