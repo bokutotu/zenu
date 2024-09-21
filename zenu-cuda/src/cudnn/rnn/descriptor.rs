@@ -39,16 +39,20 @@ pub struct RNNDescPtr {
     pub ptr: *mut std::ffi::c_void,
 }
 
-pub struct LSTMParams {
-    pub input_gate_x: RNNDescPtr,
-    pub input_gate_h: RNNDescPtr,
-    pub forget_gate_x: RNNDescPtr,
-    pub forget_gate_h: RNNDescPtr,
-    pub cell_x: RNNDescPtr,
-    pub cell_h: RNNDescPtr,
-    pub output_gate_x: RNNDescPtr,
-    pub output_gate_h: RNNDescPtr,
-}
+// pub struct LSTMParams {
+//     // pub input_gate_x: RNNDescPtr,
+//     // pub input_gate_h: RNNDescPtr,
+//     // pub forget_gate_x: RNNDescPtr,
+//     // pub forget_gate_h: RNNDescPtr,
+//     // pub cell_x: RNNDescPtr,
+//     // pub cell_h: RNNDescPtr,
+//     // pub output_gate_x: RNNDescPtr,
+//     // pub output_gate_h: RNNDescPtr,
+//     pub input_weight: RNNDescPtr,
+//     pub hidden_weight: RNNDescPtr,
+//     pub input_bias: RNNDescPtr,
+//     pub hidden_bias: RNNDescPtr,
+// }
 
 pub struct RNNParams {
     pub input_weight: RNNDescPtr,
@@ -57,14 +61,14 @@ pub struct RNNParams {
     pub hidden_bias: RNNDescPtr,
 }
 
-pub struct GRUParams {
-    pub reset_gate_x: RNNDescPtr,
-    pub reset_gate_h: RNNDescPtr,
-    pub update_gate_x: RNNDescPtr,
-    pub update_gate_h: RNNDescPtr,
-    pub cell_x: RNNDescPtr,
-    pub cell_h: RNNDescPtr,
-}
+// pub struct GRUParams {
+//     pub reset_gate_x: RNNDescPtr,
+//     pub reset_gate_h: RNNDescPtr,
+//     pub update_gate_x: RNNDescPtr,
+//     pub update_gate_h: RNNDescPtr,
+//     pub cell_x: RNNDescPtr,
+//     pub cell_h: RNNDescPtr,
+// }
 
 impl<T: 'static + Copy> RNNDescriptor<T> {
     #[expect(clippy::too_many_arguments)]
@@ -239,129 +243,129 @@ impl<T: 'static + Copy> RNNDescriptor<T> {
         params
     }
 
-    pub fn get_lstm_params(&self, weight_ptr: *mut T) -> Vec<LSTMParams> {
-        assert!(!(self.cell != RNNCell::LSTM), "Only LSTM cell is supported");
-        let mut params = Vec::new();
-
-        for layer_idx in 0..self.num_layers {
-            let input_gate_x =
-                rnn_weight_params(self.rnn_desc, layer_idx, self.weights_size, weight_ptr, 0)
-                    .unwrap();
-            let input_gate_h =
-                rnn_weight_params(self.rnn_desc, layer_idx, self.weights_size, weight_ptr, 1)
-                    .unwrap();
-            let forget_gate_x =
-                rnn_weight_params(self.rnn_desc, layer_idx, self.weights_size, weight_ptr, 2)
-                    .unwrap();
-            let forget_gate_h =
-                rnn_weight_params(self.rnn_desc, layer_idx, self.weights_size, weight_ptr, 3)
-                    .unwrap();
-            let cell_x =
-                rnn_weight_params(self.rnn_desc, layer_idx, self.weights_size, weight_ptr, 4)
-                    .unwrap();
-            let cell_h =
-                rnn_weight_params(self.rnn_desc, layer_idx, self.weights_size, weight_ptr, 5)
-                    .unwrap();
-            let output_gate_x =
-                rnn_weight_params(self.rnn_desc, layer_idx, self.weights_size, weight_ptr, 6)
-                    .unwrap();
-            let output_gate_h =
-                rnn_weight_params(self.rnn_desc, layer_idx, self.weights_size, weight_ptr, 7)
-                    .unwrap();
-
-            params.push(LSTMParams {
-                input_gate_x: RNNDescPtr {
-                    desc: input_gate_x.weight_desc,
-                    ptr: input_gate_x.weight,
-                },
-                input_gate_h: RNNDescPtr {
-                    desc: input_gate_h.weight_desc,
-                    ptr: input_gate_h.weight,
-                },
-                forget_gate_x: RNNDescPtr {
-                    desc: forget_gate_x.weight_desc,
-                    ptr: forget_gate_x.weight,
-                },
-                forget_gate_h: RNNDescPtr {
-                    desc: forget_gate_h.weight_desc,
-                    ptr: forget_gate_h.weight,
-                },
-                cell_x: RNNDescPtr {
-                    desc: cell_x.weight_desc,
-                    ptr: cell_x.weight,
-                },
-                cell_h: RNNDescPtr {
-                    desc: cell_h.weight_desc,
-                    ptr: cell_h.weight,
-                },
-                output_gate_x: RNNDescPtr {
-                    desc: output_gate_x.weight_desc,
-                    ptr: output_gate_x.weight,
-                },
-                output_gate_h: RNNDescPtr {
-                    desc: output_gate_h.weight_desc,
-                    ptr: output_gate_h.weight,
-                },
-            });
-        }
-
-        params
-    }
-
-    pub fn get_gru_params(&self, weight_ptr: *mut T) -> Vec<GRUParams> {
-        assert!(!(self.cell != RNNCell::GRU), "Only GRU cell is supported");
-        let mut params = Vec::new();
-
-        for layer_idx in 0..self.num_layers {
-            let reset_gate_x =
-                rnn_weight_params(self.rnn_desc, layer_idx, self.weights_size, weight_ptr, 0)
-                    .unwrap();
-            let reset_gate_h =
-                rnn_weight_params(self.rnn_desc, layer_idx, self.weights_size, weight_ptr, 1)
-                    .unwrap();
-            let update_gate_x =
-                rnn_weight_params(self.rnn_desc, layer_idx, self.weights_size, weight_ptr, 2)
-                    .unwrap();
-            let update_gate_h =
-                rnn_weight_params(self.rnn_desc, layer_idx, self.weights_size, weight_ptr, 3)
-                    .unwrap();
-            let cell_x =
-                rnn_weight_params(self.rnn_desc, layer_idx, self.weights_size, weight_ptr, 4)
-                    .unwrap();
-            let cell_h =
-                rnn_weight_params(self.rnn_desc, layer_idx, self.weights_size, weight_ptr, 5)
-                    .unwrap();
-
-            params.push(GRUParams {
-                reset_gate_x: RNNDescPtr {
-                    desc: reset_gate_x.weight_desc,
-                    ptr: reset_gate_x.weight,
-                },
-                reset_gate_h: RNNDescPtr {
-                    desc: reset_gate_h.weight_desc,
-                    ptr: reset_gate_h.weight,
-                },
-                update_gate_x: RNNDescPtr {
-                    desc: update_gate_x.weight_desc,
-                    ptr: update_gate_x.weight,
-                },
-                update_gate_h: RNNDescPtr {
-                    desc: update_gate_h.weight_desc,
-                    ptr: update_gate_h.weight,
-                },
-                cell_x: RNNDescPtr {
-                    desc: cell_x.weight_desc,
-                    ptr: cell_x.weight,
-                },
-                cell_h: RNNDescPtr {
-                    desc: cell_h.weight_desc,
-                    ptr: cell_h.weight,
-                },
-            });
-        }
-
-        params
-    }
+    // pub fn get_lstm_params(&self, weight_ptr: *mut T) -> Vec<LSTMParams> {
+    //     assert!(!(self.cell != RNNCell::LSTM), "Only LSTM cell is supported");
+    //     let mut params = Vec::new();
+    //
+    //     for layer_idx in 0..self.num_layers {
+    //         let input_gate_x =
+    //             rnn_weight_params(self.rnn_desc, layer_idx, self.weights_size, weight_ptr, 0)
+    //                 .unwrap();
+    //         let input_gate_h =
+    //             rnn_weight_params(self.rnn_desc, layer_idx, self.weights_size, weight_ptr, 1)
+    //                 .unwrap();
+    //         let forget_gate_x =
+    //             rnn_weight_params(self.rnn_desc, layer_idx, self.weights_size, weight_ptr, 2)
+    //                 .unwrap();
+    //         let forget_gate_h =
+    //             rnn_weight_params(self.rnn_desc, layer_idx, self.weights_size, weight_ptr, 3)
+    //                 .unwrap();
+    //         let cell_x =
+    //             rnn_weight_params(self.rnn_desc, layer_idx, self.weights_size, weight_ptr, 4)
+    //                 .unwrap();
+    //         let cell_h =
+    //             rnn_weight_params(self.rnn_desc, layer_idx, self.weights_size, weight_ptr, 5)
+    //                 .unwrap();
+    //         let output_gate_x =
+    //             rnn_weight_params(self.rnn_desc, layer_idx, self.weights_size, weight_ptr, 6)
+    //                 .unwrap();
+    //         let output_gate_h =
+    //             rnn_weight_params(self.rnn_desc, layer_idx, self.weights_size, weight_ptr, 7)
+    //                 .unwrap();
+    //
+    //         params.push(LSTMParams {
+    //             input_gate_x: RNNDescPtr {
+    //                 desc: input_gate_x.weight_desc,
+    //                 ptr: input_gate_x.weight,
+    //             },
+    //             input_gate_h: RNNDescPtr {
+    //                 desc: input_gate_h.weight_desc,
+    //                 ptr: input_gate_h.weight,
+    //             },
+    //             forget_gate_x: RNNDescPtr {
+    //                 desc: forget_gate_x.weight_desc,
+    //                 ptr: forget_gate_x.weight,
+    //             },
+    //             forget_gate_h: RNNDescPtr {
+    //                 desc: forget_gate_h.weight_desc,
+    //                 ptr: forget_gate_h.weight,
+    //             },
+    //             cell_x: RNNDescPtr {
+    //                 desc: cell_x.weight_desc,
+    //                 ptr: cell_x.weight,
+    //             },
+    //             cell_h: RNNDescPtr {
+    //                 desc: cell_h.weight_desc,
+    //                 ptr: cell_h.weight,
+    //             },
+    //             output_gate_x: RNNDescPtr {
+    //                 desc: output_gate_x.weight_desc,
+    //                 ptr: output_gate_x.weight,
+    //             },
+    //             output_gate_h: RNNDescPtr {
+    //                 desc: output_gate_h.weight_desc,
+    //                 ptr: output_gate_h.weight,
+    //             },
+    //         });
+    //     }
+    //
+    //     params
+    // }
+    //
+    // pub fn get_gru_params(&self, weight_ptr: *mut T) -> Vec<GRUParams> {
+    //     assert!(!(self.cell != RNNCell::GRU), "Only GRU cell is supported");
+    //     let mut params = Vec::new();
+    //
+    //     for layer_idx in 0..self.num_layers {
+    //         let reset_gate_x =
+    //             rnn_weight_params(self.rnn_desc, layer_idx, self.weights_size, weight_ptr, 0)
+    //                 .unwrap();
+    //         let reset_gate_h =
+    //             rnn_weight_params(self.rnn_desc, layer_idx, self.weights_size, weight_ptr, 1)
+    //                 .unwrap();
+    //         let update_gate_x =
+    //             rnn_weight_params(self.rnn_desc, layer_idx, self.weights_size, weight_ptr, 2)
+    //                 .unwrap();
+    //         let update_gate_h =
+    //             rnn_weight_params(self.rnn_desc, layer_idx, self.weights_size, weight_ptr, 3)
+    //                 .unwrap();
+    //         let cell_x =
+    //             rnn_weight_params(self.rnn_desc, layer_idx, self.weights_size, weight_ptr, 4)
+    //                 .unwrap();
+    //         let cell_h =
+    //             rnn_weight_params(self.rnn_desc, layer_idx, self.weights_size, weight_ptr, 5)
+    //                 .unwrap();
+    //
+    //         params.push(GRUParams {
+    //             reset_gate_x: RNNDescPtr {
+    //                 desc: reset_gate_x.weight_desc,
+    //                 ptr: reset_gate_x.weight,
+    //             },
+    //             reset_gate_h: RNNDescPtr {
+    //                 desc: reset_gate_h.weight_desc,
+    //                 ptr: reset_gate_h.weight,
+    //             },
+    //             update_gate_x: RNNDescPtr {
+    //                 desc: update_gate_x.weight_desc,
+    //                 ptr: update_gate_x.weight,
+    //             },
+    //             update_gate_h: RNNDescPtr {
+    //                 desc: update_gate_h.weight_desc,
+    //                 ptr: update_gate_h.weight,
+    //             },
+    //             cell_x: RNNDescPtr {
+    //                 desc: cell_x.weight_desc,
+    //                 ptr: cell_x.weight,
+    //             },
+    //             cell_h: RNNDescPtr {
+    //                 desc: cell_h.weight_desc,
+    //                 ptr: cell_h.weight,
+    //             },
+    //         });
+    //     }
+    //
+    //     params
+    // }
 
     pub fn set_input_size(
         &mut self,

@@ -5,24 +5,18 @@ use zenu_cuda::cudnn::rnn::{
 use crate::{
     device::{nvidia::Nvidia, Device, DeviceBase},
     matrix::Matrix,
-    nn::rnn::params::Params,
     num::Num,
 };
 
-use super::{GRUWeightsMat, LSTMWeightsMat, RNNWeightsMat};
+use super::RNNWeightsMat;
 
-pub struct Descriptor<T: Num, P: Params> {
+pub struct RNNDescriptor<T: Num> {
     pub desc: RNNDesc<T>,
     workspace: Option<*mut u8>,
     reserve_space: Option<*mut u8>,
-    _phantom: std::marker::PhantomData<P>,
 }
 
-pub type RNNDescriptor<T> = Descriptor<T, RNNWeightsMat<T, Nvidia>>;
-pub type LSTMDescriptor<T> = Descriptor<T, LSTMWeightsMat<T, Nvidia>>;
-pub type GRUDescriptor<T> = Descriptor<T, GRUWeightsMat<T, Nvidia>>;
-
-impl<T: Num, P: Params> Drop for Descriptor<T, P> {
+impl<T: Num> Drop for RNNDescriptor<T> {
     fn drop(&mut self) {
         if self.workspace.is_some() {
             Nvidia::drop_ptr(self.workspace.unwrap());
@@ -33,7 +27,7 @@ impl<T: Num, P: Params> Drop for Descriptor<T, P> {
     }
 }
 
-impl<T: Num, P: Params> Descriptor<T, P> {
+impl<T: Num> RNNDescriptor<T> {
     fn new(
         cell: RNNCell,
         bidirectional: bool,
@@ -60,7 +54,6 @@ impl<T: Num, P: Params> Descriptor<T, P> {
             desc,
             workspace: None,
             reserve_space: None,
-            _phantom: std::marker::PhantomData,
         }
     }
 

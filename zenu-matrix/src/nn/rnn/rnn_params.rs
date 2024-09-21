@@ -10,8 +10,6 @@ use crate::{
     num::Num,
 };
 
-use super::params::Params;
-
 pub struct RNNOutput<T: Num> {
     pub y: Matrix<Owned<T>, DimDyn, Nvidia>,
     pub hy: Matrix<Owned<T>, DimDyn, Nvidia>,
@@ -65,11 +63,9 @@ impl<T: Num, D: Device> RNNWeightsMat<T, D> {
     pub fn hidden_bias(&self) -> Matrix<Ref<&T>, DimDyn, D> {
         self.hidden_bias.to_ref()
     }
-}
 
-impl<T: Num, D: Device> Params for RNNWeightsMat<T, D> {
-    type Params = RNNParams;
-    fn set_weight(&self, params: &RNNParams) {
+    #[expect(clippy::missing_panics_doc)]
+    pub fn set_weight(&self, params: &RNNParams) {
         let input_weight_ptr = params.input_weight.ptr.cast();
         let hidden_weight_ptr = params.hidden_weight.ptr.cast();
         let input_bias_ptr = params.input_bias.ptr.cast();
@@ -119,7 +115,8 @@ impl<T: Num, D: Device> Params for RNNWeightsMat<T, D> {
         .unwrap();
     }
 
-    fn load_from_params(&mut self, params: &RNNParams) {
+    #[expect(clippy::missing_panics_doc)]
+    pub fn load_from_params(&mut self, params: &RNNParams) {
         let input_weight_ptr = params.input_weight.ptr as *const T;
         let hidden_weight_ptr = params.hidden_weight.ptr as *const T;
         let input_bias_ptr = params.input_bias.ptr as *const T;
