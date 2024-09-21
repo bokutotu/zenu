@@ -179,22 +179,33 @@ impl<T: 'static + Copy> RNNDescriptor<T> {
     }
 
     pub fn get_rnn_params(&self, weight_ptr: *mut T) -> Vec<RNNParams> {
-        assert!(
-            !(self.cell != RNNCell::RNNRelu && self.cell != RNNCell::RNNTanh),
-            "Only RNN cell is supported"
-        );
+        let (layer_id_input, layer_id_hidden) = match self.cell {
+            RNNCell::RNNRelu | RNNCell::RNNTanh => (0, 1),
+            RNNCell::LSTM => (0, 4),
+            RNNCell::GRU => (0, 3),
+        };
 
         let mut params = Vec::new();
 
         let num_layers = self.num_layers * if self.bidirectional { 2 } else { 1 };
 
         for layer_idx in 0..num_layers {
-            let input_params =
-                rnn_weight_params(self.rnn_desc, layer_idx, self.weights_size, weight_ptr, 0)
-                    .unwrap();
-            let hidden_params =
-                rnn_weight_params(self.rnn_desc, layer_idx, self.weights_size, weight_ptr, 1)
-                    .unwrap();
+            let input_params = rnn_weight_params(
+                self.rnn_desc,
+                layer_idx,
+                self.weights_size,
+                weight_ptr,
+                layer_id_input,
+            )
+            .unwrap();
+            let hidden_params = rnn_weight_params(
+                self.rnn_desc,
+                layer_idx,
+                self.weights_size,
+                weight_ptr,
+                layer_id_hidden,
+            )
+            .unwrap();
 
             params.push(RNNParams {
                 input_weight: RNNDescPtr {
