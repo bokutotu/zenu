@@ -5,9 +5,9 @@ use crate::{
     num::Num,
 };
 
-use super::{descriptor::Descriptor, params::Params, RNNBkwdDataOutput, RNNOutput};
+use super::{descriptor::RNNDescriptor, RNNBkwdDataOutput, RNNOutput};
 
-impl<T: Num, P: Params> Descriptor<T, P> {
+impl<T: Num> RNNDescriptor<T> {
     fn rnn_fwd_shape_check(&self, x: DimDyn, hx: Option<DimDyn>) {
         assert_eq!(x.len(), 3, "Input shape must be 3D");
         assert_eq!(x[1], self.get_batch_size(), "Batch size mismatch");

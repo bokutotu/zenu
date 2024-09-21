@@ -6,12 +6,11 @@ use crate::{
 };
 
 use super::{
-    descriptor::Descriptor,
-    lstm_params::LSTMWeightsMat,
+    descriptor::RNNDescriptor,
     lstm_params::{LSTMGrad, LSTMOutput},
 };
 
-impl<T: Num> Descriptor<T, LSTMWeightsMat<T, Nvidia>> {
+impl<T: Num> RNNDescriptor<T> {
     fn lstm_fwd_shape_check(&self, x: DimDyn, hx: Option<DimDyn>, cx: Option<DimDyn>) {
         assert_eq!(x.len(), 3, "Input shape must be 3D");
         assert_eq!(x[1], self.get_batch_size(), "Batch size mismatch");
