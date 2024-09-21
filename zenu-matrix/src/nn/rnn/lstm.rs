@@ -143,7 +143,7 @@ impl<T: Num> RNNDescriptor<T> {
     )]
     pub fn lstm_bkwd_data(
         &mut self,
-        x: Matrix<Ref<&T>, DimDyn, Nvidia>,
+        x_shape: DimDyn,
         y: Matrix<Ref<&T>, DimDyn, Nvidia>,
         dy: Matrix<Ref<&T>, DimDyn, Nvidia>,
         hx: Option<Matrix<Ref<&T>, DimDyn, Nvidia>>,
@@ -153,7 +153,7 @@ impl<T: Num> RNNDescriptor<T> {
         weight: Matrix<Ref<&T>, DimDyn, Nvidia>,
     ) -> LSTMGrad<T> {
         self.lstm_bkwd_data_shape_check(
-            x.shape(),
+            x_shape,
             y.shape(),
             dy.shape(),
             hx.as_ref().map(|hx| hx.to_ref().shape()),
@@ -162,10 +162,10 @@ impl<T: Num> RNNDescriptor<T> {
             dcy.as_ref().map(|dcy| dcy.to_ref().shape()),
         );
 
-        self.config_seq_length(true, x.shape()[0], x.shape()[1]);
+        self.config_seq_length(true, x_shape[0], x_shape[1]);
 
         let output_size = self.get_output_size();
-        let mut dx = Matrix::alloc([x.shape()[0], x.shape()[1], x.shape()[2]]);
+        let mut dx = Matrix::alloc([x_shape[0], x_shape[1], x_shape[2]]);
         let mut dhx = Matrix::zeros([self.get_num_layers(), self.get_batch_size(), output_size]);
         let mut dcx = Matrix::zeros([self.get_num_layers(), self.get_batch_size(), output_size]);
         self.bkwd_data(

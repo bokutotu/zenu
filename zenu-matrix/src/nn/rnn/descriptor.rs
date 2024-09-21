@@ -4,6 +4,7 @@ use zenu_cuda::cudnn::rnn::{
 
 use crate::{
     device::{nvidia::Nvidia, Device, DeviceBase},
+    dim::DimDyn,
     matrix::Matrix,
     num::Num,
 };
@@ -261,25 +262,50 @@ impl<T: Num> RNNDescriptor<T> {
         Ok(())
     }
 
+    fn weight_size_factor(&self) -> usize {
+        match self.desc.get_cell() {
+            RNNCell::RNNRelu | RNNCell::RNNTanh => 1,
+            RNNCell::LSTM => 4,
+            RNNCell::GRU => 3,
+        }
+    }
+
+    fn cal_rnn_input_weight_size(&self, idx: usize) -> DimDyn {
+        let factor = self.weight_size_factor();
+
+        let input_size = if idx == 0 || (idx == 1 && self.get_is_bidirectional()) {
+            self.get_input_size()
+        } else {
+            self.get_output_size()
+        };
+
+        [self.get_hidden_size() * factor, input_size].into()
+    }
+
+    fn call_rnn_hidden_weight_size(&self) -> DimDyn {
+        let factor = self.weight_size_factor();
+        [self.get_hidden_size() * factor, self.get_hidden_size()].into()
+    }
+
+    fn call_bias_size(&self) -> DimDyn {
+        let factor = self.weight_size_factor();
+        [self.get_hidden_size() * factor].into()
+    }
+
     pub fn store_rnn_weights<D: Device>(&self, weight_ptr: *mut u8) -> Vec<RNNWeightsMat<T, D>> {
-        let num_layers = self.get_num_layers() * if self.get_is_bidirectional() { 2 } else { 1 };
+        let num_layers = self.get_output_num_layers();
         let mut params = Vec::with_capacity(num_layers);
 
         let rnn_params = self.desc.get_rnn_params(weight_ptr.cast());
 
         for (idx, layer) in rnn_params.iter().enumerate() {
-            let input_weight = if idx == 0 || (idx == 1 && self.get_is_bidirectional()) {
-                let input_shape = &[self.get_hidden_size(), self.get_input_size()];
-                Matrix::alloc(input_shape)
-            } else {
-                let input_len =
-                    self.get_hidden_size() * if self.get_is_bidirectional() { 2 } else { 1 };
-                let input_shape = &[self.get_hidden_size(), input_len];
-                Matrix::alloc(input_shape)
-            };
-            let hidden_weight = Matrix::alloc([self.get_hidden_size(), self.get_hidden_size()]);
-            let input_bias = Matrix::alloc([self.get_hidden_size()]);
-            let hidden_bias = Matrix::alloc([self.get_hidden_size()]);
+            let input_weight_shape = self.cal_rnn_input_weight_size(idx);
+            let hidden_weight_shape = self.call_rnn_hidden_weight_size();
+            let bias_shape = self.call_bias_size();
+            let input_weight = Matrix::alloc(input_weight_shape);
+            let hidden_weight = Matrix::alloc(hidden_weight_shape);
+            let input_bias = Matrix::alloc(bias_shape);
+            let hidden_bias = Matrix::alloc(bias_shape);
 
             let mut layer_params =
                 RNNWeightsMat::new(input_weight, hidden_weight, input_bias, hidden_bias);

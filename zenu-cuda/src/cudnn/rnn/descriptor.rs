@@ -178,6 +178,11 @@ impl<T: 'static + Copy> RNNDescriptor<T> {
         self.bidirectional
     }
 
+    #[must_use]
+    pub fn get_cell(&self) -> RNNCell {
+        self.cell
+    }
+
     pub fn get_rnn_params(&self, weight_ptr: *mut T) -> Vec<RNNParams> {
         let (layer_id_input, layer_id_hidden) = match self.cell {
             RNNCell::RNNRelu | RNNCell::RNNTanh => (0, 1),
