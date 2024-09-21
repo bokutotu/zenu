@@ -5,7 +5,7 @@ use crate::{
     num::Num,
 };
 
-use super::{params::Params, Descriptor, RNNBkwdDataOutput, RNNOutput};
+use super::{descriptor::Descriptor, params::Params, RNNBkwdDataOutput, RNNOutput};
 
 impl<T: Num, P: Params> Descriptor<T, P> {
     fn rnn_fwd_shape_check(&self, x: DimDyn, hx: Option<DimDyn>) {

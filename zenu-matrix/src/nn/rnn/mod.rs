@@ -1,4 +1,4 @@
-mod descriptor;
+pub(super) mod descriptor;
 mod gru;
 mod gru_params;
 mod lstm;
@@ -6,9 +6,8 @@ mod lstm_params;
 pub mod params;
 mod rnn;
 mod rnn_params;
-mod rnn_test;
 
-pub use descriptor::*;
+pub use descriptor::{GRUDescriptor, LSTMDescriptor, RNNDescriptor};
 pub use gru_params::GRUWeightsMat;
 pub use lstm_params::LSTMWeightsMat;
 pub use rnn_params::{RNNBkwdDataOutput, RNNOutput, RNNWeightsMat};
