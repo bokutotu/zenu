@@ -10,6 +10,8 @@ use zenu_cuda::{
     runtime::{cuda_copy, ZenuCudaMemCopyKind},
 };
 
+use super::params::Params;
+
 #[derive(Debug, Clone)]
 pub struct LSTMWeightsMat<T: Num, D: Device> {
     input_gate_x: Matrix<Owned<T>, DimDyn, D>,
@@ -20,6 +22,20 @@ pub struct LSTMWeightsMat<T: Num, D: Device> {
     cell_h: Matrix<Owned<T>, DimDyn, D>,
     output_gate_x: Matrix<Owned<T>, DimDyn, D>,
     output_gate_h: Matrix<Owned<T>, DimDyn, D>,
+}
+
+#[derive(Debug, Clone)]
+pub struct LSTMOutput<T: Num> {
+    pub y: Matrix<Owned<T>, DimDyn, Nvidia>,
+    pub hy: Matrix<Owned<T>, DimDyn, Nvidia>,
+    pub cy: Matrix<Owned<T>, DimDyn, Nvidia>,
+}
+
+#[derive(Debug, Clone)]
+pub struct LSTMGrad<T: Num> {
+    pub dx: Matrix<Owned<T>, DimDyn, Nvidia>,
+    pub dhx: Matrix<Owned<T>, DimDyn, Nvidia>,
+    pub dcx: Matrix<Owned<T>, DimDyn, Nvidia>,
 }
 
 impl<T: Num, D: Device> LSTMWeightsMat<T, D> {
@@ -86,9 +102,12 @@ impl<T: Num, D: Device> LSTMWeightsMat<T, D> {
     pub fn output_gate_h(&self) -> Matrix<Ref<&T>, DimDyn, D> {
         self.output_gate_h.to_ref()
     }
+}
 
-    #[expect(clippy::missing_panics_doc, clippy::similar_names)]
-    pub fn set_weight(&self, params: &LSTMParams) {
+impl<T: Num, D: Device> Params for LSTMWeightsMat<T, D> {
+    type Params = LSTMParams;
+    #[expect(clippy::similar_names)]
+    fn set_weight(&self, params: &LSTMParams) {
         let input_gates_x_ptr = params.input_gate_x.ptr.cast();
         let input_gates_h_ptr = params.input_gate_h.ptr.cast();
         let forget_gates_x_ptr = params.forget_gate_x.ptr.cast();
@@ -162,8 +181,8 @@ impl<T: Num, D: Device> LSTMWeightsMat<T, D> {
         .unwrap();
     }
 
-    #[expect(clippy::missing_panics_doc, clippy::similar_names)]
-    pub fn load_from_params(&mut self, params: &LSTMParams) {
+    #[expect(clippy::similar_names)]
+    fn load_from_params(&mut self, params: &LSTMParams) {
         let input_gates_x_ptr = params.input_gate_x.ptr as *const T;
         let input_gates_h_ptr = params.input_gate_h.ptr as *const T;
         let forget_gates_x_ptr = params.forget_gate_x.ptr as *const T;

@@ -203,6 +203,28 @@ impl<T: Num, P: Params> Descriptor<T, P> {
         self.desc.get_hidden_size()
     }
 
+    /// the hidden size of the output is `hidden_size` * `num_directions`
+    #[must_use]
+    pub fn get_output_size(&self) -> usize {
+        self.desc.get_hidden_size()
+            * if self.desc.get_is_bidirectional() {
+                2
+            } else {
+                1
+            }
+    }
+
+    /// the number of layers of the output is `num_layers` * `num_directions`
+    #[must_use]
+    pub fn get_output_num_layers(&self) -> usize {
+        self.desc.get_num_layers()
+            * if self.desc.get_is_bidirectional() {
+                2
+            } else {
+                1
+            }
+    }
+
     #[must_use]
     pub fn get_num_layers(&self) -> usize {
         self.desc.get_num_layers()

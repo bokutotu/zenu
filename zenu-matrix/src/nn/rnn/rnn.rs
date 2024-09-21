@@ -12,7 +12,7 @@ impl<T: Num, P: Params> Descriptor<T, P> {
         assert_eq!(x.len(), 3, "Input shape must be 3D");
         assert_eq!(x[1], self.get_batch_size(), "Batch size mismatch");
         assert_eq!(x[2], self.get_input_size(), "Input size mismatch");
-        let num_layers = self.get_num_layers() * if self.get_is_bidirectional() { 2 } else { 1 };
+        let num_layers = self.get_output_num_layers();
         if let Some(hx) = hx {
             assert_eq!(hx[0], num_layers, "Number of layers mismatch");
             assert_eq!(hx[1], self.get_batch_size(), "Hidden size mismatch");
@@ -31,8 +31,8 @@ impl<T: Num, P: Params> Descriptor<T, P> {
         self.rnn_fwd_shape_check(x.shape(), hx.as_ref().map(|hx| hx.to_ref().shape()));
         self.config_seq_length(is_training, x.shape()[0], x.shape()[1]);
 
-        let hidden_size = self.get_hidden_size() * if self.get_is_bidirectional() { 2 } else { 1 };
-        let mut y = Matrix::alloc([x.shape()[0], x.shape()[1], hidden_size]);
+        let output_size = self.get_output_size();
+        let mut y = Matrix::alloc([x.shape()[0], x.shape()[1], output_size]);
 
         let num_layers = self.get_num_layers() * if self.get_is_bidirectional() { 2 } else { 1 };
 
@@ -63,8 +63,8 @@ impl<T: Num, P: Params> Descriptor<T, P> {
         assert_eq!(x[2], self.get_input_size(), "Input size mismatch");
         assert_eq!(y.len(), 3, "Output shape must be 3D");
         assert_eq!(y[1], self.get_batch_size(), "Batch size mismatch");
-        let hidden_size = self.get_hidden_size() * if self.get_is_bidirectional() { 2 } else { 1 };
-        assert_eq!(y[2], hidden_size, "Hidden size mismatch");
+        let output_size = self.get_output_size();
+        assert_eq!(y[2], output_size, "Hidden size mismatch");
         assert_eq!(y.slice(), dy.slice(), "Output and dy shape mismatch");
         assert_eq!(
             hx.is_some(),
@@ -81,7 +81,7 @@ impl<T: Num, P: Params> Descriptor<T, P> {
 
         assert_eq!(hx.slice(), dhy.slice(), "hx and dhy shape mismatch");
 
-        let num_layers = self.get_num_layers() * if self.get_is_bidirectional() { 2 } else { 1 };
+        let num_layers = self.get_output_num_layers();
         assert_eq!(hx[0], num_layers, "Number of layers mismatch");
         assert_eq!(hx[1], self.get_batch_size(), "Batch size mismatch");
         assert_eq!(hx[2], self.get_hidden_size(), "Hidden size mismatch");
@@ -108,12 +108,7 @@ impl<T: Num, P: Params> Descriptor<T, P> {
 
         let mut dx = Matrix::alloc(x_shape);
         let mut dhx = {
-            let d = self.desc.get_num_layers()
-                * if self.desc.get_is_bidirectional() {
-                    2
-                } else {
-                    1
-                };
+            let d = self.get_output_num_layers();
             Matrix::alloc([d, self.desc.get_hidden_size()])
         };
 
@@ -138,10 +133,10 @@ impl<T: Num, P: Params> Descriptor<T, P> {
         assert_eq!(x[2], self.get_input_size(), "Input size mismatch");
         assert_eq!(y.len(), 3, "Output shape must be 3D");
         assert_eq!(y[1], self.get_batch_size(), "Batch size mismatch");
-        let hidden_size = self.get_hidden_size() * if self.get_is_bidirectional() { 2 } else { 1 };
-        assert_eq!(y[2], hidden_size, "Hidden size mismatch");
+        let output_size = self.get_output_size();
+        assert_eq!(y[2], output_size, "Hidden size mismatch");
 
-        let num_layers = self.get_num_layers() * if self.get_is_bidirectional() { 2 } else { 1 };
+        let num_layers = self.get_output_num_layers();
         if let Some(hx) = hx {
             assert_eq!(hx[0], num_layers, "Number of layers mismatch");
             assert_eq!(hx[1], self.get_batch_size(), "Batch size mismatch");
