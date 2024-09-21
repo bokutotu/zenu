@@ -9,7 +9,7 @@ use crate::{
     num::Num,
 };
 
-use super::RNNWeightsMat;
+use super::{GRUWeightsMat, LSTMWeightsMat, RNNWeightsMat};
 
 pub struct Descriptor<T: Num, P: Params> {
     pub desc: RNNDesc<T>,
@@ -19,6 +19,8 @@ pub struct Descriptor<T: Num, P: Params> {
 }
 
 pub type RNNDescriptor<T> = Descriptor<T, RNNWeightsMat<T, Nvidia>>;
+pub type LSTMDescriptor<T> = Descriptor<T, LSTMWeightsMat<T, Nvidia>>;
+pub type GRUDescriptor<T> = Descriptor<T, GRUWeightsMat<T, Nvidia>>;
 
 impl<T: Num, P: Params> Drop for Descriptor<T, P> {
     fn drop(&mut self) {

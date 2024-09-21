@@ -1,15 +1,15 @@
 #[cfg(test)]
 mod rnn {
     use zenu_test::assert_mat_eq_epsilon;
-    use zenu_test::read_test_case_from_json;
+    use zenu_test::read_test_case_from_json_val;
 
-    use crate::device::cpu::Cpu;
-    use crate::matrix::Owned;
-    use crate::{device::nvidia::Nvidia, dim::DimDyn, matrix::Matrix, nn::rnn::*};
+    use zenu_matrix::device::cpu::Cpu;
+    use zenu_matrix::matrix::Owned;
+    use zenu_matrix::{device::nvidia::Nvidia, dim::DimDyn, matrix::Matrix, nn::rnn::*};
 
     #[expect(clippy::too_many_lines)]
     fn test_json_single(json_path: String, num_layers: usize, bidirectional: bool) {
-        let matrix_map = read_test_case_from_json!(json_path);
+        let matrix_map = read_test_case_from_json_val!(json_path);
 
         let mut weights = Vec::new();
         for layer_id in 0..num_layers {
