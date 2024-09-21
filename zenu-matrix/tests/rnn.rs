@@ -70,11 +70,14 @@ fn assert_grad(expected: &[RNNWeightsMat<f32, Cpu>], actual: &[RNNWeightsMat<f32
     }
 }
 
-fn before_run(map: &HashMap<String, Matrix<Owned<f32>, DimDyn, Cpu>>) -> (usize, usize, usize) {
+fn before_run(
+    map: &HashMap<String, Matrix<Owned<f32>, DimDyn, Cpu>>,
+    bidirectional: bool,
+) -> (usize, usize, usize) {
     let input = map.get("input").unwrap().clone();
     let output = map.get("output").unwrap().clone();
     let input_size = input.shape()[2];
-    let hidden_size = output.shape()[2];
+    let hidden_size = output.shape()[2] / if bidirectional { 2 } else { 1 };
     let batch_size = input.shape()[1];
     (input_size, hidden_size, batch_size)
 }
@@ -97,7 +100,7 @@ fn init_weights(
 
 fn rnn(json_path: String, num_layers: usize, bidirectional: bool) {
     let matrix_map = read_test_case_from_json_val!(json_path);
-    let (input_size, hidden_size, batch_size) = before_run(&matrix_map);
+    let (input_size, hidden_size, batch_size) = before_run(&matrix_map, bidirectional);
     let mut desc = RNNDescriptor::<f32>::new_rnn_relu(
         bidirectional,
         0.0,
