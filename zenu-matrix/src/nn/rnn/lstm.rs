@@ -200,7 +200,7 @@ impl<T: Num> RNNDescriptor<T> {
         );
 
         let num_elm_weight = self.desc.get_weights_size() / std::mem::size_of::<T>();
-        let mut dweight = Matrix::alloc([num_elm_weight]);
+        let mut dweight = Matrix::zeros([num_elm_weight]);
 
         self.bkwd_weights(
             x.as_ptr(),
