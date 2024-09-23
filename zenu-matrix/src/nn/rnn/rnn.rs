@@ -144,7 +144,7 @@ impl<T: Num> RNNDescriptor<T> {
         }
     }
 
-    #[expect(clippy::needless_pass_by_value, clippy::missing_panics_doc)]
+    #[expect(clippy::needless_pass_by_value)]
     pub fn rnn_bkwd_weights(
         &mut self,
         x: Matrix<Ref<&T>, DimDyn, Nvidia>,

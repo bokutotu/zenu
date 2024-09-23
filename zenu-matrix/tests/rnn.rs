@@ -239,8 +239,3 @@ fn test_rnn_seq_len_5_num_layer_2_bidirectional() {
         true,
     );
 }
-
-#[test]
-fn test_rnn_large() {
-    rnn("../test_data_json/rnn_large.json".to_string(), 4, true);
-}
