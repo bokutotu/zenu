@@ -43,6 +43,9 @@ impl MaxIdx for Nvidia {
 impl<T: Num, R: Repr<Item = T>, D: Device> Matrix<R, DimDyn, D> {
     #[must_use]
     pub fn max_idx(&self) -> DimDyn {
+        if self.shape().is_empty() {
+            return DimDyn::from(&[] as &[usize]);
+        }
         let default_stride = self.to_default_stride();
         let idx = <D as MaxIdx>::max_idx(
             default_stride.as_ptr(),
