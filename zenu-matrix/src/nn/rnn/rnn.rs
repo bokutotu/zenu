@@ -154,13 +154,13 @@ impl<T: Num> RNNDescriptor<T> {
         self.rnn_bkwd_weights_shape_check(x.shape(), hx.as_ref().map(Matrix::shape), y.shape());
         self.config_seq_length(true, x.shape()[0], x.shape()[1]);
 
-        let dweight = Nvidia::alloc(self.desc.get_weights_size()).unwrap();
+        let dweight = Nvidia::zeros(self.desc.get_weights_size() / size_of::<T>());
 
         self.bkwd_weights(
             x.as_ptr(),
             hx.map_or(std::ptr::null(), |hx| hx.as_ptr()),
             y.as_ptr(),
-            dweight.cast(),
+            dweight,
         );
         let weight_size = self.get_weight_bytes() / std::mem::size_of::<T>();
         Matrix::new(
