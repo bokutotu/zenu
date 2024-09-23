@@ -27,7 +27,7 @@ mod with_clousers;
 use device::nvidia::Nvidia;
 
 pub(crate) struct ZenuMatrixState {
-    pub(crate) is_used: bool,
+    pub(crate) is_mem_pool_used: bool,
     pub(crate) cpu: MemPool<Cpu>,
     #[cfg(feature = "nvidia")]
     pub(crate) nvidia: MemPool<Nvidia>,
@@ -37,7 +37,7 @@ impl Default for ZenuMatrixState {
     fn default() -> Self {
         let use_mem_pool = std::env::var("ZENU_USE_MEMPOOL").unwrap_or("1".to_string()) == "1";
         ZenuMatrixState {
-            is_used: use_mem_pool,
+            is_mem_pool_used: use_mem_pool,
             cpu: MemPool::default(),
             #[cfg(feature = "nvidia")]
             nvidia: MemPool::default(),

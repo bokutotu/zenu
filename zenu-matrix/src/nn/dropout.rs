@@ -23,7 +23,7 @@ pub struct DropoutState<T: Num, D: DeviceBase> {
     #[cfg(feature = "nvidia")]
     state_cache: Option<NNCache<D>>,
     #[cfg(feature = "nvidia")]
-    space_cache: Option<NNCache<D>>,
+    reserve_space_cache: Option<NNCache<D>>,
     _device: std::marker::PhantomData<D>,
 }
 
@@ -38,7 +38,7 @@ impl<T: Num, D: DeviceBase> DropoutState<T, D> {
             #[cfg(feature = "nvidia")]
             state_cache: None,
             #[cfg(feature = "nvidia")]
-            space_cache: None,
+            reserve_space_cache: None,
             _device: std::marker::PhantomData,
         }
     }
@@ -49,10 +49,13 @@ impl<T: Num, D: DeviceBase> DropoutState<T, D> {
         {
             let gpu_state = DropoutConfig::new(shape.slice()).unwrap();
             let state_size = gpu_state.get_state_size();
+            let reserve_space_size = gpu_state.get_reserve_space_size();
             let cache = NNCache::<D>::new(state_size);
+            let reserve_space_cache = NNCache::<D>::new(reserve_space_size);
             gpu_state.set(self.rate, 0, cache.ptr.cast()).unwrap();
             self.gpu_state = Some(gpu_state);
             self.state_cache = Some(cache);
+            self.reserve_space_cache = Some(reserve_space_cache);
         }
         #[cfg(not(feature = "nvidia"))]
         {
@@ -151,13 +154,13 @@ impl Dropout for Nvidia {
             }
         };
 
-        if state.space_cache.is_none() {
-            let space_cache = NNCache::<Self>::new(0);
-            state.space_cache = Some(space_cache);
-        }
+        assert!(
+            state.reserve_space_cache.is_some(),
+            "Reserve space cache is not initialized"
+        );
 
         let mut y = Matrix::<Owned<T>, _, _>::alloc(x.shape().slice());
-        let space_cache = state.space_cache.as_ref().unwrap();
+        let space_cache = state.reserve_space_cache.as_ref().unwrap();
         let spcace_cache_ptr = space_cache.ptr.cast();
 
         {
@@ -181,7 +184,7 @@ impl Dropout for Nvidia {
         state: &DropoutState<T, Self>,
     ) -> Matrix<Owned<T>, DimDyn, Self> {
         let gpu_state = state.gpu_state.as_ref().unwrap();
-        let space_cache = state.space_cache.as_ref().unwrap();
+        let space_cache = state.reserve_space_cache.as_ref().unwrap();
 
         let mut dx = Matrix::<Owned<T>, _, _>::alloc(dy.shape().slice());
 
