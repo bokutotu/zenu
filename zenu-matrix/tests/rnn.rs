@@ -199,8 +199,17 @@ fn test_lstm_small() {
 fn test_lstm_medium() {
     lstm(
         "../test_data_json/lstm_fwd_bkwd_medium.json".to_string(),
-        1,
+        4,
         false,
+    );
+}
+
+#[test]
+fn test_lstm_bidirectional() {
+    lstm(
+        "../test_data_json/lstm_bidirectional.json".to_string(),
+        4,
+        true,
     );
 }
 
