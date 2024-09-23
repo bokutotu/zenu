@@ -8,15 +8,15 @@ macro_rules! assert_mat_eq_epsilon {
         let epsilon = $epsilon;
         let diff = mat.to_ref() - mat2.to_ref();
         let abs = diff.abs();
-        let diff_asum = abs.asum();
-        if diff_asum > epsilon {
+        let diff_max = abs.max_item();
+        if diff_max > epsilon {
             panic!(
                 "assertion failed: `(left == right)`\n\
                 left: \n{:?},\n\
                 right: \n{:?}\n\
                 diff: \n{:?}\n\
-                diff_asum: \n{:?}",
-                mat, mat2, diff, diff_asum
+                diff_max: \n{:?}",
+                mat, mat2, diff, diff_max
             );
         }
     }};
