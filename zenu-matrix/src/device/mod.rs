@@ -28,7 +28,7 @@ pub mod nvidia;
 pub trait DeviceBase: Copy + Default + Serialize + 'static {
     fn drop_ptr<T>(ptr: *mut T) {
         let state = &ZENU_MATRIX_STATE;
-        if state.is_used {
+        if state.is_mem_pool_used {
             let result = Self::mem_pool_drop_ptr(ptr.cast());
             if result.is_err() {
                 Self::raw_drop_ptr(ptr);
@@ -48,7 +48,7 @@ pub trait DeviceBase: Copy + Default + Serialize + 'static {
     #[expect(clippy::missing_errors_doc)]
     fn alloc(num_bytes: usize) -> Result<*mut u8, MemPoolError> {
         let state = &ZENU_MATRIX_STATE;
-        if state.is_used {
+        if state.is_mem_pool_used {
             Self::mem_pool_alloc(num_bytes)
         } else {
             Self::raw_alloc(num_bytes).map_err(|_| MemPoolError::DeviceMallocError)

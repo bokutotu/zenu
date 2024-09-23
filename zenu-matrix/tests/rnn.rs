@@ -186,13 +186,25 @@ fn lstm(json_path: String, num_layers: usize, bidirectional: bool) {
     assert_grad(&weights_grad, &params);
 }
 
-#[test]
-fn test_lstm_small() {
-    lstm(
-        "../test_data_json/lstm_fwd_bkwd_small.json".to_string(),
-        1,
-        false,
-    );
+mod lstm {
+    use crate::lstm;
+    #[test]
+    fn test_lstm_small() {
+        lstm(
+            "../test_data_json/lstm_fwd_bkwd_small.json".to_string(),
+            1,
+            false,
+        );
+    }
+
+    #[test]
+    fn test_lstm_medium() {
+        lstm(
+            "../test_data_json/lstm_fwd_bkwd_medium.json".to_string(),
+            1,
+            false,
+        );
+    }
 }
 
 mod rnn {
