@@ -1,3 +1,3 @@
-// mod naive;
-//
-// pub use naive::lstm;
+mod naive;
+
+pub use naive::lstm_naive;
