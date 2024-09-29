@@ -22,6 +22,7 @@ pub mod matmul;
 pub mod powf;
 pub mod reshape;
 pub mod sinh;
+pub mod slice;
 pub mod stack;
 pub mod sum;
 pub mod sum_to;
