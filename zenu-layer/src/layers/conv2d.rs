@@ -3,7 +3,7 @@ use std::{cell::RefCell, collections::HashMap};
 use rand_distr::{Distribution, StandardNormal};
 use zenu_autograd::{
     creator::{rand::normal, zeros::zeros},
-    functions::conv2d::{conv2d, Conv2dConfigs},
+    nn::conv2d::{conv2d, Conv2dConfigs},
     Variable,
 };
 use zenu_matrix::{device::Device, dim::DimTrait, nn::conv2d::conv2d_out_size, num::Num};

@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use zenu_autograd::{
     creator::{ones::ones, zeros::zeros},
-    functions::batch_norm::{batch_norm_2d, BatchNorm2dAutoGradConfig},
+    nn::batch_norm::{batch_norm_2d, BatchNorm2dAutoGradConfig},
     Variable,
 };
 use zenu_matrix::{device::Device, dim::DimTrait, num::Num};

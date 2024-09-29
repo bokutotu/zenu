@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use zenu_autograd::{
-    functions::pool2d::{max_pool_2d, MaxPool2dConfig},
+    nn::pool2d::{max_pool_2d, MaxPool2dConfig},
     Variable,
 };
 use zenu_matrix::{device::Device, num::Num};

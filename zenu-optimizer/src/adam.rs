@@ -78,10 +78,9 @@ impl<T: Num, D: Device> Adam<T, D> {
 }
 
 #[cfg(test)]
-mod adam {
+mod adam_tests {
     use zenu_autograd::{
-        creator::from_vec::from_vec,
-        functions::{loss::mse::mean_squared_error, matmul::matmul},
+        creator::from_vec::from_vec, functions::matmul::matmul, loss::mse::mean_squared_error,
         Variable,
     };
     use zenu_matrix::{device::Device, dim::DimDyn, matrix::Matrix};
@@ -100,6 +99,7 @@ mod adam {
         matmul(x, weight2)
     }
 
+    #[expect(clippy::needless_pass_by_value, clippy::type_complexity)]
     fn adam_apply<D: Device>(
         adam: &Adam<f64, D>,
         forward_func: fn(Variable<f64, D>, Variable<f64, D>, Variable<f64, D>) -> Variable<f64, D>,
@@ -115,6 +115,7 @@ mod adam {
         loss.clear_grad();
     }
 
+    #[expect(clippy::unreadable_literal)]
     fn small_2_times<D: Device>() {
         // Initial weights:
         // Weight1: 10.000000

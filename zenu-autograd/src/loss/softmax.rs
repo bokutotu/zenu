@@ -2,9 +2,7 @@ use std::{cell::RefCell, rc::Rc};
 
 use zenu_matrix::{device::Device, num::Num};
 
-use crate::{creator::alloc::alloc, Function, Variable, VariableWeak};
-
-use super::sum::sum;
+use crate::{creator::alloc::alloc, functions::sum::sum, Function, Variable, VariableWeak};
 
 struct SoftMax<T: Num, D: Device> {
     input: Variable<T, D>,

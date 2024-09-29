@@ -1,8 +1,11 @@
 #![expect(clippy::module_name_repetitions)]
 
+pub mod activation;
 pub mod concat;
 pub mod creator;
 pub mod functions;
+pub mod loss;
+pub mod nn;
 
 use std::{
     cell::{Ref, RefCell, RefMut},

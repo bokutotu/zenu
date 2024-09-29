@@ -1,7 +1,6 @@
 use zenu::{
     autograd::{
-        creator::from_vec::from_vec,
-        functions::{activation::relu::relu, loss::cross_entropy::cross_entropy},
+        activation::relu::relu, creator::from_vec::from_vec, loss::cross_entropy::cross_entropy,
         no_train, set_train, Variable,
     },
     dataset::{train_val_split, DataLoader, Dataset},
