@@ -1,9 +1,11 @@
 use zenu_matrix::{device::Device, num::Num};
 
 use crate::{
-    functions::{log::log, softmax::softmax, sum_to::sum_to},
+    functions::{log::log, sum_to::sum_to},
     Variable,
 };
+
+use super::softmax::softmax;
 
 #[expect(clippy::needless_pass_by_value)]
 #[must_use]

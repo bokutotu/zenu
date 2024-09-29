@@ -1,7 +1,7 @@
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use zenu_autograd::{
-    functions::dropout::{dropout, DropoutConfig},
+    nn::dropout::{dropout, DropoutConfig},
     Variable,
 };
 use zenu_matrix::{

@@ -2,11 +2,11 @@ use rand_distr::{Distribution, StandardNormal};
 use zenu_matrix::{device::Device, index::index_dyn_impl::Index, nn::rnn::RNNWeightsMat, num::Num};
 
 use crate::{
+    activation::relu::relu,
     concat::concat,
     creator::{rand::normal, zeros::zeros},
     functions::{
-        activation::relu::relu, index_axis::index_axis, matmul::matmul, stack::stack, tanh::tanh,
-        transpose::transpose,
+        index_axis::index_axis, matmul::matmul, stack::stack, tanh::tanh, transpose::transpose,
     },
     Variable,
 };
@@ -226,9 +226,7 @@ where
             activation,
             bidirectional,
         );
-        println!("output shape: {:?}", output.get_shape());
 
-        // For the next layer, state is the output from this layer
         state = output;
     }
 
@@ -269,7 +267,7 @@ mod rnn_test {
 
     use crate::{
         creator::{ones::ones, zeros::zeros},
-        functions::rnn::naive::{rnn_relu, RNNLayerWeights},
+        nn::rnn::naive::{rnn_relu, RNNLayerWeights},
         Variable,
     };
 

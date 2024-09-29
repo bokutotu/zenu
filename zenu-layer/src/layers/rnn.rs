@@ -4,13 +4,13 @@ use std::{cell::RefCell, rc::Rc};
 
 use rand_distr::{Distribution, StandardNormal};
 use zenu_autograd::{
-    functions::rnn::naive::{rnn_relu, rnn_tanh, RNNLayerWeights, RNNWeights},
+    nn::rnn::naive::{rnn_relu, rnn_tanh, RNNLayerWeights, RNNWeights},
     Variable,
 };
 use zenu_matrix::{device::Device, num::Num};
 
 #[cfg(feature = "nvidia")]
-use zenu_autograd::functions::rnn::{cudnn::cudnn_rnn_fwd, RNNOutput};
+use zenu_autograd::nn::rnn::{cudnn::cudnn_rnn_fwd, RNNOutput};
 #[cfg(feature = "nvidia")]
 use zenu_matrix::{
     device::nvidia::Nvidia,
@@ -243,7 +243,7 @@ impl<T: Num, D: Device> Parameters<T, D> for RNN<T, D> {
 impl<T: Num, D: Device> RNN<T, D> {
     #[cfg(feature = "nvidia")]
     fn cudnn_weights_to_layer_weights(&self) -> Vec<RNNLayerWeights<T, D>> {
-        use zenu_autograd::functions::rnn::naive::RNNWeights;
+        use zenu_autograd::nn::rnn::naive::RNNWeights;
 
         let desc = self.desc.as_ref().unwrap().clone();
         let cudnn_weights_ptr = self

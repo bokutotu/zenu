@@ -213,7 +213,7 @@ mod pool2d {
     };
     use zenu_test::{assert_val_eq, assert_val_eq_grad, run_test};
 
-    use crate::{creator::from_vec::from_vec, functions::pool2d::MaxPool2dConfig};
+    use crate::{creator::from_vec::from_vec, nn::pool2d::MaxPool2dConfig};
 
     use super::max_pool_2d;
 
