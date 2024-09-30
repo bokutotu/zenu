@@ -128,8 +128,6 @@ fn lstm_single_layer_direction<T: Num, D: Device>(
     let bias_hh = &weight.bias_hh;
 
     for time_step in time_steps {
-        // let x_t = slice(x.clone(), slice_dynamic![.., time_step..time_step + 1]);
-        // let x_t = x_t.reshape(vec![h.get_shape()[0], x_t.get_shape()[2]]); // Remove time dimension
         let x_t = index_axis(x.clone(), Index::new(0, time_step));
         let (h_t, c_t) = lstm_single_time_step(
             x_t,
@@ -246,11 +244,107 @@ pub fn lstm_naive<T: Num, D: Device>(
             layer_weight.backward.as_ref(),
             bidirectional,
         );
-        println!("output shape: {:?}", output.get_shape());
-
-        // For the next layer, state is the output from this layer
         state = output;
     }
 
     state
+}
+
+#[cfg(test)]
+mod lstm_test {
+    use std::collections::HashMap;
+
+    use zenu_matrix::{
+        device::{cpu::Cpu, Device},
+        dim::DimDyn,
+        matrix::{Matrix, Owned},
+    };
+
+    use zenu_test::{assert_val_eq, assert_val_eq_grad, read_test_case_from_json_val, run_test};
+
+    use crate::{creator::zeros::zeros, Variable};
+
+    use super::{lstm_naive, LSTMLayerWeights, LSTMWeights};
+
+    fn load_rnn_weight_from_json<D: Device>(
+        path: &str,
+        idx: usize,
+        bidirectional: bool,
+    ) -> LSTMLayerWeights<f32, D> {
+        let mats: HashMap<String, Matrix<Owned<f32>, DimDyn, Cpu>> =
+            read_test_case_from_json_val!(path);
+
+        let input_weight = mats.get(&format!("rnn.weight_ih_l{idx}")).unwrap().clone();
+        let hidden_weight = mats.get(&format!("rnn.weight_hh_l{idx}")).unwrap().clone();
+        let input_bias = mats.get(&format!("rnn.bias_ih_l{idx}")).unwrap().clone();
+        let hidden_bias = mats.get(&format!("rnn.bias_hh_l{idx}")).unwrap().clone();
+
+        let forward = LSTMWeights {
+            weight_ih: Variable::<f32, D>::new(input_weight.to::<D>()),
+            weight_hh: Variable::<f32, D>::new(hidden_weight.to::<D>()),
+            bias_ih: Variable::<f32, D>::new(input_bias.to::<D>()),
+            bias_hh: Variable::<f32, D>::new(hidden_bias.to::<D>()),
+        };
+
+        let reverse = if bidirectional {
+            let input_weight_rev = mats
+                .get(&format!("rnn.weight_ih_l{idx}_reverse"))
+                .unwrap()
+                .clone();
+            let hidden_weight_rev = mats
+                .get(&format!("rnn.weight_hh_l{idx}_reverse"))
+                .unwrap()
+                .clone();
+            let input_bias_rev = mats
+                .get(&format!("rnn.bias_ih_l{idx}_reverse"))
+                .unwrap()
+                .clone();
+            let hidden_bias_rev = mats
+                .get(&format!("rnn.bias_hh_l{idx}_reverse"))
+                .unwrap()
+                .clone();
+            Some(LSTMWeights {
+                weight_ih: Variable::<f32, D>::new(input_weight_rev.to::<D>()),
+                weight_hh: Variable::<f32, D>::new(hidden_weight_rev.to::<D>()),
+                bias_ih: Variable::<f32, D>::new(input_bias_rev.to::<D>()),
+                bias_hh: Variable::<f32, D>::new(hidden_bias_rev.to::<D>()),
+            })
+        } else {
+            None
+        };
+
+        LSTMLayerWeights {
+            forward,
+            backward: reverse,
+        }
+    }
+
+    fn lstm_test_single_layer<D: Device>(path: &str) {
+        let mats: HashMap<String, Matrix<Owned<f32>, DimDyn, Cpu>> =
+            read_test_case_from_json_val!(path);
+
+        let input = mats.get("input").unwrap().clone();
+        let input = Variable::<f32, D>::new(input.to::<D>());
+        let weights = load_rnn_weight_from_json::<D>(path, 0, false);
+
+        let batch_size = input.get_shape()[1];
+        let hidden_size = weights.forward.bias_ih.get_shape()[0] / 4;
+
+        let h = zeros([1, batch_size, hidden_size]);
+        let c = zeros([1, batch_size, hidden_size]);
+
+        let output = lstm_naive(input.clone(), h, c, &[weights], false);
+        let expected = mats.get("output").unwrap().clone();
+        output.backward();
+        assert_val_eq!(output, expected.to::<D>(), 1e-5);
+
+        let grad_input = mats.get("input_grad").unwrap().clone();
+        let grad_input = grad_input.to::<D>();
+        assert_val_eq_grad!(input, grad_input, 1e-5);
+    }
+
+    fn small_lstm<D: Device>() {
+        lstm_test_single_layer::<D>("../test_data_json/lstm_fwd_bkwd_small.json");
+    }
+    run_test!(small_lstm, small_lstm_cpu, small_lstm_gpu);
 }
