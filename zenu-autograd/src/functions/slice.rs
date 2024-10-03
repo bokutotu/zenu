@@ -2,7 +2,10 @@ use std::{cell::RefCell, rc::Rc};
 
 use zenu_matrix::{device::Device, dim::DimDyn, index::SliceTrait, num::Num, slice::Slice as S};
 
-use crate::{creator::alloc::alloc, Function, Variable, VariableWeak};
+use crate::{
+    creator::{alloc::alloc, zeros::zeros},
+    Function, Variable, VariableWeak,
+};
 
 struct Slice<T: Num, D: Device> {
     input: Variable<T, D>,
@@ -38,10 +41,8 @@ impl<T: Num, D: Device> Function<T, D> for Slice<T, D> {
 impl<T: Num, D: Device> Function<T, D> for SliceBackward<T, D> {
     fn forward(&self) {
         let output = self.output.upgrade().unwrap();
-        output
-            .get_as_mut()
-            .slice_mut(self.s)
-            .copy_from(&self.input.get_as_ref());
+        let output_sliced = output.get_as_mut().slice_mut(self.s);
+        output_sliced.copy_from(&self.input.get_as_ref());
     }
 
     fn backward(&self) {
@@ -79,7 +80,7 @@ fn slice_bkwd<T: Num, D: Device>(
     s: S,
     output_shape: DimDyn,
 ) -> Variable<T, D> {
-    let output = alloc(output_shape);
+    let output = zeros(output_shape);
     let slice_bkwd = SliceBackward {
         input,
         s,
@@ -114,4 +115,18 @@ mod slice_tests {
         assert_val_eq_grad!(input, expected_grad, 1e-5);
     }
     run_test!(slice_2d, slice_2d_cpu, slice_2d_gpu);
+
+    fn slice_2d_2nd_dim<D: Device>() {
+        let input = from_vec::<f32, _, D>(vec![1., 1., 1., 2., 2., 2., 3., 3., 3.], [3, 3]);
+        let output = slice(input.clone(), slice_dynamic!(.., 1..));
+        output.backward();
+
+        let expected = Matrix::<_, DimDyn, _>::from_vec(vec![1., 1., 2., 2., 3., 3.], [3, 2]);
+        assert_val_eq!(output, expected, 1e-5);
+
+        let expected_grad =
+            Matrix::<_, DimDyn, _>::from_vec(vec![0., 1., 1., 0., 1., 1., 0., 1., 1.], [3, 3]);
+        assert_val_eq_grad!(input, expected_grad, 1e-5);
+    }
+    run_test!(slice_2d_2nd_dim, slice_2d_2nd_dim_cpu, slice_2d_2nd_dim_gpu);
 }
