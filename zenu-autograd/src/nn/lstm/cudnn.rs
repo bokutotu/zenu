@@ -21,9 +21,7 @@ struct CudnnLSTM<T: Num> {
 impl<T: Num> Function<T, Nvidia> for CudnnLSTM<T> {
     fn forward(&self) {
         let mut rnn_desc = self.rnn_desc.borrow_mut();
-        // let hx = self.hx.as_ref().map(|hx| (hx.get_as_ref()));
         let hx = self.hx.as_ref().map(Variable::get_as_ref);
-        // let cx = self.cx.as_ref().map(|cx| (cx.get_as_ref()));
         let cx = self.cx.as_ref().map(Variable::get_as_ref);
         let output = rnn_desc.lstm_fwd(
             self.x.get_as_ref(),
@@ -54,15 +52,11 @@ impl<T: Num> Function<T, Nvidia> for CudnnLSTM<T> {
         let dhy = self
             .hy
             .upgrade()
-            .unwrap()
-            .get_grad()
-            .map(|dhy| dhy.get_as_ref());
+            .map(|dhy| dhy.get_grad().unwrap().get_as_ref());
         let dcy = self
             .cy
             .upgrade()
-            .unwrap()
-            .get_grad()
-            .map(|dcy| dcy.get_as_ref());
+            .map(|dcy| dcy.get_grad().unwrap().get_as_ref());
         let weight = self.weight.get_data().to_ref();
         let ddata = rnn_desc.lstm_bkwd_data(
             x_shape,
@@ -138,4 +132,137 @@ pub fn lstm_cudnn<T: Num>(
 
     // LSTMOutput { y, hy, cy }
     y
+}
+
+#[cfg(test)]
+mod lstm_test {
+    use std::{cell::RefCell, rc::Rc};
+
+    use zenu_matrix::{
+        device::{cpu::Cpu, nvidia::Nvidia},
+        dim::DimDyn,
+        matrix::{Matrix, Owned},
+        nn::rnn::{RNNDescriptor, RNNWeightsMat},
+    };
+
+    use zenu_test::{
+        assert_mat_eq_epsilon, assert_val_eq, assert_val_eq_grad, read_test_case_from_json_val,
+    };
+
+    use crate::Variable;
+
+    use super::lstm_cudnn;
+
+    #[cfg(feature = "nvidia")]
+    #[test]
+    fn rnn() {
+        let matrix_map =
+            read_test_case_from_json_val!("../test_data_json/lstm_fwd_bkwd_small.json");
+
+        let mut weights = Vec::new();
+        let input_weight: Matrix<Owned<f32>, DimDyn, Cpu> =
+            matrix_map.get("rnn.weight_ih_l0").unwrap().clone();
+        let hidden_weight = matrix_map.get("rnn.weight_hh_l0").unwrap().clone();
+        let input_bias = matrix_map.get("rnn.bias_ih_l0").unwrap().clone();
+        let hidden_bias = matrix_map.get("rnn.bias_hh_l0").unwrap().clone();
+
+        let rnn_weights = RNNWeightsMat::new(input_weight, hidden_weight, input_bias, hidden_bias);
+        weights.push(rnn_weights);
+
+        let input = matrix_map.get("input").unwrap().clone();
+        let output = matrix_map.get("output").unwrap().clone();
+        let input_size = input.shape()[2];
+        let hidden_size = output.shape()[2];
+        let batch_size = input.shape()[1];
+
+        let rnn_desc =
+            RNNDescriptor::<f32>::lstm(false, 0.0, input_size, hidden_size, 1, batch_size);
+
+        let input = matrix_map.get("input").unwrap().clone();
+        let input = Variable::new(input.to::<Nvidia>());
+
+        let weight_num_elm = rnn_desc.get_weight_num_elems();
+        let weight = Matrix::<Owned<f32>, DimDyn, Nvidia>::alloc([weight_num_elm]);
+        let weight = Variable::new(weight);
+
+        rnn_desc
+            .load_rnn_weights(weight.get_as_mut().as_mut_ptr().cast(), weights)
+            .unwrap();
+
+        let rnn_desc = Rc::new(RefCell::new(rnn_desc));
+
+        let result = lstm_cudnn(
+            rnn_desc.clone(),
+            input.clone(),
+            None,
+            None,
+            weight.clone(),
+            true,
+        );
+
+        result.backward();
+
+        let expected_output = matrix_map.get("output").unwrap();
+
+        assert_val_eq!(result, expected_output.clone().to::<Nvidia>(), 1e-5);
+        assert_val_eq_grad!(
+            input.clone(),
+            matrix_map.get("input_grad").unwrap().clone().to::<Nvidia>(),
+            1e-5
+        );
+
+        let params = rnn_desc.borrow().store_rnn_weights::<Cpu>(
+            weight
+                .get_grad()
+                .unwrap()
+                .get_as_mut()
+                .as_mut_ptr()
+                .cast::<u8>(),
+        );
+
+        let g_input_weight = params[0].input_weight();
+        let g_hidden_weight = params[0].hidden_weight();
+        let g_input_bias = params[0].input_bias();
+        let g_hidden_bias = params[0].hidden_bias();
+
+        assert_mat_eq_epsilon!(
+            g_input_weight,
+            matrix_map
+                .get("rnn.weight_ih_l0_grad")
+                .unwrap()
+                .clone()
+                .to::<Cpu>(),
+            1e-5
+        );
+
+        assert_mat_eq_epsilon!(
+            g_hidden_weight,
+            matrix_map
+                .get("rnn.weight_hh_l0_grad")
+                .unwrap()
+                .clone()
+                .to::<Cpu>(),
+            1e-5
+        );
+
+        assert_mat_eq_epsilon!(
+            g_input_bias,
+            matrix_map
+                .get("rnn.bias_ih_l0_grad")
+                .unwrap()
+                .clone()
+                .to::<Cpu>(),
+            1e-5
+        );
+
+        assert_mat_eq_epsilon!(
+            g_hidden_bias,
+            matrix_map
+                .get("rnn.bias_hh_l0_grad")
+                .unwrap()
+                .clone()
+                .to::<Cpu>(),
+            1e-5
+        );
+    }
 }
