@@ -319,6 +319,7 @@ mod lstm_test {
         }
     }
 
+    #[expect(clippy::similar_names)]
     fn lstm_test_single_layer<D: Device>(path: &str) {
         let mats: HashMap<String, Matrix<Owned<f32>, DimDyn, Cpu>> =
             read_test_case_from_json_val!(path);
@@ -333,7 +334,7 @@ mod lstm_test {
         let h = zeros([1, batch_size, hidden_size]);
         let c = zeros([1, batch_size, hidden_size]);
 
-        let output = lstm_naive(input.clone(), h, c, &[weights], false);
+        let output = lstm_naive(input.clone(), h, c, &[weights.clone()], false);
         let expected = mats.get("output").unwrap().clone();
         output.backward();
         assert_val_eq!(output, expected.to::<D>(), 1e-5);
@@ -341,6 +342,22 @@ mod lstm_test {
         let grad_input = mats.get("input_grad").unwrap().clone();
         let grad_input = grad_input.to::<D>();
         assert_val_eq_grad!(input, grad_input, 1e-5);
+
+        let grad_weight_ih = mats.get("rnn.weight_ih_l0_grad").unwrap().clone();
+        let grad_weight_ih = grad_weight_ih.to::<D>();
+        assert_val_eq_grad!(weights.forward.weight_ih, grad_weight_ih, 1e-5);
+
+        let grad_weight_hh = mats.get("rnn.weight_hh_l0_grad").unwrap().clone();
+        let grad_weight_hh = grad_weight_hh.to::<D>();
+        assert_val_eq_grad!(weights.forward.weight_hh, grad_weight_hh, 1e-5);
+
+        let grad_bias_ih = mats.get("rnn.bias_ih_l0_grad").unwrap().clone();
+        let grad_bias_ih = grad_bias_ih.to::<D>();
+        assert_val_eq_grad!(weights.forward.bias_ih, grad_bias_ih, 1e-5);
+
+        let grad_bias_hh = mats.get("rnn.bias_hh_l0_grad").unwrap().clone();
+        let grad_bias_hh = grad_bias_hh.to::<D>();
+        assert_val_eq_grad!(weights.forward.bias_hh, grad_bias_hh, 1e-5);
     }
 
     fn small_lstm<D: Device>() {

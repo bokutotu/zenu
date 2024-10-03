@@ -1,4 +1,4 @@
-use rand_distr::{Distribution, StandardNormal};
+ut se rand_distr::{Distribution, StandardNormal};
 use zenu_matrix::{device::Device, index::index_dyn_impl::Index, nn::rnn::RNNWeightsMat, num::Num};
 
 use crate::{
