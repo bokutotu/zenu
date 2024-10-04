@@ -454,7 +454,20 @@ where
         }
     }
 
+    #[expect(clippy::missing_panics_doc)]
     pub fn as_slice(&self) -> &[R::Item] {
+        // let num_elm = self.shape().num_elm();
+        // unsafe { std::slice::from_raw_parts(self.as_ptr(), num_elm) }
+        if self.shape().len() <= 1 {
+            // let num_elm = std::cmp::max(self.shape().num_elm(), 1);
+            // unsafe { std::slice::from_raw_parts(self.as_ptr(), num_elm) }
+            self.as_slice_unchecked()
+        } else {
+            panic!("Invalid shape");
+        }
+    }
+
+    fn as_slice_unchecked(&self) -> &[R::Item] {
         let num_elm = self.shape().num_elm();
         unsafe { std::slice::from_raw_parts(self.as_ptr(), num_elm) }
     }
@@ -496,13 +509,30 @@ where
         unsafe { self.ptr.ptr.add(self.offset()) }
     }
 
-    #[expect(clippy::mut_from_ref, clippy::missing_panics_doc)]
+    #[expect(clippy::missing_panics_doc)]
     pub fn as_mut_slice(&self) -> &mut [T] {
         if self.shape().len() <= 1 {
-            let num_elm = std::cmp::max(self.shape().num_elm(), 1);
-            unsafe { std::slice::from_raw_parts_mut(self.as_mut_ptr(), num_elm) }
+            self.as_mut_slice_unchecked()
         } else {
             panic!("Invalid shape");
+        }
+    }
+
+    #[expect(clippy::mut_from_ref)]
+    pub fn as_mut_slice_unchecked(&self) -> &mut [T] {
+        let num_elm = self.shape().num_elm();
+        unsafe { std::slice::from_raw_parts_mut(self.as_mut_ptr(), num_elm) }
+    }
+
+    pub fn for_each<F>(&mut self, mut f: F)
+    where
+        F: FnMut(&mut T),
+    {
+        let num_elm = self.shape().num_elm();
+        let mut ptr = self.as_mut_ptr();
+        for _ in 0..num_elm {
+            f(unsafe { &mut *ptr });
+            ptr = unsafe { ptr.add(1) };
         }
     }
 
