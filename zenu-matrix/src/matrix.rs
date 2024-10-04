@@ -524,16 +524,13 @@ where
         unsafe { std::slice::from_raw_parts_mut(self.as_mut_ptr(), num_elm) }
     }
 
-    pub fn each_by<F>(&mut self, mut f: F)
+    #[expect(clippy::missing_panics_doc)]
+    pub fn each_by<F>(&mut self, f: F)
     where
         F: FnMut(&mut T),
     {
-        let num_elm = self.shape().num_elm();
-        let mut ptr = self.as_mut_ptr();
-        for _ in 0..num_elm {
-            f(unsafe { &mut *ptr });
-            ptr = unsafe { ptr.add(1) };
-        }
+        assert_eq!(self.stride().into_iter().min(), Some(1), "Invalid stride");
+        self.as_mut_slice_unchecked().iter_mut().for_each(f);
     }
 
     #[must_use]
