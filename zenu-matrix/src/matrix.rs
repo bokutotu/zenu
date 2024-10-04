@@ -524,7 +524,7 @@ where
         unsafe { std::slice::from_raw_parts_mut(self.as_mut_ptr(), num_elm) }
     }
 
-    pub fn for_each<F>(&mut self, mut f: F)
+    pub fn each_by<F>(&mut self, mut f: F)
     where
         F: FnMut(&mut T),
     {
