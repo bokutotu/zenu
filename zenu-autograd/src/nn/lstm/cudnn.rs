@@ -155,7 +155,7 @@ mod lstm_test {
 
     #[cfg(feature = "nvidia")]
     #[test]
-    fn rnn() {
+    fn lstm() {
         let matrix_map =
             read_test_case_from_json_val!("../test_data_json/lstm_fwd_bkwd_small.json");
 
