@@ -1,5 +1,4 @@
-mod cudnn;
-mod naive;
+#[cfg(feature = "nvidia")]
+pub mod cudnn;
 
-pub use cudnn::lstm_cudnn;
-pub use naive::lstm_naive;
+pub mod naive;
