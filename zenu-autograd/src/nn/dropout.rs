@@ -133,7 +133,10 @@ fn dropout_backward<T: Num, D: Device>(
 
 #[cfg(test)]
 mod dropout {
-    use zenu_matrix::device::{cpu::Cpu, Device};
+    use zenu_matrix::{
+        device::{cpu::Cpu, Device},
+        dim::DimTrait,
+    };
     use zenu_test::run_test;
 
     use crate::creator::rand::normal;
@@ -155,13 +158,16 @@ mod dropout {
             output.to::<Cpu>()
         };
 
+        let outupt_mat_cpu_flatten = output_mat_cpu.reshape([output_mat_cpu.shape().num_elm()]);
+        let input_mat_cpu_flatten = input_mat_cpu.reshape([input_mat_cpu.shape().num_elm()]);
+
         let mask = {
-            let s = output_mat_cpu.as_slice();
+            let s = outupt_mat_cpu_flatten.as_slice();
             s.iter().map(|&x| (x != 0f32)).collect::<Vec<_>>()
         };
 
-        let output_slice = output_mat_cpu.as_slice();
-        let input_slice = input_mat_cpu.as_slice();
+        let output_slice = outupt_mat_cpu_flatten.as_slice();
+        let input_slice = input_mat_cpu_flatten.as_slice();
 
         for idx in 0..output_slice.len() {
             if mask[idx] {
@@ -185,6 +191,7 @@ mod dropout {
             input_grad.to::<Cpu>()
         };
 
+        let input_grad_cpu = input_grad_cpu.reshape([input_grad_cpu.shape().num_elm()]);
         for (idx, mask) in mask.iter().enumerate().take(output_slice.len()) {
             if *mask {
                 assert_eq!(input_grad_cpu.as_slice()[idx], 1f32 / (1f32 - 0.8));
@@ -192,6 +199,14 @@ mod dropout {
                 assert_eq!(input_grad_cpu.as_slice()[idx], 0f32);
             }
         }
+
+        // for (idx, mask) in mask.iter().enumerate().take(output_slice.len()) {
+        //     if *mask {
+        //         assert_eq!(input_grad_cpu.as_slice()[idx], 1f32 / (1f32 - 0.8));
+        //     } else {
+        //         assert_eq!(input_grad_cpu.as_slice()[idx], 0f32);
+        //     }
+        // }
     }
     run_test!(dropout_4d_train, dropout_4d_train_cpu, dropout_4d_train_gpu);
 }

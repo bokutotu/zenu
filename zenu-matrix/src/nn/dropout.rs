@@ -259,13 +259,13 @@ mod dropout {
         let y = dropout(&x, &mut state);
         let y_cpu = y.clone().to::<Cpu>();
         let y_cpu_ref = y_cpu.to_ref();
-        let y_cpu_slice = y_cpu_ref.as_slice();
+        let y_cpu_slice = y_cpu_ref.as_slice_unchecked();
         let zero_indexed = y_cpu_slice.iter().map(|x| *x == 0.).collect::<Vec<bool>>();
         let y_grad = Matrix::ones_like(&y);
         let x_grad = dropout_grad(&y_grad.to_ref(), &state);
         let x_grad_cpu = x_grad.to::<Cpu>();
         let x_grad_cpu_ref = x_grad_cpu.to_ref();
-        let x_grad_cpu_slice = x_grad_cpu_ref.as_slice();
+        let x_grad_cpu_slice = x_grad_cpu_ref.as_slice_unchecked();
 
         for i in 0..y_cpu_slice.len() {
             if zero_indexed[i] {

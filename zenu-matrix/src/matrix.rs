@@ -456,18 +456,14 @@ where
 
     #[expect(clippy::missing_panics_doc)]
     pub fn as_slice(&self) -> &[R::Item] {
-        // let num_elm = self.shape().num_elm();
-        // unsafe { std::slice::from_raw_parts(self.as_ptr(), num_elm) }
         if self.shape().len() <= 1 {
-            // let num_elm = std::cmp::max(self.shape().num_elm(), 1);
-            // unsafe { std::slice::from_raw_parts(self.as_ptr(), num_elm) }
             self.as_slice_unchecked()
         } else {
             panic!("Invalid shape");
         }
     }
 
-    fn as_slice_unchecked(&self) -> &[R::Item] {
+    pub fn as_slice_unchecked(&self) -> &[R::Item] {
         let num_elm = self.shape().num_elm();
         unsafe { std::slice::from_raw_parts(self.as_ptr(), num_elm) }
     }
