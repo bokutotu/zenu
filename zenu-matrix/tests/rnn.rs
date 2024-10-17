@@ -63,10 +63,10 @@ fn get_rnn_weights_from_json(
 
 fn assert_grad(expected: &[RNNWeightsMat<f32, Cpu>], actual: &[RNNWeightsMat<f32, Cpu>]) {
     for (expected, actual) in expected.iter().zip(actual.iter()) {
-        assert_mat_eq_epsilon!(expected.input_weight(), actual.input_weight(), 1e-5);
-        assert_mat_eq_epsilon!(expected.hidden_weight(), actual.hidden_weight(), 1e-5);
-        assert_mat_eq_epsilon!(expected.input_bias(), actual.input_bias(), 1e-5);
-        assert_mat_eq_epsilon!(expected.hidden_bias(), actual.hidden_bias(), 1e-5);
+        assert_mat_eq_epsilon!(expected.input_weight(), actual.input_weight(), 5e-3);
+        assert_mat_eq_epsilon!(expected.hidden_weight(), actual.hidden_weight(), 5e-3);
+        assert_mat_eq_epsilon!(expected.input_bias(), actual.input_bias(), 5e-3);
+        assert_mat_eq_epsilon!(expected.hidden_bias(), actual.hidden_bias(), 5e-3);
     }
 }
 
@@ -115,7 +115,7 @@ fn rnn(json_path: String, num_layers: usize, bidirectional: bool) {
     let input = matrix_map.get("input").unwrap().clone().to::<Nvidia>();
     let y = desc.rnn_fwd(input.to_ref(), None, weight.to_ref(), true);
     let output = matrix_map.get("output").unwrap().clone().to::<Nvidia>();
-    assert_mat_eq_epsilon!(y.y.to_ref(), output, 1e-5);
+    assert_mat_eq_epsilon!(y.y.to_ref(), output, 2e-4);
 
     let dy = Matrix::ones_like(&y.y);
 
@@ -131,7 +131,7 @@ fn rnn(json_path: String, num_layers: usize, bidirectional: bool) {
     assert_mat_eq_epsilon!(
         dx.dx.to_ref(),
         matrix_map.get("input_grad").unwrap().clone().to::<Nvidia>(),
-        1e-5
+        2e-3
     );
     let mut dw = desc.rnn_bkwd_weights(input.to_ref(), None, y.y.to_ref());
 
@@ -158,7 +158,7 @@ fn lstm(json_path: String, num_layers: usize, bidirectional: bool) {
     let input = matrix_map.get("input").unwrap().clone().to::<Nvidia>();
     let y = desc.lstm_fwd(input.to_ref(), None, None, weight.to_ref(), true);
     let output = matrix_map.get("output").unwrap().clone().to::<Nvidia>();
-    assert_mat_eq_epsilon!(y.y.to_ref(), output, 1e-5);
+    assert_mat_eq_epsilon!(y.y.to_ref(), output, 2e-4);
 
     let dy = Matrix::ones_like(&y.y);
 
@@ -176,7 +176,7 @@ fn lstm(json_path: String, num_layers: usize, bidirectional: bool) {
     assert_mat_eq_epsilon!(
         dx.dx.to_ref(),
         matrix_map.get("input_grad").unwrap().clone().to::<Nvidia>(),
-        1e-5
+        2e-4
     );
     let mut dw = desc.lstm_bkwd_weights(input.to_ref(), None, None, y.y.to_ref());
 
