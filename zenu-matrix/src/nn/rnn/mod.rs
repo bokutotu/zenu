@@ -7,4 +7,4 @@ mod rnn;
 mod rnn_params;
 
 pub use descriptor::RNNDescriptor;
-pub use rnn_params::{RNNBkwdDataOutput, RNNOutput, RNNWeightsMat};
+pub use rnn_params::{RNNBkwdDataOutput, RNNOutput, RNNWeights};

@@ -21,14 +21,14 @@ pub struct RNNBkwdDataOutput<T: Num> {
 }
 
 #[derive(Debug, Clone)]
-pub struct RNNWeightsMat<T: Num, D: Device> {
+pub struct RNNWeights<T: Num, D: Device> {
     input_weight: Matrix<Owned<T>, DimDyn, D>,
     hidden_weight: Matrix<Owned<T>, DimDyn, D>,
     input_bias: Matrix<Owned<T>, DimDyn, D>,
     hidden_bias: Matrix<Owned<T>, DimDyn, D>,
 }
 
-impl<T: Num, D: Device> RNNWeightsMat<T, D> {
+impl<T: Num, D: Device> RNNWeights<T, D> {
     #[must_use]
     pub fn new(
         input_weight: Matrix<Owned<T>, DimDyn, D>,

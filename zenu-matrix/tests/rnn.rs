@@ -12,7 +12,7 @@ fn get_rnn_weights_from_json(
     num_layers: usize,
     bidirectional: bool,
     suffix: &str,
-) -> Vec<RNNWeightsMat<f32, Cpu>> {
+) -> Vec<RNNWeights<f32, Cpu>> {
     let mut weights = Vec::new();
     for layer_id in 0..num_layers {
         let input_weight: Matrix<Owned<f32>, DimDyn, Cpu> = matrix_map
@@ -32,7 +32,7 @@ fn get_rnn_weights_from_json(
             .unwrap()
             .clone();
 
-        let rnn_weights = RNNWeightsMat::new(input_weight, hidden_weight, input_bias, hidden_bias);
+        let rnn_weights = RNNWeights::new(input_weight, hidden_weight, input_bias, hidden_bias);
         weights.push(rnn_weights);
 
         if bidirectional {
@@ -53,15 +53,14 @@ fn get_rnn_weights_from_json(
                 .unwrap()
                 .clone();
 
-            let rnn_weights =
-                RNNWeightsMat::new(input_weight, hidden_weight, input_bias, hidden_bias);
+            let rnn_weights = RNNWeights::new(input_weight, hidden_weight, input_bias, hidden_bias);
             weights.push(rnn_weights);
         }
     }
     weights
 }
 
-fn assert_grad(expected: &[RNNWeightsMat<f32, Cpu>], actual: &[RNNWeightsMat<f32, Cpu>]) {
+fn assert_grad(expected: &[RNNWeights<f32, Cpu>], actual: &[RNNWeights<f32, Cpu>]) {
     for (expected, actual) in expected.iter().zip(actual.iter()) {
         assert_mat_eq_epsilon!(expected.input_weight(), actual.input_weight(), 5e-3);
         assert_mat_eq_epsilon!(expected.hidden_weight(), actual.hidden_weight(), 5e-3);

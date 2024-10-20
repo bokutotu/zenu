@@ -9,7 +9,7 @@ use crate::{
     num::Num,
 };
 
-use super::RNNWeightsMat;
+use super::RNNWeights;
 
 pub struct RNNDescriptor<T: Num> {
     pub desc: RNNDesc<T>,
@@ -242,7 +242,7 @@ impl<T: Num> RNNDescriptor<T> {
     pub fn load_rnn_weights<D: Device>(
         &self,
         weight_ptr: *mut u8,
-        mut params: Vec<RNNWeightsMat<T, D>>,
+        mut params: Vec<RNNWeights<T, D>>,
     ) -> Result<(), String> {
         let expected_size = self.get_num_layers() * if self.get_is_bidirectional() { 2 } else { 1 };
 
@@ -292,7 +292,7 @@ impl<T: Num> RNNDescriptor<T> {
         [self.get_hidden_size() * factor].into()
     }
 
-    pub fn store_rnn_weights<D: Device>(&self, weight_ptr: *mut u8) -> Vec<RNNWeightsMat<T, D>> {
+    pub fn store_rnn_weights<D: Device>(&self, weight_ptr: *mut u8) -> Vec<RNNWeights<T, D>> {
         let num_layers = self.get_output_num_layers();
         let mut params = Vec::with_capacity(num_layers);
 
@@ -308,7 +308,7 @@ impl<T: Num> RNNDescriptor<T> {
             let hidden_bias = Matrix::alloc(bias_shape);
 
             let mut layer_params =
-                RNNWeightsMat::new(input_weight, hidden_weight, input_bias, hidden_bias);
+                RNNWeights::new(input_weight, hidden_weight, input_bias, hidden_bias);
 
             layer_params.load_from_params(layer);
             params.push(layer_params);

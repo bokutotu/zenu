@@ -1,5 +1,7 @@
 use rand_distr::{Distribution, StandardNormal};
-use zenu_matrix::{device::Device, index::index_dyn_impl::Index, nn::rnn::RNNWeightsMat, num::Num};
+use zenu_matrix::{
+    device::Device, index::index_dyn_impl::Index, nn::rnn::RNNWeights as RNNWeightsMat, num::Num,
+};
 
 use crate::{
     activation::relu::relu,
@@ -267,7 +269,7 @@ mod rnn_test {
 
     use crate::{
         creator::{ones::ones, zeros::zeros},
-        nn::rnn::naive::{rnn_relu, RNNLayerWeights},
+        nn::rnns::rnn::naive::{rnn_relu, RNNLayerWeights},
         Variable,
     };
 
