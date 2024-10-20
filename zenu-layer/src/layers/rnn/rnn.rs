@@ -4,7 +4,10 @@ use std::{cell::RefCell, rc::Rc};
 
 use rand_distr::{Distribution, StandardNormal};
 use zenu_autograd::{
-    nn::rnns::rnn::naive::{rnn_relu, rnn_tanh, RNNLayerWeights, RNNWeights},
+    nn::rnns::{
+        rnn::naive::{rnn_relu, rnn_tanh, RNNLayerWeights},
+        weights::RNNWeights,
+    },
     Variable,
 };
 use zenu_matrix::{device::Device, num::Num};
