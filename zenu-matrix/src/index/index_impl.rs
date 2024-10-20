@@ -7,14 +7,17 @@ macro_rules! impl_index_axis {
         pub struct $impl_name(pub usize);
 
         impl $impl_name {
+            #[must_use]
             pub fn new(index: usize) -> Self {
                 $impl_name(index)
             }
 
+            #[must_use]
             pub fn index(&self) -> usize {
                 self.0
             }
 
+            #[must_use]
             pub fn target_dim(&self) -> usize {
                 $target_dim
             }
@@ -29,10 +32,9 @@ macro_rules! impl_index_axis {
                 for i in 0..shape.len() {
                     if i == $target_dim {
                         continue;
-                    } else {
-                        shape_v.push(shape[i]);
-                        stride_v.push(stride[i]);
                     }
+                    shape_v.push(shape[i]);
+                    stride_v.push(stride[i]);
                 }
 
                 let new_shape = Dout::from(&shape_v as &[usize]);

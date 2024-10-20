@@ -17,7 +17,7 @@ pub trait MaxIdx: DeviceBase {
 }
 
 impl MaxIdx for Cpu {
-    #[allow(clippy::not_unsafe_ptr_arg_deref)]
+    #[expect(clippy::not_unsafe_ptr_arg_deref)]
     fn max_idx<T: Num>(input: *const T, size: usize, stride: usize) -> usize {
         let tmep_v = unsafe { std::slice::from_raw_parts(input, size * stride) };
         let mut max_idx = 0;
@@ -41,7 +41,11 @@ impl MaxIdx for Nvidia {
 }
 
 impl<T: Num, R: Repr<Item = T>, D: Device> Matrix<R, DimDyn, D> {
+    #[must_use]
     pub fn max_idx(&self) -> DimDyn {
+        if self.shape().is_empty() {
+            return DimDyn::from(&[] as &[usize]);
+        }
         let default_stride = self.to_default_stride();
         let idx = <D as MaxIdx>::max_idx(
             default_stride.as_ptr(),
@@ -51,16 +55,17 @@ impl<T: Num, R: Repr<Item = T>, D: Device> Matrix<R, DimDyn, D> {
         default_stride.shape_stride().get_dim_by_offset(idx)
     }
 
+    #[must_use]
     pub fn max_item(&self) -> T {
         let idx = self.max_idx();
         self.index_item(idx)
     }
 
     /// selfはdefault stride
+    #[expect(clippy::missing_panics_doc)]
+    #[must_use]
     pub fn max_axis(&self, axis: usize, keep_dim: bool) -> Matrix<Owned<T>, DimDyn, D> {
-        if axis >= self.shape().len() {
-            panic!("max_axis: Axis out of bounds");
-        }
+        assert!(axis < self.shape().len(), "max_axis: Axis out of bounds");
 
         let mut output_shape = Vec::new();
         for i in 0..self.shape().len() {
@@ -93,10 +98,10 @@ impl<T: Num, R: Repr<Item = T>, D: Device> Matrix<R, DimDyn, D> {
         output
     }
 
+    #[expect(clippy::missing_panics_doc)]
+    #[must_use]
     pub fn max_axis_idx_ravel(&self, axis: usize) -> Vec<usize> {
-        if axis >= self.shape().len() {
-            panic!("max_axis: Axis out of bounds");
-        }
+        assert!(axis < self.shape().len(), "max_axis: Axis out of bounds");
 
         let mut output_shape = Vec::new();
         for i in 0..self.shape().len() {
@@ -131,6 +136,15 @@ impl<T: Num, R: Repr<Item = T>, D: Device> Matrix<R, DimDyn, D> {
 
 #[cfg(test)]
 mod max_idx {
+    #![expect(
+        clippy::float_cmp,
+        clippy::unreadable_literal,
+        clippy::cast_precision_loss,
+        clippy::cast_possible_truncation,
+        clippy::too_many_lines,
+        clippy::excessive_precision
+    )]
+
     use crate::{
         device::Device,
         dim::DimDyn,

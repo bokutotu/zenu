@@ -18,7 +18,7 @@ pub fn read_env() -> Vec<PathBuf> {
 }
 
 #[must_use]
-#[allow(clippy::missing_panics_doc)]
+#[expect(clippy::missing_panics_doc)]
 pub fn find_cuda() -> Vec<PathBuf> {
     let mut candidates = read_env();
     candidates.push(PathBuf::from("/opt/cuda"));
@@ -48,8 +48,8 @@ pub fn find_cuda() -> Vec<PathBuf> {
     valid_paths
 }
 
-#[allow(clippy::missing_panics_doc)]
-#[allow(clippy::uninlined_format_args)]
+#[expect(clippy::missing_panics_doc)]
+#[expect(clippy::uninlined_format_args)]
 #[must_use]
 pub fn find_cuda_windows() -> PathBuf {
     let paths = read_env();

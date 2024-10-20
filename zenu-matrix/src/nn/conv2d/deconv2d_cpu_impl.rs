@@ -12,6 +12,7 @@ pub(super) fn get_deconv_outsize_(size: usize, k: usize, s: usize, p: usize) -> 
     s * (size - 1) + k - 2 * p
 }
 
+#[expect(clippy::needless_pass_by_value)]
 pub(crate) fn deconv2d_inner<T: Num, D: Device>(
     img: Matrix<Ref<&T>, DimDyn, D>,
     kernel: Matrix<Ref<&T>, DimDyn, D>,
@@ -64,6 +65,12 @@ pub(crate) fn deconv2d_inner<T: Num, D: Device>(
     result
 }
 
+#[expect(
+    clippy::cast_precision_loss,
+    clippy::unreadable_literal,
+    clippy::too_many_lines,
+    clippy::excessive_precision
+)]
 #[cfg(test)]
 mod deconv2d {
 

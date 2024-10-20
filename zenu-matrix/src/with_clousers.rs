@@ -43,9 +43,10 @@ fn array_array_scalar_check<T: Num, D: DeviceBase>(
     a: &Matrix<Ref<&mut T>, DimDyn, D>,
     b: &Matrix<Ref<&T>, DimDyn, D>,
 ) {
-    if a.shape() != b.shape() {
-        panic!("The shape of the matrix is different.");
-    }
+    assert!(
+        a.shape().len() >= b.shape().len(),
+        "The rank of the matrix is different."
+    );
 }
 fn array_array_scalar_with_closure<T: Num, D: DeviceBase, B: Copy, F>(
     a: &Matrix<Ref<&mut T>, DimDyn, D>,
@@ -87,23 +88,22 @@ fn array_array_check<T: Num, D: DeviceBase>(
     a: &Matrix<Ref<&mut T>, DimDyn, D>,
     b: &Matrix<Ref<&T>, DimDyn, D>,
 ) {
-    if a.shape().len() < b.shape().len() {
-        panic!("The rank of the matrix is different.");
-    }
-    if !(a.shape().is_include(b.shape()) || a.shape().is_include_bradcast(b.shape())) {
-        panic!(
-            "other shape is not include self shape {:?} {:?}",
-            a.shape(),
-            b.shape()
-        );
-    }
-    if !a.shape().is_include_bradcast(b.shape()) {
-        panic!(
-            "other shape is not include self shape {:?} {:?}",
-            a.shape(),
-            b.shape()
-        );
-    }
+    assert!(
+        a.shape().len() >= b.shape().len(),
+        "The rank of the matrix is different."
+    );
+    assert!(
+        a.shape().is_include(b.shape()) || a.shape().is_include_bradcast(b.shape()),
+        "other shape is not include self shape {:?} {:?}",
+        a.shape(),
+        b.shape()
+    );
+    assert!(
+        a.shape().is_include_bradcast(b.shape()),
+        "other shape is not include self shape {:?}, {:?}",
+        a.shape(),
+        b.shape()
+    );
 }
 fn array_array_with_closure<T: Num, D: DeviceBase, FMatMat, FMatSca>(
     a: &Matrix<Ref<&mut T>, DimDyn, D>,
@@ -114,7 +114,7 @@ fn array_array_with_closure<T: Num, D: DeviceBase, FMatMat, FMatSca>(
     FMatMat: Fn(&Matrix<Ref<&mut T>, DimDyn, D>, &Matrix<Ref<&T>, DimDyn, D>) + Copy,
     FMatSca: Fn(&Matrix<Ref<&mut T>, DimDyn, D>, *const T) + Copy,
 {
-    #[allow(clippy::if_same_then_else)]
+    #[expect(clippy::if_same_then_else)]
     if a.shape().is_scalar() {
         f_mat_scalar_ptr(a, b.as_ptr());
     } else if a.shape_stride().is_default_stride() && b.shape().is_scalar() {
@@ -169,11 +169,14 @@ fn array_array_array_check<T: Num, D: DeviceBase>(
             rhs.shape()
         );
     }
-    if self_.shape().slice() != larger_dim.slice() && self_.shape().slice() != smaller_dim.slice() {
-        panic!("longer shape lhs or rhs is same shape to self\n self.shape = {:?}\n lhs.shape() = {:?} \n rhs.shape() = {:?}",
-            self_.shape(), lhs.shape(), rhs.shape());
-    }
+
+    assert!(
+        !(self_.shape().slice() != larger_dim.slice() && self_.shape().slice() != smaller_dim.slice()),
+        "longer shape lhs or rhs is same shape to self\n self.shape = {:?}\n lhs.shape() = {:?} \n rhs.shape() = {:?}",
+        self_.shape(), lhs.shape(), rhs.shape()
+    );
 }
+
 fn array_array_array_with_closure<T, D, FMatMat, FMatSca>(
     a: &Matrix<Ref<&mut T>, DimDyn, D>,
     b: &Matrix<Ref<&T>, DimDyn, D>,
@@ -240,6 +243,12 @@ pub(crate) fn array_array_array<T, D, FMatMat, FMatSca>(
 
 #[cfg(test)]
 mod basic_ops {
+    #![expect(
+        clippy::float_cmp,
+        clippy::cast_precision_loss,
+        clippy::cast_possible_truncation
+    )]
+
     use std::{cell::RefCell, rc::Rc};
 
     use crate::{
@@ -284,6 +293,7 @@ mod basic_ops {
             });
         }
 
+        #[expect(clippy::needless_pass_by_value)]
         fn add_assign_(&self, other: Matrix<Ref<&T>, DimDyn, D>) {
             array_array(
                 self,
@@ -350,8 +360,8 @@ mod basic_ops {
             *num_called.borrow_mut() += 1;
         };
 
-        let mut a = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros(&[10, 10, 10]);
-        scalar_array_with_closure(&a.to_ref_mut().into_dyn_dim(), 1.0, &clsuer);
+        let mut a = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros([10, 10, 10]);
+        scalar_array_with_closure(&a.to_ref_mut().into_dyn_dim(), 1.0, clsuer);
         assert_eq!(num_called.take(), 1);
     }
 
@@ -362,22 +372,22 @@ mod basic_ops {
             *num_called.borrow_mut() += 1;
         };
 
-        let mut a = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros(&[10, 10, 10]);
+        let mut a = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros([10, 10, 10]);
         let a = a.to_ref_mut().slice_mut(slice_dynamic![.., ..;2, ..]);
-        scalar_array_with_closure(&a.into_dyn_dim(), 1.0, &clsuer);
+        scalar_array_with_closure(&a.into_dyn_dim(), 1.0, clsuer);
         assert_eq!(num_called.take(), 50);
     }
 
     #[test]
     fn add_scalar_default_stride() {
-        let mut a = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros(&[10, 10, 10]);
+        let mut a = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros([10, 10, 10]);
         a.to_ref_mut().add_scalar_assign_(1.0);
         assert_eq!(a.to_vec(), &[1.0; 10 * 10 * 10]);
     }
 
     #[test]
     fn add_scalar_sliced() {
-        let mut a = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros(&[2, 4, 5]);
+        let mut a = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros([2, 4, 5]);
         {
             let a_ref = a.to_ref_mut().slice_mut(slice_dynamic![.., ..;2, ..]);
             a_ref.add_scalar_assign_(1.0);
@@ -399,25 +409,25 @@ mod basic_ops {
 
     #[test]
     fn add_assign_default_stride_same_shape() {
-        let mut a = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros(&[10, 10, 10]);
-        let b = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(vec![1.0; 10 * 10 * 10], &[10, 10, 10]);
+        let mut a = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros([10, 10, 10]);
+        let b = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(vec![1.0; 10 * 10 * 10], [10, 10, 10]);
         a.to_ref_mut().add_assign_(b.to_ref());
         assert_eq!(a.to_vec(), &[1.0; 10 * 10 * 10]);
     }
 
     #[test]
     fn add_assign_default_stride_bradcast() {
-        let mut a = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros(&[10, 10, 10]);
-        let b = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(vec![1.0; 10 * 10], &[10, 10]);
+        let mut a = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros([10, 10, 10]);
+        let b = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(vec![1.0; 10 * 10], [10, 10]);
         a.to_ref_mut().add_assign_(b.to_ref());
         assert_eq!(a.to_vec(), &[1.0; 10 * 10 * 10]);
     }
 
     #[test]
     fn add_assign_other_stride() {
-        let mut a = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros(&[10, 10, 10]);
+        let mut a = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros([10, 10, 10]);
         let b = (0..10 * 10 * 10).map(|x| x as f32).collect::<Vec<f32>>();
-        let b = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(b, &[10, 10, 10]);
+        let b = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(b, [10, 10, 10]);
         let b = b.slice(slice_dynamic![.., 2, ..]);
         a.to_ref_mut().add_assign_(b);
         let mut ans = Vec::new();
@@ -431,16 +441,16 @@ mod basic_ops {
                 }
             }
         }
-        let ans = [&ans; 10].iter().cloned().flatten().collect::<Vec<&f32>>();
+        let ans = [&ans; 10].iter().copied().flatten().collect::<Vec<&f32>>();
         let ans = ans.iter().map(|x| **x).collect::<Vec<f32>>();
         assert_eq!(a.to_vec(), ans);
     }
 
     #[test]
     fn add_assign_self_strided() {
-        let mut a = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros(&[20, 10, 10]);
+        let mut a = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros([20, 10, 10]);
         let b_vec = (0..10 * 10).map(|x| x as f32).collect::<Vec<f32>>();
-        let b = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(b_vec.clone(), &[10, 10]);
+        let b = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(b_vec.clone(), [10, 10]);
         {
             let a_ref = a.to_ref_mut().slice_mut(slice_dynamic![..;2, .., ..]);
             a_ref.add_assign_(b.to_ref());
@@ -458,16 +468,16 @@ mod basic_ops {
 
     #[test]
     fn add_scalar_default_stride_() {
-        let mut a = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros(&[10, 10, 10]);
-        let b = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(vec![1.0; 10 * 10 * 10], &[10, 10, 10]);
+        let mut a = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros([10, 10, 10]);
+        let b = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(vec![1.0; 10 * 10 * 10], [10, 10, 10]);
         a.to_ref_mut().add_scalar_(&b.to_ref(), 2.0);
         assert_eq!(a.to_vec(), &[3.0; 10 * 10 * 10]);
     }
 
     #[test]
     fn add_scalar_sliced_() {
-        let mut a = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros(&[2, 4, 5]);
-        let b = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(vec![1.0; 2 * 4 * 5], &[2, 4, 5]);
+        let mut a = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros([2, 4, 5]);
+        let b = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(vec![1.0; 2 * 4 * 5], [2, 4, 5]);
         {
             let a_ref = a.to_ref_mut().slice_mut(slice_dynamic![.., ..;2, ..]);
             let b_ref = b.slice(slice_dynamic![.., ..;2, ..]);
@@ -490,9 +500,9 @@ mod basic_ops {
 
     #[test]
     fn add_default_stride_same_shape() {
-        let mut a = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros(&[10, 10, 10]);
-        let b = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(vec![1.0; 10 * 10 * 10], &[10, 10, 10]);
-        let c = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(vec![2.0; 10 * 10 * 10], &[10, 10, 10]);
+        let mut a = Matrix::<Owned<f32>, DimDyn, Cpu>::zeros([10, 10, 10]);
+        let b = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(vec![1.0; 10 * 10 * 10], [10, 10, 10]);
+        let c = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(vec![2.0; 10 * 10 * 10], [10, 10, 10]);
         a.to_ref_mut().add_(&b.to_ref(), &c.to_ref());
         assert_eq!(a.to_vec(), &[3.0; 10 * 10 * 10]);
     }

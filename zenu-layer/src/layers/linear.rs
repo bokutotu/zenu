@@ -17,6 +17,8 @@ pub struct Linear<T: Num, D: Device> {
 }
 
 impl<T: Num, D: Device> Module<T, D> for Linear<T, D> {
+    type Input = Variable<T, D>;
+    type Output = Variable<T, D>;
     fn call(&self, input: Variable<T, D>) -> Variable<T, D> {
         let output = matmul(input, self.weight.clone());
         if let Some(bias) = &self.bias {

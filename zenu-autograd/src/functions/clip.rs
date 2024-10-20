@@ -20,8 +20,8 @@ impl<T: Num, D: Device> Clip<T, D> {
         );
         let output = output.downgrade();
         Self {
-            max,
             min,
+            max,
             input,
             output,
         }

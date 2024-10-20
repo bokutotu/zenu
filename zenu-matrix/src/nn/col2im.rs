@@ -6,6 +6,7 @@ use crate::{
     slice_dynamic,
 };
 
+#[expect(clippy::needless_pass_by_value)]
 pub(super) fn col2im<T: Num, D: Device>(
     col: Matrix<Ref<&T>, DimDyn, D>,
     img_shape: [usize; 4],
@@ -53,10 +54,11 @@ mod col2im {
 
     use super::col2im;
 
+    #[expect(clippy::cast_precision_loss)]
     #[test]
     fn col2im_small() {
         let col = (1..=1350).map(|x| x as f32).collect::<Vec<f32>>();
-        let col = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(col, &[2, 3, 3, 3, 5, 5]);
+        let col = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(col, [2, 3, 3, 3, 5, 5]);
         let img_shape = [2, 3, 5, 5];
         let kernel_shape = (3, 3);
         let stride = (1, 1);
@@ -78,7 +80,7 @@ mod col2im {
         .iter()
         .map(|&x| x as f32)
         .collect::<Vec<f32>>();
-        let ans = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(ans, &[2, 3, 5, 5]);
+        let ans = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(ans, [2, 3, 5, 5]);
         assert!((img - ans).asum() < 1e-6);
     }
 }

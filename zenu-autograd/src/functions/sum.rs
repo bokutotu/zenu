@@ -57,6 +57,7 @@ impl<T: Num, D: Device> Function<T, D> for Sum<T, D> {
 }
 
 // FIXME: 汚いのでどうにかする
+#[must_use]
 pub fn sum<T: Num, D: Device>(
     input: Variable<T, D>,
     axis: usize,

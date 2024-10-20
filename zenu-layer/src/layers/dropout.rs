@@ -1,7 +1,7 @@
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use zenu_autograd::{
-    functions::dropout::{dropout, DropoutConfig},
+    nn::dropout::{dropout, DropoutConfig},
     Variable,
 };
 use zenu_matrix::{
@@ -19,6 +19,8 @@ pub struct Dropout<T: Num, D: Device> {
 }
 
 impl<T: Num, D: Device> Module<T, D> for Dropout<T, D> {
+    type Input = Variable<T, D>;
+    type Output = Variable<T, D>;
     fn call(&self, input: Variable<T, D>) -> Variable<T, D> {
         if self.input_shape.as_ref().unwrap().borrow().slice() != input.get_shape().slice() {
             todo!();
@@ -28,6 +30,7 @@ impl<T: Num, D: Device> Module<T, D> for Dropout<T, D> {
 }
 
 impl<T: Num, D: Device> Dropout<T, D> {
+    #[must_use]
     pub fn new(rate: f32) -> Self {
         let config = DropoutConfig::new(rate);
         Self {

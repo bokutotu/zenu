@@ -26,9 +26,11 @@ impl<T: Num, D: Device> MatMul<T, D> {
 
 impl<T: Num, D: Device> Function<T, D> for MatMul<T, D> {
     fn forward(&self) {
-        if self.x.get_data().shape().len() != 2 || self.y.get_data().shape().len() != 2 {
-            panic!("x.shape().len() != 2 || y.shape().len() != 2");
-        }
+        assert_eq!(
+            self.x.get_shape().len() == 2,
+            self.y.get_shape().len() == 2,
+            "x.shape().len() != y.shape().len()"
+        );
 
         let x = self.x.get_data();
         let y = self.y.get_data();
@@ -54,6 +56,7 @@ impl<T: Num, D: Device> Function<T, D> for MatMul<T, D> {
     }
 }
 
+#[must_use]
 pub fn matmul<T: Num, D: Device>(x: Variable<T, D>, y: Variable<T, D>) -> Variable<T, D> {
     let output_shape = DimDyn::new(&[x.get_data().shape()[0], y.get_data().shape()[1]]);
     let output = alloc(output_shape);
@@ -64,7 +67,7 @@ pub fn matmul<T: Num, D: Device>(x: Variable<T, D>, y: Variable<T, D>) -> Variab
 }
 
 #[cfg(test)]
-mod matmul {
+mod matmul_test {
     use zenu_matrix::{
         device::Device,
         dim::DimDyn,
@@ -79,8 +82,8 @@ mod matmul {
     fn matmul_test<D: Device>() {
         let x = vec![1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12.];
         let y = vec![1., 2., 3., 4., 5., 6., 7., 8.];
-        let x = Matrix::<Owned<f64>, DimDyn, D>::from_vec(x, &[3, 4]);
-        let y = Matrix::<Owned<f64>, DimDyn, D>::from_vec(y, &[4, 2]);
+        let x = Matrix::<Owned<f64>, DimDyn, D>::from_vec(x, [3, 4]);
+        let y = Matrix::<Owned<f64>, DimDyn, D>::from_vec(y, [4, 2]);
 
         let x = Variable::new(x);
         let y = Variable::new(y);
@@ -88,13 +91,13 @@ mod matmul {
         let output = matmul(x.clone(), y.clone());
         output.backward();
         let ans = vec![50., 60., 114., 140., 178., 220.];
-        let ans = Matrix::<Owned<f64>, DimDyn, D>::from_vec(ans, &[3, 2]);
+        let ans = Matrix::<Owned<f64>, DimDyn, D>::from_vec(ans, [3, 2]);
         assert_val_eq!(output, ans, 1e-6);
         let x_grad_ans = vec![3., 7., 11., 15., 3., 7., 11., 15., 3., 7., 11., 15.];
-        let x_grad_ans = Matrix::<Owned<f64>, DimDyn, D>::from_vec(x_grad_ans, &[3, 4]);
+        let x_grad_ans = Matrix::<Owned<f64>, DimDyn, D>::from_vec(x_grad_ans, [3, 4]);
         assert_val_eq_grad!(x, x_grad_ans, 1e-6);
         let y_grad_ans = vec![15., 15., 18., 18., 21., 21., 24., 24.];
-        let y_grad_ans = Matrix::<Owned<f64>, DimDyn, D>::from_vec(y_grad_ans, &[4, 2]);
+        let y_grad_ans = Matrix::<Owned<f64>, DimDyn, D>::from_vec(y_grad_ans, [4, 2]);
         assert_val_eq_grad!(y, y_grad_ans, 1e-6);
     }
     run_test!(matmul_test, matmul_cpu, matmul_nvidia);

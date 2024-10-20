@@ -22,6 +22,8 @@ use rand_distr::{num_traits::Float, uniform::SampleUniform, Normal, StandardNorm
 /// * `std_dev` - The standard deviation of the normal distribution.
 /// * `shape` - The shape of the matrix.
 /// * `seed` - An optional seed for the random number generator.
+/// # Panics
+/// Normal distribution may fail to create if the standard deviation is negative.
 pub fn normal<T: Num, S: DimTrait, D: DeviceBase>(
     mean: T,
     std_dev: T,
@@ -133,6 +135,7 @@ where
     D: DeviceBase,
 {
     /// Creates a new `NormalBuilder`.
+    #[must_use]
     pub fn new() -> Self {
         NormalBuilder {
             mean: None,
@@ -144,43 +147,52 @@ where
     }
 
     /// Sets the mean of the normal distribution.
+    #[must_use]
     pub fn mean(mut self, mean: T) -> Self {
         self.mean = Some(mean);
         self
     }
 
     /// Sets the standard deviation of the normal distribution.
+    #[must_use]
     pub fn std_dev(mut self, std_dev: T) -> Self {
         self.std_dev = Some(std_dev);
         self
     }
 
     /// Sets the shape of the matrix.
+    #[must_use]
     pub fn shape(mut self, shape: S) -> Self {
         self.shape = Some(shape);
         self
     }
 
     /// Sets the seed for the random number generator.
+    #[must_use]
     pub fn seed(mut self, seed: u64) -> Self {
         self.seed = Some(seed);
         self
     }
 
     /// Sets the shape of the matrix to be the same as another matrix.
+    #[must_use]
     pub fn from_matrx<R2: Repr<Item = T>>(mut self, a: &Matrix<R2, S, D>) -> Self {
         self.shape = Some(a.shape());
         self
     }
 
     /// Builds the matrix.
+    /// # Panics
+    /// `mean` and `std_dev` and `shape` is not set.
+    #[must_use]
     pub fn build(self) -> Matrix<Owned<T>, S, D>
     where
         StandardNormal: Distribution<T>,
     {
-        if self.mean.is_none() || self.std_dev.is_none() || self.shape.is_none() {
-            panic!("mean, std_dev, and shape must be set");
-        }
+        assert!(self.mean.is_some(), "mean must be set");
+        assert!(self.std_dev.is_some(), "std_dev must be set");
+        assert!(self.shape.is_some(), "shape must be set");
+
         normal(
             self.mean.unwrap(),
             self.std_dev.unwrap(),
@@ -208,6 +220,7 @@ where
     D: DeviceBase,
 {
     /// Creates a new `UniformBuilder`.
+    #[must_use]
     pub fn new() -> Self {
         UniformBuilder {
             low: None,
@@ -219,40 +232,51 @@ where
     }
 
     /// Sets the lower bound of the uniform distribution.
+    #[must_use]
     pub fn low(mut self, low: T) -> Self {
         self.low = Some(low);
         self
     }
 
     /// Sets the upper bound of the uniform distribution.
+    #[must_use]
     pub fn high(mut self, high: T) -> Self {
         self.high = Some(high);
         self
     }
 
     /// Sets the shape of the matrix.
+    #[must_use]
     pub fn shape(mut self, shape: S) -> Self {
         self.shape = Some(shape);
         self
     }
 
     /// Sets the seed for the random number generator.
+    #[must_use]
     pub fn seed(mut self, seed: u64) -> Self {
         self.seed = Some(seed);
         self
     }
 
     /// Sets the shape of the matrix to be the same as another matrix.
+    #[must_use]
     pub fn from_matrx<R2: Repr<Item = T>>(mut self, a: &Matrix<R2, S, D>) -> Self {
         self.shape = Some(a.shape());
         self
     }
 
     /// Builds the matrix.
+    /// # Panics
+    /// `low`, `high`, and `shape` is not set.
     pub fn build(self) -> Matrix<Owned<T>, S, D> {
-        if self.low.is_none() || self.high.is_none() || self.shape.is_none() {
-            panic!("low, high, and shape must be set");
-        }
+        // if self.low.is_none() || self.high.is_none() || self.shape.is_none() {
+        //     panic!("low, high, and shape must be set");
+        // }
+        assert!(self.low.is_some(), "low must be set");
+        assert!(self.high.is_some(), "high must be set");
+        assert!(self.shape.is_some(), "shape must be set");
+
         uniform(
             self.low.unwrap(),
             self.high.unwrap(),

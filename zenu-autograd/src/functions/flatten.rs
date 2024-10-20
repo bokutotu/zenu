@@ -42,6 +42,7 @@ impl<T: Num, D: Device> Function<T, D> for Flatten<T, D> {
     }
 }
 
+#[must_use]
 pub fn flatten<T: Num, D: Device>(input: Variable<T, D>) -> Variable<T, D> {
     let input_shape = input.get_data().shape();
     let batch_size = input_shape[0];

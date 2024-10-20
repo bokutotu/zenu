@@ -6,6 +6,7 @@ use crate::{
     slice_dynamic,
 };
 
+#[expect(clippy::needless_pass_by_value)]
 fn padding<T: Num, D: Device>(
     input: Matrix<Ref<&T>, DimDyn, D>,
     pad_h: usize,
@@ -153,6 +154,7 @@ mod im2col {
         }
     }
 
+    #[expect(clippy::cast_precision_loss, clippy::too_many_lines)]
     fn medium_test_case() -> Im2ColTestCase<f32> {
         let input = (1..151).map(|x| x as f32).collect::<Vec<f32>>();
         let ans = vec![

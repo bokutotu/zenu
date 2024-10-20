@@ -21,6 +21,7 @@ pub struct BatchNorm2dInner<T: Num> {
 }
 
 impl<T: Num> BatchNorm2dInner<T> {
+    #[must_use]
     pub fn new(dim: DimDyn) -> Self {
         let train = BatchNorm2dConfig::<T>::new(dim);
         let inference = BatchNorm2dInferenceConfig::<T>::new(dim);
@@ -40,6 +41,7 @@ pub struct BatchNorm2dAutoGradConfig<T: Num> {
 }
 
 impl<T: Num> BatchNorm2dAutoGradConfig<T> {
+    #[must_use]
     pub fn new(dim: &[usize]) -> Self {
         let dim = DimDyn::from(dim);
         let inner = BatchNorm2dInner::new(dim);
@@ -127,9 +129,9 @@ impl<T: Num, D: Device> Function<T, D> for BatchNorm2d<T, D> {
             self.config.clone(),
         );
 
-        self.x.set_grad(grads.x_grad);
-        self.scale.set_grad(grads.scale_grad);
-        self.bias.set_grad(grads.bias_grad);
+        self.x.set_grad(grads.x);
+        self.scale.set_grad(grads.scale);
+        self.bias.set_grad(grads.bias);
     }
 
     fn get_inputs(&self) -> Vec<Variable<T, D>> {
@@ -210,9 +212,9 @@ pub fn batch_norm_2d<T: Num, D: Device>(
 }
 
 struct BatchNorm2dGradOut<T: Num, D: Device> {
-    x_grad: Variable<T, D>,
-    scale_grad: Variable<T, D>,
-    bias_grad: Variable<T, D>,
+    x: Variable<T, D>,
+    scale: Variable<T, D>,
+    bias: Variable<T, D>,
 }
 
 fn batch_norm_2d_bkwd<T: Num, D: Device>(
@@ -245,9 +247,9 @@ fn batch_norm_2d_bkwd<T: Num, D: Device>(
     scale_grad.set_creator(function.clone());
     bias_grad.set_creator(function);
     BatchNorm2dGradOut {
-        x_grad,
-        scale_grad,
-        bias_grad,
+        x: x_grad,
+        scale: scale_grad,
+        bias: bias_grad,
     }
 }
 
@@ -307,6 +309,7 @@ mod batch_norm_2d {
     }
     run_test!(small_test, small_test_cpu, small_test_gpu);
 
+    #[expect(clippy::too_many_lines, clippy::unreadable_literal)]
     fn small_test_case<D: Device>() -> TestConfig<D> {
         let x = [
             -1.1258398,
@@ -706,16 +709,16 @@ mod batch_norm_2d {
             0.019394945,
             -0.8808039,
         ];
-        let x = Matrix::<Owned<f32>, DimDyn, D>::from_vec(x.to_vec(), &[2, 3, 4, 4]);
-        let y = Matrix::<Owned<f32>, DimDyn, D>::from_vec(y.to_vec(), &[2, 3, 4, 4]);
-        let x_grad = Matrix::<Owned<f32>, DimDyn, D>::from_vec(x_grad.to_vec(), &[2, 3, 4, 4]);
-        let y_grad = Matrix::<Owned<f32>, DimDyn, D>::from_vec(y_grad.to_vec(), &[2, 3, 4, 4]);
-        let scale = Matrix::<Owned<f32>, DimDyn, D>::from_vec(weight.to_vec(), &[3]);
-        let bias = Matrix::<Owned<f32>, DimDyn, D>::from_vec(bias.to_vec(), &[3]);
-        let mean = Matrix::<Owned<f32>, DimDyn, D>::from_vec(prev_mean.to_vec(), &[3]);
-        let variance = Matrix::<Owned<f32>, DimDyn, D>::from_vec(prev_var.to_vec(), &[3]);
-        let scale_grad = Matrix::<Owned<f32>, DimDyn, D>::from_vec(weight_grad.to_vec(), &[3]);
-        let bias_grad = Matrix::<Owned<f32>, DimDyn, D>::from_vec(bias_grad.to_vec(), &[3]);
+        let x = Matrix::<Owned<f32>, DimDyn, D>::from_vec(x.to_vec(), [2, 3, 4, 4]);
+        let y = Matrix::<Owned<f32>, DimDyn, D>::from_vec(y.to_vec(), [2, 3, 4, 4]);
+        let x_grad = Matrix::<Owned<f32>, DimDyn, D>::from_vec(x_grad.to_vec(), [2, 3, 4, 4]);
+        let y_grad = Matrix::<Owned<f32>, DimDyn, D>::from_vec(y_grad.to_vec(), [2, 3, 4, 4]);
+        let scale = Matrix::<Owned<f32>, DimDyn, D>::from_vec(weight.to_vec(), [3]);
+        let bias = Matrix::<Owned<f32>, DimDyn, D>::from_vec(bias.to_vec(), [3]);
+        let mean = Matrix::<Owned<f32>, DimDyn, D>::from_vec(prev_mean.to_vec(), [3]);
+        let variance = Matrix::<Owned<f32>, DimDyn, D>::from_vec(prev_var.to_vec(), [3]);
+        let scale_grad = Matrix::<Owned<f32>, DimDyn, D>::from_vec(weight_grad.to_vec(), [3]);
+        let bias_grad = Matrix::<Owned<f32>, DimDyn, D>::from_vec(bias_grad.to_vec(), [3]);
         let config = BatchNorm2dAutoGradConfig::new(&[2, 3, 4, 4]);
         TestConfig {
             x,

@@ -1,9 +1,14 @@
-use crate::ZENU_CUDA_STATE;
+use zenu_cudnn_sys::{
+    cudnnBatchNormMode_t, cudnnBatchNormalizationBackward, cudnnBatchNormalizationForwardInference,
+    cudnnBatchNormalizationForwardTraining, cudnnDestroyTensorDescriptor, cudnnStatus_t,
+    cudnnTensorDescriptor_t,
+};
 
-use zenu_cudnn_sys::*;
+use crate::ZENU_CUDA_STATE;
 
 use super::{error::ZenuCudnnError, tensor_descriptor_4d, TensorFormat};
 
+#[expect(clippy::module_name_repetitions)]
 pub struct BatchNorm2d<T> {
     input: cudnnTensorDescriptor_t,
     output: cudnnTensorDescriptor_t,
@@ -12,6 +17,7 @@ pub struct BatchNorm2d<T> {
     _phantom: std::marker::PhantomData<T>,
 }
 
+#[expect(clippy::module_name_repetitions)]
 #[derive(Debug, Default)]
 pub struct BatchNorm2dBuilder<T> {
     input: Option<cudnnTensorDescriptor_t>,
@@ -21,7 +27,7 @@ pub struct BatchNorm2dBuilder<T> {
     _phantom: std::marker::PhantomData<T>,
 }
 
-impl<T: 'static> BatchNorm2d<T> {
+impl<T: 'static + Copy> BatchNorm2d<T> {
     pub fn new(
         input: cudnnTensorDescriptor_t,
         output: cudnnTensorDescriptor_t,
@@ -37,7 +43,11 @@ impl<T: 'static> BatchNorm2d<T> {
         }
     }
 
-    #[allow(clippy::too_many_arguments)]
+    #[expect(
+        clippy::too_many_arguments,
+        clippy::missing_errors_doc,
+        clippy::missing_panics_doc
+    )]
     pub fn forward_train(
         &self,
         alpha: T,
@@ -57,21 +67,21 @@ impl<T: 'static> BatchNorm2d<T> {
             cudnnBatchNormalizationForwardTraining(
                 cudnn_handle,
                 self.mode,
-                &alpha as *const T as *const std::ffi::c_void,
-                &beta as *const T as *const std::ffi::c_void,
+                std::ptr::from_ref(&alpha).cast(),
+                std::ptr::from_ref(&beta).cast(),
                 self.input,
-                x as *const std::ffi::c_void,
+                x.cast(),
                 self.output,
-                y as *mut std::ffi::c_void,
+                y.cast(),
                 self.scale_bias_mean_var,
-                scale as *const std::ffi::c_void,
-                bias as *const std::ffi::c_void,
+                scale.cast(),
+                bias.cast(),
                 expotential_average_factor,
-                estimated_mean as *mut std::ffi::c_void,
-                estimated_variance as *mut std::ffi::c_void,
+                estimated_mean.cast(),
+                estimated_variance.cast(),
                 1e-10,
-                result_save_mean as *mut std::ffi::c_void,
-                result_save_inv_variance as *mut std::ffi::c_void,
+                result_save_mean.cast(),
+                result_save_inv_variance.cast(),
             )
         };
         if status != cudnnStatus_t::CUDNN_STATUS_SUCCESS {
@@ -92,6 +102,7 @@ impl<T> Drop for BatchNorm2d<T> {
 }
 
 impl<T: 'static> BatchNorm2dBuilder<T> {
+    #[must_use]
     pub fn new() -> Self {
         Self {
             input: None,
@@ -140,6 +151,7 @@ impl<T: 'static> BatchNorm2dBuilder<T> {
         })
     }
 
+    #[must_use]
     pub fn mode(self, mode: cudnnBatchNormMode_t) -> Self {
         Self {
             mode: Some(mode),
@@ -147,6 +159,7 @@ impl<T: 'static> BatchNorm2dBuilder<T> {
         }
     }
 
+    #[must_use]
     pub fn build(self) -> BatchNorm2d<T> {
         let input = self.input.expect("input is required");
         let output = self.output.expect("output is required");
@@ -167,6 +180,7 @@ impl<T: 'static> BatchNorm2dBuilder<T> {
     }
 }
 
+#[expect(clippy::module_name_repetitions)]
 pub struct BatchNorm2dBackward<T> {
     input: cudnnTensorDescriptor_t,
     input_grad: cudnnTensorDescriptor_t,
@@ -176,6 +190,7 @@ pub struct BatchNorm2dBackward<T> {
     _phantom: std::marker::PhantomData<T>,
 }
 
+#[expect(clippy::module_name_repetitions)]
 #[derive(Debug, Default)]
 pub struct BatchNorm2dBackwardBuilder<T> {
     input: Option<cudnnTensorDescriptor_t>,
@@ -186,8 +201,8 @@ pub struct BatchNorm2dBackwardBuilder<T> {
     _phantom: std::marker::PhantomData<T>,
 }
 
-impl<T: 'static> BatchNorm2dBackward<T> {
-    #[allow(clippy::too_many_arguments)]
+impl<T: 'static + Copy> BatchNorm2dBackward<T> {
+    #[expect(clippy::too_many_arguments)]
     pub fn backward(
         &self,
         alpha_data_grad: T,
@@ -208,23 +223,23 @@ impl<T: 'static> BatchNorm2dBackward<T> {
             cudnnBatchNormalizationBackward(
                 cudnn_handle,
                 self.mode,
-                &alpha_data_grad as *const T as *const std::ffi::c_void,
-                &beta_data_grad as *const T as *const std::ffi::c_void,
-                &alpha_param_diff as *const T as *const std::ffi::c_void,
-                &beta_param_diff as *const T as *const std::ffi::c_void,
+                std::ptr::from_ref(&alpha_data_grad).cast(),
+                std::ptr::from_ref(&beta_data_grad).cast(),
+                std::ptr::from_ref(&alpha_param_diff).cast(),
+                std::ptr::from_ref(&beta_param_diff).cast(),
                 self.input,
-                x as *const std::ffi::c_void,
+                x.cast(),
                 self.output_grad,
-                y_grad as *const std::ffi::c_void,
+                y_grad.cast(),
                 self.input_grad,
-                x_grad as *mut std::ffi::c_void,
+                x_grad.cast(),
                 self.scale_bias_mean_var,
-                scale as *const std::ffi::c_void,
-                scale_grad as *mut std::ffi::c_void,
-                bias_grad as *mut std::ffi::c_void,
+                scale.cast(),
+                scale_grad.cast(),
+                bias_grad.cast(),
                 1e-10,
-                result_save_mean as *const std::ffi::c_void,
-                result_save_inv_variance as *const std::ffi::c_void,
+                result_save_mean.cast(),
+                result_save_inv_variance.cast(),
             )
         };
         if status != cudnnStatus_t::CUDNN_STATUS_SUCCESS {
@@ -246,6 +261,7 @@ impl<T> Drop for BatchNorm2dBackward<T> {
 }
 
 impl<T: 'static> BatchNorm2dBackwardBuilder<T> {
+    #[must_use]
     pub fn new() -> Self {
         Self {
             input: None,
@@ -310,6 +326,7 @@ impl<T: 'static> BatchNorm2dBackwardBuilder<T> {
         })
     }
 
+    #[must_use]
     pub fn mode(self, mode: cudnnBatchNormMode_t) -> Self {
         Self {
             mode: Some(mode),
@@ -317,6 +334,7 @@ impl<T: 'static> BatchNorm2dBackwardBuilder<T> {
         }
     }
 
+    #[must_use]
     pub fn build(self) -> BatchNorm2dBackward<T> {
         let input = self.input.expect("input is required");
         let input_grad = self.input_grad.expect("input_grad is required");
@@ -338,6 +356,7 @@ impl<T: 'static> BatchNorm2dBackwardBuilder<T> {
     }
 }
 
+#[expect(clippy::module_name_repetitions)]
 pub struct BatchNorm2dInference<T> {
     input: cudnnTensorDescriptor_t,
     output: cudnnTensorDescriptor_t,
@@ -346,6 +365,7 @@ pub struct BatchNorm2dInference<T> {
     _phantom: std::marker::PhantomData<T>,
 }
 
+#[expect(clippy::module_name_repetitions)]
 #[derive(Debug, Default)]
 pub struct BatchNorm2dInferenceBuilder<T> {
     input: Option<cudnnTensorDescriptor_t>,
@@ -355,8 +375,8 @@ pub struct BatchNorm2dInferenceBuilder<T> {
     _phantom: std::marker::PhantomData<T>,
 }
 
-impl<T: 'static> BatchNorm2dInference<T> {
-    #[allow(clippy::too_many_arguments)]
+impl<T: 'static + Copy> BatchNorm2dInference<T> {
+    #[expect(clippy::too_many_arguments)]
     pub fn forward_inference(
         &self,
         alpha: T,
@@ -373,17 +393,17 @@ impl<T: 'static> BatchNorm2dInference<T> {
             cudnnBatchNormalizationForwardInference(
                 cudnn_handle,
                 self.mode,
-                &alpha as *const T as *const std::ffi::c_void,
-                &beta as *const T as *const std::ffi::c_void,
+                std::ptr::from_ref(&alpha).cast(),
+                std::ptr::from_ref(&beta).cast(),
                 self.input,
-                x as *const std::ffi::c_void,
+                x.cast(),
                 self.output,
-                y as *mut std::ffi::c_void,
+                y.cast(),
                 self.scale_bias_mean_var,
-                scale as *const std::ffi::c_void,
-                bias as *const std::ffi::c_void,
-                estimated_mean as *const std::ffi::c_void,
-                estimated_variance as *const std::ffi::c_void,
+                scale.cast(),
+                bias.cast(),
+                estimated_mean.cast(),
+                estimated_variance.cast(),
                 1e-10,
             )
         };
@@ -405,6 +425,7 @@ impl<T> Drop for BatchNorm2dInference<T> {
 }
 
 impl<T: 'static> BatchNorm2dInferenceBuilder<T> {
+    #[must_use]
     pub fn new() -> Self {
         Self {
             input: None,
@@ -453,6 +474,7 @@ impl<T: 'static> BatchNorm2dInferenceBuilder<T> {
         })
     }
 
+    #[must_use]
     pub fn mode(self, mode: cudnnBatchNormMode_t) -> Self {
         Self {
             mode: Some(mode),
@@ -460,6 +482,7 @@ impl<T: 'static> BatchNorm2dInferenceBuilder<T> {
         }
     }
 
+    #[must_use]
     pub fn build(self) -> BatchNorm2dInference<T> {
         let input = self.input.expect("input is required");
         let output = self.output.expect("output is required");
@@ -480,7 +503,7 @@ impl<T: 'static> BatchNorm2dInferenceBuilder<T> {
 }
 
 #[cfg(test)]
-mod batch_norm {
+mod batch_norm_test {
     use zenu_cudnn_sys::cudnnBatchNormMode_t;
 
     use crate::{
@@ -515,6 +538,7 @@ mod batch_norm {
     }
 
     #[test]
+    #[expect(clippy::too_many_lines, clippy::similar_names)]
     fn forward() {
         // import torch
         // import torch.nn as nn
@@ -611,7 +635,7 @@ mod batch_norm {
             .unwrap()
             .build();
 
-        let input_cpu = vec![
+        let input_cpu = [
             -1.1258398,
             -1.1523602,
             -0.25057858,
@@ -629,7 +653,7 @@ mod batch_norm {
             1.1167772,
             -0.24727815,
         ];
-        let output_cpu = vec![
+        let output_cpu = [
             -1.0970649,
             -1.1374662,
             0.23631285,
@@ -647,12 +671,12 @@ mod batch_norm {
             0.92657995,
             -0.40424496,
         ];
-        let running_mean = vec![-0.04057, 0.01670607];
-        let running_variance = vec![0.9492437, 1.0200632];
-        let saved_mean = vec![-0.04057, 0.01670607];
-        let saved_variance = vec![0.9492437, 1.0200632];
-        let scale = vec![1.0, 1.0];
-        let bias = vec![0.0, 0.0];
+        let running_mean = [-0.04057, 0.01670607];
+        let running_variance = [0.9492437, 1.0200632];
+        let saved_mean = [-0.04057, 0.01670607];
+        let saved_variance = [0.9492437, 1.0200632];
+        let scale = [1.0, 1.0];
+        let bias = [0.0, 0.0];
 
         let input_gpu = cpu_vec_to_gpu(&input_cpu);
         let running_mean_gpu = cpu_vec_to_gpu(&running_mean);
@@ -724,7 +748,7 @@ mod batch_norm {
             .unwrap();
 
         let input_grad_cpu = gpu_to_cpu_vec(input_grad, input_cpu.len());
-        let input_grad_ans = vec![
+        let input_grad_ans = [
             -0.37104672,
             0.3949252,
             -3.165237,

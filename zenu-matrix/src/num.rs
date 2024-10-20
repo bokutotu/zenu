@@ -1,3 +1,5 @@
+#![expect(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
+
 use std::{
     fmt::{Debug, Display},
     ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign},
@@ -30,6 +32,7 @@ pub trait Num:
     fn is_f32() -> bool;
     fn minus_one() -> Self;
     fn from_usize(n: usize) -> Self;
+    #[must_use]
     fn size() -> usize {
         std::mem::size_of::<Self>()
     }
@@ -73,7 +76,7 @@ impl Num for f64 {
     }
 
     fn from_f32(f: f32) -> Self {
-        f as f64
+        f64::from(f)
     }
 
     fn from_f64(f: f64) -> Self {

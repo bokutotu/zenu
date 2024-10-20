@@ -17,17 +17,20 @@ pub trait Asum: DeviceBase {
 
 impl Asum for Cpu {
     fn asum<T: Num>(n: usize, x: *const T, incx: usize) -> T {
-        use cblas::*;
+        use cblas::{dasum, sasum};
         extern crate openblas_src;
 
+        let n = i32::try_from(n).unwrap();
+        let incx = i32::try_from(incx).unwrap();
+
         if TypeId::of::<T>() == TypeId::of::<f32>() {
-            let x = unsafe { std::slice::from_raw_parts(x as *const f32, n * incx) };
-            let result = unsafe { sasum(n as i32, x, incx as i32) };
-            unsafe { *(&result as *const f32 as *const T) }
+            let x = unsafe { std::slice::from_raw_parts(x.cast(), 1) };
+            let result = unsafe { sasum(n, x, incx) };
+            T::from_f32(result)
         } else if TypeId::of::<T>() == TypeId::of::<f64>() {
-            let x = unsafe { std::slice::from_raw_parts(x as *const f64, n * incx) };
-            let result = unsafe { dasum(n as i32, x, incx as i32) };
-            unsafe { *(&result as *const f64 as *const T) }
+            let x = unsafe { std::slice::from_raw_parts(x.cast(), 1) };
+            let result = unsafe { dasum(n, x, incx) };
+            T::from_f64(result)
         } else {
             unimplemented!()
         }
@@ -37,7 +40,7 @@ impl Asum for Cpu {
 #[cfg(feature = "nvidia")]
 impl Asum for Nvidia {
     fn asum<T: Num>(n: usize, x: *const T, incx: usize) -> T {
-        use zenu_cuda::cublas::*;
+        use zenu_cuda::cublas::cublas_asum;
 
         cublas_asum(n, x, incx).unwrap()
     }
@@ -65,7 +68,8 @@ impl<T: Num, R: Repr<Item = T>, S: DimTrait, D: DeviceBase + Asum> Matrix<R, S, 
 }
 
 #[cfg(test)]
-mod asum {
+mod asum_test {
+    #![expect(clippy::float_cmp)]
 
     use crate::{dim::DimDyn, matrix::Owned, slice_dynamic};
 

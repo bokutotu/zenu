@@ -2,6 +2,7 @@ use zenu_matrix::{device::Device, num::Num};
 
 use crate::{functions::sum_to::sum_to, Variable};
 
+#[must_use]
 pub fn mean_squared_error<T: Num, D: Device>(
     y_true: Variable<T, D>,
     y_pred: Variable<T, D>,
@@ -13,7 +14,7 @@ pub fn mean_squared_error<T: Num, D: Device>(
 }
 
 #[cfg(test)]
-mod mse {
+mod mse_test {
 
     use zenu_matrix::{
         device::Device,

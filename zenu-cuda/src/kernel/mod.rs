@@ -1,6 +1,45 @@
 use std::any::TypeId;
 
-use zenu_cuda_kernel_sys::*;
+use zenu_cuda_kernel_sys::{
+    array_abs_assign_double, array_abs_assign_float, array_abs_double, array_abs_float,
+    array_acos_assign_double, array_acos_assign_float, array_acos_double, array_acos_float,
+    array_array_add_assign_double, array_array_add_assign_float, array_array_add_double,
+    array_array_add_float, array_array_div_assign_double, array_array_div_assign_float,
+    array_array_div_double, array_array_div_float, array_array_mul_assign_double,
+    array_array_mul_assign_float, array_array_mul_double, array_array_mul_float,
+    array_array_sub_assign_double, array_array_sub_assign_float, array_array_sub_double,
+    array_array_sub_float, array_asin_assign_double, array_asin_assign_float, array_asin_double,
+    array_asin_float, array_atan_assign_double, array_atan_assign_float, array_atan_double,
+    array_atan_float, array_clip_assign_double, array_clip_assign_float,
+    array_clip_backward_assign_double, array_clip_backward_assign_float,
+    array_clip_backward_double, array_clip_backward_float, array_clip_double, array_clip_float,
+    array_cos_assign_double, array_cos_assign_float, array_cos_double, array_cos_float,
+    array_cosh_assign_double, array_cosh_assign_float, array_cosh_double, array_cosh_float,
+    array_exp_assign_double, array_exp_assign_float, array_exp_double, array_exp_float,
+    array_log_assign_double, array_log_assign_float, array_log_double, array_log_float,
+    array_max_idx_double, array_max_idx_float, array_pow_assign_double, array_pow_assign_float,
+    array_pow_double, array_pow_float, array_scalar_add_assign_double,
+    array_scalar_add_assign_float, array_scalar_add_double, array_scalar_add_float,
+    array_scalar_div_assign_double, array_scalar_div_assign_float, array_scalar_div_double,
+    array_scalar_div_float, array_scalar_mul_assign_double, array_scalar_mul_assign_float,
+    array_scalar_mul_double, array_scalar_mul_float, array_scalar_pointer_add_assign_double,
+    array_scalar_pointer_add_assign_float, array_scalar_pointer_add_double,
+    array_scalar_pointer_add_float, array_scalar_pointer_div_assign_double,
+    array_scalar_pointer_div_assign_float, array_scalar_pointer_div_double,
+    array_scalar_pointer_div_float, array_scalar_pointer_mul_assign_double,
+    array_scalar_pointer_mul_assign_float, array_scalar_pointer_mul_double,
+    array_scalar_pointer_mul_float, array_scalar_pointer_sub_assign_double,
+    array_scalar_pointer_sub_assign_float, array_scalar_pointer_sub_double,
+    array_scalar_pointer_sub_float, array_scalar_sub_assign_double, array_scalar_sub_assign_float,
+    array_scalar_sub_double, array_scalar_sub_float, array_sin_assign_double,
+    array_sin_assign_float, array_sin_double, array_sin_float, array_sinh_assign_double,
+    array_sinh_assign_float, array_sinh_double, array_sinh_float, array_sqrt_assign_double,
+    array_sqrt_assign_float, array_sqrt_double, array_sqrt_float, array_tan_assign_double,
+    array_tan_assign_float, array_tan_double, array_tan_float, array_tanh_assign_double,
+    array_tanh_assign_float, array_tanh_double, array_tanh_float, conv_bias_add_double,
+    conv_bias_add_float, memory_access_double, memory_access_float, memory_set_double,
+    memory_set_float,
+};
 
 pub mod activation;
 
@@ -14,18 +53,18 @@ macro_rules! impl_array_scalar {
             out_stride: usize,
             stride: usize,
         ) {
-            let size = size as ::std::os::raw::c_int;
-            let stride = stride as ::std::os::raw::c_int;
-            let out_stride = out_stride as i32;
+            let size = ::libc::c_int::try_from(size).unwrap();
+            let stride = ::libc::c_int::try_from(stride).unwrap();
+            let out_stride = i32::try_from(out_stride).unwrap();
             if TypeId::of::<T>() == TypeId::of::<f32>() {
-                let a = a as *mut f32;
-                let out = out as *mut f32;
-                let scalar = unsafe { *{ &scalar as *const T as *const f32 } };
+                let a = a.cast::<f32>().cast_mut();
+                let out = out.cast::<f32>();
+                let scalar = unsafe { *std::ptr::from_ref(&scalar).cast() };
                 unsafe { $float_fn(a, size, stride, scalar, out, out_stride) };
             } else if TypeId::of::<T>() == TypeId::of::<f64>() {
-                let a = a as *mut f64;
-                let out = out as *mut f64;
-                let scalar = unsafe { *{ &scalar as *const T as *const f64 } };
+                let a = a.cast::<f64>().cast_mut();
+                let out = out.cast::<f64>();
+                let scalar = unsafe { *std::ptr::from_ref(&scalar).cast() };
                 unsafe { $double_fn(a, size, stride, scalar, out, out_stride) }
             }
         }
@@ -38,18 +77,18 @@ macro_rules! impl_array_scalar {
             out_stride: usize,
             stride: usize,
         ) {
-            let size = size as ::std::os::raw::c_int;
-            let stride = stride as ::std::os::raw::c_int;
-            let out_stride = out_stride as i32;
+            let size = ::libc::c_int::try_from(size).unwrap();
+            let stride = ::libc::c_int::try_from(stride).unwrap();
+            let out_stride = i32::try_from(out_stride).unwrap();
             if TypeId::of::<T>() == TypeId::of::<f32>() {
-                let a = a as *mut f32;
-                let out = out as *mut f32;
-                let scalar = scalar as *mut f32;
+                let a = a.cast::<f32>().cast_mut();
+                let out = out.cast::<f32>();
+                let scalar = scalar.cast::<f32>().cast_mut();
                 unsafe { $float_fn_ptr(a, size, stride, scalar, out, out_stride) };
             } else if TypeId::of::<T>() == TypeId::of::<f64>() {
-                let a = a as *mut f64;
-                let out = out as *mut f64;
-                let scalar = scalar as *mut f64;
+                let a = a.cast::<f64>().cast_mut();
+                let out = out.cast::<f64>();
+                let scalar = scalar.cast::<f64>().cast_mut();
                 unsafe { $double_fn_ptr(a, size, stride, scalar, out, out_stride) }
             }
         }
@@ -98,15 +137,15 @@ macro_rules! impl_array_scalar_assign {
         $float_pointer:ident
     ) => {
         pub fn $name_scalar<T: 'static>(a: *mut T, scalar: T, size: usize, stride: usize) {
-            let size = size as ::std::os::raw::c_int;
-            let stride = stride as ::std::os::raw::c_int;
+            let size = ::libc::c_int::try_from(size).unwrap();
+            let stride = ::libc::c_int::try_from(stride).unwrap();
             if TypeId::of::<T>() == TypeId::of::<f32>() {
-                let a = a as *mut f32;
-                let scalar = unsafe { *{ &scalar as *const T as *const f32 } };
+                let a = a.cast();
+                let scalar = unsafe { *std::ptr::from_ref(&scalar).cast() };
                 unsafe { $float_fn(a, size, stride, scalar) };
             } else if TypeId::of::<T>() == TypeId::of::<f64>() {
-                let a = a as *mut f64;
-                let scalar = unsafe { *{ &scalar as *const T as *const f64 } };
+                let a = a.cast();
+                let scalar = unsafe { *std::ptr::from_ref(&scalar).cast() };
                 unsafe { $double_fn(a, size, stride, scalar) }
             }
         }
@@ -117,15 +156,15 @@ macro_rules! impl_array_scalar_assign {
             size: usize,
             stride: usize,
         ) {
-            let size = size as ::std::os::raw::c_int;
-            let stride = stride as ::std::os::raw::c_int;
+            let size = ::libc::c_int::try_from(size).unwrap();
+            let stride = ::libc::c_int::try_from(stride).unwrap();
             if TypeId::of::<T>() == TypeId::of::<f32>() {
-                let a = a as *mut f32;
-                let scalar = scalar as *mut f32;
+                let a = a.cast();
+                let scalar = scalar.cast::<f32>().cast_mut();
                 unsafe { $float_pointer(a, size, stride, scalar) };
             } else if TypeId::of::<T>() == TypeId::of::<f64>() {
-                let a = a as *mut f64;
-                let scalar = scalar as *mut f64;
+                let a = a.cast();
+                let scalar = scalar.cast::<f64>().cast_mut();
                 unsafe { $double_pointer(a, size, stride, scalar) }
             }
         }
@@ -175,19 +214,19 @@ macro_rules! impl_arra_array {
             stride_a: usize,
             stride_b: usize,
         ) {
-            let size = size as ::std::os::raw::c_int;
-            let stride_a = stride_a as ::std::os::raw::c_int;
-            let stride_b = stride_b as ::std::os::raw::c_int;
-            let stride_c = stride_c as ::std::os::raw::c_int;
+            let size = ::libc::c_int::try_from(size).unwrap();
+            let stride_a = ::libc::c_int::try_from(stride_a).unwrap();
+            let stride_b = ::libc::c_int::try_from(stride_b).unwrap();
+            let stride_c = ::libc::c_int::try_from(stride_c).unwrap();
             if TypeId::of::<T>() == TypeId::of::<f32>() {
-                let a = a as *mut f32;
-                let b = b as *mut f32;
-                let c = c as *mut f32;
+                let a = a.cast::<f32>().cast_mut();
+                let b = b.cast::<f32>().cast_mut();
+                let c = c.cast::<f32>();
                 unsafe { $float_fn(a, stride_a, b, stride_b, c, stride_c, size) };
             } else if TypeId::of::<T>() == TypeId::of::<f64>() {
-                let a = a as *mut f64;
-                let b = b as *mut f64;
-                let c = c as *mut f64;
+                let a = a.cast::<f64>().cast_mut();
+                let b = b.cast::<f64>().cast_mut();
+                let c = c.cast::<f64>();
                 unsafe { $double_fn(a, stride_a, b, stride_b, c, stride_c, size) }
             }
         }
@@ -207,16 +246,16 @@ macro_rules! impl_array_array_assign {
             stride_a: usize,
             stride_b: usize,
         ) {
-            let size = size as ::std::os::raw::c_int;
-            let stride_a = stride_a as ::std::os::raw::c_int;
-            let stride_b = stride_b as ::std::os::raw::c_int;
+            let size = ::libc::c_int::try_from(size).unwrap();
+            let stride_a = ::libc::c_int::try_from(stride_a).unwrap();
+            let stride_b = ::libc::c_int::try_from(stride_b).unwrap();
             if TypeId::of::<T>() == TypeId::of::<f32>() {
-                let a = a as *mut f32;
-                let b = b as *mut f32;
+                let a = a.cast::<f32>();
+                let b = b.cast::<f32>().cast_mut();
                 unsafe { $float_fn(a, stride_a, b, stride_b, size) };
             } else if TypeId::of::<T>() == TypeId::of::<f64>() {
-                let a = a as *mut f64;
-                let b = b as *mut f64;
+                let a = a.cast::<f64>();
+                let b = b.cast::<f64>().cast_mut();
                 unsafe { $double_fn(a, stride_a, b, stride_b, size) }
             }
         }
@@ -252,17 +291,16 @@ macro_rules! impl_array_scalar_sin {
             to_stride: usize,
             other_stride: usize,
         ) {
-            let other_stride = other_stride as ::std::os::raw::c_int;
-            let to_stride = to_stride as ::std::os::raw::c_int;
-            let num_elm = num_elm as ::std::os::raw::c_int;
+            let other_stride = ::libc::c_int::try_from(other_stride).unwrap();
+            let to_stride = ::libc::c_int::try_from(to_stride).unwrap();
+            let num_elm = ::libc::c_int::try_from(num_elm).unwrap();
             if TypeId::of::<T>() == TypeId::of::<f32>() {
-                let other = other as *mut f32;
-                let to = to as *mut f32;
+                let other = other.cast::<f32>().cast_mut();
+                let to = to.cast();
                 unsafe { $float_fn(other, num_elm, other_stride, to, to_stride) };
             } else if TypeId::of::<T>() == TypeId::of::<f64>() {
-                let other = other as *mut f64;
-                let to = to as *mut f64;
-                // unsafe { $double_fn(a, size, stride, out) }
+                let other = other.cast::<f64>().cast_mut();
+                let to = to.cast();
                 unsafe { $double_fn(other, num_elm, other_stride, to, to_stride) }
             }
         }
@@ -285,13 +323,13 @@ impl_array_scalar_sin!(array_log, array_log_double, array_log_float);
 macro_rules! impl_array_scalar_sin_assign {
     ($name:ident, $double_fn:ident, $float_fn:ident) => {
         pub fn $name<T: 'static>(a: *mut T, size: usize, stride: usize) {
-            let size = size as ::std::os::raw::c_int;
-            let stride = stride as ::std::os::raw::c_int;
+            let size = ::libc::c_int::try_from(size).unwrap();
+            let stride = ::libc::c_int::try_from(stride).unwrap();
             if TypeId::of::<T>() == TypeId::of::<f32>() {
-                let a = a as *mut f32;
+                let a = a.cast();
                 unsafe { $float_fn(a, size, stride) };
             } else if TypeId::of::<T>() == TypeId::of::<f64>() {
-                let a = a as *mut f64;
+                let a = a.cast();
                 unsafe { $double_fn(a, size, stride) }
             }
         }
@@ -363,35 +401,40 @@ impl_array_scalar_sin_assign!(
     array_log_assign_float
 );
 
+#[expect(clippy::missing_panics_doc)]
 pub fn get_memory<T: 'static + Default>(array: *const T, offset: usize) -> T {
     let mut out: T = Default::default();
+    let offset = ::libc::c_int::try_from(offset).unwrap();
     if TypeId::of::<T>() == TypeId::of::<f32>() {
         let array = array as *mut f32;
         unsafe {
-            memory_access_float(array, offset as libc::c_int, &mut out as *mut T as *mut f32)
-        };
+            memory_access_float(array, offset, std::ptr::from_mut(&mut out).cast());
+        }
     } else if TypeId::of::<T>() == TypeId::of::<f64>() {
         let array = array as *mut f64;
         unsafe {
-            memory_access_double(array, offset as libc::c_int, &mut out as *mut T as *mut f64)
-        };
+            memory_access_double(array, offset, std::ptr::from_mut(&mut out).cast());
+        }
     }
     out
 }
 
-pub fn set_memory<T: 'static>(array: *mut T, offset: usize, value: T) {
+#[expect(clippy::missing_panics_doc)]
+pub fn set_memory<T: 'static + Copy>(array: *mut T, offset: usize, value: T) {
+    let offset = ::libc::c_int::try_from(offset).unwrap();
     if TypeId::of::<T>() == TypeId::of::<f32>() {
-        let array = array as *mut f32;
-        let value = unsafe { *{ &value as *const T as *const f32 } };
-        unsafe { memory_set_float(array, offset as libc::c_int, value) };
+        let array = array.cast::<f32>();
+        let value = unsafe { *std::ptr::from_ref(&value).cast::<f32>() };
+        unsafe { memory_set_float(array, offset, value) };
     } else if TypeId::of::<T>() == TypeId::of::<f64>() {
-        let array = array as *mut f64;
-        let value = unsafe { *{ &value as *const T as *const f64 } };
-        unsafe { memory_set_double(array, offset as libc::c_int, value) };
+        let array = array.cast::<f64>();
+        let value = unsafe { *std::ptr::from_ref(&value).cast::<f64>() };
+        unsafe { memory_set_double(array, offset, value) };
     }
 }
 
-pub fn clip<T: 'static>(
+#[expect(clippy::missing_panics_doc)]
+pub fn clip<T: 'static + Copy>(
     input: *const T,
     output: *mut T,
     size: usize,
@@ -400,41 +443,42 @@ pub fn clip<T: 'static>(
     min: T,
     max: T,
 ) {
-    let size = size as ::std::os::raw::c_int;
-    let stride_in = stride_in as ::std::os::raw::c_int;
-    let stride_out = stride_out as ::std::os::raw::c_int;
+    let size = ::libc::c_int::try_from(size).unwrap();
+    let stride_in = ::libc::c_int::try_from(stride_in).unwrap();
+    let stride_out = ::libc::c_int::try_from(stride_out).unwrap();
     if TypeId::of::<T>() == TypeId::of::<f32>() {
-        let input = input as *mut f32;
-        let output = output as *mut f32;
-        let min = unsafe { *{ &min as *const T as *const f32 } };
-        let max = unsafe { *{ &max as *const T as *const f32 } };
+        let input = input.cast::<f32>().cast_mut();
+        let output = output.cast();
+        let min = unsafe { *std::ptr::from_ref(&min).cast::<f32>() };
+        let max = unsafe { *std::ptr::from_ref(&max).cast::<f32>() };
         unsafe { array_clip_float(input, output, size, stride_in, stride_out, min, max) };
     } else if TypeId::of::<T>() == TypeId::of::<f64>() {
-        let input = input as *mut f64;
-        let output = output as *mut f64;
-        let min = unsafe { *{ &min as *const T as *const f64 } };
-        let max = unsafe { *{ &max as *const T as *const f64 } };
+        let input = input.cast::<f64>().cast_mut();
+        let output = output.cast();
+        let min = unsafe { *std::ptr::from_ref(&min).cast::<f64>() };
+        let max = unsafe { *std::ptr::from_ref(&max).cast::<f64>() };
         unsafe { array_clip_double(input, output, size, stride_in, stride_out, min, max) };
     }
 }
 
-pub fn clip_assign<T: 'static>(input: *mut T, size: usize, stride: usize, min: T, max: T) {
-    let size = size as ::std::os::raw::c_int;
-    let stride = stride as ::std::os::raw::c_int;
+#[expect(clippy::missing_panics_doc)]
+pub fn clip_assign<T: 'static + Copy>(input: *mut T, size: usize, stride: usize, min: T, max: T) {
+    let size = ::libc::c_int::try_from(size).unwrap();
+    let stride = ::libc::c_int::try_from(stride).unwrap();
     if TypeId::of::<T>() == TypeId::of::<f32>() {
-        let input = input as *mut f32;
-        let min = unsafe { *{ &min as *const T as *const f32 } };
-        let max = unsafe { *{ &max as *const T as *const f32 } };
+        let input = unsafe { input.cast::<f32>().as_mut().unwrap() };
+        let min = unsafe { *std::ptr::from_ref(&min).cast::<f32>() };
+        let max = unsafe { *std::ptr::from_ref(&max).cast::<f32>() };
         unsafe { array_clip_assign_float(input, size, stride, min, max) };
     } else if TypeId::of::<T>() == TypeId::of::<f64>() {
-        let input = input as *mut f64;
-        let min = unsafe { *{ &min as *const T as *const f64 } };
-        let max = unsafe { *{ &max as *const T as *const f64 } };
+        let input = unsafe { input.cast::<f64>().as_mut().unwrap() };
+        let min = unsafe { *std::ptr::from_ref(&min).cast::<f64>() };
+        let max = unsafe { *std::ptr::from_ref(&max).cast::<f64>() };
         unsafe { array_clip_assign_double(input, size, stride, min, max) };
     }
 }
 
-pub fn clip_backward<T: 'static>(
+pub fn clip_backward<T: 'static + Copy>(
     input: *mut T,
     mask: *mut T,
     max: T,
@@ -443,41 +487,48 @@ pub fn clip_backward<T: 'static>(
     stride_in: usize,
     stride_out: usize,
 ) {
-    let size = size as ::std::os::raw::c_int;
-    let stride_in = stride_in as ::std::os::raw::c_int;
-    let stride_out = stride_out as ::std::os::raw::c_int;
+    let size = ::libc::c_int::try_from(size).unwrap();
+    let stride_in = ::libc::c_int::try_from(stride_in).unwrap();
+    let stride_out = ::libc::c_int::try_from(stride_out).unwrap();
+
     if TypeId::of::<T>() == TypeId::of::<f32>() {
-        let input = input as *mut f32;
-        let mask = mask as *mut f32;
-        let min = unsafe { *{ &min as *const T as *const f32 } };
-        let max = unsafe { *{ &max as *const T as *const f32 } };
+        let input = unsafe { input.cast::<f32>().as_mut().unwrap() };
+        let mask = unsafe { mask.cast::<f32>().as_mut().unwrap() };
+        let min = unsafe { *std::ptr::from_ref(&min).cast::<f32>() };
+        let max = unsafe { *std::ptr::from_ref(&max).cast::<f32>() };
         unsafe { array_clip_backward_float(input, mask, max, min, size, stride_in, stride_out) };
     } else if TypeId::of::<T>() == TypeId::of::<f64>() {
-        let input = input as *mut f64;
-        let mask = mask as *mut f64;
-        let min = unsafe { *{ &min as *const T as *const f64 } };
-        let max = unsafe { *{ &max as *const T as *const f64 } };
+        let input = unsafe { input.cast::<f64>().as_mut().unwrap() };
+        let mask = unsafe { mask.cast::<f64>().as_mut().unwrap() };
+        let min = unsafe { *std::ptr::from_ref(&min).cast::<f64>() };
+        let max = unsafe { *std::ptr::from_ref(&max).cast::<f64>() };
         unsafe { array_clip_backward_double(input, mask, max, min, size, stride_in, stride_out) };
     }
 }
 
-pub fn clip_backward_assign<T: 'static>(mask: *mut T, max: T, min: T, size: usize, stride: usize) {
-    let size = size as ::std::os::raw::c_int;
-    let stride = stride as ::std::os::raw::c_int;
+pub fn clip_backward_assign<T: 'static + Copy>(
+    mask: *mut T,
+    max: T,
+    min: T,
+    size: usize,
+    stride: usize,
+) {
+    let size = ::libc::c_int::try_from(size).unwrap();
+    let stride = ::libc::c_int::try_from(stride).unwrap();
     if TypeId::of::<T>() == TypeId::of::<f32>() {
-        let mask = mask as *mut f32;
-        let min = unsafe { *{ &min as *const T as *const f32 } };
-        let max = unsafe { *{ &max as *const T as *const f32 } };
+        let mask = mask.cast();
+        let min = unsafe { *std::ptr::from_ref(&min).cast::<f32>() };
+        let max = unsafe { *std::ptr::from_ref(&max).cast::<f32>() };
         unsafe { array_clip_backward_assign_float(mask, max, min, size, stride) };
     } else if TypeId::of::<T>() == TypeId::of::<f64>() {
-        let mask = mask as *mut f64;
-        let min = unsafe { *{ &min as *const T as *const f64 } };
-        let max = unsafe { *{ &max as *const T as *const f64 } };
+        let mask = mask.cast();
+        let min = unsafe { *std::ptr::from_ref(&min).cast::<f64>() };
+        let max = unsafe { *std::ptr::from_ref(&max).cast::<f64>() };
         unsafe { array_clip_backward_assign_double(mask, max, min, size, stride) };
     }
 }
 
-pub fn array_pow<T: 'static>(
+pub fn array_pow<T: 'static + Copy>(
     input: *const T,
     size: usize,
     stride_a: usize,
@@ -485,64 +536,55 @@ pub fn array_pow<T: 'static>(
     out: *mut T,
     stride_out: usize,
 ) {
-    let size = size as ::std::os::raw::c_int;
-    let stride_a = stride_a as ::std::os::raw::c_int;
-    let stride_out = stride_out as ::std::os::raw::c_int;
+    let size = ::libc::c_int::try_from(size).unwrap();
+    let stride_a = ::libc::c_int::try_from(stride_a).unwrap();
+    let stride_out = ::libc::c_int::try_from(stride_out).unwrap();
+
     if TypeId::of::<T>() == TypeId::of::<f32>() {
-        let input = input as *mut f32;
-        let out = out as *mut f32;
-        let scalar = unsafe { *{ &scalar as *const T as *const f32 } };
+        let input = input.cast::<f32>().cast_mut();
+        let out = out.cast::<f32>();
+        let scalar = unsafe { *std::ptr::from_ref(&scalar).cast::<f32>() };
         unsafe { array_pow_float(input, size, stride_a, scalar, out, stride_out) };
     } else if TypeId::of::<T>() == TypeId::of::<f64>() {
-        let input = input as *mut f64;
-        let out = out as *mut f64;
-        let scalar = unsafe { *{ &scalar as *const T as *const f64 } };
+        let input = input.cast::<f64>().cast_mut();
+        let out = out.cast::<f64>();
+        let scalar = unsafe { *std::ptr::from_ref(&scalar).cast::<f64>() };
         unsafe { array_pow_double(input, size, stride_a, scalar, out, stride_out) };
     }
 }
 
-pub fn array_pow_assign<T: 'static>(input: *mut T, size: usize, stride: usize, scalar: T) {
-    let size = size as ::std::os::raw::c_int;
-    let stride = stride as ::std::os::raw::c_int;
+pub fn array_pow_assign<T: 'static + Copy>(input: *mut T, size: usize, stride: usize, scalar: T) {
+    let size = ::libc::c_int::try_from(size).unwrap();
+    let stride = ::libc::c_int::try_from(stride).unwrap();
     if TypeId::of::<T>() == TypeId::of::<f32>() {
-        let input = input as *mut f32;
-        let scalar = unsafe { *{ &scalar as *const T as *const f32 } };
+        let input = unsafe { input.cast::<f32>().as_mut().unwrap() };
+        let scalar = unsafe { *std::ptr::from_ref(&scalar).cast::<f32>() };
         unsafe { array_pow_assign_float(input, size, stride, scalar) };
     } else if TypeId::of::<T>() == TypeId::of::<f64>() {
-        let input = input as *mut f64;
-        let scalar = unsafe { *{ &scalar as *const T as *const f64 } };
+        let input = unsafe { input.cast::<f64>().as_mut().unwrap() };
+        let scalar = unsafe { *std::ptr::from_ref(&scalar).cast::<f64>() };
         unsafe { array_pow_assign_double(input, size, stride, scalar) };
     }
 }
 
 pub fn array_max_idx<T: 'static>(input: *const T, size: usize, stride: usize) -> usize {
-    let size = size as ::std::os::raw::c_int;
-    let stride = stride as ::std::os::raw::c_int;
+    let size = ::libc::c_int::try_from(size).unwrap();
+    let stride = ::libc::c_int::try_from(stride).unwrap();
     let mut ans: i32 = 0;
     if TypeId::of::<T>() == TypeId::of::<f32>() {
-        let input = input as *mut f32;
+        let input = input.cast::<f32>().cast_mut();
         unsafe {
-            array_max_idx_float(
-                input,
-                size,
-                stride,
-                &mut ans as *mut i32 as *mut std::os::raw::c_int,
-            )
+            array_max_idx_float(input, size, stride, std::ptr::from_mut(&mut ans).cast());
         };
     } else if TypeId::of::<T>() == TypeId::of::<f64>() {
-        let input = input as *mut f64;
+        let input = input.cast::<f64>().cast_mut();
         unsafe {
-            array_max_idx_double(
-                input,
-                size,
-                stride,
-                &mut ans as *mut i32 as *mut std::os::raw::c_int,
-            )
+            array_max_idx_double(input, size, stride, std::ptr::from_mut(&mut ans).cast());
         };
     } else {
         panic!("Not supported type");
     }
-    ans as usize
+    usize::try_from(ans).unwrap()
 }
 
 pub fn conv_bias_add<T: 'static>(
@@ -553,13 +595,16 @@ pub fn conv_bias_add<T: 'static>(
     bias_size: usize,
     output: *mut T,
 ) {
-    let total_elements = total_elements as ::std::os::raw::c_int;
-    let channel_stride = channel_stride as ::std::os::raw::c_int;
-    let bias_size = bias_size as ::std::os::raw::c_int;
+    let total_elements = ::libc::c_int::try_from(total_elements).unwrap();
+    let channel_stride = ::libc::c_int::try_from(channel_stride).unwrap();
+    let bias_size = ::libc::c_int::try_from(bias_size).unwrap();
     if TypeId::of::<T>() == TypeId::of::<f32>() {
-        let input = input as *mut f32;
-        let bias = bias as *mut f32;
-        let output = output as *mut f32;
+        // let input = input as *mut f32;
+        // let bias = bias as *mut f32;
+        // let output = output as *mut f32;
+        let input = input.cast::<f32>().cast_mut();
+        let bias = bias.cast::<f32>().cast_mut();
+        let output = unsafe { output.cast::<f32>().as_mut().unwrap() };
         unsafe {
             conv_bias_add_float(
                 input,
@@ -568,12 +613,12 @@ pub fn conv_bias_add<T: 'static>(
                 bias,
                 bias_size,
                 total_elements,
-            )
+            );
         };
     } else if TypeId::of::<T>() == TypeId::of::<f64>() {
-        let input = input as *mut f64;
-        let bias = bias as *mut f64;
-        let output = output as *mut f64;
+        let input = input.cast::<f64>().cast_mut();
+        let bias = bias.cast::<f64>().cast_mut();
+        let output = unsafe { output.cast::<f64>().as_mut().unwrap() };
         unsafe {
             conv_bias_add_double(
                 input,
@@ -582,7 +627,7 @@ pub fn conv_bias_add<T: 'static>(
                 bias,
                 bias_size,
                 total_elements,
-            )
+            );
         };
     }
 }
@@ -598,7 +643,8 @@ mod array_array {
             fn $test_name() {
                 let a: Vec<$ty> = $input_1;
                 let b: Vec<$ty> = $input_2;
-                let mut out = vec![0 as $ty; a.len()];
+                let zero: $ty = 0.;
+                let mut out = vec![zero; a.len()];
                 let a_gpu = cuda_malloc(a.len()).unwrap();
                 let b_gpu = cuda_malloc(b.len()).unwrap();
                 let out_gpu = cuda_malloc(out.len()).unwrap();
@@ -700,7 +746,8 @@ mod array_array {
             fn $name() {
                 let a: Vec<$ty> = $input;
                 let b: Vec<$ty> = $input2;
-                let mut out = vec![0 as $ty; a.len()];
+                let zero: $ty = 0.;
+                let mut out = vec![zero; a.len()];
                 let a_gpu = cuda_malloc(a.len()).unwrap();
                 cuda_copy(
                     a_gpu,
@@ -797,8 +844,14 @@ mod array_array {
     );
 }
 
+#[expect(
+    clippy::unreadable_literal,
+    clippy::approx_constant,
+    clippy::excessive_precision
+)]
 #[cfg(test)]
 mod array_scalar {
+
     use crate::runtime::{cuda_copy, cuda_malloc, ZenuCudaMemCopyKind};
 
     use super::*;
@@ -808,7 +861,8 @@ mod array_scalar {
             #[test]
             fn $test_name() {
                 let a: Vec<$ty> = $input;
-                let mut out = vec![0 as $ty; a.len()];
+                let zero: $ty = 0.;
+                let mut out = vec![zero; a.len()];
                 let scalar: $ty = $scalar;
                 let a_gpu = cuda_malloc(a.len()).unwrap();
                 cuda_copy(
@@ -1163,9 +1217,10 @@ mod array_scalar {
         array_log
     );
 
+    #[expect(clippy::float_cmp)]
     #[test]
     fn set_value_f32() {
-        let a = vec![0.0, 0.0, 0.0, 0.0];
+        let a = [0.0, 0.0, 0.0, 0.0];
         let a_gpu = cuda_malloc(a.len()).unwrap();
         cuda_copy(
             a_gpu,

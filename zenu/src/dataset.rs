@@ -3,6 +3,11 @@ use rand::seq::SliceRandom;
 use zenu_autograd::{concat::concat, Variable};
 use zenu_matrix::{device::cpu::Cpu, num::Num};
 
+#[expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss
+)]
 pub fn train_val_split<T: Clone>(data: &[T], split_ratio: f64, shuffle: bool) -> (Vec<T>, Vec<T>) {
     let mut data = data.to_vec();
     if shuffle {
@@ -45,6 +50,11 @@ impl<T: Num, D: Dataset<T>> DataLoader<T, D> {
         }
     }
 
+    #[expect(
+        clippy::cast_possible_truncation,
+        clippy::cast_precision_loss,
+        clippy::cast_sign_loss
+    )]
     pub fn len(&self) -> usize {
         (self.dataset.len() as f64 / self.batch_size as f64).ceil() as usize
     }
@@ -74,9 +84,7 @@ impl<T: Num, D: Dataset<T>> Iterator for DataLoader<T, D> {
 
         let k = batch[0].len();
         for v in batch.iter().skip(1) {
-            if v.len() != k {
-                panic!("All dataset's output size must be same");
-            }
+            assert_eq!(v.len(), k, "All dataset's output size must be same");
         }
 
         let mut result = vec![vec![]; k];
@@ -94,9 +102,7 @@ impl<T: Num, D: Dataset<T>> Iterator for DataLoader<T, D> {
         } else {
             let first_batch_size = result[0].get_data().shape()[0];
             for v in result.iter().skip(1) {
-                if v.get_data().shape()[0] != first_batch_size {
-                    panic!("All batch size must be same");
-                }
+                assert_eq!(v.get_data().shape()[0], first_batch_size);
             }
             Some(result)
         }
@@ -104,13 +110,14 @@ impl<T: Num, D: Dataset<T>> Iterator for DataLoader<T, D> {
 }
 
 #[cfg(test)]
-mod dataset {
+mod dataset_tests {
     use zenu_autograd::{creator::from_vec::from_vec, Variable};
     use zenu_matrix::{
         device::cpu::Cpu,
         dim::{DimDyn, DimTrait},
         matrix::{Matrix, Owned},
     };
+    use zenu_test::assert_val_eq;
 
     use super::{DataLoader, Dataset};
 
@@ -189,26 +196,22 @@ mod dataset {
         let batch = &dataloader.next().unwrap()[0];
         let expected_batch =
             Matrix::<Owned<f64>, DimDyn, Cpu>::from_vec(vec![1., 2., 3., 4., 5., 6.], [2, 3]);
-        let diff = batch.get_data().to_ref() - expected_batch;
-        assert_eq!(diff.asum(), 0.);
+        assert_val_eq!(batch, expected_batch, 1e-5);
 
         let batch = &dataloader.next().unwrap()[0];
         let expected_batch =
             Matrix::<Owned<f64>, DimDyn, Cpu>::from_vec(vec![7., 8., 9., 10., 11., 12.], [2, 3]);
-        let diff = batch.get_data().to_ref() - expected_batch;
-        assert_eq!(diff.asum(), 0.);
+        assert_val_eq!(batch, expected_batch, 1e-5);
 
         let batch = &dataloader.next().unwrap()[0];
         let expected_batch =
             Matrix::<Owned<f64>, DimDyn, Cpu>::from_vec(vec![13., 14., 15., 16., 17., 18.], [2, 3]);
-        let diff = batch.get_data().to_ref() - expected_batch;
-        assert_eq!(diff.asum(), 0.);
+        assert_val_eq!(batch, expected_batch, 1e-5);
 
         let batch = &dataloader.next().unwrap()[0];
         let expected_batch =
             Matrix::<Owned<f64>, DimDyn, Cpu>::from_vec(vec![19., 20., 21.], [1, 3]);
-        let diff = batch.get_data().to_ref() - expected_batch;
-        assert_eq!(diff.asum(), 0.);
+        assert_val_eq!(batch, expected_batch, 1e-5);
     }
 
     #[test]

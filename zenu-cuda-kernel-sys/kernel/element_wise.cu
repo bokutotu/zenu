@@ -1,5 +1,6 @@
 #include "element_wise.h"
 
+#include <limits>
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 

@@ -104,6 +104,7 @@ where
         }
     }
 
+    #[must_use]
     pub fn offset_ptr(&self, offset: usize) -> Ptr<Ref<&R::Item>, D> {
         Ptr {
             ptr: self.ptr,
@@ -118,14 +119,14 @@ where
         self.len
     }
 
+    #[expect(clippy::missing_panics_doc)]
+    #[must_use]
     pub fn get_item(&self, offset: usize) -> R::Item {
-        if offset >= self.len {
-            panic!("Index out of bounds");
-        }
+        assert!(offset < self.len, "Index out of bounds");
         D::get_item(self.ptr, offset + self.offset)
     }
 
-    fn to_ref(&self) -> Ptr<Ref<&R::Item>, D> {
+    fn to_ref<'a>(&self) -> Ptr<Ref<&'a R::Item>, D> {
         Ptr {
             ptr: self.ptr,
             len: self.len,
@@ -146,13 +147,11 @@ where
             (a, b) if a == b => Owned::clone_memory(self_raw_ptr, len, D::default()),
             #[cfg(feature = "nvidia")]
             (a, b) if a == TypeId::of::<Cpu>() && b == TypeId::of::<Nvidia>() => {
-                let ptr = zenu_cuda::runtime::copy_to_gpu(self_raw_ptr, len);
-                ptr
+                zenu_cuda::runtime::copy_to_gpu(self_raw_ptr, len)
             }
             #[cfg(feature = "nvidia")]
             (a, b) if a == TypeId::of::<Nvidia>() && b == TypeId::of::<Cpu>() => {
-                let ptr = zenu_cuda::runtime::copy_to_cpu(self_raw_ptr, len);
-                ptr
+                zenu_cuda::runtime::copy_to_cpu(self_raw_ptr, len)
             }
             _ => unreachable!(),
         };
@@ -172,6 +171,7 @@ where
 }
 
 impl<'a, T: Num, D: DeviceBase> Ptr<Ref<&'a mut T>, D> {
+    #[must_use]
     pub fn offset_ptr_mut(self, offset: usize) -> Ptr<Ref<&'a mut T>, D> {
         Ptr {
             ptr: self.ptr,
@@ -182,10 +182,9 @@ impl<'a, T: Num, D: DeviceBase> Ptr<Ref<&'a mut T>, D> {
         }
     }
 
+    #[expect(clippy::missing_panics_doc)]
     pub fn assign_item(&self, offset: usize, value: T) {
-        if offset >= self.len {
-            panic!("Index out of bounds");
-        }
+        assert!(offset < self.len, "Index out of bounds");
         D::assign_item(self.ptr, offset + self.offset, value);
     }
 }
@@ -211,7 +210,7 @@ where
     R: OwnedRepr,
     D: DeviceBase,
 {
-    fn to_ref_mut(&mut self) -> Ptr<Ref<&mut R::Item>, D> {
+    fn to_ref_mut<'a>(&mut self) -> Ptr<Ref<&'a mut R::Item>, D> {
         Ptr {
             ptr: self.ptr,
             len: self.len,
@@ -403,16 +402,15 @@ where
         }
     }
 
+    #[expect(clippy::missing_panics_doc)]
     pub fn index_item<I: Into<S>>(&self, index: I) -> R::Item {
         let index = index.into();
-        if self.shape().is_overflow(index) {
-            panic!("Index out of bounds");
-        }
+        assert!(!self.shape().is_overflow(index), "Index out of bounds");
         let offset = cal_offset(index, self.stride());
         self.ptr.get_item(offset)
     }
 
-    pub fn to_ref(&self) -> Matrix<Ref<&R::Item>, S, D> {
+    pub fn to_ref<'a>(&self) -> Matrix<Ref<&'a R::Item>, S, D> {
         Matrix {
             ptr: self.ptr.to_ref(),
             shape: self.shape,
@@ -437,6 +435,7 @@ where
         owned
     }
 
+    #[expect(clippy::missing_errors_doc)]
     pub fn try_to_scalar(&self) -> Result<R::Item, String> {
         if self.shape().is_scalar() {
             let scalr = self.ptr.get_item(0);
@@ -446,6 +445,7 @@ where
         }
     }
 
+    #[expect(clippy::missing_panics_doc)]
     pub fn to_scalar(&self) -> R::Item {
         if let Ok(scalar) = self.try_to_scalar() {
             scalar
@@ -454,7 +454,16 @@ where
         }
     }
 
+    #[expect(clippy::missing_panics_doc)]
     pub fn as_slice(&self) -> &[R::Item] {
+        if self.shape().len() <= 1 {
+            self.as_slice_unchecked()
+        } else {
+            panic!("Invalid shape");
+        }
+    }
+
+    pub fn as_slice_unchecked(&self) -> &[R::Item] {
         let num_elm = self.shape().num_elm();
         unsafe { std::slice::from_raw_parts(self.as_ptr(), num_elm) }
     }
@@ -466,7 +475,7 @@ where
     D: DeviceBase,
     S: DimTrait,
 {
-    pub fn to_ref_mut(&mut self) -> Matrix<Ref<&mut T>, S, D> {
+    pub fn to_ref_mut<'a>(&mut self) -> Matrix<Ref<&'a mut T>, S, D> {
         Matrix {
             ptr: self.ptr.to_ref_mut(),
             shape: self.shape,
@@ -496,16 +505,31 @@ where
         unsafe { self.ptr.ptr.add(self.offset()) }
     }
 
-    #[allow(clippy::mut_from_ref)]
+    #[expect(clippy::missing_panics_doc)]
     pub fn as_mut_slice(&self) -> &mut [T] {
         if self.shape().len() <= 1 {
-            let num_elm = std::cmp::max(self.shape().num_elm(), 1);
-            unsafe { std::slice::from_raw_parts_mut(self.as_mut_ptr(), num_elm) }
+            self.as_mut_slice_unchecked()
         } else {
             panic!("Invalid shape");
         }
     }
 
+    #[expect(clippy::mut_from_ref)]
+    pub fn as_mut_slice_unchecked(&self) -> &mut [T] {
+        let num_elm = self.shape().num_elm();
+        unsafe { std::slice::from_raw_parts_mut(self.as_mut_ptr(), num_elm) }
+    }
+
+    #[expect(clippy::missing_panics_doc)]
+    pub fn each_by<F>(&mut self, f: F)
+    where
+        F: FnMut(&mut T),
+    {
+        assert_eq!(self.stride().into_iter().min(), Some(1), "Invalid stride");
+        self.as_mut_slice_unchecked().iter_mut().for_each(f);
+    }
+
+    #[must_use]
     pub fn slice_mut<I>(&self, index: I) -> Matrix<Ref<&'a mut T>, S, D>
     where
         I: SliceTrait<Dim = S>,
@@ -533,6 +557,7 @@ where
         }
     }
 
+    #[must_use]
     pub fn index_axis_mut<I>(&self, index: I) -> Matrix<Ref<&'a mut T>, S, D>
     where
         I: IndexAxisTrait,
@@ -564,18 +589,18 @@ where
         }
     }
 
+    #[expect(clippy::missing_panics_doc)]
     pub fn index_item_assign<I: Into<S>>(&self, index: I, value: T) {
         let index = index.into();
-        if self.shape().is_overflow(index) {
-            panic!("Index out of bounds");
-        }
+        assert!(!self.shape().is_overflow(index), "Index out of bounds");
         let offset = cal_offset(index, self.stride());
         self.ptr.assign_item(offset, value);
     }
 }
 
+#[expect(clippy::float_cmp)]
 #[cfg(test)]
-mod matrix {
+mod matrix_test {
 
     use crate::{
         device::DeviceBase,
@@ -625,6 +650,7 @@ mod matrix {
         index_item_2d::<crate::device::nvidia::Nvidia>();
     }
 
+    #[expect(clippy::cast_precision_loss)]
     fn slice_1d<D: DeviceBase>() {
         let v = (1..10).map(|x| x as f32).collect::<Vec<f32>>();
         let m: Matrix<Owned<f32>, Dim1, D> = Matrix::from_vec(v.clone(), [9]);
@@ -645,6 +671,7 @@ mod matrix {
         slice_1d::<crate::device::nvidia::Nvidia>();
     }
 
+    #[expect(clippy::cast_precision_loss)]
     fn slice_2d<D: DeviceBase>() {
         let v = (1..13).map(|x| x as f32).collect::<Vec<f32>>();
         let m: Matrix<Owned<f32>, Dim2, D> = Matrix::from_vec(v.clone(), [3, 4]);
@@ -669,6 +696,7 @@ mod matrix {
         slice_2d::<crate::device::nvidia::Nvidia>();
     }
 
+    #[expect(clippy::cast_precision_loss)]
     fn slice_dyn_4d<D: DeviceBase>() {
         let v = (1..65).map(|x| x as f32).collect::<Vec<f32>>();
         let m: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(v.clone(), [2, 2, 4, 4]);
@@ -701,6 +729,7 @@ mod matrix {
         slice_dyn_4d::<crate::device::nvidia::Nvidia>();
     }
 
+    #[expect(clippy::cast_precision_loss)]
     fn index_axis_dyn_2d<D: DeviceBase>() {
         let v = (1..13).map(|x| x as f32).collect::<Vec<f32>>();
         let m: Matrix<Owned<f32>, DimDyn, D> = Matrix::from_vec(v.clone(), [3, 4]);

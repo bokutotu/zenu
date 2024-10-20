@@ -29,10 +29,12 @@ macro_rules! impl_slice_ty {
         }
 
         impl $impl_name {
+            #[must_use]
             pub fn new(index: [SliceDim; $num_item]) -> Self {
                 Self { index }
             }
 
+            #[must_use]
             pub fn index(&self) -> &[SliceDim; $num_item] {
                 &self.index
             }

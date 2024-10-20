@@ -21,6 +21,7 @@ impl<D: DimTrait> ShapeStride<D> {
         self.stride
     }
 
+    #[must_use]
     pub fn sort_by_stride(&self) -> Self {
         let mut indeies = (0..self.stride.len()).collect::<Vec<_>>();
         indeies.sort_by(|&a, &b| self.stride[b].cmp(&self.stride[a]));
@@ -39,14 +40,15 @@ impl<D: DimTrait> ShapeStride<D> {
         Self::new(new_shape, new_stride)
     }
 
+    #[expect(clippy::missing_panics_doc)]
     pub fn min_stride(&self) -> usize {
         let slice = self.stride.slice();
         *slice.iter().min().unwrap()
     }
 
-    /// このShapeStrideが連続しているかどうかを判定する
+    /// この`ShapeStride`が連続しているかどうかを判定する
     /// transposeされていた場合は並び替えを行い、
-    /// そのストライドが、default_strideのn倍になっているかどうかを判定する
+    /// そのストライドが、`default_stride`のn倍になっているかどうかを判定する
     pub fn is_contiguous(&self) -> bool {
         let sorted = self.sort_by_stride();
 
@@ -75,6 +77,7 @@ impl<D: DimTrait> ShapeStride<D> {
         last > last_2
     }
 
+    #[must_use]
     pub fn transpose(&self) -> Self {
         let mut shape = self.shape();
         let mut stride = self.stride();
@@ -104,8 +107,8 @@ impl<D: DimTrait> ShapeStride<D> {
         default_stride(self.shape()) == self.stride()
     }
 
-    /// shpae strideが転置されている場合、
-    /// 転置を元に戻した場合default_strideになっているかどうかを判定する
+    /// `shpae` `stride`が転置されている場合、
+    /// 転置を元に戻した場合`default_stride`になっているかどうかを判定する
     pub fn is_transposed_default_stride(&self) -> bool {
         self.transpose().is_default_stride()
     }
@@ -134,9 +137,10 @@ impl<D: DimTrait> ShapeStride<D> {
         if a == b {
             return self;
         }
-        if a >= self.shape().len() || b >= self.shape().len() {
-            panic!("Index out of bounds");
-        }
+        assert!(
+            (a < self.shape().len()) && (b < self.shape().len()),
+            "Index out of bounds"
+        );
         let mut shape = self.shape();
         let mut stride = self.stride();
 
@@ -154,6 +158,7 @@ impl<D: DimTrait> ShapeStride<D> {
 }
 
 impl ShapeStride<DimDyn> {
+    #[must_use]
     pub fn get_dim_by_offset(&self, offset: usize) -> DimDyn {
         let mut offset = offset;
         let mut dim = DimDyn::default();
@@ -164,12 +169,13 @@ impl ShapeStride<DimDyn> {
         dim
     }
 
+    #[must_use]
     pub fn add_axis(self, axis: usize) -> Self {
         if self.shape().is_empty() {
             return ShapeStride::new(DimDyn::from([1]), DimDyn::from([1]));
         }
-        let mut shape: DimDyn = Default::default();
-        let mut stride: DimDyn = Default::default();
+        let mut shape = DimDyn::default();
+        let mut stride = DimDyn::default();
 
         for i in 0..self.shape.len() {
             if i == axis {
@@ -188,7 +194,7 @@ impl ShapeStride<DimDyn> {
 }
 
 #[cfg(test)]
-mod shape_stride {
+mod shape_stride_test {
     use super::*;
     use crate::dim::{default_stride, Dim2, Dim4};
 
@@ -212,6 +218,6 @@ mod shape_stride {
         let stride_transposed: Dim4 = stride_transposed.into();
         let shape_stride = ShapeStride::new(shape_transposed, stride_transposed);
 
-        assert_eq!(shape_stride.is_transposed(), true);
+        assert!(shape_stride.is_transposed());
     }
 }

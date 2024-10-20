@@ -41,6 +41,7 @@ impl<T: Num, D: Device> Function<T, D> for Broadcast<T, D> {
     }
 }
 
+#[must_use]
 pub fn broadcast<T: Num, D: Device>(x: Variable<T, D>, shape: DimDyn) -> Variable<T, D> {
     let output = alloc(shape);
     let broadcast = Broadcast::new(x, output.clone());

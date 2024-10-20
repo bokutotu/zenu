@@ -17,6 +17,7 @@ impl<R: Repr, D: Device> Matrix<R, DimDyn, D> {
         self.update_shape_stride(transposed);
     }
 
+    #[must_use]
     pub fn transpose_by_index_new_matrix(
         &self,
         index: &[usize],
@@ -26,10 +27,9 @@ impl<R: Repr, D: Device> Matrix<R, DimDyn, D> {
         ref_mat.to_default_stride()
     }
 
+    #[expect(clippy::missing_panics_doc)]
     pub fn transpose_swap_index(&mut self, a: usize, b: usize) {
-        if a == b {
-            panic!("Index must be different");
-        }
+        assert!(a != b, "Index must be different");
         if a < b {
             return self.transpose_swap_index(b, a);
         }
@@ -40,14 +40,14 @@ impl<R: Repr, D: Device> Matrix<R, DimDyn, D> {
         self.update_shape_stride(shape_stride);
     }
 
+    #[expect(clippy::missing_panics_doc)]
+    #[must_use]
     pub fn transpose_swap_index_new_matrix(
         &self,
         a: usize,
         b: usize,
     ) -> Matrix<Owned<R::Item>, DimDyn, D> {
-        if a == b {
-            panic!("Index must be different");
-        }
+        assert!(a != b, "Index must be different");
         if a < b {
             return self.transpose_swap_index_new_matrix(b, a);
         }
@@ -56,6 +56,8 @@ impl<R: Repr, D: Device> Matrix<R, DimDyn, D> {
         ref_mat.to_default_stride()
     }
 }
+
+#[expect(clippy::float_cmp)]
 #[cfg(test)]
 mod transpose {
     use crate::{
@@ -87,12 +89,9 @@ mod transpose {
     }
 }
 
+#[expect(clippy::cast_precision_loss)]
 #[cfg(test)]
 mod transpose_inplace {
-    // use crate::{matrix::OwnedMatrix, matrix_impl::OwnedMatrixDyn, operation::asum::Asum};
-    //
-    // use super::TransposeInplace;
-
     use crate::{
         device::Device,
         dim::DimDyn,

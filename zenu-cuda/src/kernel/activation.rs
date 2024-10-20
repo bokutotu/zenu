@@ -1,8 +1,11 @@
 use std::any::TypeId;
 
-use zenu_cuda_kernel_sys::*;
+use zenu_cuda_kernel_sys::{
+    relu_backward_mask_double, relu_backward_mask_float, relu_double, relu_float,
+};
 
-pub fn relu<T: 'static>(
+#[expect(clippy::missing_panics_doc)]
+pub fn relu<T: 'static + Copy>(
     input: *const T,
     output: *mut T,
     alpha: T,
@@ -11,35 +14,36 @@ pub fn relu<T: 'static>(
     output_stride: usize,
 ) {
     if TypeId::of::<T>() == TypeId::of::<f32>() {
-        let alpha: f32 = unsafe { *(&alpha as *const T as *const f32) };
+        let alpha = unsafe { *std::ptr::from_ref(&alpha).cast() };
         unsafe {
             relu_float(
-                input as *mut f32,
-                output as *mut f32,
+                input.cast::<f32>().cast_mut(),
+                output.cast(),
                 alpha,
-                size as ::libc::c_int,
-                input_stride as ::libc::c_int,
-                output_stride as ::libc::c_int,
-            )
+                ::libc::c_int::try_from(size).unwrap(),
+                ::libc::c_int::try_from(input_stride).unwrap(),
+                ::libc::c_int::try_from(output_stride).unwrap(),
+            );
         }
     } else if TypeId::of::<T>() == TypeId::of::<f64>() {
-        let alpha: f64 = unsafe { *(&alpha as *const T as *const f64) };
+        let alpha = unsafe { *std::ptr::from_ref(&alpha).cast() };
         unsafe {
             relu_double(
-                input as *mut f64,
-                output as *mut f64,
+                input.cast::<f64>().cast_mut(),
+                output.cast(),
                 alpha,
-                size as ::libc::c_int,
-                input_stride as ::libc::c_int,
-                output_stride as ::libc::c_int,
-            )
+                ::libc::c_int::try_from(size).unwrap(),
+                ::libc::c_int::try_from(input_stride).unwrap(),
+                ::libc::c_int::try_from(output_stride).unwrap(),
+            );
         }
     } else {
         panic!("Unsupported data type");
     }
 }
 
-pub fn relu_backward_mask<T: 'static>(
+#[expect(clippy::missing_panics_doc)]
+pub fn relu_backward_mask<T: 'static + Copy>(
     input: *const T,
     mask: *mut T,
     alpha: T,
@@ -48,28 +52,28 @@ pub fn relu_backward_mask<T: 'static>(
     mask_stride: usize,
 ) {
     if TypeId::of::<T>() == TypeId::of::<f32>() {
-        let alpha: f32 = unsafe { *(&alpha as *const T as *const f32) };
+        let alpha = unsafe { *std::ptr::from_ref(&alpha).cast() };
         unsafe {
             relu_backward_mask_float(
-                input as *mut f32,
-                mask as *mut f32,
+                input.cast::<f32>().cast_mut(),
+                mask.cast(),
                 alpha,
-                size as ::libc::c_int,
-                input_stride as ::libc::c_int,
-                mask_stride as ::libc::c_int,
-            )
+                ::libc::c_int::try_from(size).unwrap(),
+                ::libc::c_int::try_from(input_stride).unwrap(),
+                ::libc::c_int::try_from(mask_stride).unwrap(),
+            );
         }
     } else if TypeId::of::<T>() == TypeId::of::<f64>() {
-        let alpha: f64 = unsafe { *(&alpha as *const T as *const f64) };
+        let alpha = unsafe { *std::ptr::from_ref(&alpha).cast() };
         unsafe {
             relu_backward_mask_double(
-                input as *mut f64,
-                mask as *mut f64,
+                input.cast::<f64>().cast_mut(),
+                mask.cast(),
                 alpha,
-                size as ::libc::c_int,
-                input_stride as ::libc::c_int,
-                mask_stride as ::libc::c_int,
-            )
+                ::libc::c_int::try_from(size).unwrap(),
+                ::libc::c_int::try_from(input_stride).unwrap(),
+                ::libc::c_int::try_from(mask_stride).unwrap(),
+            );
         }
     } else {
         panic!("Unsupported data type");

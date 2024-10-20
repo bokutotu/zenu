@@ -8,6 +8,7 @@ use crate::{
 
 use crate::nn::im2col::{im2col, Im2ColRes};
 
+#[expect(clippy::needless_pass_by_value)]
 pub(super) fn conv2d_inner<T: Num, D: Device>(
     img: Matrix<Ref<&T>, DimDyn, D>,
     kernel: Matrix<Ref<&T>, DimDyn, D>,
@@ -37,6 +38,7 @@ pub(super) fn conv2d_inner<T: Num, D: Device>(
     result
 }
 
+#[expect(clippy::cast_precision_loss, clippy::unreadable_literal)]
 #[cfg(test)]
 mod conv2d {
     use zenu_test::assert_mat_eq_epsilon;

@@ -34,6 +34,7 @@ impl<T: Num, D: Device> Function<T, D> for Exp<T, D> {
     }
 }
 
+#[must_use]
 pub fn exp<T: Num, D: Device>(input: Variable<T, D>) -> Variable<T, D> {
     let output = alloc_like(&input);
     let exp = Exp::new(input, output.clone());
@@ -55,6 +56,7 @@ mod exp {
 
     use super::exp;
 
+    #[expect(clippy::unreadable_literal)]
     fn exp_1d<D: Device>() {
         let x = from_vec(vec![1., 2., 3.], [3]);
         let exp = exp(x.clone());

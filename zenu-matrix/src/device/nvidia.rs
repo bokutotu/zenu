@@ -7,17 +7,17 @@ pub struct Nvidia;
 
 impl DeviceBase for Nvidia {
     fn raw_drop_ptr<T>(ptr: *mut T) {
-        zenu_cuda::runtime::cuda_free(ptr as *mut std::ffi::c_void).unwrap();
+        zenu_cuda::runtime::cuda_free(ptr.cast::<::libc::c_void>()).unwrap();
     }
 
     fn mem_pool_drop_ptr(ptr: *mut u8) -> Result<(), MemPoolError> {
         let state = &ZENU_MATRIX_STATE;
-        state.nvidia_mem_pool.try_free(ptr)
+        state.nvidia.try_free(ptr)
     }
 
     fn clone_ptr<T>(src: *const T, len: usize) -> *mut T {
         let bytes = len * std::mem::size_of::<T>();
-        let dst = Self::alloc(bytes).unwrap() as *mut T;
+        let dst = Self::alloc(bytes).unwrap().cast::<T>();
         zenu_cuda::runtime::cuda_copy(
             dst,
             src,
@@ -37,7 +37,9 @@ impl DeviceBase for Nvidia {
     }
 
     fn from_vec<T: Num>(mut vec: Vec<T>) -> *mut T {
-        let ptr = Self::alloc(vec.len() * std::mem::size_of::<T>()).unwrap() as *mut T;
+        let ptr = Self::alloc(vec.len() * std::mem::size_of::<T>())
+            .unwrap()
+            .cast::<T>();
         zenu_cuda::runtime::cuda_copy(
             ptr,
             vec.as_mut_ptr(),
@@ -50,7 +52,7 @@ impl DeviceBase for Nvidia {
 
     fn zeros<T: Num>(len: usize) -> *mut T {
         let bytes = len * std::mem::size_of::<T>();
-        let ptr = Self::alloc(bytes).unwrap() as *mut T;
+        let ptr = Self::alloc(bytes).unwrap().cast::<T>();
         zenu_cuda::cublas::cublas_scal(len, T::zero(), ptr, 1).unwrap();
         ptr
     }
@@ -62,7 +64,7 @@ impl DeviceBase for Nvidia {
 
     fn mem_pool_alloc(num_bytes: usize) -> Result<*mut u8, MemPoolError> {
         let state = &ZENU_MATRIX_STATE;
-        state.nvidia_mem_pool.try_alloc(num_bytes)
+        state.nvidia.try_alloc(num_bytes)
     }
 }
 

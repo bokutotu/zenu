@@ -39,6 +39,7 @@ impl<T: Num, D: Device> Function<T, D> for CosH<T, D> {
     }
 }
 
+#[must_use]
 pub fn cosh<T: Num, D: Device>(input: Variable<T, D>) -> Variable<T, D> {
     let output = alloc_like(&input);
     let cosh = CosH::new(input, output.clone());

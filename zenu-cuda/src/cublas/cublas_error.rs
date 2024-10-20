@@ -25,7 +25,7 @@ impl From<u32> for ZenuCublasError {
             14 => ZenuCublasError::CublasStatusInternalError,
             15 => ZenuCublasError::CublasStatusNotSupported,
             16 => ZenuCublasError::CublasStatusLicenseError,
-            _ => panic!("Invalid cublas error code: {}", value),
+            _ => panic!("Invalid cublas error code: {value}"),
         }
     }
 }

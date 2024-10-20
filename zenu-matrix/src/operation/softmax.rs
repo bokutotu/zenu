@@ -6,13 +6,16 @@ use crate::{
 };
 
 impl<T: Num, D: Device> Matrix<Ref<&mut T>, DimDyn, D> {
+    #[expect(clippy::missing_panics_doc)]
     pub fn softmax_assign<R: Repr<Item = T>>(&self, source: &Matrix<R, DimDyn, D>, axis: usize) {
-        if axis >= self.shape().len() {
-            panic!("axis must be less than the number of dimensions");
-        }
-        if self.shape().slice() != source.shape().slice() {
-            panic!("softmax shape mismatch");
-        }
+        assert!(
+            axis < self.shape().len(),
+            "axis must be less than the number of dimensions"
+        );
+        assert!(
+            self.shape().slice() == source.shape().slice(),
+            "softmax shape mismatch"
+        );
 
         let max_diff = source.to_ref() - source.max_axis(axis, true);
         let mut output = max_diff.exp();
@@ -24,6 +27,7 @@ impl<T: Num, D: Device> Matrix<Ref<&mut T>, DimDyn, D> {
 
 #[cfg(test)]
 mod softmax {
+    #![expect(clippy::unreadable_literal)]
     use crate::{
         device::Device,
         dim::DimDyn,

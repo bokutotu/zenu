@@ -8,15 +8,15 @@ macro_rules! assert_mat_eq_epsilon {
         let epsilon = $epsilon;
         let diff = mat.to_ref() - mat2.to_ref();
         let abs = diff.abs();
-        let diff_asum = abs.asum();
-        if diff_asum > epsilon {
+        let diff_max = abs.max_item();
+        if diff_max > epsilon {
             panic!(
                 "assertion failed: `(left == right)`\n\
                 left: \n{:?},\n\
                 right: \n{:?}\n\
                 diff: \n{:?}\n\
-                diff_asum: \n{:?}",
-                mat, mat2, diff, diff_asum
+                diff_max: \n{:?}",
+                mat, mat2, diff, diff_max
             );
         }
     }};
@@ -74,7 +74,7 @@ macro_rules! run_test {
     };
 }
 
-#[allow(clippy::crate_in_macro_def)]
+#[expect(clippy::crate_in_macro_def)]
 #[macro_export]
 macro_rules! run_mat_test {
     ($test_func:ident, $cpu_name:ident, $gpu_name:ident) => {
@@ -88,4 +88,43 @@ macro_rules! run_mat_test {
             $test_func::<crate::device::nvidia::Nvidia>();
         }
     };
+}
+
+#[expect(clippy::crate_in_macro_def)]
+#[macro_export]
+macro_rules! read_test_case_from_json {
+    ($path:expr) => {{
+        let json = std::fs::read_to_string($path).unwrap();
+        let json: serde_json::Value = serde_json::from_str(&json).unwrap();
+        let mut map = std::collections::HashMap::new();
+        for (key, value) in json.as_object().unwrap() {
+            let value = value.to_string();
+            let data: crate::matrix::Matrix<
+                crate::matrix::Owned<f32>,
+                crate::dim::DimDyn,
+                crate::device::cpu::Cpu,
+            > = serde_json::from_str(&value).unwrap();
+            map.insert(key.to_string(), data);
+        }
+        map
+    }};
+}
+
+#[macro_export]
+macro_rules! read_test_case_from_json_val {
+    ($path:expr) => {{
+        let json = std::fs::read_to_string($path).unwrap();
+        let json: serde_json::Value = serde_json::from_str(&json).unwrap();
+        let mut map = std::collections::HashMap::new();
+        for (key, value) in json.as_object().unwrap() {
+            let value = value.to_string();
+            let data: zenu_matrix::matrix::Matrix<
+                zenu_matrix::matrix::Owned<f32>,
+                zenu_matrix::dim::DimDyn,
+                zenu_matrix::device::cpu::Cpu,
+            > = serde_json::from_str(&value).unwrap();
+            map.insert(key.to_string(), data);
+        }
+        map
+    }};
 }

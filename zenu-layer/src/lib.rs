@@ -1,12 +1,27 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, hash::BuildHasher};
 
 use zenu_autograd::Variable;
 use zenu_matrix::{device::Device, num::Num};
 
 pub mod layers;
 
+pub trait ModuleParameters<T: Num, D: Device> {}
+
+impl<T: Num, D: Device> ModuleParameters<T, D> for () {}
+
+impl<T: Num, D: Device> ModuleParameters<T, D> for Variable<T, D> {}
+
+impl<T: Num, D: Device> ModuleParameters<T, D> for Vec<Variable<T, D>> {}
+
+impl<T: Num, D: Device, K, S: BuildHasher> ModuleParameters<T, D>
+    for HashMap<K, Variable<T, D>, S>
+{
+}
+
 pub trait Module<T: Num, D: Device> {
-    fn call(&self, input: Variable<T, D>) -> Variable<T, D>;
+    type Input: ModuleParameters<T, D>;
+    type Output: ModuleParameters<T, D>;
+    fn call(&self, input: Self::Input) -> Self::Output;
 }
 
 pub trait Parameters<T: Num, D: Device> {
@@ -23,6 +38,15 @@ pub trait Parameters<T: Num, D: Device> {
             parameters.insert(key.clone(), value.clone());
         }
         parameters
+    }
+    fn load_parameters(&mut self, parameters: HashMap<String, Variable<T, D>>) {
+        for (self_key, self_value) in self.parameters() {
+            if let Some(value) = parameters.get(&self_key) {
+                self_value.get_as_mut().copy_from(&value.get_as_ref());
+            } else {
+                panic!("Failed to load model missing key: {self_key}");
+            }
+        }
     }
 }
 

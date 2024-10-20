@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use zenu_autograd::{
-    functions::pool2d::{max_pool_2d, MaxPool2dConfig},
+    nn::pool2d::{max_pool_2d, MaxPool2dConfig},
     Variable,
 };
 use zenu_matrix::{device::Device, num::Num};
@@ -38,6 +38,8 @@ impl<T: Num> MaxPool2d<T> {
 }
 
 impl<T: Num, D: Device> Module<T, D> for MaxPool2d<T> {
+    type Input = Variable<T, D>;
+    type Output = Variable<T, D>;
     fn call(&self, input: Variable<T, D>) -> Variable<T, D> {
         max_pool_2d(
             input,

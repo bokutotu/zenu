@@ -1,33 +1,26 @@
-use super::{error::ZenuCudnnError, tensor_descriptor_4d, zenu_cudnn_data_type, TensorFormat};
+use zenu_cuda_runtime_sys::{cudaFree, cudaMalloc};
+use zenu_cudnn_sys::{
+    cudnnConvolutionBackwardBias, cudnnConvolutionBackwardData, cudnnConvolutionBackwardFilter,
+    cudnnConvolutionBwdDataAlgoPerf_t, cudnnConvolutionBwdDataAlgo_t,
+    cudnnConvolutionBwdFilterAlgoPerf_t, cudnnConvolutionBwdFilterAlgo_t,
+    cudnnConvolutionDescriptor_t, cudnnConvolutionForward, cudnnConvolutionFwdAlgoPerf_t,
+    cudnnConvolutionFwdAlgo_t, cudnnConvolutionMode_t, cudnnCreateConvolutionDescriptor,
+    cudnnDestroyConvolutionDescriptor, cudnnDestroyFilterDescriptor, cudnnDestroyTensorDescriptor,
+    cudnnFilterDescriptor_t, cudnnGetConvolutionBackwardDataAlgorithm_v7,
+    cudnnGetConvolutionBackwardDataWorkspaceSize, cudnnGetConvolutionBackwardFilterAlgorithm_v7,
+    cudnnGetConvolutionBackwardFilterWorkspaceSize, cudnnGetConvolutionForwardAlgorithm_v7,
+    cudnnGetConvolutionForwardWorkspaceSize, cudnnMathType_t, cudnnSetConvolution2dDescriptor,
+    cudnnSetConvolutionMathType, cudnnStatus_t, cudnnTensorDescriptor_t,
+};
+
+use super::{
+    error::ZenuCudnnError, filter_descriptor_4d, tensor_descriptor_4d, zenu_cudnn_data_type,
+    TensorFormat,
+};
 
 use crate::ZENU_CUDA_STATE;
 
 use std::cell::UnsafeCell;
-
-use zenu_cudnn_sys::*;
-
-fn filter_descriptor<T: 'static>(
-    k: i32,
-    c: i32,
-    h: i32,
-    w: i32,
-    format: TensorFormat,
-) -> Result<cudnnFilterDescriptor_t, ZenuCudnnError> {
-    let data_type = zenu_cudnn_data_type::<T>();
-    let format = format.into();
-    let mut filter: cudnnFilterDescriptor_t = std::ptr::null_mut();
-    unsafe {
-        let status = cudnnCreateFilterDescriptor(&mut filter as *mut cudnnFilterDescriptor_t);
-        if status != cudnnStatus_t::CUDNN_STATUS_SUCCESS {
-            return Err(ZenuCudnnError::from(status));
-        }
-        let status = cudnnSetFilter4dDescriptor(filter, data_type, format, k, c, h, w);
-        if status != cudnnStatus_t::CUDNN_STATUS_SUCCESS {
-            return Err(ZenuCudnnError::from(status));
-        }
-    }
-    Ok(filter)
-}
 
 fn convolution_descriptor(
     pad_h: i32,
@@ -39,8 +32,7 @@ fn convolution_descriptor(
 ) -> Result<cudnnConvolutionDescriptor_t, ZenuCudnnError> {
     let mut conv: cudnnConvolutionDescriptor_t = std::ptr::null_mut();
     unsafe {
-        let status =
-            cudnnCreateConvolutionDescriptor(&mut conv as *mut cudnnConvolutionDescriptor_t);
+        let status = cudnnCreateConvolutionDescriptor(std::ptr::from_mut(&mut conv));
         if status != cudnnStatus_t::CUDNN_STATUS_SUCCESS {
             return Err(ZenuCudnnError::from(status));
         }
@@ -88,9 +80,9 @@ fn convolution_algorithm(
             filter,
             conv,
             output,
-            requested_algo_count as i32,
-            &mut returned_algo_count as *mut i32,
-            algorithm.as_mut_ptr() as *mut cudnnConvolutionFwdAlgoPerf_t,
+            i32::try_from(requested_algo_count).unwrap(),
+            std::ptr::from_mut(&mut returned_algo_count),
+            algorithm.as_mut_ptr().cast(),
         );
         if state != cudnnStatus_t::CUDNN_STATUS_SUCCESS {
             return Err(ZenuCudnnError::from(state));
@@ -125,9 +117,9 @@ fn convolution_backward_data_algorithm(
             output,
             conv,
             input,
-            requested_algo_count as i32,
-            &mut returned_algo_count as *mut i32,
-            algorithm.as_mut_ptr() as *mut cudnnConvolutionBwdDataAlgoPerf_t,
+            i32::try_from(requested_algo_count).unwrap(),
+            std::ptr::from_mut(&mut returned_algo_count),
+            algorithm.as_mut_ptr().cast(),
         );
         if state != cudnnStatus_t::CUDNN_STATUS_SUCCESS {
             return Err(ZenuCudnnError::from(state));
@@ -163,9 +155,9 @@ fn convolution_backward_filter_algorithm(
             output,
             conv,
             filter,
-            requested_algo_count as i32,
-            &mut returned_algo_count as *mut i32,
-            algorithm.as_mut_ptr() as *mut cudnnConvolutionBwdFilterAlgoPerf_t,
+            i32::try_from(requested_algo_count).unwrap(),
+            std::ptr::from_mut(&mut returned_algo_count),
+            algorithm.as_mut_ptr().cast(),
         );
         if state != cudnnStatus_t::CUDNN_STATUS_SUCCESS {
             return Err(ZenuCudnnError::from(state));
@@ -193,7 +185,7 @@ fn convolution_workspace(
             conv,
             output,
             algorithm,
-            &mut workspace_size as *mut usize,
+            std::ptr::from_mut(&mut workspace_size),
         );
         if status != cudnnStatus_t::CUDNN_STATUS_SUCCESS {
             return Err(ZenuCudnnError::from(status));
@@ -220,7 +212,7 @@ fn convolution_backward_data_workspace(
             conv,
             input,
             algorithm,
-            &mut workspace_size as *mut usize,
+            std::ptr::from_mut(&mut workspace_size),
         );
         if status != cudnnStatus_t::CUDNN_STATUS_SUCCESS {
             return Err(ZenuCudnnError::from(status));
@@ -235,7 +227,7 @@ fn convolution_backward_filter_workspace(
     conv: cudnnConvolutionDescriptor_t,
     output: cudnnTensorDescriptor_t,
     algorithm: cudnnConvolutionBwdFilterAlgo_t,
-) -> Result<Workspace, ZenuCudnnError> {
+) -> Workspace {
     let state = ZENU_CUDA_STATE.lock().unwrap();
     let handle = state.get_cudnn();
     let mut workspace_size = 0;
@@ -247,12 +239,13 @@ fn convolution_backward_filter_workspace(
             conv,
             filter,
             algorithm,
-            &mut workspace_size as *mut usize,
+            std::ptr::from_mut(&mut workspace_size),
         );
-        if status != cudnnStatus_t::CUDNN_STATUS_SUCCESS {
-            panic!("Failed to get convolution backward filter workspace size");
-        }
-        Ok(Workspace::new(workspace_size))
+        assert!(
+            status == cudnnStatus_t::CUDNN_STATUS_SUCCESS,
+            "Failed to get convolution backward filter workspace size"
+        );
+        Workspace::new(workspace_size)
     }
 }
 
@@ -263,6 +256,7 @@ pub struct Workspace {
 }
 
 impl Workspace {
+    #[must_use]
     pub fn new(workspace_size: usize) -> Self {
         Self {
             workspace: UnsafeCell::new(None),
@@ -270,12 +264,16 @@ impl Workspace {
         }
     }
 
+    #[expect(clippy::missing_panics_doc)]
     pub fn workspace(&self) -> *mut libc::c_void {
         let workspace = unsafe { &mut *self.workspace.get() };
         if workspace.is_none() {
             let ptr = unsafe {
                 let mut ptr = std::ptr::null_mut();
-                cudaMalloc(&mut ptr as *mut *mut libc::c_void, self.workspace_size);
+                cudaMalloc(
+                    std::ptr::from_mut::<*mut libc::c_void>(&mut ptr),
+                    self.workspace_size,
+                );
                 ptr
             };
             *workspace = Some(ptr);
@@ -319,29 +317,31 @@ pub struct ConvolutionConfig<T> {
     _marker: std::marker::PhantomData<T>,
 }
 
-impl<T> ConvolutionConfig<T> {
+impl<T: Copy> ConvolutionConfig<T> {
+    #[expect(clippy::missing_panics_doc)]
     pub fn forward(&self, alpha: T, input: *const T, filter: *const T, beta: T, output: *mut T) {
         let state = ZENU_CUDA_STATE.lock().unwrap();
         let handle = state.get_cudnn();
         unsafe {
             cudnnConvolutionForward(
                 handle.as_ptr(),
-                &alpha as *const T as *const libc::c_void,
+                std::ptr::from_ref(&alpha).cast(),
                 self.input,
-                input as *const libc::c_void,
+                input.cast(),
                 self.filter,
-                filter as *const libc::c_void,
+                filter.cast(),
                 self.conv,
                 self.fwd_algo,
                 self.fwd_workspace.workspace(),
                 self.fwd_workspace.workspace_size,
-                &beta as *const T as *const libc::c_void,
+                std::ptr::from_ref(&beta).cast(),
                 self.output,
-                output as *mut libc::c_void,
+                output.cast(),
             );
         }
     }
 
+    #[expect(clippy::missing_panics_doc)]
     pub fn backward_data(
         &self,
         alpha: T,
@@ -355,22 +355,23 @@ impl<T> ConvolutionConfig<T> {
         unsafe {
             cudnnConvolutionBackwardData(
                 handle.as_ptr(),
-                &alpha as *const T as *const libc::c_void,
+                std::ptr::from_ref(&alpha).cast(),
                 self.filter,
-                filter as *const libc::c_void,
+                filter.cast(),
                 self.output,
-                output as *const libc::c_void,
+                output.cast(),
                 self.conv,
                 self.bwd_data_algo,
                 self.bwd_data_workspace.workspace(),
                 self.bwd_data_workspace.workspace_size,
-                &beta as *const T as *const libc::c_void,
+                std::ptr::from_ref(&beta).cast(),
                 self.input,
-                input as *mut libc::c_void,
+                input.cast(),
             );
         }
     }
 
+    #[expect(clippy::missing_panics_doc)]
     pub fn backward_filter(
         &self,
         alpha: T,
@@ -384,18 +385,18 @@ impl<T> ConvolutionConfig<T> {
         unsafe {
             cudnnConvolutionBackwardFilter(
                 handle.as_ptr(),
-                &alpha as *const T as *const libc::c_void,
+                std::ptr::from_ref(&alpha).cast(),
                 self.input,
-                input as *const libc::c_void,
+                input.cast(),
                 self.output,
-                d_output as *const libc::c_void,
+                d_output.cast(),
                 self.conv,
                 self.bwd_filter_algo,
                 self.bwd_filter_workspace.workspace(),
                 self.bwd_filter_workspace.workspace_size,
-                &beta as *const T as *const libc::c_void,
+                std::ptr::from_ref(&beta).cast(),
                 self.filter,
-                filter as *mut libc::c_void,
+                filter.cast(),
             );
         }
     }
@@ -425,6 +426,7 @@ pub struct ConvolutionBuilder<T> {
 }
 
 impl<T: 'static> ConvolutionBuilder<T> {
+    #[expect(clippy::missing_errors_doc)]
     pub fn input(
         mut self,
         n: i32,
@@ -437,6 +439,7 @@ impl<T: 'static> ConvolutionBuilder<T> {
         Ok(self)
     }
 
+    #[expect(clippy::missing_errors_doc)]
     pub fn filter(
         mut self,
         k: i32,
@@ -445,10 +448,11 @@ impl<T: 'static> ConvolutionBuilder<T> {
         w: i32,
         format: TensorFormat,
     ) -> Result<Self, ZenuCudnnError> {
-        self.filter = Some(filter_descriptor::<T>(k, c, h, w, format)?);
+        self.filter = Some(filter_descriptor_4d::<T>(k, c, h, w, format)?);
         Ok(self)
     }
 
+    #[expect(clippy::missing_errors_doc)]
     pub fn conv(
         mut self,
         pad_h: i32,
@@ -464,6 +468,7 @@ impl<T: 'static> ConvolutionBuilder<T> {
         Ok(self)
     }
 
+    #[expect(clippy::missing_errors_doc)]
     pub fn output(
         mut self,
         n: i32,
@@ -476,6 +481,8 @@ impl<T: 'static> ConvolutionBuilder<T> {
         Ok(self)
     }
 
+    #[expect(clippy::missing_panics_doc)]
+    #[must_use]
     pub fn algorithms(mut self, requested_algo_count: usize) -> Self {
         let input = self.input.unwrap();
         let filter = self.filter.unwrap();
@@ -502,6 +509,8 @@ impl<T: 'static> ConvolutionBuilder<T> {
         self
     }
 
+    #[expect(clippy::missing_panics_doc)]
+    #[must_use]
     pub fn build(self) -> ConvolutionConfig<T> {
         let input = self.input.unwrap();
         let filter = self.filter.unwrap();
@@ -516,8 +525,7 @@ impl<T: 'static> ConvolutionBuilder<T> {
             convolution_backward_data_workspace(input, filter, conv, output, bwd_data_algo)
                 .unwrap();
         let bwd_filter_workspace =
-            convolution_backward_filter_workspace(input, filter, conv, output, bwd_filter_algo)
-                .unwrap();
+            convolution_backward_filter_workspace(input, filter, conv, output, bwd_filter_algo);
 
         ConvolutionConfig {
             input,
@@ -535,17 +543,22 @@ impl<T: 'static> ConvolutionBuilder<T> {
     }
 }
 
-pub fn backward_bias<T: 'static>(
+#[expect(clippy::missing_panics_doc)]
+pub fn backward_bias<T: 'static + Copy>(
     alpha: T,
     d_output: *const T,
     beta: T,
     bias: *mut T,
     output_shape: &[usize],
 ) {
-    let output_shape_0 = output_shape[0] as i32;
-    let output_shape_1 = output_shape[1] as i32;
-    let output_shape_2 = output_shape[2] as i32;
-    let output_shape_3 = output_shape[3] as i32;
+    let output_shape = output_shape
+        .iter()
+        .map(|x| i32::try_from(*x).unwrap())
+        .collect::<Vec<i32>>();
+    let output_shape_0 = output_shape[0];
+    let output_shape_1 = output_shape[1];
+    let output_shape_2 = output_shape[2];
+    let output_shape_3 = output_shape[3];
 
     let state = ZENU_CUDA_STATE.lock().unwrap();
     let handle = state.get_cudnn();
@@ -564,24 +577,30 @@ pub fn backward_bias<T: 'static>(
     unsafe {
         cudnnConvolutionBackwardBias(
             handle.as_ptr(),
-            &alpha as *const T as *const libc::c_void,
+            std::ptr::from_ref(&alpha).cast(),
             output_desc,
-            d_output as *const libc::c_void,
-            &beta as *const T as *const libc::c_void,
+            d_output.cast(),
+            std::ptr::from_ref(&beta).cast(),
             bias_desc,
-            bias as *mut libc::c_void,
+            bias.cast(),
         );
     }
 }
 
 #[cfg(test)]
+#[expect(
+    clippy::too_many_lines,
+    clippy::unreadable_literal,
+    clippy::cast_ptr_alignment
+)]
 mod cudnn {
     use super::*;
     use crate::runtime::{cuda_copy, cuda_malloc, ZenuCudaMemCopyKind};
 
+    #[expect(clippy::similar_names)]
     #[test]
     fn random() {
-        let input = vec![
+        let input = [
             0.5432947,
             -0.39515755,
             0.20552567,
@@ -615,7 +634,7 @@ mod cudnn {
             -0.7504268,
             0.18540798,
         ];
-        let output = vec![
+        let output = [
             0.3671525,
             -0.17387724,
             -0.53952014,
@@ -665,7 +684,7 @@ mod cudnn {
             -0.34638345,
             -0.02880986,
         ];
-        let input_grad = vec![
+        let input_grad = [
             -0.06312838,
             0.05240719,
             0.05240719,
@@ -699,7 +718,7 @@ mod cudnn {
             -0.37261552,
             -0.085577406,
         ];
-        let filter = vec![
+        let filter = [
             -0.0017646605,
             0.12644097,
             -0.1939936,
@@ -755,7 +774,7 @@ mod cudnn {
             0.093546025,
             0.03184169,
         ];
-        let filter_grad = vec![
+        let filter_grad = [
             -0.23757887,
             1.0425875,
             -0.7473556,
@@ -871,6 +890,12 @@ mod cudnn {
     }
 
     #[test]
+    #[expect(
+        clippy::many_single_char_names,
+        clippy::cast_precision_loss,
+        clippy::cast_sign_loss,
+        clippy::similar_names
+    )]
     fn test_convolution_operations() {
         let n = 1;
         let c = 3;

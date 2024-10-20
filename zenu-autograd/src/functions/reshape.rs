@@ -41,6 +41,7 @@ impl<T: Num, D: Device> Function<T, D> for Reshape<T, D> {
     }
 }
 
+#[must_use]
 pub fn reshape<T: Num, D: Device>(input: Variable<T, D>, output_shape: &[usize]) -> Variable<T, D> {
     let output = alloc(output_shape);
     let reshape = Reshape::new(input, output.clone());
