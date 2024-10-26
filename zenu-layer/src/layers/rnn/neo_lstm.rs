@@ -7,9 +7,9 @@ use zenu_autograd::{
 };
 use zenu_matrix::{device::Device, num::Num};
 
-use crate::ModuleParameters;
+use crate::{Module, ModuleParameters, Parameters};
 
-use super::neo_struct::NeoRNN;
+use super::{builder::RNNSLayerBuilder, neo_struct::NeoRNN};
 
 pub struct LSTMInput<T: Num, D: Device> {
     pub x: Variable<T, D>,
@@ -47,3 +47,30 @@ impl<T: Num, D: Device> NeoRNN<T, D, LSTMCell> {
         )
     }
 }
+
+pub struct LSTM<T: Num, D: Device>(NeoRNN<T, D, LSTMCell>);
+
+impl<T: Num, D: Device> Parameters<T, D> for LSTM<T, D> {
+    fn weights(&self) -> std::collections::HashMap<String, Variable<T, D>> {
+        self.0.weights()
+    }
+
+    fn biases(&self) -> std::collections::HashMap<String, Variable<T, D>> {
+        self.0.biases()
+    }
+
+    fn load_parameters(&mut self, parameters: std::collections::HashMap<String, Variable<T, D>>) {
+        self.0.load_parameters(parameters)
+    }
+}
+
+impl<T: Num, D: Device> Module<T, D> for LSTM<T, D> {
+    type Input = LSTMInput<T, D>;
+    type Output = Variable<T, D>;
+
+    fn call(&self, input: Self::Input) -> Self::Output {
+        self.0.forward(input)
+    }
+}
+
+pub type LSTMBuilder<T, D> = RNNSLayerBuilder<T, D, LSTMCell>;
