@@ -8,12 +8,12 @@ use crate::{
     Variable,
 };
 
-pub trait CellType: Sized + Clone + Copy + Debug {
+pub trait CellType: Sized + Clone + Copy + Debug + Default {
     fn hidden_size(hidden_size: usize) -> usize;
     fn name() -> &'static str;
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct LSTMCell;
 
 impl CellType for LSTMCell {
@@ -26,7 +26,7 @@ impl CellType for LSTMCell {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct GRUCell;
 
 impl CellType for GRUCell {
@@ -39,7 +39,7 @@ impl CellType for GRUCell {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RNNCell;
 
 impl CellType for RNNCell {

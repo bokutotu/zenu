@@ -7,12 +7,10 @@ use zenu_matrix::{device::Device, num::Num};
 #[cfg(feature = "nvidia")]
 use zenu_matrix::{device::nvidia::Nvidia, nn::rnn::RNNDescriptor};
 
+use zenu_autograd::nn::rnns::weights::{RNNCell, RNNLayerWeights};
+
 #[cfg(feature = "nvidia")]
-use zenu_autograd::{
-    creator::alloc::alloc,
-    nn::rnns::weights::{RNNCell, RNNLayerWeights, RNNWeights},
-    Variable,
-};
+use zenu_autograd::{creator::alloc::alloc, nn::rnns::weights::RNNWeights, Variable};
 
 #[cfg(feature = "nvidia")]
 use crate::layers::rnn::neo_struct::rnn_weights_to_desc;
@@ -22,7 +20,7 @@ use crate::layers::rnn::neo_struct::NeoRNN;
 use super::neo_struct::Activation;
 
 #[derive(Debug, Default)]
-pub struct RNNLayerBuilderInner<T: Num, D: Device, C: CellType> {
+pub struct RNNSLayerBuilder<T: Num, D: Device, C: CellType> {
     is_cudnn: Option<bool>,
     is_bidirectional: Option<bool>,
     hidden_size: Option<usize>,
@@ -34,7 +32,7 @@ pub struct RNNLayerBuilderInner<T: Num, D: Device, C: CellType> {
     _type: std::marker::PhantomData<(T, D, C)>,
 }
 
-impl<T: Num, D: Device, C: CellType> RNNLayerBuilderInner<T, D, C> {
+impl<T: Num, D: Device, C: CellType> RNNSLayerBuilder<T, D, C> {
     #[must_use]
     pub fn is_cudnn(mut self, is_cudnn: bool) -> Self {
         self.is_cudnn = Some(is_cudnn);
@@ -64,12 +62,6 @@ impl<T: Num, D: Device, C: CellType> RNNLayerBuilderInner<T, D, C> {
         self.input_size = Some(input_size);
         self
     }
-
-    // #[must_use]
-    // pub fn activation(mut self, activation: Activation) -> Self {
-    //     self.activation = Some(activation);
-    //     self
-    // }
 
     #[must_use]
     pub fn batch_size(mut self, batch_size: usize) -> Self {
@@ -158,7 +150,7 @@ impl<T: Num, D: Device, C: CellType> RNNLayerBuilderInner<T, D, C> {
 
     #[expect(clippy::missing_panics_doc)]
     #[must_use]
-    pub fn build(mut self) -> NeoRNN<T, D, C>
+    pub(super) fn build_inner(mut self) -> NeoRNN<T, D, C>
     where
         StandardNormal: Distribution<T>,
     {
@@ -209,7 +201,7 @@ impl<T: Num, D: Device, C: CellType> RNNLayerBuilderInner<T, D, C> {
     }
 }
 
-impl<T: Num, D: Device> RNNLayerBuilderInner<T, D, RNNCell> {
+impl<T: Num, D: Device> RNNSLayerBuilder<T, D, RNNCell> {
     #[must_use]
     pub fn activation(mut self, activation: Activation) -> Self {
         self.activation = Some(activation);
