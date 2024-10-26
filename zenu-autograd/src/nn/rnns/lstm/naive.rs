@@ -9,6 +9,7 @@ use crate::{
         index_axis::index_axis, matmul::matmul, slice::slice, stack::stack, tanh::tanh,
         transpose::transpose,
     },
+    nn::rnns::weights::{LSTMCell, RNNLayerWeights, RNNWeights},
     Variable,
 };
 
@@ -67,8 +68,8 @@ fn lstm_single_layer<T: Num, D: Device>(
     c_forward: Variable<T, D>,
     h_backward: Option<Variable<T, D>>,
     c_backward: Option<Variable<T, D>>,
-    weight_forward: &LSTMWeights<T, D>,
-    weight_backward: Option<&LSTMWeights<T, D>>,
+    weight_forward: &RNNWeights<T, D, LSTMCell>,
+    weight_backward: Option<&RNNWeights<T, D, LSTMCell>>,
     bidirectional: bool,
 ) -> Variable<T, D> {
     let forward_output =
@@ -109,7 +110,7 @@ fn lstm_single_layer_direction<T: Num, D: Device>(
     x: Variable<T, D>,
     mut h: Variable<T, D>,
     mut c: Variable<T, D>,
-    weight: &LSTMWeights<T, D>,
+    weight: &RNNWeights<T, D, LSTMCell>,
     reverse: bool,
 ) -> Vec<Variable<T, D>> {
     let seq_len = x.get_shape()[0];
@@ -122,10 +123,10 @@ fn lstm_single_layer_direction<T: Num, D: Device>(
     };
 
     // Transpose weights once outside the loop
-    let weight_ih_t = transpose(weight.weight_ih.clone()); // [input_size, 4 * hidden_size]
-    let weight_hh_t = transpose(weight.weight_hh.clone()); // [hidden_size, 4 * hidden_size]
-    let bias_ih = &weight.bias_ih;
-    let bias_hh = &weight.bias_hh;
+    let weight_ih_t = transpose(weight.weight_input.clone()); // [input_size, 4 * hidden_size]
+    let weight_hh_t = transpose(weight.weight_hidden.clone()); // [hidden_size, 4 * hidden_size]
+    let bias_ih = &weight.bias_input;
+    let bias_hh = &weight.bias_hidden;
 
     for time_step in time_steps {
         let x_t = index_axis(x.clone(), Index::new(0, time_step));
@@ -146,63 +147,6 @@ fn lstm_single_layer_direction<T: Num, D: Device>(
     out
 }
 
-#[derive(Clone)]
-pub struct LSTMWeights<T: Num, D: Device> {
-    pub weight_ih: Variable<T, D>, // [4 * hidden_size, input_size]
-    pub weight_hh: Variable<T, D>, // [4 * hidden_size, hidden_size]
-    pub bias_ih: Variable<T, D>,   // [4 * hidden_size]
-    pub bias_hh: Variable<T, D>,   // [4 * hidden_size]
-}
-
-#[expect(clippy::similar_names)]
-impl<T: Num, D: Device> LSTMWeights<T, D> {
-    #[must_use]
-    pub fn init(input_size: usize, hidden_size: usize) -> Self
-    where
-        StandardNormal: Distribution<T>,
-    {
-        let gate_size = 4 * hidden_size;
-        let weight_ih = normal(T::zero(), T::one(), None, [gate_size, input_size]);
-        let weight_hh = normal(T::zero(), T::one(), None, [gate_size, hidden_size]);
-        let bias_ih = zeros([gate_size]);
-        let bias_hh = zeros([gate_size]);
-
-        LSTMWeights {
-            weight_ih,
-            weight_hh,
-            bias_ih,
-            bias_hh,
-        }
-    }
-}
-
-#[derive(Clone)]
-pub struct LSTMLayerWeights<T: Num, D: Device> {
-    pub forward: LSTMWeights<T, D>,
-    pub backward: Option<LSTMWeights<T, D>>,
-}
-
-impl<T: Num, D: Device> LSTMLayerWeights<T, D> {
-    #[must_use]
-    pub fn init(input_size: usize, hidden_size: usize, is_bidirectional: bool) -> Self
-    where
-        StandardNormal: Distribution<T>,
-    {
-        let forward = LSTMWeights::init(input_size, hidden_size);
-        let backward = if is_bidirectional {
-            Some(LSTMWeights::init(input_size, hidden_size))
-        } else {
-            None
-        };
-        Self { forward, backward }
-    }
-
-    #[must_use]
-    pub fn new(forward: LSTMWeights<T, D>, backward: Option<LSTMWeights<T, D>>) -> Self {
-        Self { forward, backward }
-    }
-}
-
 /// h and c shapes are [`num_layers` * `num_directions`, `batch_size`, `hidden_size`]
 #[expect(clippy::needless_pass_by_value)]
 #[must_use]
@@ -210,7 +154,7 @@ pub fn lstm_naive<T: Num, D: Device>(
     x: Variable<T, D>,
     h: Variable<T, D>,
     c: Variable<T, D>,
-    weights: &[LSTMLayerWeights<T, D>],
+    weights: &[RNNLayerWeights<T, D, LSTMCell>],
     bidirectional: bool,
 ) -> Variable<T, D> {
     let mut state = x;
@@ -262,15 +206,19 @@ mod lstm_test {
 
     use zenu_test::{assert_val_eq, assert_val_eq_grad, read_test_case_from_json_val, run_test};
 
-    use crate::{creator::zeros::zeros, Variable};
+    use crate::{
+        creator::zeros::zeros,
+        nn::rnns::weights::{LSTMCell, RNNLayerWeights, RNNWeights},
+        Variable,
+    };
 
-    use super::{lstm_naive, LSTMLayerWeights, LSTMWeights};
+    use super::lstm_naive;
 
     fn load_rnn_weight_from_json<D: Device>(
         path: &str,
         idx: usize,
         bidirectional: bool,
-    ) -> LSTMLayerWeights<f32, D> {
+    ) -> RNNLayerWeights<f32, D, LSTMCell> {
         let mats: HashMap<String, Matrix<Owned<f32>, DimDyn, Cpu>> =
             read_test_case_from_json_val!(path);
 
@@ -279,12 +227,12 @@ mod lstm_test {
         let input_bias = mats.get(&format!("rnn.bias_ih_l{idx}")).unwrap().clone();
         let hidden_bias = mats.get(&format!("rnn.bias_hh_l{idx}")).unwrap().clone();
 
-        let forward = LSTMWeights {
-            weight_ih: Variable::<f32, D>::new(input_weight.to::<D>()),
-            weight_hh: Variable::<f32, D>::new(hidden_weight.to::<D>()),
-            bias_ih: Variable::<f32, D>::new(input_bias.to::<D>()),
-            bias_hh: Variable::<f32, D>::new(hidden_bias.to::<D>()),
-        };
+        let forward = RNNWeights::new(
+            Variable::<f32, D>::new(input_weight.to::<D>()),
+            Variable::<f32, D>::new(hidden_weight.to::<D>()),
+            Variable::<f32, D>::new(input_bias.to::<D>()),
+            Variable::<f32, D>::new(hidden_bias.to::<D>()),
+        );
 
         let reverse = if bidirectional {
             let input_weight_rev = mats
@@ -303,20 +251,17 @@ mod lstm_test {
                 .get(&format!("rnn.bias_hh_l{idx}_reverse"))
                 .unwrap()
                 .clone();
-            Some(LSTMWeights {
-                weight_ih: Variable::<f32, D>::new(input_weight_rev.to::<D>()),
-                weight_hh: Variable::<f32, D>::new(hidden_weight_rev.to::<D>()),
-                bias_ih: Variable::<f32, D>::new(input_bias_rev.to::<D>()),
-                bias_hh: Variable::<f32, D>::new(hidden_bias_rev.to::<D>()),
-            })
+            Some(RNNWeights::<_, _, LSTMCell>::new(
+                Variable::<f32, D>::new(input_weight_rev.to::<D>()),
+                Variable::<f32, D>::new(hidden_weight_rev.to::<D>()),
+                Variable::<f32, D>::new(input_bias_rev.to::<D>()),
+                Variable::<f32, D>::new(hidden_bias_rev.to::<D>()),
+            ))
         } else {
             None
         };
 
-        LSTMLayerWeights {
-            forward,
-            backward: reverse,
-        }
+        RNNLayerWeights::new(forward, reverse)
     }
 
     #[expect(clippy::similar_names)]
@@ -329,7 +274,7 @@ mod lstm_test {
         let weights = load_rnn_weight_from_json::<D>(path, 0, false);
 
         let batch_size = input.get_shape()[1];
-        let hidden_size = weights.forward.bias_ih.get_shape()[0] / 4;
+        let hidden_size = weights.forward.bias_input.get_shape()[0] / 4;
 
         let h = zeros([1, batch_size, hidden_size]);
         let c = zeros([1, batch_size, hidden_size]);
@@ -345,19 +290,19 @@ mod lstm_test {
 
         let grad_weight_ih = mats.get("rnn.weight_ih_l0_grad").unwrap().clone();
         let grad_weight_ih = grad_weight_ih.to::<D>();
-        assert_val_eq_grad!(weights.forward.weight_ih, grad_weight_ih, 1e-5);
+        assert_val_eq_grad!(weights.forward.weight_input, grad_weight_ih, 1e-5);
 
         let grad_weight_hh = mats.get("rnn.weight_hh_l0_grad").unwrap().clone();
         let grad_weight_hh = grad_weight_hh.to::<D>();
-        assert_val_eq_grad!(weights.forward.weight_hh, grad_weight_hh, 1e-5);
+        assert_val_eq_grad!(weights.forward.weight_hidden, grad_weight_hh, 1e-5);
 
         let grad_bias_ih = mats.get("rnn.bias_ih_l0_grad").unwrap().clone();
         let grad_bias_ih = grad_bias_ih.to::<D>();
-        assert_val_eq_grad!(weights.forward.bias_ih, grad_bias_ih, 1e-5);
+        assert_val_eq_grad!(weights.forward.bias_input, grad_bias_ih, 1e-5);
 
         let grad_bias_hh = mats.get("rnn.bias_hh_l0_grad").unwrap().clone();
         let grad_bias_hh = grad_bias_hh.to::<D>();
-        assert_val_eq_grad!(weights.forward.bias_hh, grad_bias_hh, 1e-5);
+        assert_val_eq_grad!(weights.forward.bias_hidden, grad_bias_hh, 1e-5);
     }
 
     fn small_lstm<D: Device>() {
