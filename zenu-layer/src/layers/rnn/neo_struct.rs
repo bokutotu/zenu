@@ -250,7 +250,7 @@ impl<T: Num, D: Device, C: CellType> Parameters<T, D> for NeoRNN<T, D, C> {
 }
 
 #[cfg(feature = "nvidia")]
-fn rnn_weights_to_desc<T: Num, D: Device, C: CellType>(
+pub(super) fn rnn_weights_to_desc<T: Num, D: Device, C: CellType>(
     weights: Vec<RNNLayerWeights<T, D, C>>,
     is_bidirectional: bool,
 ) -> Vec<RNNWeightsMat<T, D>> {

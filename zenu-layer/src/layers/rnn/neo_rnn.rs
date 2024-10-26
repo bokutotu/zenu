@@ -85,3 +85,5 @@ impl<T: Num, D: Device> Module<T, D> for RNN<T, D> {
         self.0.forward(input)
     }
 }
+
+pub type RNNLayerBuilder<T, D> = super::builder::RNNLayerBuilderInner<T, D, RNNCell>;
