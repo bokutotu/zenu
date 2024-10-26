@@ -1,3 +1,4 @@
+mod builder;
 mod lstm;
 mod neo_lstm;
 mod neo_rnn;
