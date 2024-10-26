@@ -109,12 +109,6 @@ fn get_nth_weights<T: Num, D: Device, C: CellType>(
             .unwrap()
             .clone();
 
-        // let backward = RNNWeights {
-        //     weight_input: reverse_input,
-        //     weight_hidden: reverse_hidden,
-        //     bias_input: reverse_bias_input,
-        //     bias_hidden: reverse_bias_hidden,
-        // };
         let backward = RNNWeights::new(
             reverse_input,
             reverse_hidden,

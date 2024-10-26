@@ -10,6 +10,7 @@ use crate::{
 
 pub trait CellType: Sized + Clone + Copy + Debug {
     fn hidden_size(hidden_size: usize) -> usize;
+    fn name() -> &'static str;
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -18,6 +19,10 @@ pub struct LSTMCell;
 impl CellType for LSTMCell {
     fn hidden_size(hidden_size: usize) -> usize {
         hidden_size * 4
+    }
+
+    fn name() -> &'static str {
+        "lstm"
     }
 }
 
@@ -28,6 +33,10 @@ impl CellType for GRUCell {
     fn hidden_size(hidden_size: usize) -> usize {
         hidden_size * 3
     }
+
+    fn name() -> &'static str {
+        "gru"
+    }
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -36,6 +45,10 @@ pub struct RNNCell;
 impl CellType for RNNCell {
     fn hidden_size(hidden_size: usize) -> usize {
         hidden_size
+    }
+
+    fn name() -> &'static str {
+        "rnn"
     }
 }
 
