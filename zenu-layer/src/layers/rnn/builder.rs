@@ -1,5 +1,3 @@
-use std::{cell::RefCell, rc::Rc};
-
 use rand_distr::{Distribution, StandardNormal};
 use zenu_autograd::nn::rnns::weights::CellType;
 use zenu_matrix::{device::Device, num::Num};
@@ -13,11 +11,9 @@ use zenu_autograd::nn::rnns::weights::{RNNCell, RNNLayerWeights};
 use zenu_autograd::{creator::alloc::alloc, nn::rnns::weights::RNNWeights, Variable};
 
 #[cfg(feature = "nvidia")]
-use crate::layers::rnn::neo_struct::rnn_weights_to_desc;
+use crate::layers::rnn::inner::rnn_weights_to_desc;
 
-use crate::layers::rnn::neo_struct::NeoRNN;
-
-use super::neo_struct::Activation;
+use crate::layers::rnn::inner::{Activation, RNNInner};
 
 #[derive(Debug, Default)]
 pub struct RNNSLayerBuilder<T: Num, D: Device, C: CellType> {
@@ -150,7 +146,7 @@ impl<T: Num, D: Device, C: CellType> RNNSLayerBuilder<T, D, C> {
 
     #[expect(clippy::missing_panics_doc)]
     #[must_use]
-    pub(super) fn build_inner(mut self) -> NeoRNN<T, D, C>
+    pub(super) fn build_inner(mut self) -> RNNInner<T, D, C>
     where
         StandardNormal: Distribution<T>,
     {
@@ -175,7 +171,7 @@ impl<T: Num, D: Device, C: CellType> RNNSLayerBuilder<T, D, C> {
             let desc = self.init_cudnn_desc();
             let cudnn_weights = self.load_cudnn_weights(&desc, weights);
             let cudnn_weights = cudnn_weights.to::<Nvidia>();
-            return NeoRNN {
+            return RNNInner {
                 weights: None,
                 desc: Some(Rc::new(RefCell::new(desc))),
                 cudnn_weights: Some(cudnn_weights),
@@ -185,7 +181,7 @@ impl<T: Num, D: Device, C: CellType> RNNSLayerBuilder<T, D, C> {
                 is_training: self.is_training.unwrap(),
             };
         }
-        NeoRNN {
+        RNNInner {
             weights: Some(weights),
             #[cfg(feature = "nvidia")]
             desc: None,
