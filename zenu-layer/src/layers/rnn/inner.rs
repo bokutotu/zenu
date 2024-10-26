@@ -14,7 +14,7 @@ use zenu_matrix::{
 
 use zenu_matrix::{device::Device, num::Num};
 
-use crate::{ModuleParameters, Parameters};
+use crate::Parameters;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Activation {
@@ -22,7 +22,7 @@ pub enum Activation {
     Tanh,
 }
 
-pub struct NeoRNN<T: Num, D: Device, C: CellType> {
+pub struct RNNInner<T: Num, D: Device, C: CellType> {
     pub(super) weights: Option<Vec<RNNLayerWeights<T, D, C>>>,
     #[cfg(feature = "nvidia")]
     pub(super) desc: Option<Rc<RefCell<RNNDescriptor<T>>>>,
@@ -120,7 +120,7 @@ fn get_nth_weights<T: Num, D: Device, C: CellType>(
     }
 }
 
-impl<T: Num, D: Device, C: CellType> Parameters<T, D> for NeoRNN<T, D, C> {
+impl<T: Num, D: Device, C: CellType> Parameters<T, D> for RNNInner<T, D, C> {
     fn weights(&self) -> HashMap<String, Variable<T, D>> {
         let cell_name = C::name();
         #[cfg(feature = "nvidia")]
@@ -293,7 +293,7 @@ pub(super) fn rnn_weights_to_desc<T: Num, D: Device, C: CellType>(
     rnn_weights
 }
 
-impl<T: Num, D: Device, C: CellType> NeoRNN<T, D, C> {
+impl<T: Num, D: Device, C: CellType> RNNInner<T, D, C> {
     #[cfg(feature = "nvidia")]
     fn cudnn_weights_to_layer_weights(&self) -> Vec<RNNLayerWeights<T, D, C>> {
         let desc = self.desc.as_ref().unwrap().clone();
