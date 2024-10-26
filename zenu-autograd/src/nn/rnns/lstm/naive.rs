@@ -1,10 +1,8 @@
-use rand_distr::{Distribution, StandardNormal};
 use zenu_matrix::{device::Device, index::index_dyn_impl::Index, num::Num, slice_dynamic};
 
 use crate::{
     activation::sigmoid::sigmoid,
     concat::concat,
-    creator::{rand::normal, zeros::zeros},
     functions::{
         index_axis::index_axis, matmul::matmul, slice::slice, stack::stack, tanh::tanh,
         transpose::transpose,

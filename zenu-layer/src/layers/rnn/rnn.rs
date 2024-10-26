@@ -5,8 +5,8 @@ use std::{cell::RefCell, rc::Rc};
 use rand_distr::{Distribution, StandardNormal};
 use zenu_autograd::{
     nn::rnns::{
-        rnn::naive::{rnn_relu, rnn_tanh, RNNLayerWeights},
-        weights::RNNWeights,
+        rnn::naive::{rnn_relu, rnn_tanh},
+        weights::{CellType, RNNCell, RNNLayerWeights, RNNWeights},
     },
     Variable,
 };
@@ -29,7 +29,7 @@ pub enum Activation {
 }
 
 pub struct RNN<T: Num, D: Device> {
-    weights: Option<Vec<RNNLayerWeights<T, D>>>,
+    weights: Option<Vec<RNNLayerWeights<T, D, RNNCell>>>,
     #[cfg(feature = "nvidia")]
     desc: Option<Rc<RefCell<RNNDescriptor<T>>>>,
     #[cfg(feature = "nvidia")]
@@ -62,11 +62,11 @@ fn is_bidirectional<T: Num, D: Device>(parameters: &HashMap<String, Variable<T, 
     false
 }
 
-fn get_nth_weights<T: Num, D: Device>(
+fn get_nth_weights<T: Num, D: Device, C: CellType>(
     parameters: &HashMap<String, Variable<T, D>>,
     idx: usize,
     is_bidirectional: bool,
-) -> RNNLayerWeights<T, D> {
+) -> RNNLayerWeights<T, D, C> {
     let forward_input = parameters
         .get(&format!("rnn.{idx}.forward.weight_input"))
         .unwrap()
@@ -84,12 +84,12 @@ fn get_nth_weights<T: Num, D: Device>(
         .unwrap()
         .clone();
 
-    let forward = RNNWeights {
-        weight_input: forward_input,
-        weight_hidden: forward_hidden,
-        bias_input: forward_bias_input,
-        bias_hidden: forward_bias_hidden,
-    };
+    let forward = RNNWeights::new(
+        forward_input,
+        forward_hidden,
+        forward_bias_input,
+        forward_bias_hidden,
+    );
 
     if is_bidirectional {
         let reverse_input = parameters
@@ -109,12 +109,18 @@ fn get_nth_weights<T: Num, D: Device>(
             .unwrap()
             .clone();
 
-        let backward = RNNWeights {
-            weight_input: reverse_input,
-            weight_hidden: reverse_hidden,
-            bias_input: reverse_bias_input,
-            bias_hidden: reverse_bias_hidden,
-        };
+        // let backward = RNNWeights {
+        //     weight_input: reverse_input,
+        //     weight_hidden: reverse_hidden,
+        //     bias_input: reverse_bias_input,
+        //     bias_hidden: reverse_bias_hidden,
+        // };
+        let backward = RNNWeights::new(
+            reverse_input,
+            reverse_hidden,
+            reverse_bias_input,
+            reverse_bias_hidden,
+        );
 
         RNNLayerWeights::new(forward, Some(backward))
     } else {
@@ -245,7 +251,7 @@ impl<T: Num, D: Device> Parameters<T, D> for RNN<T, D> {
 
 impl<T: Num, D: Device> RNN<T, D> {
     #[cfg(feature = "nvidia")]
-    fn cudnn_weights_to_layer_weights(&self) -> Vec<RNNLayerWeights<T, D>> {
+    fn cudnn_weights_to_layer_weights(&self) -> Vec<RNNLayerWeights<T, D, RNNCell>> {
         let desc = self.desc.as_ref().unwrap().clone();
         let cudnn_weights_ptr = self
             .cudnn_weights
@@ -260,7 +266,7 @@ impl<T: Num, D: Device> RNN<T, D> {
         let weights = weights
             .into_iter()
             .map(RNNWeights::from)
-            .collect::<Vec<RNNWeights<T, D>>>();
+            .collect::<Vec<_>>();
 
         if self.is_bidirectional {
             let mut layer_weights = Vec::new();
@@ -287,7 +293,7 @@ impl<T: Num, D: Device> ModuleParameters<T, D> for RNNLayerInput<T, D> {}
 
 #[cfg(feature = "nvidia")]
 fn rnn_weights_to_desc<T: Num, D: Device>(
-    weights: Vec<RNNLayerWeights<T, D>>,
+    weights: Vec<RNNLayerWeights<T, D, RNNCell>>,
     is_bidirectional: bool,
 ) -> Vec<RNNWeightsMat<T, D>> {
     let mut rnn_weights = Vec::new();
@@ -429,7 +435,7 @@ impl<T: Num, D: Device> RNNLayerBuilder<T, D> {
         self
     }
 
-    fn init_weight(&self, idx: usize) -> RNNLayerWeights<T, D>
+    fn init_weight(&self, idx: usize) -> RNNLayerWeights<T, D, RNNCell>
     where
         StandardNormal: Distribution<T>,
     {
@@ -452,7 +458,7 @@ impl<T: Num, D: Device> RNNLayerBuilder<T, D> {
         )
     }
 
-    fn init_weights(&self) -> Vec<RNNLayerWeights<T, D>>
+    fn init_weights(&self) -> Vec<RNNLayerWeights<T, D, RNNCell>>
     where
         StandardNormal: Distribution<T>,
     {
@@ -488,7 +494,7 @@ impl<T: Num, D: Device> RNNLayerBuilder<T, D> {
     fn load_cudnn_weights(
         &self,
         desc: &RNNDescriptor<T>,
-        weights: Vec<RNNLayerWeights<T, D>>,
+        weights: Vec<RNNLayerWeights<T, D, RNNCell>>,
     ) -> Variable<T, Nvidia> {
         use zenu_autograd::creator::alloc::alloc;
         let cudnn_weight_bytes = desc.get_weight_num_elems();
