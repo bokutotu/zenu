@@ -1,14 +1,12 @@
-use rand_distr::{Distribution, StandardNormal};
 use zenu_matrix::{device::Device, index::index_dyn_impl::Index, num::Num};
 
 use crate::{
     activation::relu::relu,
     concat::concat,
-    creator::{rand::normal, zeros::zeros},
     functions::{
         index_axis::index_axis, matmul::matmul, stack::stack, tanh::tanh, transpose::transpose,
     },
-    nn::rnns::weights::RNNWeights,
+    nn::rnns::weights::{RNNCell, RNNLayerWeights, RNNWeights},
     Variable,
 };
 
@@ -40,8 +38,8 @@ fn rnn_single_layer<T: Num, D: Device, F>(
     x: Variable<T, D>,
     h_forward: Variable<T, D>,
     h_backward: Option<Variable<T, D>>,
-    weight_forward: &RNNWeights<T, D>,
-    weight_backward: Option<&RNNWeights<T, D>>,
+    weight_forward: &RNNWeights<T, D, RNNCell>,
+    weight_backward: Option<&RNNWeights<T, D, RNNCell>>,
     activation: F,
     bidirectional: bool,
 ) -> Variable<T, D>
@@ -82,7 +80,7 @@ where
 fn rnn_single_layer_direction<T: Num, D: Device, F>(
     x: Variable<T, D>,
     mut h: Variable<T, D>,
-    weight: &RNNWeights<T, D>,
+    weight: &RNNWeights<T, D, RNNCell>,
     activation: F,
     reverse: bool,
 ) -> Vec<Variable<T, D>>
@@ -124,41 +122,13 @@ where
 
     out
 }
-
-#[derive(Clone)]
-pub struct RNNLayerWeights<T: Num, D: Device> {
-    pub forward: RNNWeights<T, D>,
-    pub backward: Option<RNNWeights<T, D>>,
-}
-
-impl<T: Num, D: Device> RNNLayerWeights<T, D> {
-    #[must_use]
-    pub fn init(input_size: usize, hidden_size: usize, is_bidirectional: bool) -> Self
-    where
-        StandardNormal: Distribution<T>,
-    {
-        let forward = RNNWeights::init(input_size, hidden_size);
-        let backward = if is_bidirectional {
-            Some(RNNWeights::init(input_size, hidden_size))
-        } else {
-            None
-        };
-        Self { forward, backward }
-    }
-
-    #[must_use]
-    pub fn new(forward: RNNWeights<T, D>, backward: Option<RNNWeights<T, D>>) -> Self {
-        Self { forward, backward }
-    }
-}
-
 /// h shape is [`num_layers` * `num_directions`, `batch_size`, `hidden_size`]
 #[expect(clippy::needless_pass_by_value)]
 #[must_use]
 fn rnn<T: Num, D: Device, F>(
     x: Variable<T, D>,
     h: Variable<T, D>,
-    weights: &[RNNLayerWeights<T, D>],
+    weights: &[RNNLayerWeights<T, D, RNNCell>],
     activation: F,
     bidirectional: bool,
 ) -> Variable<T, D>
@@ -199,7 +169,7 @@ where
 pub fn rnn_tanh<T: Num, D: Device>(
     x: Variable<T, D>,
     h: Variable<T, D>,
-    weights: &[RNNLayerWeights<T, D>],
+    weights: &[RNNLayerWeights<T, D, RNNCell>],
     bidirectional: bool,
 ) -> Variable<T, D> {
     rnn(x, h, weights, tanh, bidirectional)
@@ -209,7 +179,7 @@ pub fn rnn_tanh<T: Num, D: Device>(
 pub fn rnn_relu<T: Num, D: Device>(
     x: Variable<T, D>,
     h: Variable<T, D>,
-    weights: &[RNNLayerWeights<T, D>],
+    weights: &[RNNLayerWeights<T, D, RNNCell>],
     bidirectional: bool,
 ) -> Variable<T, D> {
     h.set_name("h");
@@ -229,17 +199,18 @@ mod rnn_test {
 
     use crate::{
         creator::{ones::ones, zeros::zeros},
-        nn::rnns::rnn::naive::{rnn_relu, RNNLayerWeights},
+        nn::rnns::{
+            rnn::naive::rnn_relu,
+            weights::{RNNCell, RNNLayerWeights, RNNWeights},
+        },
         Variable,
     };
-
-    use super::RNNWeights;
 
     fn load_rnn_weight_from_json<D: Device>(
         path: &str,
         idx: usize,
         bidirectional: bool,
-    ) -> RNNLayerWeights<f32, D> {
+    ) -> RNNLayerWeights<f32, D, RNNCell> {
         let mats: HashMap<String, Matrix<Owned<f32>, DimDyn, Cpu>> =
             read_test_case_from_json_val!(path);
 
@@ -248,12 +219,12 @@ mod rnn_test {
         let input_bias = mats.get(&format!("rnn.bias_ih_l{idx}")).unwrap().clone();
         let hidden_bias = mats.get(&format!("rnn.bias_hh_l{idx}")).unwrap().clone();
 
-        let forward = RNNWeights {
-            weight_input: Variable::<f32, D>::new(input_weight.to::<D>()),
-            weight_hidden: Variable::<f32, D>::new(hidden_weight.to::<D>()),
-            bias_input: Variable::<f32, D>::new(input_bias.to::<D>()),
-            bias_hidden: Variable::<f32, D>::new(hidden_bias.to::<D>()),
-        };
+        let input_weight = Variable::new(input_weight.to::<D>());
+        let hidden_weight = Variable::new(hidden_weight.to::<D>());
+        let input_bias = Variable::new(input_bias.to::<D>());
+        let hidden_bias = Variable::new(hidden_bias.to::<D>());
+
+        let forward = RNNWeights::new(input_weight, hidden_weight, input_bias, hidden_bias);
 
         let reverse = if bidirectional {
             let input_weight_rev = mats
@@ -272,12 +243,16 @@ mod rnn_test {
                 .get(&format!("rnn.bias_hh_l{idx}_reverse"))
                 .unwrap()
                 .clone();
-            Some(RNNWeights {
-                weight_input: Variable::<f32, D>::new(input_weight_rev.to::<D>()),
-                weight_hidden: Variable::<f32, D>::new(hidden_weight_rev.to::<D>()),
-                bias_input: Variable::<f32, D>::new(input_bias_rev.to::<D>()),
-                bias_hidden: Variable::<f32, D>::new(hidden_bias_rev.to::<D>()),
-            })
+            let input_weight_rev = Variable::new(input_weight_rev.to::<D>());
+            let hidden_weight_rev = Variable::new(hidden_weight_rev.to::<D>());
+            let input_bias_rev = Variable::new(input_bias_rev.to::<D>());
+            let hidden_bias_rev = Variable::new(hidden_bias_rev.to::<D>());
+            Some(RNNWeights::new(
+                input_weight_rev,
+                hidden_weight_rev,
+                input_bias_rev,
+                hidden_bias_rev,
+            ))
         } else {
             None
         };
@@ -344,12 +319,7 @@ mod rnn_test {
         let input_bias = zeros([1]);
         let hidden_bias = zeros([1]);
 
-        let weight_forward = RNNWeights {
-            weight_input: input_weight,
-            weight_hidden: hidden_weight,
-            bias_input: input_bias,
-            bias_hidden: hidden_bias,
-        };
+        let weight_forward = RNNWeights::new(input_weight, hidden_weight, input_bias, hidden_bias);
 
         let weights = vec![RNNLayerWeights {
             forward: weight_forward,
