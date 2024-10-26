@@ -4,7 +4,10 @@ use std::{cell::RefCell, rc::Rc};
 
 use rand_distr::{Distribution, StandardNormal};
 use zenu_autograd::{
-    nn::rnns::lstm::naive::{lstm_naive, LSTMLayerWeights, LSTMWeights},
+    nn::rnns::{
+        lstm::naive::lstm_naive,
+        weights::{LSTMCell, RNNLayerWeights, RNNWeights},
+    },
     Variable,
 };
 use zenu_matrix::{device::Device, num::Num};
@@ -14,13 +17,13 @@ use zenu_autograd::nn::rnns::lstm::cudnn::lstm_cudnn;
 #[cfg(feature = "nvidia")]
 use zenu_matrix::{
     device::nvidia::Nvidia,
-    nn::rnn::{RNNDescriptor, RNNWeights},
+    nn::rnn::{RNNDescriptor, RNNWeights as RNNWeightsMat},
 };
 
 use crate::{Module, ModuleParameters, Parameters};
 
 pub struct LSTM<T: Num, D: Device> {
-    weights: Option<Vec<LSTMLayerWeights<T, D>>>,
+    weights: Option<Vec<RNNLayerWeights<T, D, LSTMCell>>>,
     #[cfg(feature = "nvidia")]
     desc: Option<Rc<RefCell<RNNDescriptor<T>>>>,
     #[cfg(feature = "nvidia")]
@@ -56,7 +59,7 @@ fn get_nth_weights<T: Num, D: Device>(
     parameters: &HashMap<String, Variable<T, D>>,
     idx: usize,
     is_bidirectional: bool,
-) -> LSTMLayerWeights<T, D> {
+) -> RNNLayerWeights<T, D, LSTMCell> {
     let forward_weight_ih = parameters
         .get(&format!("lstm.{idx}.forward.weight_ih"))
         .unwrap()
@@ -74,14 +77,14 @@ fn get_nth_weights<T: Num, D: Device>(
         .unwrap()
         .clone();
 
-    let forward = LSTMWeights {
-        weight_ih: forward_weight_ih,
-        weight_hh: forward_weight_hh,
-        bias_ih: forward_bias_ih,
-        bias_hh: forward_bias_hh,
-    };
+    let forward = RNNWeights::new(
+        forward_weight_ih.to(),
+        forward_weight_hh.to(),
+        forward_bias_ih.to(),
+        forward_bias_hh.to(),
+    );
 
-    if is_bidirectional {
+    let bkwd = if is_bidirectional {
         let reverse_weight_ih = parameters
             .get(&format!("lstm.{idx}.reverse.weight_ih"))
             .unwrap()
@@ -99,17 +102,17 @@ fn get_nth_weights<T: Num, D: Device>(
             .unwrap()
             .clone();
 
-        let backward = LSTMWeights {
-            weight_ih: reverse_weight_ih,
-            weight_hh: reverse_weight_hh,
-            bias_ih: reverse_bias_ih,
-            bias_hh: reverse_bias_hh,
-        };
-
-        LSTMLayerWeights::new(forward, Some(backward))
+        Some(RNNWeights::new(
+            reverse_weight_ih.to(),
+            reverse_weight_hh.to(),
+            reverse_bias_ih.to(),
+            reverse_bias_hh.to(),
+        ))
     } else {
-        LSTMLayerWeights::new(forward, None)
-    }
+        None
+    };
+
+    RNNLayerWeights::new(forward, bkwd)
 }
 
 impl<T: Num, D: Device> Parameters<T, D> for LSTM<T, D> {
@@ -130,8 +133,8 @@ impl<T: Num, D: Device> Parameters<T, D> for LSTM<T, D> {
             let forward = weight.forward.clone();
             let backward = weight.backward.clone();
 
-            let forward_weight_ih = forward.weight_ih.clone();
-            let forward_weight_hh = forward.weight_hh.clone();
+            let forward_weight_ih = forward.weight_input.clone();
+            let forward_weight_hh = forward.weight_hidden.clone();
 
             parameters.insert(
                 format!("lstm.{idx}.forward.weight_ih"),
@@ -144,8 +147,8 @@ impl<T: Num, D: Device> Parameters<T, D> for LSTM<T, D> {
 
             if self.is_bidirectional {
                 let reverse = backward.unwrap();
-                let reverse_weight_ih = reverse.weight_ih.clone();
-                let reverse_weight_hh = reverse.weight_hh.clone();
+                let reverse_weight_ih = reverse.weight_input.clone();
+                let reverse_weight_hh = reverse.weight_hidden.clone();
 
                 parameters.insert(
                     format!("lstm.{idx}.reverse.weight_ih"),
@@ -178,16 +181,16 @@ impl<T: Num, D: Device> Parameters<T, D> for LSTM<T, D> {
             let forward = weight.forward.clone();
             let backward = weight.backward.clone();
 
-            let forward_bias_ih = forward.bias_ih.clone();
-            let forward_bias_hh = forward.bias_hh.clone();
+            let forward_bias_ih = forward.bias_input.clone();
+            let forward_bias_hh = forward.bias_hidden.clone();
 
             parameters.insert(format!("lstm.{idx}.forward.bias_ih"), forward_bias_ih.to());
             parameters.insert(format!("lstm.{idx}.forward.bias_hh"), forward_bias_hh.to());
 
             if self.is_bidirectional {
                 let reverse = backward.unwrap();
-                let reverse_bias_ih = reverse.bias_ih.clone();
-                let reverse_bias_hh = reverse.bias_hh.clone();
+                let reverse_bias_ih = reverse.bias_input.clone();
+                let reverse_bias_hh = reverse.bias_hidden.clone();
 
                 parameters.insert(format!("lstm.{idx}.reverse.bias_ih"), reverse_bias_ih.to());
                 parameters.insert(format!("lstm.{idx}.reverse.bias_hh"), reverse_bias_hh.to());
@@ -229,7 +232,7 @@ impl<T: Num, D: Device> Parameters<T, D> for LSTM<T, D> {
 
 impl<T: Num, D: Device> LSTM<T, D> {
     #[cfg(feature = "nvidia")]
-    fn cudnn_weights_to_layer_weights(&self) -> Vec<LSTMLayerWeights<T, D>> {
+    fn cudnn_weights_to_layer_weights(&self) -> Vec<RNNLayerWeights<T, D, LSTMCell>> {
         let desc = self.desc.as_ref().unwrap().clone();
         let cudnn_weights_ptr = self
             .cudnn_weights
@@ -243,21 +246,21 @@ impl<T: Num, D: Device> LSTM<T, D> {
 
         let weights = weights
             .into_iter()
-            .map(LSTMWeights::from)
-            .collect::<Vec<LSTMWeights<T, D>>>();
+            .map(RNNWeights::from)
+            .collect::<Vec<_>>();
 
         if self.is_bidirectional {
             let mut layer_weights = Vec::new();
             for i in 0..weights.len() / 2 {
                 let forward = weights[i * 2].clone();
                 let backward = weights[i * 2 + 1].clone();
-                layer_weights.push(LSTMLayerWeights::new(forward, Some(backward)));
+                layer_weights.push(RNNLayerWeights::new(forward, Some(backward)));
             }
             return layer_weights;
         }
         weights
             .into_iter()
-            .map(|w| LSTMLayerWeights::new(w, None))
+            .map(|w| RNNLayerWeights::new(w, None))
             .collect()
     }
 }
@@ -272,19 +275,19 @@ impl<T: Num, D: Device> ModuleParameters<T, D> for LSTMInput<T, D> {}
 
 #[cfg(feature = "nvidia")]
 fn lstm_weights_to_desc<T: Num, D: Device>(
-    weights: Vec<LSTMLayerWeights<T, D>>,
+    weights: Vec<RNNLayerWeights<T, D, LSTMCell>>,
     is_bidirectional: bool,
-) -> Vec<RNNWeights<T, D>> {
+) -> Vec<RNNWeightsMat<T, D>> {
     let mut rnn_weights = Vec::new();
 
     for weight in weights {
         let forward_weights = weight.forward;
-        let weight_ih = forward_weights.weight_ih.get_as_ref();
-        let weight_hh = forward_weights.weight_hh.get_as_ref();
-        let bias_ih = forward_weights.bias_ih.get_as_ref();
-        let bias_hh = forward_weights.bias_hh.get_as_ref();
+        let weight_ih = forward_weights.weight_input.get_as_ref();
+        let weight_hh = forward_weights.weight_hidden.get_as_ref();
+        let bias_ih = forward_weights.bias_input.get_as_ref();
+        let bias_hh = forward_weights.bias_hidden.get_as_ref();
 
-        let weights = RNNWeights::new(
+        let weights = RNNWeightsMat::new(
             weight_ih.new_matrix(),
             weight_hh.new_matrix(),
             bias_ih.new_matrix(),
@@ -295,12 +298,12 @@ fn lstm_weights_to_desc<T: Num, D: Device>(
 
         if is_bidirectional {
             let backward_weights = weight.backward.unwrap();
-            let weight_ih = backward_weights.weight_ih.get_as_ref();
-            let weight_hh = backward_weights.weight_hh.get_as_ref();
-            let bias_ih = backward_weights.bias_ih.get_as_ref();
-            let bias_hh = backward_weights.bias_hh.get_as_ref();
+            let weight_ih = backward_weights.weight_input.get_as_ref();
+            let weight_hh = backward_weights.weight_hidden.get_as_ref();
+            let bias_ih = backward_weights.bias_input.get_as_ref();
+            let bias_hh = backward_weights.bias_hidden.get_as_ref();
 
-            let weights = RNNWeights::new(
+            let weights = RNNWeightsMat::new(
                 weight_ih.new_matrix(),
                 weight_hh.new_matrix(),
                 bias_ih.new_matrix(),
@@ -400,7 +403,7 @@ impl<T: Num, D: Device> LSTMLayerBuilder<T, D> {
         self
     }
 
-    fn init_weight(&self, idx: usize) -> LSTMLayerWeights<T, D>
+    fn init_weight(&self, idx: usize) -> RNNLayerWeights<T, D, LSTMCell>
     where
         StandardNormal: Distribution<T>,
     {
@@ -416,14 +419,14 @@ impl<T: Num, D: Device> LSTMLayerBuilder<T, D> {
             self.hidden_size.unwrap()
         };
 
-        LSTMLayerWeights::init(
+        RNNLayerWeights::init(
             input_size,
             self.hidden_size.unwrap(),
             self.is_bidirectional.unwrap(),
         )
     }
 
-    fn init_weights(&self) -> Vec<LSTMLayerWeights<T, D>>
+    fn init_weights(&self) -> Vec<RNNLayerWeights<T, D, LSTMCell>>
     where
         StandardNormal: Distribution<T>,
     {
@@ -448,7 +451,7 @@ impl<T: Num, D: Device> LSTMLayerBuilder<T, D> {
     fn load_cudnn_weights(
         &self,
         desc: &RNNDescriptor<T>,
-        weights: Vec<LSTMLayerWeights<T, D>>,
+        weights: Vec<RNNLayerWeights<T, D, LSTMCell>>,
     ) -> Variable<T, Nvidia> {
         use zenu_autograd::creator::alloc::alloc;
         let cudnn_weight_bytes = desc.get_weight_num_elems();
