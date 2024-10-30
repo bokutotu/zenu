@@ -8,7 +8,7 @@ use zenu_autograd::{
 };
 
 #[cfg(feature = "nvidia")]
-use zenu_autograd::nn::rnns::rnn::{cudnn::cudnn_rnn_fwd, CellType, RNNOutput};
+use zenu_autograd::nn::rnns::rnn::{cudnn::cudnn_rnn_fwd, RNNOutput};
 
 use zenu_matrix::{device::Device, num::Num};
 

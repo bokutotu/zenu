@@ -1,3 +1,6 @@
+#[cfg(feature = "nvidia")]
+use std::{cell::RefCell, rc::Rc};
+
 use rand_distr::{Distribution, StandardNormal};
 use zenu_autograd::nn::rnns::weights::CellType;
 use zenu_matrix::{device::Device, num::Num};
@@ -8,7 +11,7 @@ use zenu_matrix::{device::nvidia::Nvidia, nn::rnn::RNNDescriptor};
 use zenu_autograd::nn::rnns::weights::{RNNCell, RNNLayerWeights};
 
 #[cfg(feature = "nvidia")]
-use zenu_autograd::{creator::alloc::alloc, nn::rnns::weights::RNNWeights, Variable};
+use zenu_autograd::{creator::alloc::alloc, Variable};
 
 #[cfg(feature = "nvidia")]
 use crate::layers::rnn::inner::rnn_weights_to_desc;
