@@ -1,4 +1,3 @@
-// Import necessary crates and modules
 use crate::{
     device::nvidia::Nvidia,
     dim::{DimDyn, DimTrait},
@@ -46,8 +45,8 @@ impl<T: Num> RNNDescriptor<T> {
             y.to_ref_mut().as_mut_ptr(),
             hx.map_or(std::ptr::null(), |hx| hx.as_ptr()),
             hy.to_ref_mut().as_mut_ptr(),
-            std::ptr::null_mut(), // GRU does not use cell states
-            std::ptr::null_mut(), // GRU does not use cell states
+            std::ptr::null_mut(),
+            std::ptr::null_mut(),
             weight.as_ptr(),
         );
 

@@ -185,6 +185,51 @@ fn lstm(json_path: String, num_layers: usize, bidirectional: bool) {
     assert_grad(&weights_grad, &params);
 }
 
+fn gru(json_path: String, num_layers: usize, bidirectional: bool) {
+    let matrix_map = read_test_case_from_json_val!(json_path);
+    let (input_size, hidden_size, batch_size) = before_run(&matrix_map, bidirectional);
+    let mut desc = RNNDescriptor::<f32>::gru(
+        bidirectional,
+        0.0,
+        input_size,
+        hidden_size,
+        num_layers,
+        batch_size,
+    );
+
+    let weight = init_weights(&desc, &matrix_map, bidirectional, num_layers);
+
+    let input = matrix_map.get("input").unwrap().clone().to::<Nvidia>();
+    let y = desc.gru_fwd(input.to_ref(), None, weight.to_ref(), true);
+    println!("y.y: {:?}", y.y);
+    let output = matrix_map.get("output").unwrap().clone().to::<Nvidia>();
+    // println!("output: {:?}", output);
+    assert_mat_eq_epsilon!(y.y.to_ref(), output, 2e-4);
+
+    let dy = Matrix::ones_like(&y.y);
+
+    let dx = desc.gru_bkwd_data(
+        input.shape(),
+        y.y.to_ref(),
+        dy.to_ref(),
+        None,
+        None,
+        weight.to_ref(),
+    );
+
+    assert_mat_eq_epsilon!(
+        dx.dx.to_ref(),
+        matrix_map.get("input_grad").unwrap().clone().to::<Nvidia>(),
+        2e-4
+    );
+    let mut dw = desc.gru_bkwd_weights(input.to_ref(), None, y.y.to_ref());
+
+    let params = desc.store_rnn_weights::<Cpu>(dw.to_ref_mut().as_ptr() as *mut u8);
+
+    let weights_grad = get_rnn_weights_from_json(&matrix_map, num_layers, bidirectional, "_grad");
+    assert_grad(&weights_grad, &params);
+}
+
 #[test]
 fn test_lstm_small() {
     lstm(
@@ -246,4 +291,9 @@ fn test_rnn_seq_len_5_num_layer_2_bidirectional() {
         2,
         true,
     );
+}
+
+#[test]
+fn test_gru_small() {
+    gru("../test_data_json/gru_small.json".to_string(), 1, true);
 }
