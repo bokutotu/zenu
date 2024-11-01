@@ -5,8 +5,12 @@ use zenu_test::read_test_case_from_json_val;
 
 use zenu_matrix::device::cpu::Cpu;
 use zenu_matrix::matrix::Owned;
-use zenu_matrix::{device::nvidia::Nvidia, dim::DimDyn, matrix::Matrix, nn::rnn::*};
+use zenu_matrix::{dim::DimDyn, matrix::Matrix};
 
+#[cfg(feature = "nvidia")]
+use zenu_matrix::{device::nvidia::Nvidia, nn::rnn::*};
+
+#[cfg(feature = "nvidia")]
 fn get_rnn_weights_from_json(
     matrix_map: &std::collections::HashMap<String, Matrix<Owned<f32>, DimDyn, Cpu>>,
     num_layers: usize,
@@ -60,6 +64,7 @@ fn get_rnn_weights_from_json(
     weights
 }
 
+#[cfg(feature = "nvidia")]
 fn assert_grad(expected: &[RNNWeights<f32, Cpu>], actual: &[RNNWeights<f32, Cpu>]) {
     for (expected, actual) in expected.iter().zip(actual.iter()) {
         assert_mat_eq_epsilon!(expected.input_weight(), actual.input_weight(), 5e-3);
@@ -69,6 +74,7 @@ fn assert_grad(expected: &[RNNWeights<f32, Cpu>], actual: &[RNNWeights<f32, Cpu>
     }
 }
 
+#[cfg(feature = "nvidia")]
 fn before_run(
     map: &HashMap<String, Matrix<Owned<f32>, DimDyn, Cpu>>,
     bidirectional: bool,
@@ -81,6 +87,7 @@ fn before_run(
     (input_size, hidden_size, batch_size)
 }
 
+#[cfg(feature = "nvidia")]
 fn init_weights(
     desc: &RNNDescriptor<f32>,
     map: &HashMap<String, Matrix<Owned<f32>, DimDyn, Cpu>>,
@@ -97,6 +104,7 @@ fn init_weights(
     w
 }
 
+#[cfg(feature = "nvidia")]
 fn rnn(json_path: String, num_layers: usize, bidirectional: bool) {
     let matrix_map = read_test_case_from_json_val!(json_path);
     let (input_size, hidden_size, batch_size) = before_run(&matrix_map, bidirectional);
@@ -140,6 +148,7 @@ fn rnn(json_path: String, num_layers: usize, bidirectional: bool) {
     assert_grad(&weights_grad, &params);
 }
 
+#[cfg(feature = "nvidia")]
 fn lstm(json_path: String, num_layers: usize, bidirectional: bool) {
     let matrix_map = read_test_case_from_json_val!(json_path);
     let (input_size, hidden_size, batch_size) = before_run(&matrix_map, bidirectional);
@@ -185,6 +194,7 @@ fn lstm(json_path: String, num_layers: usize, bidirectional: bool) {
     assert_grad(&weights_grad, &params);
 }
 
+#[cfg(feature = "nvidia")]
 fn gru(json_path: String, num_layers: usize, bidirectional: bool) {
     let matrix_map = read_test_case_from_json_val!(json_path);
     let (input_size, hidden_size, batch_size) = before_run(&matrix_map, bidirectional);
@@ -230,6 +240,7 @@ fn gru(json_path: String, num_layers: usize, bidirectional: bool) {
     assert_grad(&weights_grad, &params);
 }
 
+#[cfg(feature = "nvidia")]
 #[test]
 fn test_lstm_small() {
     lstm(
@@ -239,6 +250,7 @@ fn test_lstm_small() {
     );
 }
 
+#[cfg(feature = "nvidia")]
 #[test]
 fn test_lstm_medium() {
     lstm(
@@ -247,7 +259,7 @@ fn test_lstm_medium() {
         false,
     );
 }
-
+#[cfg(feature = "nvidia")]
 #[test]
 fn test_lstm_bidirectional() {
     lstm(
@@ -257,6 +269,7 @@ fn test_lstm_bidirectional() {
     );
 }
 
+#[cfg(feature = "nvidia")]
 #[test]
 fn test_rnn_seq_len_1() {
     rnn(
@@ -266,6 +279,7 @@ fn test_rnn_seq_len_1() {
     );
 }
 
+#[cfg(feature = "nvidia")]
 #[test]
 fn test_rnn_seq_len_3() {
     rnn(
@@ -275,6 +289,7 @@ fn test_rnn_seq_len_3() {
     );
 }
 
+#[cfg(feature = "nvidia")]
 #[test]
 fn test_rnn_seq_len_5() {
     rnn(
@@ -284,6 +299,7 @@ fn test_rnn_seq_len_5() {
     );
 }
 
+#[cfg(feature = "nvidia")]
 #[test]
 fn test_rnn_seq_len_5_num_layer_2_bidirectional() {
     rnn(
@@ -293,6 +309,7 @@ fn test_rnn_seq_len_5_num_layer_2_bidirectional() {
     );
 }
 
+#[cfg(feature = "nvidia")]
 #[test]
 fn test_gru_small() {
     gru("../test_data_json/gru_small.json".to_string(), 2, false);

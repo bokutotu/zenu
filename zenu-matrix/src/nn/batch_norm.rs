@@ -25,6 +25,7 @@ pub struct BatchNorm2dConfig<T: Num> {
 
 impl<T: Num> BatchNorm2dConfig<T> {
     #[must_use]
+    #[allow(unused_variables)]
     pub fn new(dim: DimDyn) -> Self {
         BatchNorm2dConfig::<T> {
             #[cfg(feature = "nvidia")]
@@ -42,6 +43,7 @@ pub struct BatchNorm2dBackwardConfig<T> {
 
 impl<T: Num> BatchNorm2dBackwardConfig<T> {
     #[must_use]
+    #[allow(unused_variables)]
     pub fn new(dim: DimDyn) -> Self {
         BatchNorm2dBackwardConfig::<T> {
             #[cfg(feature = "nvidia")]

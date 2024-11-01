@@ -22,7 +22,6 @@ pub struct Pool2dConfig<T: Num> {
 
 impl<T: Num> Pool2dConfig<T> {
     #[must_use]
-    #[expect(clippy::missing_panics_doc)]
     pub fn new(
         kernel: (usize, usize),
         stride: (usize, usize),
