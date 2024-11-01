@@ -21,7 +21,6 @@ zenu-cuda = { path = "../zenu-cuda", optional = true, version = "0.1.0" }
 
 [features]
 nvidia = ["zenu-cuda"]
-default = ["nvidia"]
 
 [dev-dependencies]
 itertools = { version = "0.10.0", default-features = false, features = ["use_std"] }
