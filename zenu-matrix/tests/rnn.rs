@@ -295,5 +295,5 @@ fn test_rnn_seq_len_5_num_layer_2_bidirectional() {
 
 #[test]
 fn test_gru_small() {
-    gru("../test_data_json/gru_small.json".to_string(), 1, true);
+    gru("../test_data_json/gru_small.json".to_string(), 2, false);
 }
