@@ -16,6 +16,7 @@ use crate::{
 // }
 //
 impl<T: Num, R: Repr<Item = T>, D: Device> Matrix<R, DimDyn, D> {
+    #[must_use]
     pub fn variance(&self, axis: Option<usize>, keep_dim: bool) -> Matrix<Owned<T>, DimDyn, D> {
         let mean = self.mean(axis, true);
         let diff = self.to_ref() - mean;
@@ -30,7 +31,7 @@ mod variance {
 
     fn variance_1d<D: Device>() {
         let x = vec![1.0, 2.0, 3.0, 4.0];
-        let x = Matrix::<_, DimDyn, D>::from_vec(x, &[4]);
+        let x = Matrix::<_, DimDyn, D>::from_vec(x, [4]);
         let ans = x.variance(None, false);
         assert!((ans - 1.25).asum() < 1e-6);
     }
@@ -46,7 +47,7 @@ mod variance {
 
     fn variance_1d_<D: Device>() {
         let x = vec![1.0, 2.0];
-        let x = Matrix::<_, DimDyn, D>::from_vec(x, &[2]);
+        let x = Matrix::<_, DimDyn, D>::from_vec(x, [2]);
         let ans = x.variance(None, false);
         assert!((ans - 0.25).asum() < 1e-6);
     }
@@ -62,7 +63,7 @@ mod variance {
 
     fn variance_2d<D: Device>() {
         let x = vec![1.0, 2.0, 3.0, 4.0];
-        let x = Matrix::<_, DimDyn, D>::from_vec(x, &[2, 2]);
+        let x = Matrix::<_, DimDyn, D>::from_vec(x, [2, 2]);
         let ans = x.variance(None, false);
         assert!((ans - 1.25).asum() < 1e-6);
     }

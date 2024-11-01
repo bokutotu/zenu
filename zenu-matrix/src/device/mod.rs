@@ -24,18 +24,20 @@ pub mod cpu;
 #[cfg(feature = "nvidia")]
 pub mod nvidia;
 
+#[expect(clippy::module_name_repetitions)]
 pub trait DeviceBase: Copy + Default + Serialize + 'static {
     fn drop_ptr<T>(ptr: *mut T) {
         let state = &ZENU_MATRIX_STATE;
-        if state.use_mem_pool {
-            let result = Self::mem_pool_drop_ptr(ptr as *mut u8);
+        if state.is_mem_pool_used {
+            let result = Self::mem_pool_drop_ptr(ptr.cast());
             if result.is_err() {
-                Self::raw_drop_ptr(ptr)
+                Self::raw_drop_ptr(ptr);
             }
         } else {
-            Self::raw_drop_ptr(ptr)
+            Self::raw_drop_ptr(ptr);
         }
     }
+    #[expect(clippy::missing_errors_doc)]
     fn mem_pool_drop_ptr(ptr: *mut u8) -> Result<(), MemPoolError>;
     fn raw_drop_ptr<T>(ptr: *mut T);
     fn clone_ptr<T>(ptr: *const T, len: usize) -> *mut T;
@@ -43,15 +45,18 @@ pub trait DeviceBase: Copy + Default + Serialize + 'static {
     fn get_item<T: Num>(ptr: *const T, offset: usize) -> T;
     fn from_vec<T: Num>(vec: Vec<T>) -> *mut T;
     fn zeros<T: Num>(len: usize) -> *mut T;
+    #[expect(clippy::missing_errors_doc)]
     fn alloc(num_bytes: usize) -> Result<*mut u8, MemPoolError> {
         let state = &ZENU_MATRIX_STATE;
-        if state.use_mem_pool {
+        if state.is_mem_pool_used {
             Self::mem_pool_alloc(num_bytes)
         } else {
             Self::raw_alloc(num_bytes).map_err(|_| MemPoolError::DeviceMallocError)
         }
     }
+    #[expect(clippy::missing_errors_doc)]
     fn mem_pool_alloc(num_bytes: usize) -> Result<*mut u8, MemPoolError>;
+    #[expect(clippy::missing_errors_doc)]
     fn raw_alloc(num_bytes: usize) -> Result<*mut u8, String>;
 }
 

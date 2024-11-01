@@ -32,10 +32,11 @@ impl<T: Num, D: Device> Function<T, D> for Relu<T, D> {
 
     fn backward(&self) {
         // リファレンスカウンタの関係でスコープを切る必要がある
+        // TODO: 複数回微分の場合に対応する
         let input_grad = {
             let input = self.input.get_data();
             let output = self.output.upgrade().unwrap();
-            let output_grad = output.get_grad().clone().unwrap();
+            let output_grad = output.get_grad().unwrap();
             let mut mask: Matrix<Owned<T>, DimDyn, D> = Matrix::alloc(input.shape());
             mask.to_ref_mut()
                 .relu_backward_mask(&input.to_ref(), T::zero());
@@ -50,6 +51,7 @@ impl<T: Num, D: Device> Function<T, D> for Relu<T, D> {
     }
 }
 
+#[must_use]
 pub fn relu<T: Num, D: Device>(input: Variable<T, D>) -> Variable<T, D> {
     let output = alloc(input.get_shape());
     let relu = Relu::new(input, output.clone());
@@ -59,7 +61,7 @@ pub fn relu<T: Num, D: Device>(input: Variable<T, D>) -> Variable<T, D> {
 }
 
 #[cfg(test)]
-mod relu {
+mod relu_test {
 
     use zenu_matrix::{
         device::Device,

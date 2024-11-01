@@ -58,7 +58,7 @@ impl<T: Num, D: Device> Add<Variable<T, D>> for Variable<T, D> {
 }
 
 #[cfg(test)]
-mod add {
+mod add_test {
     use zenu_matrix::{
         device::Device,
         dim::DimDyn,

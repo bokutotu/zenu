@@ -1,6 +1,11 @@
+#![expect(clippy::module_name_repetitions)]
+
+pub mod activation;
 pub mod concat;
 pub mod creator;
 pub mod functions;
+pub mod loss;
+pub mod nn;
 
 use std::{
     cell::{Ref, RefCell, RefMut},
@@ -18,7 +23,7 @@ use serde::{Deserialize, Serialize};
 use zenu_matrix::{
     device::Device,
     dim::{larger_shape, DimDyn, DimTrait},
-    matrix::{Matrix, Owned},
+    matrix::{Matrix, Owned, Ref as MRef},
     num::Num,
 };
 
@@ -28,7 +33,7 @@ pub trait Function<T: Num, D: Device> {
     fn get_inputs(&self) -> Vec<Variable<T, D>>;
     fn get_gen(&self) -> usize {
         let inputs = self.get_inputs();
-        inputs.iter().map(|input| input.get_gen()).max().unwrap()
+        inputs.iter().map(Variable::get_gen).max().unwrap()
     }
 }
 
@@ -36,16 +41,20 @@ lazy_static! {
     static ref IS_TRAIN: Mutex<bool> = Mutex::new(true);
 }
 
+#[expect(clippy::missing_panics_doc)]
 pub fn no_train() {
     let mut is_train = IS_TRAIN.lock().unwrap();
     *is_train = false;
 }
 
+#[expect(clippy::missing_panics_doc)]
+#[must_use]
 pub fn is_train() -> bool {
     let is_train = IS_TRAIN.lock().unwrap();
     *is_train
 }
 
+#[expect(clippy::missing_panics_doc)]
 pub fn set_train() {
     let mut is_train = IS_TRAIN.lock().unwrap();
     *is_train = true;
@@ -99,7 +108,7 @@ impl<T: Num, D: Device> Deref for FunctionQueueItem<T, D> {
 #[derive(Clone)]
 pub struct VariableInner<T: Num, D: Device> {
     data: Matrix<Owned<T>, DimDyn, D>,
-    #[allow(clippy::type_complexity)]
+    #[expect(clippy::type_complexity)]
     creator: Option<Rc<RefCell<Box<dyn Function<T, D>>>>>,
     grad: Option<Variable<T, D>>,
     gen: usize,
@@ -142,6 +151,7 @@ where
 }
 
 impl<T: Num, D: Device> VariableInner<T, D> {
+    #[must_use]
     pub fn new(data: Matrix<Owned<T>, DimDyn, D>) -> Self {
         VariableInner {
             data,
@@ -153,7 +163,7 @@ impl<T: Num, D: Device> VariableInner<T, D> {
         }
     }
 
-    #[allow(clippy::type_complexity)]
+    #[expect(clippy::type_complexity)]
     fn get_creator(&self) -> Option<Rc<RefCell<Box<dyn Function<T, D>>>>> {
         self.creator.clone()
     }
@@ -176,6 +186,7 @@ impl<T: Num, D: Device> VariableInner<T, D> {
         self.name = Some(name);
     }
 
+    #[expect(clippy::missing_panics_doc)]
     pub fn backward(&self) {
         let mut funcs: BinaryHeap<FunctionQueueItem<T, D>> = BinaryHeap::new();
         let mut seen_rc = HashSet::new();
@@ -239,13 +250,14 @@ impl<T: Num, D: Device> VariableInner<T, D> {
 
     fn get_all_trainable_variables(&self) -> Vec<Variable<T, D>> {
         let variables = self.get_all_variable();
-        variables.into_iter().filter(|v| v.get_is_train()).collect()
+        variables
+            .into_iter()
+            .filter(Variable::get_is_train)
+            .collect()
     }
 
     fn to<DO: Device>(&self) -> VariableInner<T, DO> {
-        if self.grad.is_some() {
-            panic!("grad must be None");
-        }
+        assert!(self.grad.is_none(), "grad must be None");
         VariableInner {
             data: self.data.new_matrix().to(),
             creator: None,
@@ -305,17 +317,42 @@ where
 }
 
 impl<T: Num, D: Device> Variable<T, D> {
+    #[must_use]
     pub fn new(data: Matrix<Owned<T>, DimDyn, D>) -> Self {
         Variable {
             inner: Rc::new(RefCell::new(VariableInner::new(data))),
         }
     }
 
+    #[expect(clippy::missing_panics_doc)]
+    pub fn swap_inner(&self, inner: Matrix<Owned<T>, DimDyn, D>) {
+        assert_eq!(
+            self.get_shape(),
+            inner.shape(),
+            "`Variable::swap_inner`, shape must be same"
+        );
+        self.inner.borrow_mut().data = inner;
+    }
+
+    #[must_use]
     pub fn get_data<'a>(&'a self) -> Ref<'a, Matrix<Owned<T>, DimDyn, D>> {
         let reference: Ref<'a, VariableInner<T, D>> = self.inner.borrow();
         Ref::map(reference, |r| &r.data)
     }
 
+    #[must_use]
+    pub fn get_as_ref<'a>(&self) -> Matrix<MRef<&'a T>, DimDyn, D> {
+        let data = self.get_data();
+        data.to_ref()
+    }
+
+    #[must_use]
+    pub fn get_as_mut<'a>(&self) -> Matrix<MRef<&'a mut T>, DimDyn, D> {
+        let mut data = self.get_data_mut();
+        data.to_ref_mut()
+    }
+
+    #[must_use]
     pub fn get_data_mut<'a>(&'a self) -> RefMut<'a, Matrix<Owned<T>, DimDyn, D>> {
         let reference: RefMut<'a, VariableInner<T, D>> = self.inner.borrow_mut();
         RefMut::map(reference, |r| &mut r.data)
@@ -325,11 +362,13 @@ impl<T: Num, D: Device> Variable<T, D> {
         self.inner.borrow_mut().set_creator(creator);
     }
 
-    #[allow(clippy::type_complexity)]
+    #[expect(clippy::type_complexity)]
+    #[must_use]
     pub fn get_creator(&self) -> Option<Rc<RefCell<Box<dyn Function<T, D>>>>> {
         self.inner.borrow().get_creator().clone()
     }
 
+    #[must_use]
     pub fn get_grad<'a>(&'a self) -> Option<Variable<T, D>> {
         let reference: Ref<'a, VariableInner<T, D>> = self.inner.borrow();
         let ref_option = Ref::map(reference, |r| &r.grad);
@@ -350,12 +389,14 @@ impl<T: Num, D: Device> Variable<T, D> {
         self.inner.borrow().backward();
     }
 
+    #[must_use]
     pub fn downgrade(self) -> VariableWeak<T, D> {
         VariableWeak {
             inner: Rc::downgrade(&self.inner),
         }
     }
 
+    #[must_use]
     pub fn get_gen(&self) -> usize {
         self.inner.borrow().get_gen()
     }
@@ -372,10 +413,12 @@ impl<T: Num, D: Device> Variable<T, D> {
         self.inner.borrow_mut().set_name(name.to_string());
     }
 
+    #[must_use]
     pub fn get_name(&self) -> Option<String> {
         self.inner.borrow().get_name().clone()
     }
 
+    #[expect(clippy::missing_panics_doc)]
     pub fn with_grad_data<F>(&self, mut f: F)
     where
         F: FnMut(&Matrix<Owned<T>, DimDyn, D>),
@@ -389,6 +432,7 @@ impl<T: Num, D: Device> Variable<T, D> {
         }
     }
 
+    #[expect(clippy::missing_panics_doc)]
     pub fn set_grad(&self, mut grad: Variable<T, D>) {
         let self_shape = self.get_shape();
         let grad_shape = grad.get_shape();
@@ -403,17 +447,15 @@ impl<T: Num, D: Device> Variable<T, D> {
         }
         let name = self.get_name().clone().unwrap_or_default();
         let mut grad_mut = self.get_grad_mut();
-        match *grad_mut {
-            Some(ref mut grad_variable) => {
-                *grad_variable = grad + grad_variable.clone();
-            }
-            None => {
-                grad.set_name(&format!("{name}_grad"));
-                *grad_mut = Some(grad);
-            }
+        if let Some(ref mut grad_variable) = *grad_mut {
+            *grad_variable = grad + grad_variable.clone();
+        } else {
+            grad.set_name(&format!("{name}_grad"));
+            *grad_mut = Some(grad);
         }
     }
 
+    #[must_use]
     pub fn get_is_train(&self) -> bool {
         self.inner.borrow().get_is_train()
     }
@@ -422,15 +464,21 @@ impl<T: Num, D: Device> Variable<T, D> {
         self.inner.borrow_mut().set_is_train(is_train);
     }
 
+    #[must_use]
     pub fn get_all_trainable_variables(&self) -> Vec<Variable<T, D>> {
         self.inner.borrow().get_all_trainable_variables()
     }
 
+    #[must_use]
     pub fn get_shape(&self) -> DimDyn {
         self.get_data().shape()
     }
 
+    #[must_use]
     pub fn to<DO: Device>(&self) -> Variable<T, DO> {
+        if std::any::TypeId::of::<D>() == std::any::TypeId::of::<DO>() {
+            return unsafe { std::mem::transmute::<Variable<T, D>, Variable<T, DO>>(self.clone()) };
+        }
         Variable {
             inner: Rc::new(RefCell::new(self.inner.borrow().to())),
         }
@@ -443,6 +491,7 @@ pub struct VariableWeak<T: Num, D: Device> {
 }
 
 impl<T: Num, D: Device> VariableWeak<T, D> {
+    #[must_use]
     pub fn upgrade(&self) -> Option<Variable<T, D>> {
         self.inner.upgrade().map(|inner| Variable { inner })
     }
@@ -451,7 +500,7 @@ impl<T: Num, D: Device> VariableWeak<T, D> {
 impl<T: Num, D: Device> Debug for Variable<T, D> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let inner = self.get_data();
-        write!(f, "Variable {{ data: \n{:?} }}", inner)?;
+        write!(f, "Variable {{ data: \n{inner:?} }}")?;
         Ok(())
     }
 }
@@ -459,7 +508,7 @@ impl<T: Num, D: Device> Debug for Variable<T, D> {
 impl<T: Num, D: Device> Display for Variable<T, D> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let inner = self.get_data();
-        write!(f, "Variable {{ data: \n{:?} }}", inner)?;
+        write!(f, "Variable {{ data: \n{inner:?} }}")?;
         Ok(())
     }
 }

@@ -35,7 +35,7 @@ const CIFAR10_URLS: [&str; 1] = ["https://www.cs.toronto.edu/~kriz/cifar-10-pyth
 
 const CIFAR10_FILENAMES: [&str; 1] = ["cifar-10-binary.tar.gz"];
 
-#[allow(clippy::type_complexity)]
+#[expect(clippy::type_complexity, clippy::missing_errors_doc)]
 pub fn mnist_dataset(
 ) -> Result<(Vec<(Vec<u8>, u8)>, Vec<(Vec<u8>, u8)>), Box<dyn std::error::Error>> {
     let dataset_dir = create_dataset_dir("mnist")?;
@@ -44,7 +44,11 @@ pub fn mnist_dataset(
     Ok((train_data, test_data))
 }
 
-#[allow(clippy::type_complexity)]
+#[expect(
+    clippy::type_complexity,
+    clippy::missing_errors_doc,
+    clippy::missing_panics_doc
+)]
 pub fn cifar10_dataset(
 ) -> Result<(Vec<(Vec<u8>, u8)>, Vec<(Vec<u8>, u8)>), Box<dyn std::error::Error>> {
     let dataset_dir = create_dataset_dir("cifar10")?;
@@ -79,7 +83,7 @@ fn download_and_extract_cifar10(save_dir: &str) -> Result<(), Box<dyn std::error
             );
         } else {
             let error = String::from_utf8_lossy(&output.stderr);
-            return Err(format!("ダウンロード中にエラーが発生しました: {}", error).into());
+            return Err(format!("ダウンロード中にエラーが発生しました: {error}").into());
         }
     }
 
@@ -95,7 +99,7 @@ fn download_and_extract_cifar10(save_dir: &str) -> Result<(), Box<dyn std::error
         Ok(())
     } else {
         let error = String::from_utf8_lossy(&output.stderr);
-        Err(format!("解凍中にエラーが発生しました: {}", error).into())
+        Err(format!("解凍中にエラーが発生しました: {error}").into())
     }
 }
 
@@ -111,35 +115,39 @@ fn download_dataset(
     for (url, filename) in urls.iter().zip(filenames.iter()) {
         let filepath = dataset_dir.join(filename);
 
-        if !filepath.exists() {
-            println!("Downloading: {}", url);
+        if filepath.exists() {
+            println!("File already exists: {filepath:?}");
+        } else {
+            println!("Downloading: {url}");
             let response = get(*url)?;
             println!("response is {:?}", response.status());
             let mut file = File::create(&filepath)?;
             let content = response.bytes()?;
             file.write_all(&content)?;
-            println!("Downloaded: {:?}", filepath);
+            println!("Downloaded: {filepath:?}");
 
-            println!("filename: {:?}", filename);
+            println!("filename: {filename:?}");
             // 解凍処理を追加
             if filename.ends_with(".tar.gz") {
-                println!("Extracting: {:?}", filepath);
+                println!("Extracting: {filepath:?}");
                 let tar_gz = File::open(&filepath)?;
                 let tar = GzDecoder::new(tar_gz);
                 let mut archive = Archive::new(tar);
                 archive.unpack(dataset_dir)?;
-                println!("Extracted: {:?}", dataset_dir);
-            } else if filename.ends_with(".gz") {
+                println!("Extracted: {dataset_dir:?}");
+            // } else if filename.ends_with(".gz") {
+            } else if std::path::Path::new(filename)
+                .extension()
+                .map_or(false, |ext| ext.eq_ignore_ascii_case("gz"))
+            {
                 let unzipped_filename = filename.replace(".gz", "");
                 let unzipped_filepath = dataset_dir.join(&unzipped_filename);
-                println!("Unzipping: {:?}", filepath);
+                println!("Unzipping: {filepath:?}");
                 let mut gz = GzDecoder::new(File::open(&filepath)?);
                 let mut unzipped_file = File::create(&unzipped_filepath)?;
                 std::io::copy(&mut gz, &mut unzipped_file)?;
-                println!("Unzipped: {:?}", unzipped_filepath);
+                println!("Unzipped: {unzipped_file:?}");
             }
-        } else {
-            println!("File already exists: {:?}", filepath);
         }
     }
 
@@ -153,24 +161,24 @@ fn create_dataset_dir(dataset_name: &str) -> Result<PathBuf, std::io::Error> {
         env::var("HOME").expect("Failed to get home directory")
     };
 
-    let target_dir = PathBuf::from(home_dir).join(format!(".zenu/data/{}", dataset_name));
+    let target_dir = PathBuf::from(home_dir).join(format!(".zenu/data/{dataset_name}"));
 
-    if !target_dir.exists() {
-        fs::create_dir_all(&target_dir)?;
-        println!("Directory created: {:?}", target_dir);
+    if target_dir.exists() {
+        println!("Directory already exists: {target_dir:?}");
     } else {
-        println!("Directory already exists: {:?}", target_dir);
+        fs::create_dir_all(&target_dir)?;
+        println!("Directory created: {target_dir:?}");
     }
 
     Ok(target_dir)
 }
 
-#[allow(clippy::type_complexity)]
+#[expect(clippy::type_complexity)]
 fn extract_image_label_pairs(
     dataset: &Dataset,
     dataset_dir: &Path,
 ) -> Result<(Vec<(Vec<u8>, u8)>, Vec<(Vec<u8>, u8)>), Box<dyn std::error::Error>> {
-    println!("dataset_dir: {:?}", dataset_dir);
+    println!("dataset_dir: {dataset_dir:?}");
     match dataset {
         Dataset::Mnist => extract_mnist_image_label_pairs(dataset_dir),
         Dataset::Cifar10 => {
@@ -180,7 +188,7 @@ fn extract_image_label_pairs(
     }
 }
 
-#[allow(clippy::type_complexity)]
+#[expect(clippy::type_complexity)]
 fn extract_mnist_image_label_pairs(
     dataset_dir: &Path,
 ) -> Result<(Vec<(Vec<u8>, u8)>, Vec<(Vec<u8>, u8)>), Box<dyn std::error::Error>> {
@@ -239,14 +247,14 @@ fn extract_mnist_image_label_pairs(
     Ok((train_data, test_data))
 }
 
-#[allow(clippy::type_complexity)]
+#[expect(clippy::type_complexity)]
 fn extract_cifar10_image_label_pairs(
     dataset_dir: &Path,
 ) -> Result<Vec<(Vec<u8>, u8)>, Box<dyn std::error::Error>> {
     let mut data = Vec::new();
 
     for i in 1..=5 {
-        let file_path = dataset_dir.join(format!("data_batch_{}", i));
+        let file_path = dataset_dir.join(format!("data_batch_{i}"));
         let mut file = File::open(file_path)?;
         let mut buffer = [0; 3073];
 

@@ -1,9 +1,14 @@
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
 use quote::quote;
-use syn::{parse_macro_input, Data, DeriveInput, Field};
+use syn::{
+    parse::{Parse, ParseStream},
+    parse_macro_input, parse_quote,
+    token::Comma,
+    Attribute, Data, DeriveInput, Field, Ident, Token, Type,
+};
 
-#[proc_macro_derive(Parameters, attributes(zenu))]
+#[proc_macro_derive(Parameters, attributes(zenu, parameters))]
 pub fn zenu_derive_parameters(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
 
@@ -43,20 +48,22 @@ fn impl_parameters(input: &DeriveInput) -> TokenStream2 {
         }
     });
 
+    let (num_type, device_type) = parse_parameters_attr(&input.attrs);
+
     quote!(
         impl #impl_generics ::zenu_layer::Parameters #ty_generics for #name #ty_generics #where_clause {
-            fn weights(&self) -> std::collections::HashMap<String, ::zenu_autograd::Variable<T, D>> {
+            fn weights(&self) -> std::collections::HashMap<String, ::zenu_autograd::Variable<#num_type, #device_type>> {
                 let mut params = std::collections::HashMap::new();
                 #(
-                    #weights_code;
+                    #weights_code
                 )*
                 params
             }
 
-            fn biases(&self) -> std::collections::HashMap<String, ::zenu_autograd::Variable<T, D>> {
+            fn biases(&self) -> std::collections::HashMap<String, ::zenu_autograd::Variable<#num_type, #device_type>> {
                 let mut params = std::collections::HashMap::new();
                 #(
-                    #biases_code;
+                    #biases_code
                 )*
                 params
             }
@@ -69,4 +76,64 @@ fn has_zenu_skip_attr(field: &Field) -> bool {
         .attrs
         .iter()
         .any(|attr| attr.path.is_ident("zenu") && attr.tokens.to_string().contains("skip"))
+}
+
+fn parse_parameters_attr(attrs: &[Attribute]) -> (Type, Type) {
+    let mut num_type: Type = parse_quote!(f32);
+    let mut device_type: Type = parse_quote!(Cpu);
+
+    for attr in attrs {
+        if attr.path.is_ident("parameters") {
+            let args = syn::parse2::<ParametersArgs>(attr.tokens.clone())
+                .expect("Failed to parse parameters attribute");
+            if let Some(ty) = args.num {
+                num_type = ty;
+            }
+            if let Some(ty) = args.device {
+                device_type = ty;
+            }
+        }
+    }
+
+    (num_type, device_type)
+}
+
+struct ParametersArgs {
+    num: Option<Type>,
+    device: Option<Type>,
+}
+
+impl Parse for ParametersArgs {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        let content;
+        syn::parenthesized!(content in input);
+
+        let mut num = None;
+        let mut device = None;
+
+        while !content.is_empty() {
+            let ident: Ident = content.parse()?;
+            let _: Token![=] = content.parse()?;
+            let ty: Type = content.parse()?;
+
+            if ident == "num" {
+                num = Some(ty);
+            } else if ident == "device" {
+                device = Some(ty);
+            } else {
+                return Err(syn::Error::new(
+                    ident.span(),
+                    "Expected 'num' or 'device' in parameters attribute",
+                ));
+            }
+
+            if content.peek(Comma) {
+                let _: Comma = content.parse()?;
+            } else {
+                break;
+            }
+        }
+
+        Ok(ParametersArgs { num, device })
+    }
 }

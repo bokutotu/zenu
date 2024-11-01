@@ -45,9 +45,11 @@ pub enum ZenuCudnnError {
     ExecutionFailedCudart = 5003,
     ExecutionFailedCurand = 5004,
     InvalidValue = 2001,
+    Other = 9999,
 }
 
 impl From<cudnnStatus_t> for ZenuCudnnError {
+    #[expect(clippy::too_many_lines)]
     fn from(status: cudnnStatus_t) -> Self {
         match status {
             cudnnStatus_t::CUDNN_STATUS_NOT_INITIALIZED => ZenuCudnnError::NotInitialized,
@@ -161,6 +163,7 @@ impl From<cudnnStatus_t> for ZenuCudnnError {
 }
 
 impl From<ZenuCudnnError> for cudnnStatus_t {
+    #[expect(clippy::too_many_lines)]
     fn from(error: ZenuCudnnError) -> Self {
         match error {
             ZenuCudnnError::NotInitialized => cudnnStatus_t::CUDNN_STATUS_NOT_INITIALIZED,
@@ -268,6 +271,7 @@ impl From<ZenuCudnnError> for cudnnStatus_t {
                 cudnnStatus_t::CUDNN_STATUS_EXECUTION_FAILED_CURAND
             }
             ZenuCudnnError::InvalidValue => cudnnStatus_t::CUDNN_STATUS_INVALID_VALUE,
+            ZenuCudnnError::Other => unimplemented!(),
         }
     }
 }
