@@ -18,6 +18,7 @@ use crate::layers::rnn::inner::rnn_weights_to_desc;
 
 use crate::layers::rnn::inner::{Activation, RNNInner};
 
+#[expect(clippy::module_name_repetitions)]
 #[derive(Debug, Default)]
 pub struct RNNSLayerBuilder<T: Num, D: Device, C: CellType> {
     is_cudnn: Option<bool>,
@@ -33,13 +34,13 @@ pub struct RNNSLayerBuilder<T: Num, D: Device, C: CellType> {
 
 impl<T: Num, D: Device, C: CellType> RNNSLayerBuilder<T, D, C> {
     #[must_use]
-    pub fn is_cudnn(mut self, is_cudnn: bool) -> Self {
+    pub fn set_is_cudnn(mut self, is_cudnn: bool) -> Self {
         self.is_cudnn = Some(is_cudnn);
         self
     }
 
     #[must_use]
-    pub fn is_bidirectional(mut self, is_bidirectional: bool) -> Self {
+    pub fn set_is_bidirectional(mut self, is_bidirectional: bool) -> Self {
         self.is_bidirectional = Some(is_bidirectional);
         self
     }
@@ -69,7 +70,7 @@ impl<T: Num, D: Device, C: CellType> RNNSLayerBuilder<T, D, C> {
     }
 
     #[must_use]
-    pub fn is_training(mut self, is_training: bool) -> Self {
+    pub fn set_is_training(mut self, is_training: bool) -> Self {
         self.is_training = Some(is_training);
         self
     }
@@ -147,7 +148,6 @@ impl<T: Num, D: Device, C: CellType> RNNSLayerBuilder<T, D, C> {
         cudnn_weight
     }
 
-    #[expect(clippy::missing_panics_doc)]
     #[must_use]
     pub(super) fn build_inner(mut self) -> RNNInner<T, D, C>
     where

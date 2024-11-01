@@ -2,6 +2,7 @@ mod builder;
 mod gru;
 mod inner;
 mod lstm;
+#[expect(clippy::module_inception)]
 mod rnn;
 
 pub use gru::*;

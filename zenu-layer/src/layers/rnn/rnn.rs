@@ -77,7 +77,7 @@ impl<T: Num, D: Device> Parameters<T, D> for RNN<T, D> {
     }
 
     fn load_parameters(&mut self, parameters: std::collections::HashMap<String, Variable<T, D>>) {
-        self.0.load_parameters(parameters)
+        self.0.load_parameters(parameters);
     }
 }
 
@@ -169,7 +169,7 @@ mod rnn_layer_test {
             .num_layers(3)
             .input_size(5)
             .batch_size(5)
-            .is_cudnn(true)
+            .set_is_cudnn(true)
             .build_rnn();
 
         let mut new_layer = RNNBuilder::<f32, Nvidia>::default()
@@ -177,7 +177,7 @@ mod rnn_layer_test {
             .num_layers(3)
             .input_size(5)
             .batch_size(5)
-            .is_cudnn(true)
+            .set_is_cudnn(true)
             .build_rnn();
 
         let layer_parameters = layer.parameters();
