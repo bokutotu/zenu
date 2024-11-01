@@ -7,7 +7,10 @@ pub mod dropout;
 pub mod im2col;
 pub mod pool2d;
 
-#[allow(unused)]
+#[cfg(feature = "nvidia")]
+pub mod rnn;
+
+#[expect(unused)]
 pub(crate) struct NNCache<D: DeviceBase> {
     pub(crate) bytes: usize,
     pub(crate) ptr: *mut u8,
@@ -15,12 +18,9 @@ pub(crate) struct NNCache<D: DeviceBase> {
 }
 
 impl<D: DeviceBase> NNCache<D> {
-    #[allow(unused)]
     pub(crate) fn new(bytes: usize) -> Self {
         let ptr = D::alloc(bytes).unwrap();
-        if ptr.is_null() {
-            panic!("Failed to allocate memory");
-        }
+        assert!(!ptr.is_null(), "Failed to allocate memory");
         Self {
             bytes,
             ptr,

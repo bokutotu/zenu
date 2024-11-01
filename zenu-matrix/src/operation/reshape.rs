@@ -7,6 +7,7 @@ use crate::{
 };
 
 impl<T: Num, R: Repr<Item = T>, S: DimTrait, D: Device> Matrix<R, S, D> {
+    #[expect(clippy::missing_panics_doc)]
     pub fn reshape<I: Into<DimDyn>>(&self, new_shape: I) -> Matrix<Ref<&T>, DimDyn, D> {
         let new_shape = new_shape.into();
         assert_eq!(
@@ -30,6 +31,7 @@ Use `reshape_new_matrix` method instead.
 }
 
 impl<T: Num, R: Repr<Item = T>, D: Device> Matrix<R, DimDyn, D> {
+    #[expect(clippy::missing_panics_doc)]
     pub fn reshape_new_matrix<I: Into<DimDyn>>(&self, new_shape: I) -> Matrix<Owned<T>, DimDyn, D> {
         let new_shape = new_shape.into();
         assert_eq!(
@@ -45,6 +47,7 @@ impl<T: Num, R: Repr<Item = T>, D: Device> Matrix<R, DimDyn, D> {
     }
 }
 impl<T: Num, S: DimTrait, D: Device> Matrix<Owned<T>, S, D> {
+    #[expect(clippy::missing_panics_doc)]
     pub fn reshape_mut<I: Into<DimDyn>>(&mut self, new_shape: I) -> Matrix<Ref<&mut T>, DimDyn, D> {
         let new_shape = new_shape.into();
         assert_eq!(
@@ -68,6 +71,7 @@ Use `reshape_new_matrix` method instead.
 }
 
 impl<T: Num, S: DimTrait, D: Device> Matrix<Owned<T>, S, D> {
+    #[expect(clippy::missing_panics_doc)]
     pub fn reshape_no_alloc_owned<I: Into<DimDyn>>(
         self,
         new_shape: I,

@@ -42,6 +42,7 @@ impl<T: Num, D: Device> Function<T, D> for Log<T, D> {
     }
 }
 
+#[must_use]
 pub fn log<T: Num, D: Device>(x: Variable<T, D>) -> Variable<T, D> {
     let output = alloc_like(&x);
     let log = Log::new(x, output.clone());
@@ -64,6 +65,7 @@ mod log {
 
     use super::log;
 
+    #[expect(clippy::unreadable_literal, clippy::approx_constant)]
     fn log_1d<D: Device>() {
         let x = from_vec(vec![1., 2., 3., 4.], [4]);
         let y = log(x.clone());

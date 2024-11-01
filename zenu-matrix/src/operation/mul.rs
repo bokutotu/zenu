@@ -10,7 +10,7 @@ use crate::{
 };
 
 pub trait Gemm: DeviceBase {
-    #[allow(clippy::too_many_arguments)]
+    #[expect(clippy::too_many_arguments)]
     fn gemm_unchecked<T: Num>(
         transa: BlasTrans,
         transb: BlasTrans,
@@ -37,6 +37,7 @@ fn from_trans(value: BlasTrans) -> Transpose {
 }
 
 impl Gemm for Cpu {
+    #[expect(clippy::many_single_char_names, clippy::similar_names)]
     fn gemm_unchecked<T: Num>(
         transa: BlasTrans,
         transb: BlasTrans,
@@ -53,11 +54,11 @@ impl Gemm for Cpu {
         ldc: usize,
     ) {
         extern crate openblas_src;
-        use cblas::*;
+        use cblas::{dgemm, sgemm, Layout};
         if T::is_f32() {
-            let a = unsafe { std::slice::from_raw_parts(a as *const f32, m * k) };
-            let b = unsafe { std::slice::from_raw_parts(b as *const f32, k * n) };
-            let c = unsafe { std::slice::from_raw_parts_mut(c as *mut f32, m * n) };
+            let a = unsafe { std::slice::from_raw_parts(a.cast(), m * k) };
+            let b = unsafe { std::slice::from_raw_parts(b.cast(), k * n) };
+            let c = unsafe { std::slice::from_raw_parts_mut(c.cast(), m * n) };
             unsafe {
                 sgemm(
                     Layout::RowMajor,
@@ -74,12 +75,12 @@ impl Gemm for Cpu {
                     beta.to_f32().unwrap(),
                     c,
                     ldc.try_into().unwrap(),
-                )
+                );
             }
         } else {
-            let a = unsafe { std::slice::from_raw_parts(a as *const f64, m * k) };
-            let b = unsafe { std::slice::from_raw_parts(b as *const f64, k * n) };
-            let c = unsafe { std::slice::from_raw_parts_mut(c as *mut f64, m * n) };
+            let a = unsafe { std::slice::from_raw_parts(a.cast(), m * k) };
+            let b = unsafe { std::slice::from_raw_parts(b.cast(), k * n) };
+            let c = unsafe { std::slice::from_raw_parts_mut(c.cast(), m * n) };
             unsafe {
                 dgemm(
                     Layout::RowMajor,
@@ -96,7 +97,7 @@ impl Gemm for Cpu {
                     beta.to_f64().unwrap(),
                     c,
                     ldc.try_into().unwrap(),
-                )
+                );
             }
         }
     }
@@ -110,6 +111,7 @@ use zenu_cuda::cublas::{cublas_gemm, ZenuCublasOperation};
 
 #[cfg(feature = "nvidia")]
 impl Gemm for Nvidia {
+    #[expect(clippy::many_single_char_names, clippy::similar_names)]
     fn gemm_unchecked<T: Num>(
         transa: BlasTrans,
         transb: BlasTrans,
@@ -134,12 +136,12 @@ impl Gemm for Nvidia {
         }
         let transa = to_cuda_ops(transa);
         let transb = to_cuda_ops(transb);
-        let m = m as i32;
-        let n = n as i32;
-        let k = k as i32;
-        let lda = lda as i32;
-        let ldb = ldb as i32;
-        let ldc = ldc as i32;
+        let m = i32::try_from(m).unwrap();
+        let n = i32::try_from(n).unwrap();
+        let k = i32::try_from(k).unwrap();
+        let lda = i32::try_from(lda).unwrap();
+        let ldb = i32::try_from(ldb).unwrap();
+        let ldc = i32::try_from(ldc).unwrap();
         cublas_gemm::<T>(transb, transa, n, m, k, alpha, b, ldb, a, lda, beta, c, ldc).unwrap();
     }
 }
@@ -203,6 +205,7 @@ fn gemm_shape_check<SA: DimTrait, SB: DimTrait, SC: DimTrait>(
     Ok(())
 }
 
+#[expect(clippy::missing_panics_doc, clippy::similar_names)]
 pub fn gemm_assign<T, D, RA, RB, SA, SB, SC>(
     a: &Matrix<RA, SA, D>,
     b: &Matrix<RB, SB, D>,
@@ -232,7 +235,7 @@ pub fn gemm_assign<T, D, RA, RB, SA, SB, SC>(
         let get_lead_dim = |stride: &[usize], trans: BlasTrans| match trans {
             BlasTrans::None => stride[0],
             BlasTrans::Ordinary => stride[1],
-            _ => unreachable!(),
+            BlasTrans::Conjugate => unreachable!(),
         };
         let lda = get_lead_dim(a.stride().slice(), transa);
         let ldb = get_lead_dim(b.stride().slice(), transb);

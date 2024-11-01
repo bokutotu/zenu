@@ -6,14 +6,21 @@ use serde::{Deserialize, Serialize};
 
 use super::{DimTrait, GreaterDimTrait, LessDimTrait};
 
-#[derive(Clone, Debug, Default, PartialEq, Copy, Serialize, Deserialize)]
+#[derive(Clone, Default, PartialEq, Copy, Serialize, Deserialize)]
 pub struct DimDyn {
     dim: [usize; 6],
     len: usize,
 }
-/// larger_shapeは2つのshapeのうち大きい方のshapeを返す
-/// xとyを受け取り、xがlarger_shapeである場合はtrueを返す
-/// xがyよりも小さい場合はfalseを返す
+
+impl std::fmt::Debug for DimDyn {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", &self.dim[0..self.len])
+    }
+}
+
+/// `larger_shape`は2つの`shape`のうち大きい方の`shape`を返す
+/// `x`と`y`を受け取り、`x`が`larger_shape`である場合は`true`を返す
+/// `x`が`y`よりも小さい場合は`false`を返す
 fn larger_shape_is_x<D1: DimTrait, D2: DimTrait>(x: D1, y: D2) -> bool {
     let x = DimDyn::from(x.slice());
     let y = DimDyn::from(y.slice());
@@ -62,21 +69,23 @@ pub(crate) fn smaller_shape<D1: DimTrait, D2: DimTrait>(x: D1, y: D2) -> DimDyn 
 }
 
 impl DimDyn {
+    #[expect(clippy::missing_panics_doc)]
+    #[must_use]
     pub fn new(dim: &[usize]) -> Self {
-        if dim.len() > 6 {
-            panic!("Dim must be smaller than 4");
-        }
+        assert!(dim.len() <= 6, "Dim must be smaller than 6");
         let mut dim_dyn = DimDyn::default();
         for i in dim {
-            dim_dyn.push_dim(*i)
+            dim_dyn.push_dim(*i);
         }
         dim_dyn
     }
 
+    #[must_use]
     pub fn dim(&self) -> [usize; 6] {
         self.dim
     }
 
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.len == 0
     }
@@ -85,6 +94,7 @@ impl DimDyn {
         self.len = len;
     }
 
+    #[must_use]
     pub fn get_len(&self) -> usize {
         self.len
     }
@@ -105,6 +115,7 @@ impl DimDyn {
     // => true
     // other: [3, 4, 5]
     // => false
+    #[must_use]
     pub fn is_include(&self, other: DimDyn) -> bool {
         // selfのshapeの後ろからotherのshapeを比較していく
         if self.len() < other.len() {
@@ -121,18 +132,17 @@ impl DimDyn {
     // selfとotherがadd, sub, mul, divで演算可能かを調べる
     // [10, 10, 1, 10]と[10, 1, 1, 10]は演算可能である
     // is_includeではfalseになるが演算可能なものを調べる
+    #[expect(clippy::missing_panics_doc)]
+    #[must_use]
     pub fn is_include_bradcast(&self, other: DimDyn) -> bool {
-        if self.len() < other.len() {
-            panic!("this is bug please make issue");
-        }
+        assert!(self.len() >= other.len(), "this is bug please make issue");
         for i in 0..other.len() {
             if self.dim[self.len() - 1 - i] == other.dim[other.len() - 1 - i]
                 || other.dim[other.len() - i - 1] == 1
             {
                 continue;
-            } else {
-                return false;
             }
+            return false;
         }
         true
     }
@@ -158,18 +168,20 @@ impl Index<usize> for DimDyn {
     type Output = usize;
 
     fn index(&self, index: usize) -> &Self::Output {
-        if index >= self.len {
-            panic!("Index out of range");
-        }
+        // if index >= self.len {
+        //     panic!("Index out of range");
+        // }
+        assert!(index < self.len, "Index out of range");
         &self.dim[index]
     }
 }
 
 impl IndexMut<usize> for DimDyn {
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
-        if index >= self.len {
-            panic!("Index out of range");
-        }
+        // if index >= self.len {
+        //     panic!("Index out of range");
+        // }
+        assert!(index < self.len, "Index out of range");
         &mut self.dim[index]
     }
 }
@@ -183,12 +195,6 @@ macro_rules! impl_range_index {
                 &self.dim[index] as &[usize]
             }
         }
-
-        // impl IndexMut<$trait$($ty)*> for DimDyn {
-        //     fn index_mut(&mut self, index: $trait$($ty)*) -> &mut Self::Output {
-        //         &mut DimDyn::from(&self.dim[index] as &[usize])
-        //     }
-        // }
     };
 }
 
@@ -203,7 +209,7 @@ impl IntoIterator for DimDyn {
     type Item = usize;
     type IntoIter = std::vec::IntoIter<Self::Item>;
 
-    #[allow(clippy::unnecessary_to_owned)]
+    #[expect(clippy::unnecessary_to_owned)]
     fn into_iter(self) -> Self::IntoIter {
         self.dim[0..self.len()].to_vec().into_iter()
     }
@@ -284,6 +290,6 @@ mod dim_dyn {
     fn is_include_bradcast_2x4x5x5_1x4x1x1() {
         let x = super::DimDyn::new(&[2, 4, 5, 5]);
         let y = super::DimDyn::new(&[1, 4, 1, 1]);
-        assert_eq!(x.is_include_bradcast(y), true);
+        assert!(x.is_include_bradcast(y));
     }
 }

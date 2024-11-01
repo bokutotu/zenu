@@ -8,6 +8,7 @@ pub struct SliceDim {
 }
 
 impl SliceDim {
+    #[must_use]
     pub fn step(self, step: usize) -> Self {
         Self {
             start: self.start,

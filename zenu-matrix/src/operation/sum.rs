@@ -7,11 +7,11 @@ use crate::{
 };
 
 impl<T: Num, D: Device> Matrix<Ref<&T>, DimDyn, D> {
+    #[expect(clippy::missing_panics_doc)]
+    #[must_use]
     pub fn sum(&self, axis: usize, keep_dim: bool) -> Matrix<Owned<T>, DimDyn, D> {
         let shape = self.shape();
-        if axis >= shape.len() {
-            panic!("Invalid axis");
-        }
+        assert!(axis < shape.len(), "Invalid axis");
 
         let result_shape = self.shape().remove_axis(axis);
 
@@ -31,13 +31,15 @@ impl<T: Num, D: Device> Matrix<Ref<&T>, DimDyn, D> {
     }
 }
 
+#[expect(clippy::missing_panics_doc, clippy::needless_pass_by_value)]
 pub fn sum_to<T: Num, D: Device>(
     source: Matrix<Ref<&T>, DimDyn, D>,
     target: Matrix<Ref<&mut T>, DimDyn, D>,
 ) {
-    if source.shape().len() < target.shape().len() {
-        panic!("source.shape().len() < target.shape().len()");
-    }
+    assert!(
+        source.shape().len() >= target.shape().len(),
+        "source.shape().len() <= target.shape().len()"
+    );
 
     let diff_len = source.shape().len() - target.shape().len();
     if source.shape().slice() == target.shape().slice() {
@@ -57,7 +59,8 @@ pub fn sum_to<T: Num, D: Device>(
         {
             if *s == *t {
                 continue;
-            } else if *t == 1 {
+            }
+            if *t == 1 {
                 diff_axis.push(idx);
             } else {
                 panic!("hoge");
@@ -65,7 +68,7 @@ pub fn sum_to<T: Num, D: Device>(
         }
 
         let mut tmp = source.new_matrix();
-        for axis in diff_axis.into_iter() {
+        for axis in diff_axis {
             let tmp_sum = {
                 let tmp_ref = tmp.to_ref();
                 tmp_ref.sum(axis, true)
@@ -76,9 +79,10 @@ pub fn sum_to<T: Num, D: Device>(
         return;
     }
 
-    if !source.shape().is_include(target.shape()) {
-        panic!("!source.shape().is_include(target.shape())");
-    }
+    assert!(
+        source.shape().is_include(target.shape()),
+        "!source.shape().is_include(target.shape())"
+    );
 
     if diff_len == 1 {
         let target = target;
@@ -91,6 +95,11 @@ pub fn sum_to<T: Num, D: Device>(
 
 #[cfg(test)]
 mod sum {
+    #![expect(
+        clippy::float_cmp,
+        clippy::cast_precision_loss,
+        clippy::cast_possible_truncation
+    )]
     use crate::{
         device::Device,
         dim::{DimDyn, DimTrait},

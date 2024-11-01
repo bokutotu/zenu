@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 pub struct Dim0 {}
 
 impl Dim0 {
+    #[must_use]
     pub fn new() -> Self {
         Self {}
     }
@@ -33,11 +34,12 @@ impl PartialEq for Dim0 {
     }
 }
 
-impl Iterator for Dim0 {
+impl IntoIterator for Dim0 {
     type Item = usize;
+    type IntoIter = std::array::IntoIter<Self::Item, 0>;
 
-    fn next(&mut self) -> Option<Self::Item> {
-        None
+    fn into_iter(self) -> Self::IntoIter {
+        [].into_iter()
     }
 }
 
@@ -61,27 +63,21 @@ impl DimTrait for Dim0 {
 
 impl From<&[usize]> for Dim0 {
     fn from(dim: &[usize]) -> Self {
-        if !dim.is_empty() {
-            panic!("Invalid dimension");
-        }
+        assert!(dim.is_empty(), "Invalid dimension");
         Dim0 {}
     }
 }
 
 impl From<&[usize; 0]> for Dim0 {
     fn from(dim: &[usize; 0]) -> Self {
-        if dim.is_empty() {
-            panic!("Invalid dimension");
-        }
+        assert!(dim.is_empty(), "Invalid dimension");
         Dim0 {}
     }
 }
 
 impl From<[usize; 0]> for Dim0 {
     fn from(dim: [usize; 0]) -> Self {
-        if !dim.is_empty() {
-            panic!("Invalid dimension");
-        }
+        assert!(dim.is_empty(), "Invalid dimension");
         Dim0 {}
     }
 }
@@ -100,10 +96,12 @@ macro_rules! impl_dim {
         }
 
         impl $name {
+            #[must_use]
             pub fn new(dim: [usize; $number_of_elm]) -> Self {
                 Self { dim }
             }
 
+            #[must_use]
             pub fn dim(&self) -> &[usize; $number_of_elm] {
                 &self.dim
             }

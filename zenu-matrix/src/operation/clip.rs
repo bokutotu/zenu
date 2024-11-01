@@ -10,7 +10,7 @@ use crate::{
 use crate::device::nvidia::Nvidia;
 
 #[cfg(feature = "nvidia")]
-use zenu_cuda::kernel::*;
+use zenu_cuda::kernel::{clip, clip_assign, clip_backward, clip_backward_assign};
 
 pub trait ClipOps {
     fn clip<T: Num>(
@@ -36,7 +36,7 @@ pub trait ClipOps {
 }
 
 impl ClipOps for Cpu {
-    #[allow(clippy::not_unsafe_ptr_arg_deref)]
+    #[expect(clippy::not_unsafe_ptr_arg_deref)]
     fn clip<T: Num>(
         input: *const T,
         output: *mut T,
@@ -59,7 +59,7 @@ impl ClipOps for Cpu {
         }
     }
 
-    #[allow(clippy::not_unsafe_ptr_arg_deref)]
+    #[expect(clippy::not_unsafe_ptr_arg_deref)]
     fn clip_assign<T: Num>(input: *mut T, size: usize, stride: usize, min: T, max: T) {
         let input = unsafe { std::slice::from_raw_parts_mut(input, size * stride) };
         for i in 0..size {
@@ -73,7 +73,7 @@ impl ClipOps for Cpu {
         }
     }
 
-    #[allow(clippy::not_unsafe_ptr_arg_deref)]
+    #[expect(clippy::not_unsafe_ptr_arg_deref)]
     fn clip_backward<T: Num>(
         input: *const T,
         mask: *mut T,
@@ -95,7 +95,7 @@ impl ClipOps for Cpu {
         }
     }
 
-    #[allow(clippy::not_unsafe_ptr_arg_deref)]
+    #[expect(clippy::not_unsafe_ptr_arg_deref)]
     fn clip_backward_assign<T: Num>(mask: *mut T, max: T, min: T, size: usize, stride: usize) {
         let mask = unsafe { std::slice::from_raw_parts_mut(mask, size * stride) };
         for i in 0..size {
@@ -120,11 +120,11 @@ impl ClipOps for Nvidia {
         min: T,
         max: T,
     ) {
-        clip(input, output, size, stride_in, stride_out, min, max)
+        clip(input, output, size, stride_in, stride_out, min, max);
     }
 
     fn clip_assign<T: Num>(input: *mut T, size: usize, stride: usize, min: T, max: T) {
-        clip_assign(input, size, stride, min, max)
+        clip_assign(input, size, stride, min, max);
     }
 
     fn clip_backward<T: Num>(
@@ -136,11 +136,19 @@ impl ClipOps for Nvidia {
         stride_in: usize,
         stride_out: usize,
     ) {
-        clip_backward(input as *mut T, mask, max, min, size, stride_in, stride_out)
+        clip_backward(
+            input.cast_mut(),
+            mask,
+            max,
+            min,
+            size,
+            stride_in,
+            stride_out,
+        );
     }
 
     fn clip_backward_assign<T: Num>(mask: *mut T, max: T, min: T, size: usize, stride: usize) {
-        clip_backward_assign(mask, max, min, size, stride)
+        clip_backward_assign(mask, max, min, size, stride);
     }
 }
 
@@ -303,6 +311,7 @@ impl<T: Num, D: Device> Matrix<Ref<&mut T>, DimDyn, D> {
 
 #[cfg(test)]
 mod clip {
+    #![expect(clippy::float_cmp)]
 
     use crate::{
         device::Device,

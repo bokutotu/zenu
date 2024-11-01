@@ -45,7 +45,7 @@ impl<D: DeviceBase, const N: usize> PtrBufferMap<D, N> {
 }
 
 /// 未使用バイト数とそのバイト数を持つバッファのマップ
-/// 未使用バイト数が同じバッファを複数持つことがあるため, PtrBufferMapを使用する
+/// 未使用バイト数が同じバッファを複数持つことがあるため, `PtrBufferMap`を使用する
 ///
 #[derive(Default)]
 pub struct UnusedBytesPtrBufferMap<D: DeviceBase, const N: usize>(
@@ -65,9 +65,9 @@ impl<D: DeviceBase, const N: usize> UnusedBytesPtrBufferMap<D, N> {
         self.0.remove(&unused_bytes)
     }
 
-    /// 未使用バイト数がunused_bytesのバッファを取得
-    /// unused_bytesに対応するPtrBufferMapが存在しない場合、Noneを返す
-    /// 返却されるArcBufferは、Selfからは削除される
+    /// 未使用バイト数が`unused_bytes`のバッファを取得
+    /// `unused_bytes`に対応する `PtrBufferMap`が存在しない場合、`None`を返す
+    /// 返却される`ArcBuffer`は、Selfからは削除される
     pub fn pop_unused_bytes_ptr_buffer(&mut self, unused_bytes: usize) -> ArcBuffer<D, N> {
         let mut ptr_buffer_map = self.pop_ptr_buffer_map(unused_bytes).unwrap();
         let (_, buffer) = ptr_buffer_map.pop();
@@ -77,7 +77,7 @@ impl<D: DeviceBase, const N: usize> UnusedBytesPtrBufferMap<D, N> {
         buffer
     }
 
-    /// 未使用バイト数と先頭ポインタを持つバッファをUnusedBytesPtrBufferMapから削除
+    /// 未使用バイト数と先頭ポインタを持つバッファを`UnusedBytesPtrBufferMap`から削除
     pub fn remove(&mut self, unused_bytes: usize, ptr: *mut u8) {
         let map = self.0.get_mut(&unused_bytes).unwrap();
         map.remove(ptr);
@@ -96,33 +96,33 @@ impl<D: DeviceBase, const N: usize> UnusedBytesPtrBufferMap<D, N> {
 /// 固定サイズのメモリプール
 ///
 /// 2つのマップを使用する理由
-/// - unused_bytes_ptr_buffer_map
+/// - `unused_bytes_ptr_buffer_map`
 ///   要求バイト数を満たす最小のbufferを高速に取得するため(O(logN))
-/// - alloced_ptr_buffer_map
+/// - `alloced_ptr_buffer_map`
 ///   ポインタを解放する際、確保されたptrはどのbufferに属しているかを高速に取得するため(O(1))
 ///
 /// 1. 確保の流れ
 ///    1. 要求のバイト数よりも多くの未使用bytesを持つバッファがある場合
-///       1. unused_bytes_ptr_buffer_mapから条件を満たす最小のunused_bytesのBufferを取得
-///          (unused_bytes_ptr_buffer_mapからBufferは削除される)
-///       2. Bufferからbytesを確保
-///       3. alloced_ptr_buffer_mapにBufferのポインタとBufferを追加
-///       4. unused_bytes_ptr_buffer_mapにBufferを追加
+///       1. `unused_bytes_ptr_buffer_map`から条件を満たす最小の`unused_bytes`の`Buffer`を取得
+///          (`unused_bytes_ptr_buffer_map`から`Buffer`は削除される)
+///       2. `Buffer`から`bytes`を確保
+///       3. `alloced_ptr_buffer_map`に`Buffer`のポインタとBufferを追加
+///       4. `unused_bytes_ptr_buffer_map`に`Buffer`を追加
 ///       5. 確保したポインタを返す
 ///    2. 要求のバイト数よりも多くの未使用bytesを持つバッファがある場合
-///       1. 新たにBufferを作成
-///       2. Bufferからbytesを確保
-///       3. alloced_ptr_buffer_mapにBufferのポインタとBufferを追加
-///       4. unused_bytes_ptr_buffer_mapにBufferを追加
+///       1. 新たに`Buffer`を作成
+///       2. `Buffer`から`bytes`を確保
+///       3. `alloced_ptr_buffer_map`に`Buffer`のポインタと`Buffer`を追加
+///       4. `unused_bytes_ptr_buffer_map`に`Buffer`を追加
 ///       5. 確保したポインタを返す
 /// 2. 解放の流れ
-///    1. alloced_ptr_buffer_mapからポインタに対応するBufferを取得
-///       (alloced_ptr_buffer_mapからBufferは削除される)
-///    2. unused_bytesを取得
-///    3. unused_bytesからunused_bytes_ptr_buffer_mapからBufferを取得
-///       (unused_bytes_ptr_buffer_mapからBufferは削除される)
-///    2. Bufferからポインタを解放
-///    3. unused_bytes_ptr_buffer_mapにBufferを追加
+///    1. `alloced_ptr_buffer_map`からポインタに対応する`Buffer`を取得
+///       (`alloced_ptr_buffer_map`から`Buffer`は削除される)
+///    2. `unused_bytes`を取得
+///    3. `unused_bytes`から`unused_bytes_ptr_buffer_map`から`Buffer`を取得
+///       (`unused_bytes_ptr_buffer_map`から`Buffer`は削除される)
+///    2. `Buffer`からポインタを解放
+///    3. `unused_bytes_ptr_buffer_map`に`Buffer`を追加
 ///
 #[derive(Default)]
 pub struct StaticMemPool<D: DeviceBase, const N: usize> {

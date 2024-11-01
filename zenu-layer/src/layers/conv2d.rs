@@ -3,7 +3,7 @@ use std::{cell::RefCell, collections::HashMap};
 use rand_distr::{Distribution, StandardNormal};
 use zenu_autograd::{
     creator::{rand::normal, zeros::zeros},
-    functions::conv2d::{conv2d, Conv2dConfigs},
+    nn::conv2d::{conv2d, Conv2dConfigs},
     Variable,
 };
 use zenu_matrix::{device::Device, dim::DimTrait, nn::conv2d::conv2d_out_size, num::Num};
@@ -19,6 +19,8 @@ pub struct Conv2d<T: Num, D: Device> {
 }
 
 impl<T: Num, D: Device> Module<T, D> for Conv2d<T, D> {
+    type Input = Variable<T, D>;
+    type Output = Variable<T, D>;
     fn call(&self, input: Variable<T, D>) -> Variable<T, D> {
         if self.config.borrow().is_none() {
             let input_shape = input.get_data().shape();

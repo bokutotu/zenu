@@ -1,7 +1,6 @@
 use zenu::{
     autograd::{
-        creator::from_vec::from_vec,
-        functions::{activation::relu::relu, loss::cross_entropy::cross_entropy},
+        activation::relu::relu, creator::from_vec::from_vec, loss::cross_entropy::cross_entropy,
         no_train, set_train, Variable,
     },
     dataset::{train_val_split, DataLoader, Dataset},
@@ -18,6 +17,7 @@ pub struct SimpleModel<D: Device> {
 }
 
 impl<D: Device> SimpleModel<D> {
+    #[must_use]
     pub fn new() -> Self {
         Self {
             linear_1: Linear::new(28 * 28, 512, true),
@@ -26,12 +26,22 @@ impl<D: Device> SimpleModel<D> {
     }
 }
 
+impl<D: Device> Default for SimpleModel<D> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<D: Device> Module<f32, D> for SimpleModel<D> {
+    type Input = Variable<f32, D>;
+    type Output = Variable<f32, D>;
+
     fn call(&self, inputs: Variable<f32, D>) -> Variable<f32, D> {
         let x = self.linear_1.call(inputs);
         let x = relu(x);
-        let x = self.linear_2.call(x);
-        x
+        // let x = self.linear_2.call(x);
+        // x
+        self.linear_2.call(x)
     }
 }
 
@@ -44,7 +54,7 @@ impl Dataset<f32> for MnistDataset {
 
     fn item(&self, item: usize) -> Vec<Variable<f32, Cpu>> {
         let (x, y) = &self.data[item];
-        let x_f32 = x.iter().map(|&x| x as f32).collect::<Vec<_>>();
+        let x_f32 = x.iter().map(|&x| f32::from(x)).collect::<Vec<_>>();
         let x = from_vec::<f32, _, Cpu>(x_f32, [784]);
         x.get_data_mut().to_ref_mut().div_scalar_assign(127.5);
         x.get_data_mut().to_ref_mut().sub_scalar_assign(1.0);
@@ -64,6 +74,7 @@ impl Dataset<f32> for MnistDataset {
     }
 }
 
+#[expect(clippy::cast_precision_loss)]
 fn main() {
     let model = SimpleModel::<Cpu>::new();
     let (train, test) = mnist_dataset().unwrap();
@@ -93,7 +104,7 @@ fn main() {
             let pred = model.call(input);
             let loss = cross_entropy(pred, target);
             let loss_asum = loss.get_data().asum();
-            update_parameters(loss, &optimizer);
+            update_parameters(&loss, &optimizer);
             train_loss += loss_asum;
             num_iter += 1;
         }
@@ -114,10 +125,7 @@ fn main() {
         }
         val_loss /= num_iter as f32;
 
-        println!(
-            "Epoch: {}, Train Loss: {}, Val Loss: {}",
-            num_epoch, train_loss, val_loss
-        );
+        println!("Epoch: {num_epoch}, Train Loss: {train_loss}, Val Loss: {val_loss}");
     }
 
     let mut test_loss = 0.;

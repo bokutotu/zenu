@@ -2,7 +2,6 @@ use super::slice_dim::SliceDim;
 use crate::{dim::DimDyn, index::SliceTrait, shape_stride::ShapeStride};
 
 #[derive(Clone, Debug, Copy, PartialEq)]
-
 pub struct Slice {
     pub index: [SliceDim; 6],
     pub len: usize,

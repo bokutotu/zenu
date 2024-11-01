@@ -18,6 +18,7 @@ serde = { version = "1.0.197", features = ["derive"] }
 [dev-dependencies]
 criterion = "0.5.1"
 zenu-test = { path = "../zenu-test", version = "0.1.0" }
+serde_json = "1.0.114"
 
 [[bench]]
 name = "conv2d"

@@ -39,6 +39,7 @@ impl<T: Num, D: Device> Function<T, D> for SinH<T, D> {
     }
 }
 
+#[must_use]
 pub fn sinh<T: Num, D: Device>(input: Variable<T, D>) -> Variable<T, D> {
     let output = alloc_like(&input);
     let sinh = SinH::new(input, output.clone());
@@ -48,7 +49,7 @@ pub fn sinh<T: Num, D: Device>(input: Variable<T, D>) -> Variable<T, D> {
 }
 
 #[cfg(test)]
-mod sinh {
+mod sinh_test {
     use zenu_matrix::{
         device::Device,
         dim::DimDyn,
