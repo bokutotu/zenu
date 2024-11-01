@@ -74,7 +74,7 @@ impl<T: Num> Function<T, Nvidia> for CudnnGRU<T> {
     }
 }
 
-pub fn cudnn_rnn_fwd<T: Num>(
+pub fn gru_cudnn<T: Num>(
     rnn_desc: Rc<RefCell<RNNDescriptor<T>>>,
     x: Variable<T, Nvidia>,
     hx: Option<Variable<T, Nvidia>>,

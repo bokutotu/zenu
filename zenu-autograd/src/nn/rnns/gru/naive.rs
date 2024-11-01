@@ -128,7 +128,7 @@ fn gru_single_layer<T: Num, D: Device>(
 /// h shape is [`num_layers` * `num_directions`, `batch_size`, `hidden_size`]
 #[expect(clippy::needless_pass_by_value)]
 #[must_use]
-pub fn gru<T: Num, D: Device>(
+pub fn gru_naive<T: Num, D: Device>(
     x: Variable<T, D>,
     h: Variable<T, D>,
     weights: &[RNNLayerWeights<T, D, GRUCell>],
