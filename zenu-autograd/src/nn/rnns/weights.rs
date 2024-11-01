@@ -1,7 +1,10 @@
 use std::fmt::Debug;
 
 use rand_distr::{Distribution, StandardNormal};
-use zenu_matrix::{device::Device, nn::rnn::RNNWeights as RNNWeightsMat, num::Num};
+use zenu_matrix::{device::Device, num::Num};
+
+#[cfg(feature = "nvidia")]
+use zenu_matrix::nn::rnn::RNNWeights as RNNWeightsMat;
 
 use crate::{
     creator::{rand::normal, zeros::zeros},
@@ -61,6 +64,7 @@ pub struct RNNWeights<T: Num, D: Device, C: CellType> {
     _cell: std::marker::PhantomData<C>,
 }
 
+#[cfg(feature = "nvidia")]
 impl<T: Num, D: Device, C: CellType> From<RNNWeightsMat<T, D>> for RNNWeights<T, D, C> {
     fn from(weights: RNNWeightsMat<T, D>) -> Self {
         Self {
