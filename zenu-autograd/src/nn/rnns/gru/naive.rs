@@ -12,6 +12,7 @@ use crate::{
     Variable,
 };
 
+#[expect(clippy::similar_names)]
 fn gru_single_time_step<T: Num, D: Device>(
     x: Variable<T, D>,
     h_prev: Variable<T, D>,
@@ -51,11 +52,10 @@ fn gru_single_time_step<T: Num, D: Device>(
     let r_t = sigmoid(gate_x_r + gate_h_r);
     let n_t = tanh(gate_x_n + r_t * gate_h_n);
 
-    let h_t = (ones_like(&z_t) - z_t.clone()) * h_prev + z_t * n_t;
-
-    h_t
+    (ones_like(&z_t) - z_t.clone()) * h_prev + z_t * n_t
 }
 
+#[expect(clippy::similar_names, clippy::needless_pass_by_value)]
 fn gru_single_layer_direction<T: Num, D: Device>(
     x: Variable<T, D>,
     mut h: Variable<T, D>,
@@ -86,7 +86,6 @@ fn gru_single_layer_direction<T: Num, D: Device>(
     out
 }
 
-#[expect(clippy::too_many_arguments)]
 #[must_use]
 fn gru_single_layer<T: Num, D: Device>(
     x: Variable<T, D>,

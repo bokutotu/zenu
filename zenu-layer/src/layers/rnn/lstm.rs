@@ -62,7 +62,7 @@ impl<T: Num, D: Device> Parameters<T, D> for LSTM<T, D> {
     }
 
     fn load_parameters(&mut self, parameters: std::collections::HashMap<String, Variable<T, D>>) {
-        self.0.load_parameters(parameters)
+        self.0.load_parameters(parameters);
     }
 }
 

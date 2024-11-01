@@ -22,6 +22,7 @@ pub enum Activation {
     Tanh,
 }
 
+#[expect(clippy::module_name_repetitions)]
 pub struct RNNInner<T: Num, D: Device, C: CellType> {
     pub(super) weights: Option<Vec<RNNLayerWeights<T, D, C>>>,
     #[cfg(feature = "nvidia")]
