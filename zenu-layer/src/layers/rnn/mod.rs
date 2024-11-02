@@ -6,6 +6,6 @@ mod lstm;
 mod rnn;
 
 pub use gru::*;
+pub use inner::Activation;
 pub use lstm::*;
 pub use rnn::*;
-pub use inner::Activation
