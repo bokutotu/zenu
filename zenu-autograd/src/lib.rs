@@ -27,6 +27,21 @@ use zenu_matrix::{
     num::Num,
 };
 
+pub(crate) struct ZenuAutogradState {
+    pub(crate) is_drop_name_show: bool,
+}
+
+impl Default for ZenuAutogradState {
+    fn default() -> Self {
+        let is_drop_name_show =
+            std::env::var("ZENU_DROP_NAME_SHOW").unwrap_or("1".to_string()) == "1";
+        ZenuAutogradState { is_drop_name_show }
+    }
+}
+
+pub(crate) static ZENU_AUTOGRAD_STATE: once_cell::sync::Lazy<ZenuAutogradState> =
+    once_cell::sync::Lazy::new(ZenuAutogradState::default);
+
 pub trait Function<T: Num, D: Device> {
     fn forward(&self);
     fn backward(&self);
@@ -114,6 +129,16 @@ pub struct VariableInner<T: Num, D: Device> {
     gen: usize,
     name: Option<String>,
     is_train: bool,
+}
+
+impl<T: Num, D: Device> Drop for VariableInner<T, D> {
+    fn drop(&mut self) {
+        if ZENU_AUTOGRAD_STATE.is_drop_name_show {
+            if let Some(name) = self.name.clone() {
+                println!("Drop Variable: {name}");
+            }
+        }
+    }
 }
 
 impl<T, D> Serialize for VariableInner<T, D>
