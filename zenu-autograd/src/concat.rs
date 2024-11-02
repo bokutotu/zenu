@@ -94,6 +94,7 @@ pub fn concat<T: Num, D: Device>(vars: &[Variable<T, D>]) -> Variable<T, D> {
     concat.forward();
 
     output.set_creator(Rc::new(RefCell::new(Box::new(concat))));
+    output.set_name("concat_output");
     output
 }
 
@@ -118,6 +119,9 @@ fn concat_grad<T: Num, D: Device>(input: Variable<T, D>) -> Vec<Variable<T, D>> 
         Box::new(concat_grad) as Box<dyn Function<T, D>>
     ));
     outputs.iter().for_each(|v| v.set_creator(layer.clone()));
+    for (idx, v) in outputs.iter().enumerate() {
+        v.set_name(&format!("concat_grad_output_{idx}"));
+    }
     outputs
 }
 
