@@ -8,3 +8,4 @@ mod rnn;
 pub use gru::*;
 pub use lstm::*;
 pub use rnn::*;
+pub use inner::Activation
