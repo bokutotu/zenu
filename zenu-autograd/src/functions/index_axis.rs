@@ -81,6 +81,8 @@ pub fn index_axis<T: Num, D: Device>(input: Variable<T, D>, index: Index) -> Var
 
     let output = alloc(output_shape.shape());
 
+    let input_name = input.get_name();
+
     let index_axis = IndexAxis {
         input,
         index,
@@ -90,6 +92,9 @@ pub fn index_axis<T: Num, D: Device>(input: Variable<T, D>, index: Index) -> Var
     index_axis.forward();
 
     output.set_creator(Rc::new(RefCell::new(Box::new(index_axis))));
+    if let Some(name) = input_name {
+        output.set_name(&format!("{name}_index_axis"));
+    }
     output
 }
 
@@ -99,6 +104,10 @@ fn index_axis_grad<T: Num, D: Device>(
     output_shape: DimDyn,
 ) -> Variable<T, D> {
     let output = zeros(output_shape);
+
+    if let Some(name) = input.get_name() {
+        output.set_name(&format!("{name}_index_axis_grad"));
+    }
 
     let index_axis_grad = IndexAxisGrad {
         input,

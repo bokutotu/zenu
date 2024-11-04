@@ -50,6 +50,7 @@ pub fn transpose<T: Num, D: Device>(x: Variable<T, D>) -> Variable<T, D> {
     assert!(x.get_data().shape().len() >= 2, "Not implemented yet");
     let output_shape = x.get_data().shape_stride().transpose().shape();
     let output = alloc(output_shape);
+    output.set_name(&format!("transpose({})", x.get_name().unwrap_or_default()));
     let transpose = Transpose::new(x, output.clone());
     transpose.forward();
     output.set_creator(Rc::new(RefCell::new(Box::new(transpose))));

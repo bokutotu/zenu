@@ -44,6 +44,7 @@ impl<T: Num, D: Device> Function<T, D> for Tanh<T, D> {
 #[must_use]
 pub fn tanh<T: Num, D: Device>(input: Variable<T, D>) -> Variable<T, D> {
     let output = alloc_like(&input);
+    output.set_name(&format!("tanh({})", input.get_name().unwrap_or_default()));
     let tanh = Tanh::new(input, output.clone());
     tanh.forward();
     output.set_creator(Rc::new(RefCell::new(Box::new(tanh))));

@@ -47,6 +47,13 @@ impl<T: Num, D: Device> Function<T, D> for MatMul<T, D> {
         let grad = output.get_grad().clone().unwrap();
         let x_grad = matmul(grad.clone(), transpose(self.y.clone()));
         let y_grad = matmul(transpose(self.x.clone()), grad);
+
+        let x_name = self.x.get_name().unwrap_or_default();
+        let y_name = self.y.get_name().unwrap_or_default();
+
+        x_grad.set_name(&format!("{}grad", x_name));
+        y_grad.set_name(&format!("{}grad", y_name));
+
         self.x.set_grad(x_grad);
         self.y.set_grad(y_grad);
     }
@@ -60,6 +67,12 @@ impl<T: Num, D: Device> Function<T, D> for MatMul<T, D> {
 pub fn matmul<T: Num, D: Device>(x: Variable<T, D>, y: Variable<T, D>) -> Variable<T, D> {
     let output_shape = DimDyn::new(&[x.get_data().shape()[0], y.get_data().shape()[1]]);
     let output = alloc(output_shape);
+    let output_name = format!(
+        "matmul({},{})",
+        x.get_name().unwrap_or_default(),
+        y.get_name().unwrap_or_default()
+    );
+    output.set_name(&output_name);
     let matmul = MatMul::new(x, y, output.clone());
     matmul.forward();
     output.set_creator(Rc::new(RefCell::new(Box::new(matmul))));
