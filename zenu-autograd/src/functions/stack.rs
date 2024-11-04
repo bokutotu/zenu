@@ -80,6 +80,13 @@ pub fn stack<T: Num, D: Device>(vars: &[Variable<T, D>], axis: usize) -> Variabl
     output_shape[axis] *= vars.len();
     let output = alloc(output_shape);
 
+    let vars_name = vars
+        .iter()
+        .map(|v| v.get_name().unwrap_or_default())
+        .collect::<Vec<_>>()
+        .join(", ");
+    output.set_name(&format!("stack({vars_name})"));
+
     let stack = Stack {
         vars: vars.to_vec(),
         output: output.clone().downgrade(),
@@ -99,10 +106,15 @@ fn stack_grad<T: Num, D: Device>(
 ) -> Vec<Variable<T, D>> {
     let mut output_shape = input.get_shape();
     output_shape[axis] /= num_splits;
+    let input_name = input.get_name().unwrap_or_default();
 
     let mut outputs = Vec::with_capacity(num_splits);
-    for _ in 0..num_splits {
+    for idx in 0..num_splits {
         outputs.push(zeros(output_shape));
+        outputs
+            .last_mut()
+            .unwrap()
+            .set_name(&format!("{input_name}_stack_grad_{idx}"));
     }
 
     let stack_grad = StackGrad {

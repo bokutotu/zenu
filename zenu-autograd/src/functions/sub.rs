@@ -2,14 +2,14 @@ use std::{cell::RefCell, ops::Sub, rc::Rc};
 
 use zenu_matrix::{device::Device, num::Num};
 
-use crate::{creator::alloc::alloc, Function, Variable};
+use crate::{creator::alloc::alloc, Function, Variable, VariableWeak};
 
 use super::output_shape;
 
 pub struct SubFunc<T: Num, D: Device> {
     x: Variable<T, D>,
     y: Variable<T, D>,
-    output: Variable<T, D>,
+    output: VariableWeak<T, D>,
 }
 
 impl<T: Num, D: Device> Function<T, D> for SubFunc<T, D> {
@@ -18,13 +18,16 @@ impl<T: Num, D: Device> Function<T, D> for SubFunc<T, D> {
         let y = self.y.get_data();
         let output = x.to_ref() - y.to_ref();
         self.output
+            .upgrade()
+            .unwrap()
             .get_data_mut()
             .to_ref_mut()
             .copy_from(&output.to_ref());
     }
 
     fn backward(&self) {
-        let output_grad = self.output.get_grad().clone().unwrap();
+        // let output_grad = self.output.get_grad().clone().unwrap();
+        let output_grad = self.output.upgrade().unwrap().get_grad().clone().unwrap();
         let x_grad = output_grad.clone();
         let y_grad = output_grad.clone() * Variable::from(T::minus_one());
         self.x.set_grad(x_grad);
@@ -42,7 +45,7 @@ pub fn sub<T: Num, D: Device>(x: Variable<T, D>, y: Variable<T, D>) -> Variable<
     let sub = SubFunc {
         x,
         y,
-        output: output.clone(),
+        output: output.clone().downgrade(),
     };
     sub.forward();
     output.set_creator(Rc::new(RefCell::new(Box::new(sub))));

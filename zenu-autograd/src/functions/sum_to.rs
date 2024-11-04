@@ -48,7 +48,7 @@ pub fn sum_to<T: Num, I: Into<DimDyn>, D: Device>(x: Variable<T, D>, shape: I) -
 }
 
 #[cfg(test)]
-mod sum_to {
+mod sum_to_test {
     use zenu_matrix::{
         device::Device,
         dim::DimDyn,

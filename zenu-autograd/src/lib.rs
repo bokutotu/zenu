@@ -34,7 +34,10 @@ pub(crate) struct ZenuAutogradState {
 impl Default for ZenuAutogradState {
     fn default() -> Self {
         let is_drop_name_show =
-            std::env::var("ZENU_DROP_NAME_SHOW").unwrap_or("1".to_string()) == "1";
+            std::env::var("ZENU_DROP_NAME_SHOW").unwrap_or("0".to_string()) == "1";
+        if is_drop_name_show {
+            println!("Drop name show");
+        }
         ZenuAutogradState { is_drop_name_show }
     }
 }
@@ -136,6 +139,8 @@ impl<T: Num, D: Device> Drop for VariableInner<T, D> {
         if ZENU_AUTOGRAD_STATE.is_drop_name_show {
             if let Some(name) = self.name.clone() {
                 println!("Drop Variable: {name}");
+            } else {
+                println!("Drop Variable");
             }
         }
     }
