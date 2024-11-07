@@ -1,25 +1,28 @@
 # ZeNu Matrix
 
-ZeNu Matrix is a linear algebra library for Rust, providing efficient matrix operations and various utilities for working with matrices.
+ZeNu Matrix is a high-performance linear algebra library for Rust, designed to provide efficient matrix operations and various utilities for working with matrices. Whether you are building complex machine learning models or performing scientific computations, ZeNu Matrix offers the tools you need.
 
 ## Features
 
-- Matrix creation, indexing, and slicing
-- Element-wise operations
-- Matrix multiplication (GEMM)
-- Transposition
-- Broadcasting
-- Random matrix generation
-- Integration with BLAS for optimized performance
+- **Comprehensive Matrix Operations**: Create, index, and slice matrices with ease.
+- **Element-wise Operations**: Perform operations on individual elements or entire matrices.
+- **Efficient Matrix Multiplication (GEMM)**: Utilize optimized routines for matrix multiplication.
+- **Matrix Transposition**: Quickly transpose matrices as needed.
+- **Broadcasting**: Seamlessly broadcast operations over matrices of different shapes.
+- **Random Matrix Generation**: Generate matrices with random values for testing and initialization.
+- **BLAS Integration**: Leverage BLAS for optimized performance on supported hardware.
+- **CUDA Support**: Accelerate computations using NVIDIA GPUs with CUDA integration.
 
 ## Getting Started
 
-To use ZeNu Matrix in your Rust project, add the following to your `Cargo.toml` file:
+To start using ZeNu Matrix, add it to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-zenu-matrix = "0.1.0"
+zenu-matrix = "0.1.1"
 ```
+
+### Example
 
 Here's a simple example of using ZeNu Matrix:
 
