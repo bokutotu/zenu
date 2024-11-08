@@ -1,4 +1,5 @@
 use zenu_autograd::Variable;
+use zenu_layer::Parameters;
 use zenu_matrix::{device::Device, num::Num};
 
 use crate::Optimizer;
@@ -17,12 +18,21 @@ impl<T: Num, D: Device> SGD<T, D> {
     }
 }
 
-impl<T: Num, D: Device> Optimizer<T, D> for SGD<T, D> {
-    fn update(&self, parameters: &[Variable<T, D>]) {
-        let parameters = parameters
-            .iter()
-            .filter(|parameter| parameter.get_grad().is_some())
-            .collect::<Vec<_>>();
+impl<T: Num, D: Device, P: Parameters> Optimizer<T, D, P> for SGD<T, D> {
+    fn update(&self, parameters: &P) {
+        let weights = parameters.weights();
+        let biases = parameters.biases();
+        let mut parameters = Vec::new();
+        for (_, weight) in weights.iter() {
+            if let Some(grad) = weight.get_grad() {
+                parameters.push(grad);
+            }
+        }
+        for (_, bias) in biases.iter() {
+            if let Some(grad) = bias.get_grad() {
+                parameters.push(grad);
+            }
+        }
         for parameter in parameters {
             let grad = parameter.clone().get_grad().unwrap();
             let grad = grad.get_data();

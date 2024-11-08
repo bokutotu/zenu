@@ -120,11 +120,11 @@ impl Parse for ParametersArgs {
                 num = Some(ty);
             } else if ident == "device" {
                 device = Some(ty);
-            } else {
-                return Err(syn::Error::new(
-                    ident.span(),
-                    "Expected 'num' or 'device' in parameters attribute",
-                ));
+                // } else {
+                //     return Err(syn::Error::new(
+                //         ident.span(),
+                //         "Expected 'num' or 'device' in parameters attribute",
+                //     ));
             }
 
             if content.peek(Comma) {
