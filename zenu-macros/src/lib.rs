@@ -52,7 +52,7 @@ fn impl_parameters(input: &DeriveInput) -> TokenStream2 {
 
     quote!(
         impl #impl_generics ::zenu_layer::Parameters #ty_generics for #name #ty_generics #where_clause {
-            fn weights(&self) -> std::collections::HashMap<String, ::zenu_autograd::Variable<#num_type, #device_type>> {
+            fn weights(&self) -> std::collections::HashMap<String, ::zenu::autograd::Variable<#num_type, #device_type>> {
                 let mut params = std::collections::HashMap::new();
                 #(
                     #weights_code
@@ -60,7 +60,7 @@ fn impl_parameters(input: &DeriveInput) -> TokenStream2 {
                 params
             }
 
-            fn biases(&self) -> std::collections::HashMap<String, ::zenu_autograd::Variable<#num_type, #device_type>> {
+            fn biases(&self) -> std::collections::HashMap<String, ::zenu::autograd::Variable<#num_type, #device_type>> {
                 let mut params = std::collections::HashMap::new();
                 #(
                     #biases_code
