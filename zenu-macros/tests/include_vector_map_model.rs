@@ -1,12 +1,9 @@
 use std::collections::HashMap;
 
 use rand_distr::{Distribution, StandardNormal};
-use zenu_layer::{
-    layers::{conv2d::Conv2d, linear::Linear, max_pool_2d::MaxPool2d},
-    Parameters,
-};
-use zenu_macros::Parameters;
-use zenu_matrix::{
+use zenu::layer::layers::{conv2d::Conv2d, linear::Linear, max_pool_2d::MaxPool2d};
+use zenu::macros::Parameters;
+use zenu::matrix::{
     device::{cpu::Cpu, Device},
     num::Num,
 };
@@ -70,6 +67,7 @@ impl<T: Num, D: Device> ConvNet<T, D> {
 
 #[test]
 fn vec_map() {
+    use zenu::layer::Parameters;
     let model = ConvNet::<f32, Cpu>::new();
     let conv_fileter_0 = model.conv_blocks[0].conv2d.filter.clone();
     let conv_bias_0 = model.conv_blocks[0].conv2d.bias.clone();
