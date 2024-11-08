@@ -13,7 +13,6 @@ use serde::Deserialize;
 use zenu_autograd::Variable;
 use zenu_layer::Parameters;
 use zenu_matrix::{device::Device, num::Num};
-use zenu_optimizer::Optimizer;
 
 pub extern crate zenu_macros;
 
@@ -22,16 +21,6 @@ pub use zenu_layer as layer;
 pub use zenu_macros as macros;
 pub use zenu_matrix as matrix;
 pub use zenu_optimizer as optimizer;
-
-pub fn update_parameters<T: Num, D: Device, O: Optimizer<T, D>>(
-    loss: &Variable<T, D>,
-    optimizer: &O,
-) {
-    loss.backward();
-    let parameters = loss.get_all_trainable_variables();
-    optimizer.update(&parameters);
-    loss.clear_grad();
-}
 
 #[expect(clippy::missing_errors_doc)]
 pub fn save_model<T: Num, D: Device, M: Parameters<T, D>, P: AsRef<Path>>(

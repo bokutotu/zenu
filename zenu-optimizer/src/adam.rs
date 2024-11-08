@@ -15,6 +15,39 @@ pub struct Adam<T: Num, D: Device> {
     v: Vec<Variable<T, D>>,
 }
 
+// impl<T: Num, D: Device> Optimizer<T, D> for Adam<T, D> {
+//     fn update(&self, parameters: &[Variable<T, D>]) {
+//         let step = *self.step.borrow();
+//         let step = step + T::one();
+//         *self.step.borrow_mut() = step;
+//
+//         let beta1_t = self.beta1.powf(step);
+//         let beta2_t = self.beta2.powf(step);
+//
+//         for ((parameter, m), v) in parameters.iter().zip(&self.m).zip(&self.v) {
+//             let grad = parameter.get_grad().unwrap();
+//             let grad = grad.get_data();
+//
+//             let mut v = v.get_data_mut();
+//             let mut v = v.to_ref_mut();
+//             let mut m = m.get_data_mut();
+//             let mut m = m.to_ref_mut();
+//
+//             m *= self.beta1;
+//             m += grad.to_ref() * (T::one() - self.beta1);
+//
+//             v *= self.beta2;
+//             v += grad.to_ref() * grad.to_ref() * (T::one() - self.beta2);
+//
+//             let m_hat = m / (T::one() - beta1_t);
+//             let v_hat = v / (T::one() - beta2_t);
+//
+//             let mut parameter_data = parameter.get_data_mut();
+//             let mut parameter_data = parameter_data.to_ref_mut();
+//             parameter_data -= m_hat / (v_hat.sqrt() + self.epsilon) * self.learning_rate;
+//         }
+//     }
+// }
 impl<T: Num, D: Device> Optimizer<T, D> for Adam<T, D> {
     fn update(&self, parameters: &[Variable<T, D>]) {
         let step = *self.step.borrow();
