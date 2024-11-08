@@ -18,7 +18,7 @@ impl<T: Num, D: Device> SGD<T, D> {
     }
 }
 
-impl<T: Num, D: Device, P: Parameters> Optimizer<T, D, P> for SGD<T, D> {
+impl<T: Num, D: Device, P: Parameters<T, D>> Optimizer<T, D, P> for SGD<T, D> {
     fn update(&self, parameters: &P) {
         let weights = parameters.weights();
         let biases = parameters.biases();

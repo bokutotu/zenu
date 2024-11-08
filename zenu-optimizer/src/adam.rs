@@ -1,6 +1,7 @@
 use std::{cell::RefCell, rc::Rc};
 
 use zenu_autograd::{creator::zeros::zeros_like, Variable};
+use zenu_layer::Parameters;
 use zenu_matrix::{device::Device, num::Num};
 
 use crate::Optimizer;
@@ -48,8 +49,8 @@ pub struct Adam<T: Num, D: Device> {
 //         }
 //     }
 // }
-impl<T: Num, D: Device> Optimizer<T, D> for Adam<T, D> {
-    fn update(&self, parameters: &[Variable<T, D>]) {
+impl<T: Num, D: Device, P: Parameters<T, D>> Optimizer<T, D, P> for Adam<T, D> {
+    fn update(&self, parameters: &P) {
         let step = *self.step.borrow();
         let step = step + T::one();
         *self.step.borrow_mut() = step;
@@ -57,10 +58,22 @@ impl<T: Num, D: Device> Optimizer<T, D> for Adam<T, D> {
         let beta1_t = self.beta1.powf(step);
         let beta2_t = self.beta2.powf(step);
 
-        for ((parameter, m), v) in parameters.iter().zip(&self.m).zip(&self.v) {
-            let grad = parameter.get_grad().unwrap();
-            let grad = grad.get_data();
+        let weights = parameters.weights();
+        let biases = parameters.biases();
+        let mut parameters = Vec::new();
+        for (_, weight) in weights.iter() {
+            if let Some(grad) = weight.get_grad() {
+                parameters.push(grad);
+            }
+        }
+        for (_, bias) in biases.iter() {
+            if let Some(grad) = bias.get_grad() {
+                parameters.push(grad);
+            }
+        }
 
+        for ((parameter, m), v) in parameters.iter().zip(&self.m).zip(&self.v) {
+            let grad = parameter.get_data();
             let mut v = v.get_data_mut();
             let mut v = v.to_ref_mut();
             let mut m = m.get_data_mut();
