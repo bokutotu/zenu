@@ -1,10 +1,4 @@
-use zenu_layer::{layers::linear::Linear, Parameters};
-use zenu_macros::Parameters;
-use zenu_matrix::{
-    device::{cpu::Cpu, Device},
-    matrix::Matrix,
-    num::Num,
-};
+use zenu::layer::layers::linear::Linear;
 use zenu_test::assert_val_eq;
 
 #[derive(Parameters)]
