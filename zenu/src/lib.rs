@@ -15,7 +15,7 @@ use zenu_layer::Parameters;
 use zenu_matrix::{device::Device, num::Num};
 use zenu_optimizer::Optimizer;
 
-extern crate zenu_macros;
+pub extern crate zenu_macros;
 
 pub use zenu_autograd as autograd;
 pub use zenu_layer as layer;
