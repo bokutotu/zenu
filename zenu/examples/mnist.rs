@@ -6,17 +6,22 @@ use zenu::{
     dataset::{train_val_split, DataLoader, Dataset},
     dataset_loader::mnist_dataset,
     layer::{layers::linear::Linear, Module},
-    matrix::device::{cpu::Cpu, Device},
-    optimizer::sgd::SGD,
-    update_parameters,
+    matrix::{
+        device::{cpu::Cpu, Device},
+        num::Num,
+    },
+    optimizer::{sgd::SGD, Optimizer},
 };
+use zenu_macros::Parameters;
 
-pub struct SimpleModel<D: Device> {
-    pub linear_1: Linear<f32, D>,
-    pub linear_2: Linear<f32, D>,
+#[derive(Parameters)]
+#[parameters(num=T, device=D)]
+pub struct SimpleModel<T: Num, D: Device> {
+    pub linear_1: Linear<T, D>,
+    pub linear_2: Linear<T, D>,
 }
 
-impl<D: Device> SimpleModel<D> {
+impl<D: Device> SimpleModel<f32, D> {
     #[must_use]
     pub fn new() -> Self {
         Self {
@@ -26,21 +31,19 @@ impl<D: Device> SimpleModel<D> {
     }
 }
 
-impl<D: Device> Default for SimpleModel<D> {
+impl<D: Device> Default for SimpleModel<f32, D> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<D: Device> Module<f32, D> for SimpleModel<D> {
+impl<D: Device> Module<f32, D> for SimpleModel<f32, D> {
     type Input = Variable<f32, D>;
     type Output = Variable<f32, D>;
 
     fn call(&self, inputs: Variable<f32, D>) -> Variable<f32, D> {
         let x = self.linear_1.call(inputs);
         let x = relu(x);
-        // let x = self.linear_2.call(x);
-        // x
         self.linear_2.call(x)
     }
 }
@@ -76,7 +79,7 @@ impl Dataset<f32> for MnistDataset {
 
 #[expect(clippy::cast_precision_loss)]
 fn main() {
-    let model = SimpleModel::<Cpu>::new();
+    let model = SimpleModel::<f32, Cpu>::new();
     let (train, test) = mnist_dataset().unwrap();
     let (train, val) = train_val_split(&train, 0.8, true);
 
@@ -104,7 +107,10 @@ fn main() {
             let pred = model.call(input);
             let loss = cross_entropy(pred, target);
             let loss_asum = loss.get_data().asum();
-            update_parameters(&loss, &optimizer);
+            // update_parameters(&loss, &optimizer);
+            loss.backward();
+            optimizer.update(&model);
+            loss.clear_grad();
             train_loss += loss_asum;
             num_iter += 1;
         }
