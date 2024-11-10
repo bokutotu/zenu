@@ -1,8 +1,7 @@
 pub mod adam;
-// pub mod adamw;
+pub mod adamw;
 pub mod sgd;
 
-use zenu_autograd::Variable;
 use zenu_layer::Parameters;
 use zenu_matrix::{device::Device, num::Num};
 

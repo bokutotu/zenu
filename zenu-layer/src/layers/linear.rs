@@ -4,7 +4,7 @@ use crate::{Module, Parameters};
 use rand_distr::{Distribution, StandardNormal};
 use zenu_autograd::{
     creator::{rand::normal, zeros::zeros},
-    functions::matmul::matmul,
+    functions::{matmul::matmul, transpose::transpose},
     Variable,
 };
 use zenu_matrix::{device::Device, num::Num};
@@ -20,7 +20,8 @@ impl<T: Num, D: Device> Module<T, D> for Linear<T, D> {
     type Input = Variable<T, D>;
     type Output = Variable<T, D>;
     fn call(&self, input: Variable<T, D>) -> Variable<T, D> {
-        let output = matmul(input, self.weight.clone());
+        let weight_t = transpose(self.weight.clone());
+        let output = matmul(input, weight_t);
         if let Some(bias) = &self.bias {
             output.set_name("linear.intermediate_output");
             output + bias.clone()
@@ -52,7 +53,7 @@ impl<T: Num, D: Device> Linear<T, D> {
     where
         StandardNormal: Distribution<T>,
     {
-        let weight = normal(T::zero(), T::one(), None, [in_features, out_features]);
+        let weight = normal(T::zero(), T::one(), None, [out_features, in_features]);
         weight
             .get_data_mut()
             .to_ref_mut()
