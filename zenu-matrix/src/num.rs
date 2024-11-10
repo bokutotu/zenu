@@ -5,7 +5,9 @@ use std::{
     ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign},
 };
 
-use rand_distr::{num_traits::Float, uniform::SampleUniform};
+use num_traits::Float;
+
+use rand_distr::uniform::SampleUniform;
 use serde::Serialize;
 
 pub trait Num:
@@ -26,7 +28,6 @@ pub trait Num:
     + Float
     + SampleUniform
     + Serialize
-    // + for<'de> Deserialize<'de>
     + 'static
 {
     fn is_f32() -> bool;
