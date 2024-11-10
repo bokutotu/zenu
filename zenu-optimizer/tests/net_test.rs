@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use zenu::{
-    autograd::{loss::mse::mean_squared_error, Variable},
+    autograd::{creator::from_vec::from_vec, loss::mse::mean_squared_error, Variable},
     layer::{layers::linear::Linear, Module},
     macros::Parameters,
     matrix::{
@@ -11,9 +11,9 @@ use zenu::{
         matrix::{Matrix, Owned},
         num::Num,
     },
-    optimizer::{sgd::SGD, Optimizer},
+    optimizer::{adam::Adam, sgd::SGD, Optimizer},
 };
-use zenu_autograd::creator::from_vec::from_vec;
+use zenu_test::assert_val_eq;
 
 #[derive(Parameters)]
 #[parameters(num = T, device = D)]
@@ -98,14 +98,12 @@ fn test_funcion_inner<O: Optimizer<f32, Cpu, SimpleNet<f32, Cpu>>>(
     let loss = mean_squared_error(target, output);
     loss.backward();
     optimizer.update(net);
-
+    loss.clear_grad();
     net.parameters()
 }
 
 #[test]
 fn sgd_test() {
-    use zenu_test::assert_val_eq;
-
     let net = SimpleNet::<f32, Cpu>::new();
     let optimizer = SGD::new(0.9);
     let parameters = test_funcion_inner(&net, &optimizer);
@@ -138,4 +136,54 @@ fn sgd_test() {
         1e-4
     );
     assert_val_eq!(parameters["linear2.linear.bias"].clone(), ans_bias2, 1e-4);
+}
+
+#[test]
+fn adam_test() {
+    use zenu::layer::Parameters;
+    let net = SimpleNet::<f32, Cpu>::new();
+    let optimizer = Adam::new(0.01, 0.9, 0.999, 1e-8, &net);
+    let _ = test_funcion_inner(&net, &optimizer);
+    let mut net_ = SimpleNet::<f32, Cpu>::new();
+    net_.load_parameters(net.parameters());
+    let optimizer = Adam::new(0.01, 0.9, 0.999, 1e-8, &net_);
+    let parameters = test_funcion_inner(&net_, &optimizer);
+    let linear1_weight = vec![
+        0.0801, 0.1801, 0.2801, 0.3801, 0.4801, 0.5801, 0.0501, 0.0601,
+    ];
+    let linear1_weight =
+        Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(linear1_weight, DimDyn::from([4, 2]));
+    let linear1_bias = vec![0.0801, 0.1801, 0.2801, 0.3801];
+    let linear1_bias = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(linear1_bias, DimDyn::from([4]));
+    let linear2_weight = vec![
+        0.0801, 0.1801, 0.2801, 0.3801, 0.4801, 0.5801, 0.0501, 0.0601, 0.0702, 0.0801, 0.0901,
+        0.1001, 0.1101, 0.1201, 0.1301, 0.1401,
+    ];
+    let linear2_weight =
+        Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(linear2_weight, DimDyn::from([4, 4]));
+    let linear2_bias = vec![0.0800, 0.1801, 0.2801, 0.3801];
+    let linear2_bias = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(linear2_bias, DimDyn::from([4]));
+
+    assert_val_eq!(
+        parameters["linear1.linear.weight"].clone(),
+        linear1_weight,
+        1e-4
+    );
+    assert_val_eq!(
+        parameters["linear1.linear.bias"].clone(),
+        linear1_bias,
+        1e-4
+    );
+    assert_val_eq!(
+        parameters["linear2.linear.weight"].clone(),
+        linear2_weight,
+        1e-4
+    );
+    assert_val_eq!(
+        parameters["linear2.linear.bias"].clone(),
+        linear2_bias,
+        1e-4
+    );
+
+    panic!();
 }

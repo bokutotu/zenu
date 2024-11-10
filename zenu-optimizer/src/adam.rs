@@ -11,16 +11,15 @@ pub struct Adam<T: Num, D: Device> {
     beta1: T,
     beta2: T,
     epsilon: T,
-    step: Rc<RefCell<T>>,
-    m: HashMap<String, Variable<T, D>>,
-    v: HashMap<String, Variable<T, D>>,
+    step: Rc<RefCell<usize>>,
+    pub m: HashMap<String, Variable<T, D>>,
+    pub v: HashMap<String, Variable<T, D>>,
 }
 
 impl<T: Num, D: Device, P: Parameters<T, D>> Optimizer<T, D, P> for Adam<T, D> {
     fn update(&self, parameters: &P) {
-        let step = *self.step.borrow();
-        let step = step + T::one();
-        *self.step.borrow_mut() = step;
+        *self.step.borrow_mut() += 1;
+        let step = T::from_usize(*self.step.borrow());
 
         let beta1_t = self.beta1.powf(step);
         let beta2_t = self.beta2.powf(step);
@@ -29,22 +28,18 @@ impl<T: Num, D: Device, P: Parameters<T, D>> Optimizer<T, D, P> for Adam<T, D> {
             .parameters()
             .iter()
             .filter_map(|(key, value)| {
-                if value.get_grad().is_some() {
-                    Some((key.clone(), value.clone()))
-                } else {
-                    None
-                }
+                value
+                    .get_grad()
+                    .map(|grad| (key.clone(), (value.clone(), grad.clone())))
             })
             .collect::<Vec<_>>();
 
-        for (k, parameter) in &parameters {
+        for (k, (data, grad)) in &parameters {
             let v = self.v.get(k).unwrap();
             let m = self.m.get(k).unwrap();
-            let grad = parameter.get_data();
-            let mut v = v.get_data_mut();
-            let mut v = v.to_ref_mut();
-            let mut m = m.get_data_mut();
-            let mut m = m.to_ref_mut();
+            let mut v = v.get_as_mut();
+            let mut m = m.get_as_mut();
+            let grad = grad.get_as_ref();
 
             m *= self.beta1;
             m += grad.to_ref() * (T::one() - self.beta1);
@@ -52,12 +47,13 @@ impl<T: Num, D: Device, P: Parameters<T, D>> Optimizer<T, D, P> for Adam<T, D> {
             v *= self.beta2;
             v += grad.to_ref() * grad.to_ref() * (T::one() - self.beta2);
 
-            let m_hat = m / (T::one() - beta1_t);
-            let v_hat = v / (T::one() - beta2_t);
+            let m_hat = m.clone() / (T::one() - beta1_t);
+            let v_hat = v.clone() / (T::one() - beta2_t);
 
-            let mut parameter_data = parameter.get_data_mut();
-            let mut parameter_data = parameter_data.to_ref_mut();
-            parameter_data -= m_hat / (v_hat.sqrt() + self.epsilon) * self.learning_rate;
+            let m_v_hat = m_hat / (v_hat.sqrt() + self.epsilon);
+            let lr_mv_hat = m_v_hat * self.learning_rate;
+
+            data.get_as_mut().sub_assign(&lr_mv_hat.to_ref());
         }
     }
 }
@@ -85,109 +81,9 @@ impl<T: Num, D: Device> Adam<T, D> {
             beta1,
             beta2,
             epsilon,
-            step: Rc::new(RefCell::new(T::zero())),
+            step: Rc::new(RefCell::new(0)),
             m,
             v,
         }
     }
 }
-
-// #[cfg(test)]
-// mod adam_tests {
-//     use zenu_autograd::{
-//         creator::from_vec::from_vec, functions::matmul::matmul, loss::mse::mean_squared_error,
-//         Variable,
-//     };
-//     use zenu_matrix::{device::Device, dim::DimDyn, matrix::Matrix};
-//     use zenu_test::{assert_val_eq, run_test};
-//
-//     use crate::Optimizer;
-//
-//     use super::Adam;
-//
-//     fn simple_function<D: Device>(
-//         x: Variable<f64, D>,
-//         weight1: Variable<f64, D>,
-//         weight2: Variable<f64, D>,
-//     ) -> Variable<f64, D> {
-//         let x = matmul(x, weight1);
-//         matmul(x, weight2)
-//     }
-//
-//     #[expect(clippy::needless_pass_by_value, clippy::type_complexity)]
-//     fn adam_apply<D: Device>(
-//         adam: &Adam<f64, D>,
-//         forward_func: fn(Variable<f64, D>, Variable<f64, D>, Variable<f64, D>) -> Variable<f64, D>,
-//         input: Variable<f64, D>,
-//         target: Variable<f64, D>,
-//         weight1: Variable<f64, D>,
-//         weight2: Variable<f64, D>,
-//     ) {
-//         let output = forward_func(input.clone(), weight1.clone(), weight2.clone());
-//         let loss = mean_squared_error(target, output);
-//         loss.backward();
-//         adam.update(&[weight1.clone(), weight2.clone()]);
-//         loss.clear_grad();
-//     }
-//
-//     #[expect(clippy::unreadable_literal)]
-//     fn small_2_times<D: Device>() {
-//         // Initial weights:
-//         // Weight1: 10.000000
-//         // Weight2: 10.000000
-//         //
-//         // Iteration 1:
-//         // Input: 1.000000
-//         // Target: 6.000000
-//         // Weight1: 9.900000
-//         // Weight2: 9.900000
-//         // Loss: 8836.000000
-//         //
-//         // Iteration 2:
-//         // Input: 1.100000
-//         // Target: 6.600000
-//         // Weight1: 9.799901
-//         // Weight2: 9.799901
-//         // Loss: 10243.665039
-//         let ans_weight_1 = from_vec::<f64, _, D>(vec![2.], [1, 1]);
-//         let ans_weight_2 = from_vec::<f64, _, D>(vec![3.], [1, 1]);
-//
-//         let weight_1 = from_vec::<f64, _, D>(vec![10.], [1, 1]);
-//         let weight_2 = from_vec::<f64, _, D>(vec![10.], [1, 1]);
-//
-//         let adam = Adam::new(0.1, 0.9, 0.999, 1e-8, &[weight_1.clone(), weight_2.clone()]);
-//
-//         // iter 1
-//         let input = from_vec::<f64, _, D>(vec![1.], [1, 1]);
-//         let target = simple_function(input.clone(), ans_weight_1.clone(), ans_weight_2.clone());
-//         adam_apply(
-//             &adam,
-//             simple_function,
-//             input,
-//             target,
-//             weight_1.clone(),
-//             weight_2.clone(),
-//         );
-//         let iter_1_weight_1 = Matrix::<_, DimDyn, D>::from_vec(vec![9.9], [1, 1]);
-//         let iter_1_weight_2 = Matrix::<_, DimDyn, D>::from_vec(vec![9.9], [1, 1]);
-//         assert_val_eq!(weight_1.clone(), iter_1_weight_1, 1e-6);
-//         assert_val_eq!(weight_2.clone(), iter_1_weight_2, 1e-6);
-//
-//         // iter 2
-//         let input = from_vec::<f64, _, D>(vec![1.1], [1, 1]);
-//         let target = simple_function(input.clone(), ans_weight_1.clone(), ans_weight_2.clone());
-//         adam_apply(
-//             &adam,
-//             simple_function,
-//             input,
-//             target,
-//             weight_1.clone(),
-//             weight_2.clone(),
-//         );
-//         let iter_2_weight_1 = Matrix::<_, DimDyn, D>::from_vec(vec![9.799901], [1, 1]);
-//         let iter_2_weight_2 = Matrix::<_, DimDyn, D>::from_vec(vec![9.799901], [1, 1]);
-//         assert_val_eq!(weight_1.clone(), iter_2_weight_1, 2e-4);
-//         assert_val_eq!(weight_2.clone(), iter_2_weight_2, 2e-4);
-//     }
-//     run_test!(small_2_times, small_2_times_cpu, small_2_times_gpu);
-// }
