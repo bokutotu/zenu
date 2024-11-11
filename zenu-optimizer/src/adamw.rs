@@ -59,7 +59,6 @@ impl<T: Num, D: Device, P: Parameters<T, D>> Optimizer<T, D, P> for AdamW<T, D> 
             let update = m_hat / denom;
 
             if weight_keys.contains(&k) {
-                println!("Weight decay");
                 data.get_as_mut().sub_assign(
                     &(data.get_as_ref() * self.learning_rate * self.weight_decay).to_ref(),
                 );

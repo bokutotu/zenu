@@ -194,17 +194,6 @@ fn adam_w_test() {
     let optimizer = AdamW::new(0.01, 0.9, 0.999, 1e-8, 0.01, &net);
     let _ = test_funcion_inner(&net, &optimizer);
     let parameters = test_funcion_inner(&net, &optimizer);
-    // linear1.weight tensor([[0.0801, 0.1800],
-    //         [0.2800, 0.3800],
-    //         [0.4800, 0.5800],
-    //         [0.0501, 0.0601]])
-    // linear1.bias tensor([0.0801, 0.1800, 0.2800, 0.3800])
-    // linear2.weight tensor([[0.0801, 0.1800, 0.2800, 0.3800],
-    //         [0.4800, 0.5800, 0.0501, 0.0601],
-    //         [0.0702, 0.0801, 0.0901, 0.1001],
-    //         [0.1101, 0.1201, 0.1301, 0.1401]])
-    // linear2.bias tensor([0.0800, 0.1800, 0.2801, 0.3800])
-
     let linear1_weight = vec![
         0.0801, 0.1800, 0.2800, 0.3800, 0.4800, 0.5800, 0.0501, 0.0601,
     ];
