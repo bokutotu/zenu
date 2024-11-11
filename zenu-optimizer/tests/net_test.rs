@@ -14,6 +14,7 @@ use zenu::{
     optimizer::{adam::Adam, sgd::SGD, Optimizer},
 };
 
+use zenu_optimizer::adamw::AdamW;
 use zenu_test::assert_val_eq;
 
 #[derive(Parameters)]
@@ -165,6 +166,60 @@ fn adam_test() {
     let linear2_bias = vec![0.0800, 0.1801, 0.2801, 0.3801];
     let linear2_bias = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(linear2_bias, DimDyn::from([4]));
 
+    assert_val_eq!(
+        parameters["linear1.linear.weight"].clone(),
+        linear1_weight,
+        2e-4
+    );
+    assert_val_eq!(
+        parameters["linear1.linear.bias"].clone(),
+        linear1_bias,
+        2e-4
+    );
+    assert_val_eq!(
+        parameters["linear2.linear.weight"].clone(),
+        linear2_weight,
+        2e-4
+    );
+    assert_val_eq!(
+        parameters["linear2.linear.bias"].clone(),
+        linear2_bias,
+        2e-4
+    );
+}
+
+#[test]
+fn adam_w_test() {
+    let net = SimpleNet::<f32, Cpu>::new();
+    let optimizer = AdamW::new(0.01, 0.9, 0.999, 1e-8, 0.01, &net);
+    let _ = test_funcion_inner(&net, &optimizer);
+    let parameters = test_funcion_inner(&net, &optimizer);
+    // linear1.weight tensor([[0.0801, 0.1800],
+    //         [0.2800, 0.3800],
+    //         [0.4800, 0.5800],
+    //         [0.0501, 0.0601]])
+    // linear1.bias tensor([0.0801, 0.1800, 0.2800, 0.3800])
+    // linear2.weight tensor([[0.0801, 0.1800, 0.2800, 0.3800],
+    //         [0.4800, 0.5800, 0.0501, 0.0601],
+    //         [0.0702, 0.0801, 0.0901, 0.1001],
+    //         [0.1101, 0.1201, 0.1301, 0.1401]])
+    // linear2.bias tensor([0.0800, 0.1800, 0.2801, 0.3800])
+
+    let linear1_weight = vec![
+        0.0801, 0.1800, 0.2800, 0.3800, 0.4800, 0.5800, 0.0501, 0.0601,
+    ];
+    let linear1_weight =
+        Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(linear1_weight, DimDyn::from([4, 2]));
+    let linear1_bias = vec![0.0801, 0.1800, 0.2800, 0.3800];
+    let linear1_bias = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(linear1_bias, DimDyn::from([4]));
+    let linear2_weight = vec![
+        0.0801, 0.1800, 0.2800, 0.3800, 0.4800, 0.5800, 0.0501, 0.0601, 0.0702, 0.0801, 0.0901,
+        0.1001, 0.1101, 0.1201, 0.1301, 0.1401,
+    ];
+    let linear2_weight =
+        Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(linear2_weight, DimDyn::from([4, 4]));
+    let linear2_bias = vec![0.0800, 0.1800, 0.2801, 0.3800];
+    let linear2_bias = Matrix::<Owned<f32>, DimDyn, Cpu>::from_vec(linear2_bias, DimDyn::from([4]));
     assert_val_eq!(
         parameters["linear1.linear.weight"].clone(),
         linear1_weight,
