@@ -30,49 +30,45 @@ impl<T: Num, D: Device, P: Parameters<T, D>> Optimizer<T, D, P> for AdamW<T, D> 
         let params = parameters
             .parameters()
             .iter()
-            .filter_map(|(key, param)| {
-                if param.get_grad().is_some() {
-                    Some((key.clone(), param.clone()))
-                } else {
-                    None
-                }
+            .filter_map(|(key, value)| {
+                value
+                    .get_grad()
+                    .map(|grad| (key.clone(), (value.clone(), grad.clone())))
             })
             .collect::<Vec<_>>();
 
-        for (k, parameter) in params {
-            let v_t = self.v.get(&k).unwrap();
-            let m_t = self.m.get(&k).unwrap();
-            let grad = parameter.get_grad().unwrap();
-            let mut grad = grad.get_data_mut();
-            let param_data = parameter.get_data();
+        for (k, (data, grad)) in params {
+            let m = self.m.get(&k).unwrap();
+            let v = self.v.get(&k).unwrap();
+            let mut m = m.get_as_mut();
+            let mut v = v.get_as_mut();
+            let grad = grad.get_as_ref();
+
+            // Update m and v
+            m *= self.beta1;
+            m += grad.to_ref() * (T::one() - self.beta1);
+
+            v *= self.beta2;
+            v += grad.to_ref() * grad.to_ref() * (T::one() - self.beta2);
+
+            let m_hat = m.clone() / (T::one() - beta1_t);
+            let v_hat = v.clone() / (T::one() - beta2_t);
+
+            let denom = v_hat.sqrt() + self.epsilon;
+            let step_size = self.learning_rate;
+            let update = m_hat / denom;
 
             if weight_keys.contains(&k) {
-                grad.to_ref_mut()
-                    .add_assign(&(param_data.to_ref() * self.weight_decay).to_ref());
+                println!("Weight decay");
+                data.get_as_mut().sub_assign(
+                    &(data.get_as_ref() * self.learning_rate * self.weight_decay).to_ref(),
+                );
             }
 
-            let mut m = m_t.get_data_mut();
-            let mut v = v_t.get_data_mut();
-
-            m.to_ref_mut().mul_scalar_assign(self.beta1);
-            m.to_ref_mut()
-                .add_assign(&(grad.to_ref() * (T::one() - self.beta1)).to_ref());
-
-            v.to_ref_mut().mul_scalar_assign(self.beta2);
-            v.to_ref_mut()
-                .add_assign(&(grad.to_ref().sqrt() * (T::one() - self.beta2)).to_ref());
-
-            let m_hat = m.to_ref() / (T::one() - beta1_t);
-            let v_hat = v.to_ref() / (T::one() - beta2_t);
-
-            let mut param_data_mut = parameter.get_data_mut();
-            param_data_mut
-                .to_ref_mut()
-                .sub_assign(&(m_hat / (v_hat.sqrt() + self.epsilon) * self.learning_rate).to_ref());
+            data.get_as_mut().sub_assign(&(update * step_size).to_ref());
         }
     }
 }
-
 impl<T: Num, D: Device> AdamW<T, D> {
     pub fn new(
         learning_rate: T,
