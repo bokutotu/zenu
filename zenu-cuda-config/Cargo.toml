@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 repository = "https://github.com/bokutotu/zenu"
 license = "MIT"
+description = "CUDA configuration for Zenu"
 
 [dependencies]
 glob = "0.3"
