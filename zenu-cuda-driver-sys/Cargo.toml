@@ -3,8 +3,7 @@ name = "zenu-cuda-driver-sys"
 version = "0.1.0"
 edition = "2021"
 repository = "https://github.com/bokutotu/zenu"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+description = "Rust bindings for CUDA Driver API"
 
 [dependencies]
 libc = "0.2.153"
