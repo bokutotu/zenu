@@ -10,8 +10,8 @@ description = "Testing framework for Zenu"
 
 [dependencies]
 
-zenu-matrix = { path = "../zenu-matrix" }
-zenu-autograd = { path = "../zenu-autograd" }
+zenu-matrix = { version= "0.1.2", path = "../zenu-matrix" }
+zenu-autograd = { version="0.1.2", path = "../zenu-autograd" }
 
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
