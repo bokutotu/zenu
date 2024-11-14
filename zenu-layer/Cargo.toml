@@ -16,7 +16,7 @@ rand = "0.8.5"
 rand_distr = "0.4.3"
 
 [dev-dependencies]
-zenu-test = { path = "../zenu-test", version = "*" }
+zenu-test = { path = "../zenu-test" }
 
 serde_json = "*"
 
