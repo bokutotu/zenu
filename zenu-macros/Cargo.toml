@@ -2,6 +2,9 @@
 name = "zenu-macros"
 version = "0.1.0"
 edition = "2021"
+repository = "https://github.com/bokutotu/zenu"
+license = "MIT"
+description = "Procedural macros for Zenu"
 
 [dependencies]
 proc-macro2 = "1"
