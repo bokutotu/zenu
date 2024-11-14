@@ -1,6 +1,6 @@
 [package]
 name = "zenu-autograd"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 description = "A simple autograd library for learning purposes"
 license = "MIT"
