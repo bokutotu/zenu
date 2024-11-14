@@ -9,9 +9,9 @@ repository = "https://github.com/bokutotu/zenu"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-zenu-matrix = { path = "../zenu-matrix", version = "0.1.1" }
-zenu-autograd = { path = "../zenu-autograd", version = "0.1.1" }
-zenu-layer = { path = "../zenu-layer", version = "0.1.0" }
+zenu-matrix = { path = "../zenu-matrix", version = "0.1.2" }
+zenu-autograd = { path = "../zenu-autograd", version = "0.1.2" }
+zenu-layer = { path = "../zenu-layer", version = "0.1.1" }
 
 [dev-dependencies]
 zenu-test = { path="../zenu-test/", version="*"}
