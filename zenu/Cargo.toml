@@ -23,7 +23,7 @@ bincode = "1.3.3"
 tar = "0.4.40"
 
 [dev-dependencies]
-zenu-test = { path = "../zenu-test", version = "0.1.0" }
+zenu-test = { path = "../zenu-test" }
 
 [profile.bench]
 debug = true
