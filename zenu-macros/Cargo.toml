@@ -12,8 +12,8 @@ quote = "1"
 syn = { version = "1", features = ["full"] }
 
 [dev-dependencies]
-zenu-test = { path = "../zenu-test", version = "0.1.0" }
-zenu = { path = "../zenu", version = "0.1.0" }
+zenu-test = { path = "../zenu-test" }
+zenu = { path = "../zenu"}
 serde = { version = "1.0.197", features = ["derive"] }
 serde_json = "1.0"
 rand_distr = "0.4.3"
