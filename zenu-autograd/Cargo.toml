@@ -16,9 +16,12 @@ lazy_static = "1.4.0"
 serde = { version = "1.0.197", features = ["derive"] }
 once_cell = "1.19.0"
 
+[features]
+nvidia = ["zenu-matrix/nvidia"]
+
 [dev-dependencies]
 criterion = "0.5.1"
-zenu-test = { path = "../zenu-test", version = "0.1.0" }
+zenu-test = { path = "../zenu-test"}
 serde_json = "1.0.114"
 
 [[bench]]
@@ -28,5 +31,4 @@ harness = false
 [profile.bench]
 debug = true
 
-[features]
-nvidia = ["zenu-matrix/nvidia"]
+
