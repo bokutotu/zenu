@@ -3,6 +3,8 @@ name = "zenu-test"
 version = "0.1.0"
 edition = "2021"
 repository = "https://github.com/bokutotu/zenu"
+license = "MIT"
+description = "Testing framework for Zenu"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
