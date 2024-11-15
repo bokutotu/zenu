@@ -16,7 +16,8 @@ members = [
     "zenu-matrix", 
     "zenu-test", 
     "zenu-optimizer", 
-    "zenu-macros"
+    "zenu-macros", 
+    "zenu-cudnn-frontend-wrapper"
 ]
 
 [workspace.lints.clippy]
