@@ -1,24 +1,75 @@
+
 # ZeNu
 
-ZeNu is a simple and intuitive deep learning library written in Rust. It provides the building blocks for creating and training neural networks, with a focus on ease of use and flexibility.
+**ZeNu** is a high-performance deep learning framework implemented in pure Rust. It features an intuitive API and high extensibility.
 
 ## Features
 
-- High-level API for defining and training neural networks
-- Integration with popular datasets like MNIST
-- Modular design for easy extensibility
-- Efficient computation using the underlying zenu-matrix and zenu-autograd libraries
+- 🦀 **Pure Rust implementation**: Maximizes safety and performance
+- ⚡ **GPU performance**: Comparable to PyTorch (supports CUDA 12.3 + cuDNN 9)
+- 🔧 **Simple and intuitive API**
+- 📦 **Modular design**: Easy to extend
 
-## Getting Started
+## Installation
 
-To use ZeNu in your Rust project, add the following to your `Cargo.toml` file:
+Add the following to your Cargo.toml:
 
 ```toml
 [dependencies]
-zenu = "0.1.0"
+zenu = "0.1"
+
+# To enable CUDA support:
+[dependencies.zenu]
+version = "0.1"
+features = ["nvidia"]
 ```
 
-Here's a simple example of defining and training a model using ZeNu:
+## Supported Features
+
+### Layers
+- Linear
+- Convolution 2D
+- Batch Normalization 2D
+- LSTM
+- RNN
+- GRU
+- MaxPool 2D
+- Dropout
+
+### Optimizers
+- SGD
+- Adam
+- AdamW
+
+### Device Support
+- CPU
+- CUDA (NVIDIA GPU)
+  - CUDA 12.3
+  - cuDNN 9
+
+## Project Structure
+
+```
+zenu/
+├── zenu               # Main library
+├── zenu-autograd      # Automatic differentiation engine
+├── zenu-layer         # Neural network layers
+├── zenu-matrix        # Matrix operations
+├── zenu-optimizer     # Optimization algorithms
+├── zenu-cuda          # CUDA implementation
+└── Other support crates
+```
+
+## Examples
+
+Check the `examples/` directory for detailed implementations:
+- MNIST classification
+- CIFAR10 classification
+- ResNet implementation
+
+### Simple Usage Example
+
+Here is a simple example of defining and training a model using ZeNu:
 
 ```rust
 use zenu::{
@@ -32,13 +83,8 @@ use zenu_autograd::{
     Variable,
 };
 use zenu_layer::{layers::linear::Linear, Layer};
-use zenu_matrix::{
-    matrix::{IndexItem, ToViewMatrix},
-    operation::max::MaxIdx,
-};
 use zenu_optimizer::sgd::SGD;
 
-// Define your model
 struct SingleLayerModel {
     linear: Linear<f32>,
 }
@@ -59,50 +105,76 @@ impl Model<f32> for SingleLayerModel {
     }
 }
 
-// Define your dataset
-struct MnistDataset {
-    data: Vec<(Vec<u8>, u8)>,
-}
-
-impl Dataset<f32> for MnistDataset {
-    type Item = (Vec<u8>, u8);
-
-    fn item(&self, item: usize) -> Vec<Variable<f32>> {
-        // ... Implement your dataset logic
-    }
-
-    fn len(&self) -> usize {
-        self.data.len()
-    }
-
-    fn all_data(&mut self) -> &mut [Self::Item] {
-        &mut self.data as &mut [Self::Item]
-    }
-}
-
 fn main() {
-    // Load and prepare your data
     let (train, test) = minist_dataset().unwrap();
     let (train, val) = train_val_split(&train, 0.8, true);
 
     let test_dataloader = DataLoader::new(MnistDataset { data: test }, 1);
 
-    // Create your model and optimizer
     let sgd = SGD::new(0.01);
     let model = SingleLayerModel::new();
 
-    // Train your model
     for epoch in 0..10 {
-        // ... Implement your training loop
+        let mut train_dataloader = DataLoader::new(
+            MnistDataset {
+                data: train.clone(),
+            },
+            16,
+        );
+        let val_dataloader = DataLoader::new(MnistDataset { data: val.clone() }, 16);
+
+        train_dataloader.shuffle();
+
+        let mut epoch_loss_train: f32 = 0.;
+        let mut num_iter_train = 0;
+        for batch in train_dataloader {
+            let input = batch[0].clone();
+            let target = batch[1].clone();
+            let y_pred = model.predict(&[input]);
+            let loss = cross_entropy(y_pred, target);
+            update_parameters(loss.clone(), &sgd);
+            epoch_loss_train += loss.get_data().index_item([]);
+            num_iter_train += 1;
+        }
+
+        let mut epoch_loss_val = 0.;
+        let mut num_iter_val = 0;
+        for batch in val_dataloader {
+            let input = batch[0].clone();
+            let target = batch[1].clone();
+            let y_pred = model.predict(&[input]);
+            let loss = cross_entropy(y_pred, target);
+            epoch_loss_val += loss.get_data().index_item([]);
+            num_iter_val += 1;
+        }
+
+        println!(
+            "Epoch: {}, Train Loss: {}, Val Loss: {}",
+            epoch,
+            epoch_loss_train / num_iter_train as f32,
+            epoch_loss_val / num_iter_val as f32
+        );
     }
 
-    // Evaluate your model
     let mut test_loss = 0.;
     let mut num_iter_test = 0;
     let mut correct = 0;
     let mut total = 0;
     for batch in test_dataloader {
-        // ... Implement your evaluation logic
+        let input = batch[0].clone();
+        let target = batch[1].clone();
+        let y_pred = model.predict(&[input]);
+        let loss = cross_entropy(y_pred.clone(), target.clone());
+        test_loss += loss.get_data().index_item([]);
+        num_iter_test += 1;
+        let y_pred = y_pred.get_data();
+        let max_idx = y_pred.to_view().max_idx()[0];
+        let target = target.get_data();
+        let target = target.to_view().max_idx()[0];
+        if max_idx == target {
+            correct += 1;
+        }
+        total += 1;
     }
 
     println!("Accuracy: {}", correct as f32 / total as f32);
@@ -110,7 +182,9 @@ fn main() {
 }
 ```
 
-For more details and examples, please refer to the [documentation](https://docs.rs/zenu).
+## Contributing
+
+Contributions to ZeNu are welcome! If you find any issues or have suggestions for improvements, please open an issue or submit a pull request on the [GitHub repository](https://github.com/bokutotu/zenu).
 
 ## License
 
