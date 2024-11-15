@@ -3,24 +3,22 @@ use zenu::macros::Parameters as ParametersDerive;
 use zenu::matrix::{
     device::{cpu::Cpu, Device},
     matrix::Matrix,
-    num::Num,
 };
 use zenu_test::assert_val_eq;
 
 #[derive(ParametersDerive)]
-#[parameters(num = T, device = D)]
-pub struct Hoge<T, D>
+#[parameters(num = f32, device = D)]
+pub struct Hoge<D>
 where
-    T: Num,
     D: Device,
 {
-    pub linear: Linear<T, D>,
+    pub linear: Linear<f32, D>,
 }
 
 #[test]
 fn small_net() {
     use zenu::layer::Parameters;
-    let hoge = Hoge::<f32, Cpu> {
+    let hoge = Hoge::<Cpu> {
         linear: Linear::new(2, 2, true),
     };
 
@@ -58,13 +56,13 @@ fn small_net() {
 #[test]
 fn test_load_parameters() {
     use zenu::layer::Parameters;
-    let base_model = Hoge::<f32, Cpu> {
+    let base_model = Hoge::<Cpu> {
         linear: Linear::new(2, 2, true),
     };
 
     let base_model_parameters = base_model.parameters();
 
-    let mut new_model = Hoge::<f32, Cpu> {
+    let mut new_model = Hoge::<Cpu> {
         linear: Linear::new(2, 2, true),
     };
 
