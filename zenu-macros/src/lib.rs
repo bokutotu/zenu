@@ -51,7 +51,8 @@ fn impl_parameters(input: &DeriveInput) -> TokenStream2 {
     let (num_type, device_type) = parse_parameters_attr(&input.attrs);
 
     quote!(
-        impl #impl_generics ::zenu::layer::Parameters #ty_generics for #name #ty_generics #where_clause {
+        // impl #impl_generics ::zenu::layer::Parameters #ty_generics for #name #ty_generics #where_clause {
+        impl #impl_generics ::zenu::layer::Parameters<#num_type, #device_type> for #name #ty_generics #where_clause {
             fn weights(&self) -> std::collections::HashMap<String, ::zenu::autograd::Variable<#num_type, #device_type>> {
                 let mut params = std::collections::HashMap::new();
                 #(
@@ -120,11 +121,11 @@ impl Parse for ParametersArgs {
                 num = Some(ty);
             } else if ident == "device" {
                 device = Some(ty);
-                // } else {
-                //     return Err(syn::Error::new(
-                //         ident.span(),
-                //         "Expected 'num' or 'device' in parameters attribute",
-                //     ));
+            } else {
+                return Err(syn::Error::new(
+                    ident.span(),
+                    "Expected 'num' or 'device' in parameters attribute",
+                ));
             }
 
             if content.peek(Comma) {
