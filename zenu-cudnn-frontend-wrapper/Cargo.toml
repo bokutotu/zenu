@@ -1,0 +1,12 @@
+[package]
+name = "zenu-cudnn-frontend-wrapper"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "A wrapper for the CUDNN frontend API"
+repository = "https://github.com/bokutotu/zenu"
+
+[dependencies]
+
+[lints]
+workspace = true
