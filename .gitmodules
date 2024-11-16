@@ -1,0 +1,3 @@
+[submodule "zenu-cudnn-frontend-wrapper/c-src/cudnn-frontend"]
+	path = zenu-cudnn-frontend-wrapper/c-src/cudnn-frontend
+	url = git@github.com:NVIDIA/cudnn-frontend.git
