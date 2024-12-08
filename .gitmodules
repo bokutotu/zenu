@@ -1,6 +1,3 @@
-[submodule "zenu-cudnn-frontend-wrapper/c-src/cudnn-frontend"]
-	path = zenu-cudnn-frontend-wrapper/c-src/cudnn-frontend
-	url = git@github.com:NVIDIA/cudnn-frontend.git
 [submodule "zenu-cudnn-frontend-wrapper/cudnn_frontend_wrapper/cudnn-frontend"]
 	path = zenu-cudnn-frontend-wrapper/cudnn_frontend_wrapper/cudnn-frontend
 	url = git@github.com:nvidia/cudnn-frontend.git
