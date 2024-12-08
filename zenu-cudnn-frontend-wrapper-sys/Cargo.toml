@@ -1,5 +1,5 @@
 [package]
-name = "zenu-cudnn-frontend-wrapper"
+name = "zenu-cudnn-frontend-wrapper-sys"
 version = "0.1.0"
 edition = "2021"
 license = "MIT"
@@ -7,6 +7,10 @@ description = "A wrapper for the CUDNN frontend API"
 repository = "https://github.com/bokutotu/zenu"
 
 [dependencies]
+
+[build-dependencies]
+bindgen = "0.71.0"
+cmake = "0.1.52"
 
 [lints]
 workspace = true

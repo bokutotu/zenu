@@ -22,6 +22,7 @@ pub struct Pool2dConfig<T: Num> {
 
 impl<T: Num> Pool2dConfig<T> {
     #[must_use]
+    #[allow(unused_variables)]
     pub fn new(
         kernel: (usize, usize),
         stride: (usize, usize),
