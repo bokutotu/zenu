@@ -44,6 +44,7 @@ impl<T: Num, D: DeviceBase> DropoutState<T, D> {
     }
 
     #[expect(clippy::missing_panics_doc)]
+    #[allow(unused_variables)]
     pub fn gpu_init(&mut self, shape: DimDyn) {
         #[cfg(feature = "nvidia")]
         {

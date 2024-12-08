@@ -61,6 +61,7 @@ pub struct BatchNorm2dInferenceConfig<T> {
 
 impl<T: Num> BatchNorm2dInferenceConfig<T> {
     #[must_use]
+    #[allow(unused_variables)]
     pub fn new(dim: DimDyn) -> Self {
         BatchNorm2dInferenceConfig::<T> {
             #[cfg(feature = "nvidia")]
