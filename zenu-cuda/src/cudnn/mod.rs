@@ -12,8 +12,12 @@ pub mod batch_norm;
 pub mod conv;
 pub mod dropout;
 pub mod error;
+pub mod graph_batchnorm;
+pub mod graph_conv;
 pub mod pooling;
 pub mod rnn;
+
+mod graph_utils;
 
 pub(crate) fn zenu_cudnn_data_type<T: 'static>() -> cudnnDataType_t {
     if TypeId::of::<T>() == TypeId::of::<f32>() {

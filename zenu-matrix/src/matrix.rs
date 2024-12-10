@@ -45,7 +45,7 @@ impl<A> Default for Ref<A> {
     }
 }
 
-impl<'a, T: Num> Repr for Ref<&'a T> {
+impl<T: Num> Repr for Ref<&T> {
     type Item = T;
 
     fn drop_memory<D: DeviceBase>(_ptr: *mut Self::Item, _: D) {}
@@ -54,7 +54,7 @@ impl<'a, T: Num> Repr for Ref<&'a T> {
     }
 }
 
-impl<'a, T: Num> Repr for Ref<&'a mut T> {
+impl<T: Num> Repr for Ref<&mut T> {
     type Item = T;
 
     fn drop_memory<D: DeviceBase>(_ptr: *mut Self::Item, _: D) {}
