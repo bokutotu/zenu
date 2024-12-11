@@ -13,7 +13,7 @@ use once_cell::sync::Lazy;
 use runtime::{cuda_create_stream, set_up_mempool};
 use zenu_cublas_sys::{cublasContext, cublasCreate_v2, cublasDestroy_v2};
 use zenu_cuda_runtime_sys::{cudaMemPool_t, cudaStream_t};
-use zenu_cudnn_sys::{cudnnContext, cudnnCreate, cudnnDestroy};
+use zenu_cudnn_sys::{cudnnContext, cudnnCreate, cudnnDestroy, cudnnHandle_t};
 
 static ZENU_CUDA_STATE: Lazy<Mutex<ZenuCudaState>> = Lazy::new(|| Mutex::new(ZenuCudaState::new()));
 
@@ -79,6 +79,13 @@ impl ZenuCudaState {
     #[must_use]
     pub fn get_cudnn(&self) -> NonNull<cudnnContext> {
         self.cudnn
+    }
+
+    // pub type cudnnHandle_t = *mut cudnnContext;
+    #[must_use]
+    pub fn get_cudnn_handle(&self) -> cudnnHandle_t {
+        let cudnn_context = self.get_cudnn();
+        cudnn_context.as_ptr()
     }
 
     #[must_use]

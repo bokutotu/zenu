@@ -4,6 +4,21 @@
 
 namespace fe = cudnn_frontend;
 
+void debug_shape_stride(CudnnTensorShapeStride* shape) {
+    std::cout << "num_dims: " << shape->num_dims << std::endl;
+    std::cout << "dims: ";
+    for (int i = 0; i < shape->num_dims; i++) {
+        std::cout << shape->dims[i] << " ";
+    }
+    std::cout << std::endl;
+
+    std::cout << "strides: ";
+    for (int i = 0; i < shape->num_dims; i++) {
+        std::cout << shape->strides[i] << " ";
+    }
+    std::cout << std::endl;
+}
+
 std::tuple<std::vector<int64_t>, std::vector<int64_t>, std::vector<int64_t>> get_conv_info(ConvInfo* info) {
     std::vector<int64_t> padding(info->padding, info->padding + info->num_dims);
     std::vector<int64_t> stride(info->stride, info->stride + info->num_dims);
@@ -35,7 +50,9 @@ ConvAttributes::ConvAttributes(CudnnTensorShapeStride* x_shape,
                             .set_dilation(dilation);
 
     Y = graph.conv_fprop(X, W, conv_options);
-    Y->set_output(true);
+    Y->set_output(true)
+      .set_dim(from_shape(y_shape->num_dims, y_shape->dims))
+      .set_stride(from_shape(y_shape->num_dims, y_shape->strides));
 }
 
 ConvDescriptor::ConvDescriptor(CudnnFrontendDataType_t type,
@@ -87,7 +104,9 @@ ConvBkwdDataAttributes::ConvBkwdDataAttributes(CudnnTensorShapeStride* dy_shape,
                             .set_dilation(dilation);
 
     DX = graph.conv_dgrad(DY, W, conv_options);
-    DX->set_output(true).set_dim(from_shape(dx_shape->num_dims, dx_shape->dims));
+    DX->set_output(true)
+        .set_dim(from_shape(dx_shape->num_dims, dx_shape->dims))
+        .set_stride(from_shape(dx_shape->num_dims, dx_shape->strides));
 }
 
 ConvBkwdDataDescriptor::ConvBkwdDataDescriptor(CudnnFrontendDataType_t type,
