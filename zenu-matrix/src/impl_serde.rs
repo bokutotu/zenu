@@ -60,7 +60,7 @@ impl<'de, T: Num + Deserialize<'de>, D: Device> Deserialize<'de> for Matrix<Owne
             {
                 struct FieldVisitor;
 
-                impl<'de> serde::de::Visitor<'de> for FieldVisitor {
+                impl serde::de::Visitor<'_> for FieldVisitor {
                     type Value = Field;
 
                     fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
