@@ -46,7 +46,7 @@ impl SliceDim {
             end = dim;
         }
 
-        (end - start + step - 1) / step
+        (end - start).div_ceil(step)
     }
 
     pub(super) fn new_dim(&self, dim: usize) -> usize {
