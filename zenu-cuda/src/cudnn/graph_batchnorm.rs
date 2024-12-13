@@ -1,8 +1,11 @@
 use std::ptr::NonNull;
 
 use zenu_cudnn_frontend_wrapper_sys::{
-    check_graph, create_batch_norm_descriptor, execute_batch_norm_forward_training,
-    get_workspace_size, BatchNormBkwdDescriptor, BatchNormDescriptor, BatchNormExecutionBuffers,
+    check_backward_data_graph, check_graph, create_batch_norm_backward_data_descriptor,
+    create_batch_norm_descriptor, execute_batch_norm_backward_data,
+    execute_batch_norm_forward_training, get_backward_data_workspace_size, get_workspace_size,
+    BatchNormBkwdDescriptor, BatchNormBkwdExecutionBuffers, BatchNormDescriptor,
+    BatchNormExecutionBuffers,
 };
 use zenu_cudnn_sys::cudnnHandle_t;
 
@@ -93,6 +96,87 @@ impl<T: 'static> BatchNormForward<T> {
         let mut handle: cudnnHandle_t = ZENU_CUDA_STATE.lock().unwrap().get_cudnn_handle();
         let status = unsafe {
             execute_batch_norm_forward_training(
+                self.ptr.as_ptr(),
+                std::ptr::from_mut(&mut buffers),
+                workspace.cast(),
+                std::ptr::from_mut(&mut handle).cast(),
+            )
+        };
+        success_or_panic(status);
+    }
+}
+
+pub struct BatchNormBkwd<T> {
+    ptr: NonNull<BatchNormBkwdDescriptor>,
+    _phantom: std::marker::PhantomData<T>,
+}
+
+impl<T: 'static> BatchNormBkwd<T> {
+    #[must_use]
+    pub fn new(shape: &[usize], stride: &[usize]) -> Self {
+        let mut desc = std::ptr::null_mut();
+        let data_type = get_cudnn_frontend_type::<T>();
+        let shape_stride = shape_stride_to_cudnn(shape, stride);
+        let status = unsafe {
+            create_batch_norm_backward_data_descriptor(
+                &mut desc,
+                data_type,
+                std::ptr::from_ref(&shape_stride),
+            )
+        };
+        success_or_panic(status);
+        Self {
+            ptr: NonNull::new(desc).unwrap(),
+            _phantom: std::marker::PhantomData,
+        }
+    }
+
+    pub fn check_and_build_graph(&self) {
+        let mut handle: cudnnHandle_t = ZENU_CUDA_STATE.lock().unwrap().get_cudnn_handle();
+        let status = unsafe {
+            check_backward_data_graph(self.ptr.as_ptr(), std::ptr::from_mut(&mut handle).cast())
+        };
+        success_or_panic(status);
+    }
+
+    #[must_use]
+    pub fn get_workspace_size(&self) -> usize {
+        let mut size = 0;
+        let status = unsafe { get_backward_data_workspace_size(self.ptr.as_ptr(), &mut size) };
+        success_or_panic(status);
+        usize::try_from(size).unwrap()
+    }
+
+    #[expect(clippy::too_many_arguments)]
+    pub fn execute(
+        &self,
+        x: *const T,
+        dy: *const T,
+        scale: *const T,
+        mean: *const T,
+        inv_variance: *const T,
+        dscale: *mut T,
+        dbias: *mut T,
+        dx: *mut T,
+        peer_stats_0: *const T,
+        peer_stats_1: *const T,
+        workspace: *mut u8,
+    ) {
+        let mut buffers = BatchNormBkwdExecutionBuffers {
+            X: x.cast_mut().cast(),
+            DY: dy.cast_mut().cast(),
+            scale: scale.cast_mut().cast(),
+            mean: mean.cast_mut().cast(),
+            inv_variance: inv_variance.cast_mut().cast(),
+            dscale: dscale.cast(),
+            dbias: dbias.cast(),
+            DX: dx.cast(),
+            peer_stats_0: peer_stats_0.cast_mut().cast(),
+            peer_stats_1: peer_stats_1.cast_mut().cast(),
+        };
+        let mut handle: cudnnHandle_t = ZENU_CUDA_STATE.lock().unwrap().get_cudnn_handle();
+        let status = unsafe {
+            execute_batch_norm_backward_data(
                 self.ptr.as_ptr(),
                 std::ptr::from_mut(&mut buffers),
                 workspace.cast(),
