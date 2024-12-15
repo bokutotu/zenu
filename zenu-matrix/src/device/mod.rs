@@ -2,7 +2,13 @@ use serde::Serialize;
 
 use crate::{
     memory_pool::MemPoolError,
-    nn::{batch_norm::BatchNormalization, conv2d::Conv2d, dropout::Dropout, pool2d::Pool2dImpl},
+    nn::{
+        batch_norm::BatchNormalization,
+        conv::interface::{ConvBkwdData, ConvBkwdFilter, ConvFwd},
+        conv2d::Conv2d,
+        dropout::Dropout,
+        pool2d::Pool2dImpl,
+    },
     num::Num,
     operation::{
         asum::Asum,
@@ -88,6 +94,9 @@ pub trait Device:
     + PowOws
     + BatchNormalization
     + Conv2d
+    // + ConvFwd
+    // + ConvBkwdData
+    // + ConvBkwdFilter
     + Sized
     + Pool2dImpl
     + Dropout

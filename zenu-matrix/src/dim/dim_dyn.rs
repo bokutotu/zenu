@@ -285,7 +285,7 @@ impl_from_slice_dim!(DimDyn, 1);
 impl_from_slice_dim!(DimDyn, 0);
 
 #[cfg(test)]
-mod dim_dyn {
+mod dim_dyn_test {
     #[test]
     fn is_include_bradcast_2x4x5x5_1x4x1x1() {
         let x = super::DimDyn::new(&[2, 4, 5, 5]);
