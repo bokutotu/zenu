@@ -26,6 +26,7 @@ use zenu_cuda::{
 #[cfg(feature = "nvidia")]
 use crate::device::nvidia::Nvidia;
 
+#[expect(clippy::module_name_repetitions)]
 #[must_use]
 pub fn conv2d_out_size(
     img_shape: &[usize],
@@ -63,6 +64,7 @@ pub fn deconv2d_out_size(
     [b, ic, h, w]
 }
 
+#[expect(clippy::module_name_repetitions)]
 pub struct Conv2dConfig<T: Num> {
     #[cfg(feature = "nvidia")]
     pub conv: ConvolutionConfig<T>,
@@ -459,7 +461,7 @@ impl Conv2d for Nvidia {
     }
 }
 
-#[expect(clippy::too_many_arguments)]
+#[expect(clippy::too_many_arguments, clippy::module_name_repetitions)]
 #[must_use]
 pub fn conv2d_forward<T: Num, D: Device>(
     input: Matrix<Ref<&T>, DimDyn, D>,
@@ -494,7 +496,7 @@ pub fn conv2d_forward<T: Num, D: Device>(
     y
 }
 
-#[expect(clippy::too_many_arguments)]
+#[expect(clippy::too_many_arguments, clippy::module_name_repetitions)]
 #[must_use]
 pub fn conv2d_bckwd_data<T: Num, D: Device>(
     dy: Matrix<Ref<&T>, DimDyn, D>,
@@ -529,7 +531,7 @@ pub fn conv2d_bckwd_data<T: Num, D: Device>(
     dx
 }
 
-#[expect(clippy::too_many_arguments)]
+#[expect(clippy::too_many_arguments, clippy::module_name_repetitions)]
 #[must_use]
 pub fn conv2d_bckwd_filter<T: Num, D: Device>(
     input: Matrix<Ref<&T>, DimDyn, D>,
@@ -559,6 +561,7 @@ pub fn conv2d_bckwd_filter<T: Num, D: Device>(
     df
 }
 
+#[expect(clippy::module_name_repetitions)]
 pub fn conv2d_bias_add<T: Num, D: Device>(
     input: Matrix<Ref<&T>, DimDyn, D>,
     bias: Matrix<Ref<&T>, DimDyn, D>,
@@ -567,6 +570,7 @@ pub fn conv2d_bias_add<T: Num, D: Device>(
     D::conv2d_forward_bias(input, output, bias);
 }
 
+#[expect(clippy::module_name_repetitions)]
 pub fn conv2d_bckwd_data_bias<T: Num, D: Device>(
     dy: Matrix<Ref<&T>, DimDyn, D>,
     dx: Matrix<Ref<&mut T>, DimDyn, D>,
@@ -576,7 +580,7 @@ pub fn conv2d_bckwd_data_bias<T: Num, D: Device>(
 
 #[expect(clippy::unreadable_literal, clippy::too_many_lines)]
 #[cfg(test)]
-mod conv2d {
+mod conv2d_test {
     use zenu_test::{assert_mat_eq_epsilon, run_mat_test};
 
     use crate::{

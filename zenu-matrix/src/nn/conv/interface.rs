@@ -28,9 +28,9 @@ pub struct ConvConfigInner<T> {
 }
 
 pub struct ConvFwdConfig<T> {
-    pub inner: ConvConfigInner<T>,
+    pub(super) inner: ConvConfigInner<T>,
     #[cfg(feature = "nvidia")]
-    pub nvidia_desc: ConvForwardGraph,
+    pub(super) nvidia_desc: ConvForwardGraph,
 }
 
 pub trait ConvFwd: DeviceBase {
@@ -43,9 +43,9 @@ pub trait ConvFwd: DeviceBase {
 }
 
 pub struct ConvBkwdDataConfig<T> {
-    pub inner: ConvConfigInner<T>,
+    pub(super) inner: ConvConfigInner<T>,
     #[cfg(feature = "nvidia")]
-    pub nvidia_desc: ConvBkwdDataGraph,
+    pub(super) nvidia_desc: ConvBkwdDataGraph,
 }
 
 pub trait ConvBkwdData: DeviceBase {
@@ -58,9 +58,9 @@ pub trait ConvBkwdData: DeviceBase {
 }
 
 pub struct ConvBkwdFilterConfig<T> {
-    pub inner: ConvConfigInner<T>,
+    pub(super) inner: ConvConfigInner<T>,
     #[cfg(feature = "nvidia")]
-    pub nvidia_desc: ConvBkwdFilterGraph,
+    pub(super) nvidia_desc: ConvBkwdFilterGraph,
 }
 
 pub trait ConvBkwdFilter: DeviceBase {
@@ -118,6 +118,36 @@ fn build_conv_inner<T>(
 }
 
 impl<T> ConvFwdConfig<T> {
+    #[must_use]
+    pub fn new(
+        input_shape: ShapeStride<DimDyn>,
+        filter_shape: ShapeStride<DimDyn>,
+        stride: Vec<usize>,
+        padding: Vec<usize>,
+        dilation: Vec<usize>,
+    ) -> Self {
+        let inner = build_conv_inner(input_shape, filter_shape, stride, padding, dilation);
+        let res: Self = inner.into();
+        res
+    }
+}
+
+impl<T> ConvBkwdDataConfig<T> {
+    #[must_use]
+    pub fn new(
+        input_shape: ShapeStride<DimDyn>,
+        filter_shape: ShapeStride<DimDyn>,
+        stride: Vec<usize>,
+        padding: Vec<usize>,
+        dilation: Vec<usize>,
+    ) -> Self {
+        let inner = build_conv_inner(input_shape, filter_shape, stride, padding, dilation);
+        let res: Self = inner.into();
+        res
+    }
+}
+
+impl<T> ConvBkwdFilterConfig<T> {
     #[must_use]
     pub fn new(
         input_shape: ShapeStride<DimDyn>,
@@ -193,5 +223,76 @@ impl<T> From<ConvConfigInner<T>> for ConvBkwdFilterConfig<T> {
             #[cfg(feature = "nvidia")]
             nvidia_desc,
         }
+    }
+}
+
+impl<T> ConvConfigInner<T> {
+    pub(super) fn new(
+        input_shape: ShapeStride<DimDyn>,
+        filter_shape: ShapeStride<DimDyn>,
+        output_shape_stride: ShapeStride<DimDyn>,
+        padding: &[usize],
+        stride: &[usize],
+        dilation: &[usize],
+    ) -> Self {
+        assert!(
+            input_shape.is_default_stride(),
+            "Input shape must be default stride."
+        );
+        assert!(
+            filter_shape.is_default_stride(),
+            "Filter shape must be default stride."
+        );
+        assert!(
+            output_shape_stride.is_default_stride(),
+            "Output shape must be default stride."
+        );
+        Self {
+            input_shape,
+            filter_shape,
+            output_shape: output_shape_stride,
+            stride: stride.to_vec(),
+            padding: padding.to_vec(),
+            dilation: dilation.to_vec(),
+            _phantom: std::marker::PhantomData,
+        }
+    }
+
+    pub(super) fn is_batch_size_changed(&self, batch_size: usize) -> bool {
+        self.input_shape.shape()[0] != batch_size
+    }
+
+    fn valid_filter_size(&self, filter_shape_stride: ShapeStride<DimDyn>) -> bool {
+        self.filter_shape == filter_shape_stride
+    }
+
+    fn valid_pad_stride_dilations(
+        &self,
+        stride: &[usize],
+        padding: &[usize],
+        dilation: &[usize],
+    ) -> bool {
+        self.stride == stride && self.padding == padding && self.dilation == dilation
+    }
+
+    fn valid_input_shape(&self, input_shape_stride: ShapeStride<DimDyn>) -> bool {
+        // batch size以外は一致していることを確認する
+        let self_input_shape = self.input_shape.shape();
+        let other_input_shape = input_shape_stride.shape();
+        self_input_shape[1..] == other_input_shape[1..]
+    }
+
+    fn valid_output_shape(&self, filter_shape_stride: ShapeStride<DimDyn>) -> bool {
+        // batch size以外は一致していることを確認する
+        let self_output_shape = self.output_shape.shape();
+        let other_output_shape = filter_shape_stride.shape();
+        self_output_shape[1..] == other_output_shape[1..]
+    }
+
+    pub(super) fn valid(&self, other: &Self) -> bool {
+        self.valid_input_shape(other.input_shape)
+            && self.valid_filter_size(other.filter_shape)
+            && self.valid_output_shape(other.output_shape)
+            && self.valid_pad_stride_dilations(&other.stride, &other.padding, &other.dilation)
     }
 }

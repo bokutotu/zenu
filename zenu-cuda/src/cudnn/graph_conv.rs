@@ -91,14 +91,8 @@ impl ConvForwardGraph {
         size.try_into().unwrap()
     }
 
-    pub fn execute<T>(
-        &self,
-        x: *mut T,
-        w: *mut T,
-        y: *mut T,
-        workspace: *mut T,
-        handle: *mut cudnnHandle_t,
-    ) {
+    pub fn execute<T>(&self, x: *mut T, w: *mut T, y: *mut T, workspace: *mut T) {
+        let handle: cudnnHandle_t = ZENU_CUDA_STATE.lock().unwrap().get_cudnn_handle();
         let mut buf = ConvBufers {
             X: x.cast(),
             filter: w.cast(),
@@ -440,11 +434,7 @@ impl<T> ConvBuilder<T> {
 }
 
 #[cfg(test)]
-#[expect(
-    clippy::too_many_lines,
-    clippy::unreadable_literal,
-    clippy::cast_ptr_alignment
-)]
+#[expect(clippy::too_many_lines, clippy::unreadable_literal)]
 mod graph_conv_test {
     use super::*;
     use crate::{
@@ -630,15 +620,7 @@ mod graph_conv_test {
         let workspace_gpu = cuda_malloc::<u8>(workspace_size).unwrap();
 
         let context = ZENU_CUDA_STATE.lock().unwrap();
-        let mut cudnn_handle: cudnnHandle_t = context.get_cudnn_handle();
-
-        conv_config.execute(
-            input_gpu,
-            filter_gpu,
-            output_gpu,
-            workspace_gpu.cast(),
-            std::ptr::from_mut(&mut cudnn_handle),
-        );
+        conv_config.execute(input_gpu, filter_gpu, output_gpu, workspace_gpu.cast());
         let mut output_cpu = vec![0.0; output.len()];
         cuda_copy(
             output_cpu.as_mut_ptr(),
