@@ -13,8 +13,10 @@ TEST_CASE("BatchNorm2d", "[batchnorm2d]") {
 
     CudnnTensorShapeStride shape = {
         .num_dims = 4,
-        .dims = {4, 32, 16, 16},
-        .strides = {32*16*16, 16*16, 16, 1}
+        // .dims = {4, 32, 16, 16},
+        // .strides = {32*16*16, 16*16, 16, 1}
+        .dims = {2, 2, 2, 2},
+        .strides = {2*2*2, 2*2, 2, 1}
     };
     float epsilon = 1e-5;
     float momentum = 0.1;

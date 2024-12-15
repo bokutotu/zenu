@@ -32,8 +32,8 @@ static std::vector<int64_t> get_stat_stride(std::vector<int64_t> shape) {
         std::vector<int64_t> stride(4, 1);
         stride[0] = shape[1];
         stride[1] = 1;
-        stride[2] = shape[1];
-        stride[3] = shape[1];
+        stride[2] = 1;
+        stride[3] = 1;
         return stride;
     } else {
         throw std::runtime_error("Invalid shape for scale/bias (only supports BN1D or BN2D)");
@@ -58,8 +58,8 @@ static std::vector<int64_t> get_peer_stats_stride(std::vector<int64_t> shape) {
         std::vector<int64_t> stride(4, 1);
         stride[0] = shape[1];
         stride[1] = 1;
-        stride[2] = shape[1];
-        stride[3] = shape[1];
+        stride[2] = 1;
+        stride[3] = 1;
         return stride;
     } else {
         throw std::runtime_error("Invalid shape for peer stats (only supports BN1D or BN2D)");
@@ -150,13 +150,13 @@ BatchNormTensorAttributes::BatchNormTensorAttributes(CudnnTensorShapeStride inpu
     auto [bn_output, mean, inv_variance, next_running_mean, next_running_var] = 
         graph.batchnorm(X, scale, bias, batchnorm_options);
     auto data_type = get_data_type(type);
-    mean->set_output(true).set_data_type(data_type);
-    inv_variance->set_output(true).set_data_type(data_type);
+    mean->set_output(true).set_data_type(data_type).set_dim(stat_shape).set_stride(stat_strides);
+    inv_variance->set_output(true).set_data_type(data_type).set_dim(stat_shape).set_stride(stat_strides);
     if (has_running_stats) {
-        next_running_mean->set_output(true).set_data_type(data_type);
-        next_running_var->set_output(true).set_data_type(data_type);
+        next_running_mean->set_output(true).set_data_type(data_type).set_dim(stat_shape).set_stride(stat_strides);
+        next_running_var->set_output(true).set_data_type(data_type).set_dim(stat_shape).set_stride(stat_strides);
     }
-    bn_output->set_output(true).set_data_type(data_type);
+    bn_output->set_output(true).set_data_type(data_type).set_dim(x_shape).set_stride(x_strides);
     this->bn_output = bn_output;
     this->mean = mean;
     this->inv_variance = inv_variance;

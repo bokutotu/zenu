@@ -1,3 +1,4 @@
+//! 実験的なものなのでまだ使用できない
 use std::ptr::NonNull;
 
 use zenu_cudnn_frontend_wrapper_sys::{
@@ -186,3 +187,127 @@ impl<T: 'static> BatchNormBkwd<T> {
         success_or_panic(status);
     }
 }
+
+// #[cfg(test)]
+// mod batchnorm_test {
+//     use crate::runtime::{cuda_copy, cuda_malloc, ZenuCudaMemCopyKind};
+//
+//     use super::BatchNormForward;
+//
+//     #[test]
+//     #[expect(clippy::unreadable_literal)]
+//     fn batchnorm_test_case_1() {
+//         let n = 2;
+//         let c = 24;
+//         let h = 22;
+//         let w = 25;
+//         let shape = [n, c, h, w];
+//         let stride = [c * h * w, h * w, w, 1];
+//         let stats_shape = [2, c * 4, 1, 1];
+//
+//         let batchnorm_fwd = BatchNormForward::<f32>::new(&shape, &stride, 1e-5, 0., true);
+//         println!("here: ");
+//         batchnorm_fwd.check_and_build_graph();
+//         let workspace_size = batchnorm_fwd.get_workspace_size();
+//         let input_cpu = [
+//             -1.1258398,
+//             -1.1523602,
+//             -0.25057858,
+//             -0.4338788,
+//             0.84871036,
+//             0.69200915,
+//             -0.31601277,
+//             -2.1152194,
+//             0.32227492,
+//             -1.2633348,
+//             0.3499832,
+//             0.30813393,
+//             0.11984151,
+//             1.2376579,
+//             1.1167772,
+//             -0.24727815,
+//         ];
+//         let output_cpu = [
+//             -1.0970649,
+//             -1.1374662,
+//             0.23631285,
+//             -0.04292771,
+//             0.66504365,
+//             0.5121599,
+//             -0.4713051,
+//             -2.2266803,
+//             1.109001,
+//             -1.3065253,
+//             1.1512119,
+//             1.0874585,
+//             -0.04606889,
+//             1.0445158,
+//             0.92657995,
+//             -0.40424496,
+//         ];
+//         let running_mean = [-0.04057, 0.01670607];
+//         let running_variance = [0.9492437, 1.0200632];
+//         let saved_mean = [-0.04057, 0.01670607];
+//         let saved_variance = [0.9492437, 1.0200632];
+//         let scale = [1.0, 1.0];
+//         let bias = [0.0, 0.0];
+//
+//         let input_gpu = cpu_vec_to_gpu(&input_cpu);
+//         let output_gpu = cuda_malloc(output_cpu.len()).unwrap();
+//         let running_mean_gpu = cpu_vec_to_gpu(&running_mean);
+//         let running_variance_gpu = cpu_vec_to_gpu(&running_variance);
+//         let saved_mean_gpu = cpu_vec_to_gpu(&saved_mean);
+//         let saved_variance_gpu = cpu_vec_to_gpu(&saved_variance);
+//         let scale_gpu = cpu_vec_to_gpu(&scale);
+//         let bias_gpu = cpu_vec_to_gpu(&bias);
+//         let workspace_gpu = cuda_malloc::<u8>(workspace_size).unwrap();
+//         let peer_stats_0_gpu = cuda_malloc::<f32>(stats_shape.iter().product()).unwrap();
+//         let peer_stats_1_gpu = cuda_malloc::<f32>(stats_shape.iter().product()).unwrap();
+//         let next_running_mean_gpu = cuda_malloc::<f32>(running_mean.len()).unwrap();
+//         let next_running_var_gpu = cuda_malloc::<f32>(running_variance.len()).unwrap();
+//
+//         batchnorm_fwd.execute(
+//             input_gpu,
+//             running_mean_gpu,
+//             running_variance_gpu,
+//             scale_gpu,
+//             bias_gpu,
+//             peer_stats_0_gpu,
+//             peer_stats_1_gpu,
+//             saved_mean_gpu,
+//             saved_variance_gpu,
+//             next_running_mean_gpu,
+//             next_running_var_gpu,
+//             output_gpu,
+//             workspace_gpu,
+//         );
+//
+//         let output_exp = gpu_to_cpu_vec(output_gpu, output_cpu.len());
+//         for i in 0..output_cpu.len() h            assert!((output_cpu[i] - output_exp[i]).abs() < 1e-6);
+//         }
+//     }
+//
+//     fn cpu_vec_to_gpu<T: 'static>(vec: &[T]) -> *mut T {
+//         let gpu = cuda_malloc(vec.len()).unwrap();
+//         cuda_copy(
+//             gpu,
+//             vec.as_ptr(),
+//             vec.len(),
+//             ZenuCudaMemCopyKind::HostToDevice,
+//         )
+//         .unwrap();
+//         gpu
+//     }
+//
+//     fn gpu_to_cpu_vec<T: 'static + Default + Clone>(gpu: *const T, len: usize) -> Vec<T> {
+//         let mut vec = vec![T::default(); len];
+//         cuda_copy(
+//             vec.as_mut_ptr(),
+//             gpu,
+//             len,
+//             ZenuCudaMemCopyKind::DeviceToHost,
+//         )
+//         .unwrap();
+//         vec
+//     }
+// }
