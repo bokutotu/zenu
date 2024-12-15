@@ -10,6 +10,11 @@ pub struct ShapeStride<D: DimTrait> {
 
 impl<D: DimTrait> ShapeStride<D> {
     pub fn new(shape: D, stride: D) -> Self {
+        assert_eq!(
+            shape.len(),
+            stride.len(),
+            "Shape and stride must have the same number of dimensions."
+        );
         Self { shape, stride }
     }
 
@@ -19,6 +24,14 @@ impl<D: DimTrait> ShapeStride<D> {
 
     pub fn stride(&self) -> D {
         self.stride
+    }
+
+    pub fn len(&self) -> usize {
+        self.shape.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.shape.is_empty()
     }
 
     #[must_use]
