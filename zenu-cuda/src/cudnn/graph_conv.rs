@@ -608,6 +608,7 @@ mod graph_conv_test {
             ZenuCudaMemCopyKind::HostToDevice,
         )
         .unwrap();
+        let output_gpu = cuda_malloc::<f32>(output.len()).unwrap();
         let context = ZENU_CUDA_STATE.lock().unwrap();
         let mut cudnn_handle: cudnnHandle_t = context.get_cudnn_handle();
         let conv_config = ConvBuilder::default()
@@ -638,8 +639,6 @@ mod graph_conv_test {
             ZenuCudaMemCopyKind::DeviceToHost,
         )
         .unwrap();
-        println!("{:?}", output_cpu);
-        println!("{:?}", output);
         for (idx, (a, b)) in output_cpu.iter().zip(output.iter()).enumerate() {
             assert!(
                 (a - b).abs() < 1e-6,
