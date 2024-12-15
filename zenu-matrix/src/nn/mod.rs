@@ -11,6 +11,8 @@ pub mod pool2d;
 #[cfg(feature = "nvidia")]
 pub mod rnn;
 
+/// matrixでメモリ管理されないblobをrustのメモリ管理に任せるための構造体
+/// `cudnn`などで、計算する際にworkspaceを確保することが求められる。
 #[expect(unused)]
 pub(crate) struct NNCache<D: DeviceBase> {
     pub(crate) bytes: usize,
