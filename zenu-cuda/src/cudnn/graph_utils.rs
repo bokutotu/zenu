@@ -29,7 +29,8 @@ pub fn get_cudnn_frontend_type<T>() -> CudnnFrontendDataType_t {
 }
 
 pub fn success_or_panic(status: CudnnFrontendError_t) {
-    if status != CudnnFrontendError_t::SUCCESS {
-        panic!("Cudnn frontend error: {:?}", status);
-    }
+    assert!(
+        status == CudnnFrontendError_t::SUCCESS,
+        "Cudnn frontend error: {status:?}"
+    );
 }

@@ -2,18 +2,12 @@ use crate::num::Num;
 
 use super::super::utils::conv_dim_out_size;
 
-/// col2im for 2D convolution.
-///
-/// # Arguments
-/// - `col`: The im2col expanded data. Shape is [N, (C*KH*KW), (`out_h`*`out_w`)]
-/// - `N, C, H, W`: Dimensions of the output image we want to reconstruct
-/// - `KH, KW`: Kernel height and width
-/// - `pad_h, pad_w`: Padding on height and width
-/// - `stride_h, stride_w`: Stride on height and width
-/// - `dilation_h, dilation_w`: Dilation on height and width
-/// - `out_im`: Output image buffer to accumulate. Size must be N*C*H*W.
-///             It's recommended to initialize this with zeros before calling col2im.
-#[allow(clippy::too_many_arguments, clippy::similar_names)]
+#[expect(
+    clippy::too_many_arguments,
+    clippy::similar_names,
+    clippy::cast_possible_wrap,
+    clippy::cast_sign_loss
+)]
 pub fn col2im<T: Num>(
     col: &[T],
     n: usize,
@@ -49,16 +43,22 @@ pub fn col2im<T: Num>(
                 let row = c * kh * kw + k_h * kw + k_w;
                 for ni in 0..n {
                     for oh in 0..out_h {
-                        let ih = oh * stride_h + ih_base as usize - pad_h;
+                        let ih_ = (oh * stride_h) as isize + ih_base as isize - pad_h as isize;
+                        if ih_ < 0 || ih_ >= h_in as isize {
+                            continue;
+                        }
+                        let ih = ih_ as usize;
+
                         for ow in 0..out_w {
-                            let iw = ow * stride_w + iw_base as usize - pad_w;
-                            if ih < h_in && iw < w_in {
-                                let col_idx = ni * (out_h * out_w) + oh * out_w + ow;
-                                dx[ni * (c_in * h_in * w_in)
-                                    + c * (h_in * w_in)
-                                    + ih * w_in
-                                    + iw] += col[row * cols + col_idx];
+                            let iw_ = (ow * stride_w) as isize + iw_base as isize - pad_w as isize;
+                            if iw_ < 0 || iw_ >= w_in as isize {
+                                continue;
                             }
+                            let iw = iw_ as usize;
+
+                            let col_idx = ni * (out_h * out_w) + oh * out_w + ow;
+                            dx[ni * (c_in * h_in * w_in) + c * (h_in * w_in) + ih * w_in + iw] +=
+                                col[row * cols + col_idx];
                         }
                     }
                 }

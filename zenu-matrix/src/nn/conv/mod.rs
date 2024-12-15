@@ -54,7 +54,10 @@ mod conv_test {
         device::Device,
         dim::DimDyn,
         matrix::{Matrix, Owned},
-        nn::conv::{conv_fwd, interface::ConvFwdConfig},
+        nn::conv::{
+            conv_bkwd_data, conv_bkwd_weight, conv_fwd, interface::ConvFwdConfig,
+            ConvBkwdDataConfig, ConvBkwdFilterConfig,
+        },
     };
 
     fn load_test_case<D: Device>(path: &str) -> HashMap<String, Matrix<Owned<f32>, DimDyn, D>> {
@@ -64,12 +67,15 @@ mod conv_test {
             .collect()
     }
 
+    #[expect(clippy::similar_names)]
     fn small_test<D: Device>() {
         let matrix_map = load_test_case::<D>("../test_data_json/conv2d.json");
 
         let x = matrix_map.get("input").unwrap().clone();
         let w = matrix_map.get("filter").unwrap().clone();
         let y = matrix_map.get("output").unwrap().clone();
+        let dx = matrix_map.get("grad_input").unwrap().clone();
+        let dw = matrix_map.get("grad_weight").unwrap().clone();
 
         let mut y_hat = Matrix::zeros(y.shape());
 
@@ -82,9 +88,32 @@ mod conv_test {
         );
 
         conv_fwd(x.to_ref(), w.to_ref(), y_hat.to_ref_mut(), &mut config);
+        assert_mat_eq_epsilon!(y_hat, y.to_ref(), 1e-4);
 
-        assert_mat_eq_epsilon!(y_hat, y, 1e-4);
+        let mut config = ConvBkwdDataConfig::new(
+            x.shape_stride(),
+            w.shape_stride(),
+            vec![1, 1],
+            vec![1, 1],
+            vec![1, 1],
+        );
+
+        let mut dx_hat = Matrix::zeros(x.shape());
+        let dy = Matrix::ones_like(&y);
+        conv_bkwd_data(dy.to_ref(), w.to_ref(), dx_hat.to_ref_mut(), &mut config);
+        assert_mat_eq_epsilon!(dx, dx_hat, 1e-4);
+
+        let mut config = ConvBkwdFilterConfig::new(
+            x.shape_stride(),
+            w.shape_stride(),
+            vec![1, 1],
+            vec![1, 1],
+            vec![1, 1],
+        );
+
+        let mut dw_hat = Matrix::zeros(w.shape());
+        conv_bkwd_weight(dy.to_ref(), x.to_ref(), dw_hat.to_ref_mut(), &mut config);
+        assert_mat_eq_epsilon!(dw, dw_hat, 1e-4);
     }
-
     run_mat_test!(small_test, small_test_cpu, small_test_gpu);
 }

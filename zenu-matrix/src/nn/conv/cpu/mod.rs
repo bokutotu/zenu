@@ -22,7 +22,7 @@ impl ConvFwd for Cpu {
         input: Matrix<Ref<&T>, DimDyn, Self>,
         weight: Matrix<Ref<&T>, DimDyn, Self>,
         output: Matrix<Ref<&mut T>, DimDyn, Self>,
-        _: &mut ConvFwdConfig<T>,
+        config: &mut ConvFwdConfig<T>,
     ) {
         let n = input.shape()[0];
         let c_in = input.shape()[1];
@@ -31,12 +31,12 @@ impl ConvFwd for Cpu {
         let c_out = weight.shape()[0];
         let kh = weight.shape()[2];
         let kw = weight.shape()[3];
-        let pad_h = 0;
-        let pad_w = 0;
-        let stride_h = 1;
-        let stride_w = 1;
-        let dilation_h = 1;
-        let dilation_w = 1;
+        let pad_h = config.inner.padding[0];
+        let pad_w = config.inner.padding[1];
+        let stride_h = config.inner.stride[0];
+        let stride_w = config.inner.stride[1];
+        let dilation_h = config.inner.dilation[0];
+        let dilation_w = config.inner.dilation[1];
 
         conv_fwd(
             input.as_slice_unchecked(),
@@ -64,7 +64,7 @@ impl ConvBkwdData for Cpu {
         dy: Matrix<Ref<&T>, DimDyn, Self>,
         filter: Matrix<Ref<&T>, DimDyn, Self>,
         dx: Matrix<Ref<&mut T>, DimDyn, Self>,
-        _: &mut ConvBkwdDataConfig<T>,
+        config: &mut ConvBkwdDataConfig<T>,
     ) {
         let n = dx.shape()[0];
         let c_in = dx.shape()[1];
@@ -73,12 +73,12 @@ impl ConvBkwdData for Cpu {
         let c_out = filter.shape()[0];
         let kh = filter.shape()[2];
         let kw = filter.shape()[3];
-        let pad_h = 0;
-        let pad_w = 0;
-        let stride_h = 1;
-        let stride_w = 1;
-        let dilation_h = 1;
-        let dilation_w = 1;
+        let pad_h = config.inner.padding[0];
+        let pad_w = config.inner.padding[1];
+        let stride_h = config.inner.stride[0];
+        let stride_w = config.inner.stride[1];
+        let dilation_h = config.inner.dilation[0];
+        let dilation_w = config.inner.dilation[1];
 
         conv_bkwd_data::conv_bkwd_data(
             dy.as_slice_unchecked(),
@@ -106,7 +106,7 @@ impl ConvBkwdFilter for Cpu {
         dy: Matrix<Ref<&T>, DimDyn, Self>,
         x: Matrix<Ref<&T>, DimDyn, Self>,
         dw: Matrix<Ref<&mut T>, DimDyn, Self>,
-        _: &mut ConvBkwdFilterConfig<T>,
+        config: &mut ConvBkwdFilterConfig<T>,
     ) {
         let n = x.shape()[0];
         let c_in = x.shape()[1];
@@ -115,12 +115,12 @@ impl ConvBkwdFilter for Cpu {
         let c_out = dy.shape()[1];
         let kh = dw.shape()[2];
         let kw = dw.shape()[3];
-        let pad_h = 0;
-        let pad_w = 0;
-        let stride_h = 1;
-        let stride_w = 1;
-        let dilation_h = 1;
-        let dilation_w = 1;
+        let pad_h = config.inner.padding[0];
+        let pad_w = config.inner.padding[1];
+        let stride_h = config.inner.stride[0];
+        let stride_w = config.inner.stride[1];
+        let dilation_h = config.inner.dilation[0];
+        let dilation_w = config.inner.dilation[1];
 
         conv_bkwd_filter::conv_bkwd_filter(
             dy.as_slice_unchecked(),
