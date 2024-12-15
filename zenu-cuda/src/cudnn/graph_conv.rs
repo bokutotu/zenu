@@ -7,6 +7,8 @@ use zenu_cudnn_frontend_wrapper_sys::{
 
 use zenu_cudnn_sys::cudnnHandle_t;
 
+use crate::ZENU_CUDA_STATE;
+
 use super::graph_utils::{get_cudnn_frontend_type, shape_stride_to_cudnn, success_or_panic};
 
 #[expect(clippy::cast_possible_wrap)]
@@ -312,7 +314,7 @@ impl<T> Default for ConvBuilder<T> {
     }
 }
 
-impl ConvBuilder<f32> {
+impl<T> ConvBuilder<T> {
     #[must_use]
     pub fn x_shape(mut self, x_shape: Vec<usize>) -> Self {
         self.x_shape = x_shape;
@@ -380,7 +382,8 @@ impl ConvBuilder<f32> {
     }
 
     #[must_use]
-    pub fn build_forward(self, handle: *mut cudnnHandle_t) -> ConvForwardGraph {
+    pub fn build_forward(self) -> ConvForwardGraph {
+        let mut handle: cudnnHandle_t = ZENU_CUDA_STATE.lock().unwrap().get_cudnn_handle();
         self.is_build_able();
         let graph = ConvForwardGraph::new::<f32>(
             &self.x_shape,
@@ -393,12 +396,13 @@ impl ConvBuilder<f32> {
             &self.stride,
             &self.dilation,
         );
-        graph.check_graph(handle);
+        graph.check_graph(std::ptr::from_mut(&mut handle).cast());
         graph
     }
 
     #[must_use]
-    pub fn build_bkwd_data(self, handle: *mut cudnnHandle_t) -> ConvBkwdDataGraph {
+    pub fn build_bkwd_data(self) -> ConvBkwdDataGraph {
+        let mut handle: cudnnHandle_t = ZENU_CUDA_STATE.lock().unwrap().get_cudnn_handle();
         self.is_build_able();
         let graph = ConvBkwdDataGraph::new::<f32>(
             &self.x_shape,
@@ -411,12 +415,13 @@ impl ConvBuilder<f32> {
             &self.stride,
             &self.dilation,
         );
-        graph.check_graph(handle);
+        graph.check_graph(std::ptr::from_mut(&mut handle).cast());
         graph
     }
 
     #[must_use]
-    pub fn build_bkwd_filter(self, handle: *mut cudnnHandle_t) -> ConvBkwdFilterGraph {
+    pub fn build_bkwd_filter(self) -> ConvBkwdFilterGraph {
+        let mut handle: cudnnHandle_t = ZENU_CUDA_STATE.lock().unwrap().get_cudnn_handle();
         self.is_build_able();
         let graph = ConvBkwdFilterGraph::new::<f32>(
             &self.x_shape,
@@ -429,7 +434,7 @@ impl ConvBuilder<f32> {
             &self.stride,
             &self.dilation,
         );
-        graph.check_graph(handle);
+        graph.check_graph(std::ptr::from_mut(&mut handle).cast());
         graph
     }
 }
@@ -608,10 +613,9 @@ mod graph_conv_test {
             ZenuCudaMemCopyKind::HostToDevice,
         )
         .unwrap();
+
         let output_gpu = cuda_malloc::<f32>(output.len()).unwrap();
-        let context = ZENU_CUDA_STATE.lock().unwrap();
-        let mut cudnn_handle: cudnnHandle_t = context.get_cudnn_handle();
-        let conv_config = ConvBuilder::default()
+        let conv_config = ConvBuilder::<f32>::default()
             .x_shape(vec![1, 2, 4, 4])
             .x_stride(vec![2 * 4 * 4, 4 * 4, 4, 1])
             .w_shape(vec![3, 2, 3, 3])
@@ -621,9 +625,13 @@ mod graph_conv_test {
             .pad(vec![1, 1])
             .stride(vec![1, 1])
             .dilation(vec![1, 1])
-            .build_forward(std::ptr::from_mut(&mut cudnn_handle));
+            .build_forward();
         let workspace_size = conv_config.get_workspace_size();
         let workspace_gpu = cuda_malloc::<u8>(workspace_size).unwrap();
+
+        let context = ZENU_CUDA_STATE.lock().unwrap();
+        let mut cudnn_handle: cudnnHandle_t = context.get_cudnn_handle();
+
         conv_config.execute(
             input_gpu,
             filter_gpu,

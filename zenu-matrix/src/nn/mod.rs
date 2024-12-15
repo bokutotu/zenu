@@ -2,6 +2,7 @@ use crate::device::DeviceBase;
 
 pub mod batch_norm;
 pub mod col2im;
+pub mod conv;
 pub mod conv2d;
 pub mod dropout;
 pub mod im2col;
