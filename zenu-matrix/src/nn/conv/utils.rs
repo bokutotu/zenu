@@ -49,7 +49,7 @@ pub(super) fn conv_output_shape(
 
 /// 1次元方向の出力サイズを計算するためのヘルパー関数
 /// `out_size` = ((`in_size` + 2*`pad` - `dil`*(`kernel_size`-1) - 1) / `stride`) + 1
-fn conv_dim_out_size(
+pub(super) fn conv_dim_out_size(
     in_size: usize,
     kernel_size: usize,
     pad: usize,

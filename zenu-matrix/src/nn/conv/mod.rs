@@ -6,4 +6,5 @@ pub mod interface;
 #[cfg(feature = "nvidia")]
 mod nvidia;
 
+mod cpu;
 mod utils;

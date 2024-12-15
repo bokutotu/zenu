@@ -169,14 +169,8 @@ impl ConvBkwdDataGraph {
         size.try_into().unwrap()
     }
 
-    pub fn execute<T>(
-        &self,
-        dy: *mut T,
-        filter: *mut T,
-        dx: *mut T,
-        workspace: *mut T,
-        handle: *mut cudnnHandle_t,
-    ) {
+    pub fn execute<T>(&self, dy: *mut T, filter: *mut T, dx: *mut T, workspace: *mut T) {
+        let handle: cudnnHandle_t = ZENU_CUDA_STATE.lock().unwrap().get_cudnn_handle();
         let mut buf = ConvBkwdDataBuffers {
             DY: dy.cast(),
             filter: filter.cast(),
@@ -253,14 +247,8 @@ impl ConvBkwdFilterGraph {
         size.try_into().unwrap()
     }
 
-    pub fn execute<T>(
-        &self,
-        dy: *mut T,
-        x: *mut T,
-        dw: *mut T,
-        workspace: *mut T,
-        handle: *mut cudnnHandle_t,
-    ) {
+    pub fn execute<T>(&self, dy: *mut T, x: *mut T, dw: *mut T, workspace: *mut T) {
+        let handle: cudnnHandle_t = ZENU_CUDA_STATE.lock().unwrap().get_cudnn_handle();
         let mut buf = ConvBkwdFilterBuffers {
             X: x.cast(),
             DY: dy.cast(),
