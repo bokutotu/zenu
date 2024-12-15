@@ -94,9 +94,9 @@ pub trait Device:
     + PowOws
     + BatchNormalization
     + Conv2d
-    // + ConvFwd
-    // + ConvBkwdData
-    // + ConvBkwdFilter
+    + ConvFwd
+    + ConvBkwdData
+    + ConvBkwdFilter
     + Sized
     + Pool2dImpl
     + Dropout
