@@ -425,10 +425,7 @@ impl<T> ConvBuilder<T> {
 #[expect(clippy::too_many_lines, clippy::unreadable_literal)]
 mod graph_conv_test {
     use super::*;
-    use crate::{
-        runtime::{cuda_copy, cuda_malloc, ZenuCudaMemCopyKind},
-        ZENU_CUDA_STATE,
-    };
+    use crate::runtime::{cuda_copy, cuda_malloc, ZenuCudaMemCopyKind};
 
     #[expect(clippy::similar_names)]
     #[test]
@@ -607,7 +604,6 @@ mod graph_conv_test {
         let workspace_size = conv_config.get_workspace_size();
         let workspace_gpu = cuda_malloc::<u8>(workspace_size).unwrap();
 
-        let context = ZENU_CUDA_STATE.lock().unwrap();
         conv_config.execute(input_gpu, filter_gpu, output_gpu, workspace_gpu.cast());
         let mut output_cpu = vec![0.0; output.len()];
         cuda_copy(

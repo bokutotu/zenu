@@ -28,6 +28,7 @@ pub struct ConvConfigInner<T> {
 }
 
 pub struct ConvFwdConfig<T> {
+    #[allow(dead_code)]
     pub(super) inner: ConvConfigInner<T>,
     #[cfg(feature = "nvidia")]
     pub(super) nvidia_desc: ConvForwardGraph,
@@ -43,6 +44,7 @@ pub trait ConvFwd: DeviceBase {
 }
 
 pub struct ConvBkwdDataConfig<T> {
+    #[allow(dead_code)]
     pub(super) inner: ConvConfigInner<T>,
     #[cfg(feature = "nvidia")]
     pub(super) nvidia_desc: ConvBkwdDataGraph,
@@ -58,6 +60,7 @@ pub trait ConvBkwdData: DeviceBase {
 }
 
 pub struct ConvBkwdFilterConfig<T> {
+    #[allow(dead_code)]
     pub(super) inner: ConvConfigInner<T>,
     #[cfg(feature = "nvidia")]
     pub(super) nvidia_desc: ConvBkwdFilterGraph,
@@ -227,6 +230,7 @@ impl<T> From<ConvConfigInner<T>> for ConvBkwdFilterConfig<T> {
 }
 
 impl<T> ConvConfigInner<T> {
+    #[allow(dead_code)]
     pub(super) fn new(
         input_shape: ShapeStride<DimDyn>,
         filter_shape: ShapeStride<DimDyn>,
@@ -258,14 +262,17 @@ impl<T> ConvConfigInner<T> {
         }
     }
 
+    #[allow(dead_code)]
     pub(super) fn is_batch_size_changed(&self, batch_size: usize) -> bool {
         self.input_shape.shape()[0] != batch_size
     }
 
+    #[allow(dead_code)]
     fn valid_filter_size(&self, filter_shape_stride: ShapeStride<DimDyn>) -> bool {
         self.filter_shape == filter_shape_stride
     }
 
+    #[allow(dead_code)]
     fn valid_pad_stride_dilations(
         &self,
         stride: &[usize],
@@ -275,6 +282,7 @@ impl<T> ConvConfigInner<T> {
         self.stride == stride && self.padding == padding && self.dilation == dilation
     }
 
+    #[allow(dead_code)]
     fn valid_input_shape(&self, input_shape_stride: ShapeStride<DimDyn>) -> bool {
         // batch size以外は一致していることを確認する
         let self_input_shape = self.input_shape.shape();
@@ -282,6 +290,7 @@ impl<T> ConvConfigInner<T> {
         self_input_shape[1..] == other_input_shape[1..]
     }
 
+    #[allow(dead_code)]
     fn valid_output_shape(&self, filter_shape_stride: ShapeStride<DimDyn>) -> bool {
         // batch size以外は一致していることを確認する
         let self_output_shape = self.output_shape.shape();
@@ -289,6 +298,7 @@ impl<T> ConvConfigInner<T> {
         self_output_shape[1..] == other_output_shape[1..]
     }
 
+    #[allow(dead_code)]
     pub(super) fn valid(&self, other: &Self) -> bool {
         self.valid_input_shape(other.input_shape)
             && self.valid_filter_size(other.filter_shape)
