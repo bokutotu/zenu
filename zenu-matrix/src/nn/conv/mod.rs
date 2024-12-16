@@ -16,7 +16,7 @@ mod utils;
 mod nvidia;
 
 #[expect(clippy::module_name_repetitions)]
-pub fn conv_fwd<T: Num, D: Device>(
+pub fn conv_fwd<T: Num + std::fmt::Debug, D: Device>(
     input: Matrix<Ref<&T>, DimDyn, D>,
     weight: Matrix<Ref<&T>, DimDyn, D>,
     output: Matrix<Ref<&mut T>, DimDyn, D>,

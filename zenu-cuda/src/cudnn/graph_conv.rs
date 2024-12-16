@@ -53,7 +53,6 @@ impl ConvForwardGraph {
         dilation: &[usize],
     ) -> Self {
         let mut x_shape_stride = shape_stride_to_cudnn(x_shape, x_stride);
-        println!("w_shape {w_shape:?}, w_stride {w_stride:?}",);
         let mut w_shape_stride = shape_stride_to_cudnn(w_shape, w_stride);
         let mut y_shape_stride = shape_stride_to_cudnn(y_shape, y_stride);
         let mut conv_info = get_conv_info(pad, stride, dilation);
@@ -216,8 +215,8 @@ impl ConvBkwdFilterGraph {
             zenu_cudnn_frontend_wrapper_sys::create_conv_backward_filter_descriptor(
                 std::ptr::from_mut(&mut inner),
                 data_type,
-                std::ptr::from_mut(&mut y_shape_stride),
                 std::ptr::from_mut(&mut x_shape_stride),
+                std::ptr::from_mut(&mut y_shape_stride),
                 std::ptr::from_mut(&mut w_shape_stride),
                 std::ptr::from_mut(&mut conv_info),
             )
