@@ -130,8 +130,7 @@ impl<T> ConvFwdConfig<T> {
         dilation: Vec<usize>,
     ) -> Self {
         let inner = build_conv_inner(input_shape, filter_shape, stride, padding, dilation);
-        let res: Self = inner.into();
-        res
+        inner.into()
     }
 }
 
@@ -171,6 +170,7 @@ fn conv_builder<T>(inner: &ConvConfigInner<T>) -> ConvBuilder<T> {
         .x_shape(inner.input_shape.shape().slice().to_vec())
         .x_stride(inner.input_shape.stride().slice().to_vec())
         .w_shape(inner.filter_shape.shape().slice().to_vec())
+        .w_stride(inner.filter_shape.stride().slice().to_vec())
         .y_shape(inner.output_shape.shape().slice().to_vec())
         .y_stride(inner.output_shape.stride().slice().to_vec())
         .stride(inner.stride.clone())

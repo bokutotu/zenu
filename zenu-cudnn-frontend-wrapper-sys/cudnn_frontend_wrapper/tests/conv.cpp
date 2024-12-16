@@ -10,7 +10,7 @@ TEST_CASE("conv2d", "[conv2d]") {
     cudnnHandle_t handle;
     cudnnCreate(&handle);
 
-    int64_t n = 16, c = 128, h = 64, w = 64, k = 256, r = 1, s = 1;
+    int64_t n = 1, c = 3, h = 32, w = 32, k = 16, r = 3, s = 3;
 
     CudnnTensorShapeStride shape = {
         .num_dims = 4,
@@ -28,7 +28,7 @@ TEST_CASE("conv2d", "[conv2d]") {
         .strides = {k * h * w, h * w, w, 1}
     };
     ConvInfo info = {
-        .padding = {0, 0},
+        .padding = {1, 1},
         .stride = {1, 1},
         .dilation = {1, 1},
         .num_dims = 2
