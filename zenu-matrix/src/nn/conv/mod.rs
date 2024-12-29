@@ -1,8 +1,9 @@
 use interface::{ConvBkwdDataConfig, ConvBkwdFilterConfig, ConvFwdConfig};
+use shape_check::shape_check_2d;
 
 use crate::{
     device::Device,
-    dim::DimDyn,
+    dim::{DimDyn, DimTrait},
     matrix::{Matrix, Ref},
     num::Num,
 };
@@ -10,38 +11,72 @@ use crate::{
 pub mod interface;
 
 mod cpu;
+mod shape_check;
 mod utils;
 
 #[cfg(feature = "nvidia")]
 mod nvidia;
 
-#[expect(clippy::module_name_repetitions)]
+#[expect(clippy::module_name_repetitions, clippy::missing_panics_doc)]
 pub fn conv_fwd<T: Num + std::fmt::Debug, D: Device>(
     input: Matrix<Ref<&T>, DimDyn, D>,
     weight: Matrix<Ref<&T>, DimDyn, D>,
     output: Matrix<Ref<&mut T>, DimDyn, D>,
     config: &mut ConvFwdConfig<T>,
 ) {
+    if input.shape().len() == 4 {
+        shape_check_2d(
+            input.shape(),
+            weight.shape(),
+            output.shape(),
+            &config.inner.stride,
+            &config.inner.padding,
+            &config.inner.dilation,
+        );
+    }
+    assert_eq!(weight.shape_stride(), config.inner.filter_shape);
     D::conv_fwd(input, weight, output, config);
 }
 
-#[expect(clippy::module_name_repetitions)]
+#[expect(clippy::module_name_repetitions, clippy::missing_panics_doc)]
 pub fn conv_bkwd_data<T: Num, D: Device>(
     dy: Matrix<Ref<&T>, DimDyn, D>,
     filter: Matrix<Ref<&T>, DimDyn, D>,
     dx: Matrix<Ref<&mut T>, DimDyn, D>,
     config: &mut ConvBkwdDataConfig<T>,
 ) {
+    if dx.shape().len() == 4 {
+        shape_check_2d(
+            dx.shape(),
+            filter.shape(),
+            dy.shape(),
+            &config.inner.stride,
+            &config.inner.padding,
+            &config.inner.dilation,
+        );
+    }
+    assert_eq!(filter.shape_stride(), config.inner.filter_shape);
     D::conv_bkwd_data(dy, filter, dx, config);
 }
 
-#[expect(clippy::module_name_repetitions)]
+#[expect(clippy::module_name_repetitions, clippy::missing_panics_doc)]
 pub fn conv_bkwd_weight<T: Num, D: Device>(
     dy: Matrix<Ref<&T>, DimDyn, D>,
     x: Matrix<Ref<&T>, DimDyn, D>,
     dw: Matrix<Ref<&mut T>, DimDyn, D>,
     config: &mut ConvBkwdFilterConfig<T>,
 ) {
+    if dy.shape().len() == 4 {
+        shape_check_2d(
+            x.shape(),
+            dw.shape(),
+            dy.shape(),
+            &config.inner.stride,
+            &config.inner.padding,
+            &config.inner.dilation,
+        );
+    }
+    assert_eq!(x.shape_stride(), config.inner.input_shape);
     D::conv_bkwd_filter(dy, x, dw, config);
 }
 

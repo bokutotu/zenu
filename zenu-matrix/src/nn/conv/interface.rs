@@ -132,6 +132,21 @@ impl<T> ConvFwdConfig<T> {
         let inner = build_conv_inner(input_shape, filter_shape, stride, padding, dilation);
         inner.into()
     }
+
+    #[must_use]
+    pub fn output_shape(&self) -> ShapeStride<DimDyn> {
+        self.inner.output_shape
+    }
+
+    #[must_use]
+    pub fn input_shape(&self) -> ShapeStride<DimDyn> {
+        self.inner.input_shape
+    }
+
+    #[must_use]
+    pub fn filter_shape(&self) -> ShapeStride<DimDyn> {
+        self.inner.filter_shape
+    }
 }
 
 impl<T> ConvBkwdDataConfig<T> {
