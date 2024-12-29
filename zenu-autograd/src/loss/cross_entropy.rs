@@ -23,7 +23,7 @@ pub fn cross_entropy<T: Num, D: Device>(
 }
 
 #[cfg(test)]
-mod cross_entropy {
+mod cross_entropy_test {
     use zenu_matrix::{
         device::Device,
         dim::DimDyn,
