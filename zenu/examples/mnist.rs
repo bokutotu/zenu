@@ -4,10 +4,9 @@ use zenu::{
         no_train, set_train, Variable,
     },
     dataset::{train_val_split, DataLoader, Dataset},
-    dataset_loader::mnist_dataset,
     layer::{layers::linear::Linear, Module},
     matrix::{
-        device::{cpu::Cpu, Device},
+        device::{cpu::Cpu, nvidia::Nvidia, Device},
         num::Num,
     },
     optimizer::{sgd::SGD, Optimizer},
@@ -52,6 +51,24 @@ struct MnistDataset {
     data: Vec<(Vec<u8>, u8)>,
 }
 
+impl MnistDataset {
+    fn new(input: &str, ans: &str) -> Self {
+        // inputはcsvで一行目はヘッダーなので無視
+        let input = std::fs::read_to_string(input).unwrap();
+        let ans = std::fs::read_to_string(ans).unwrap();
+        let mut data = Vec::new();
+        for (_, (input, ans)) in input.lines().skip(1).zip(ans.lines()).enumerate() {
+            let input = input
+                .split(',')
+                .map(|x| x.parse::<u8>().unwrap())
+                .collect::<Vec<_>>();
+            let ans = ans.parse::<u8>().unwrap();
+            data.push((input, ans));
+        }
+        Self { data }
+    }
+}
+
 impl Dataset<f32> for MnistDataset {
     type Item = (Vec<u8>, u8);
 
@@ -79,21 +96,29 @@ impl Dataset<f32> for MnistDataset {
 
 #[expect(clippy::cast_precision_loss)]
 fn main() {
-    let model = SimpleModel::<f32, Cpu>::new();
-    let (train, test) = mnist_dataset().unwrap();
-    let (train, val) = train_val_split(&train, 0.8, true);
+    let model = SimpleModel::<f32, Nvidia>::new();
+    let train = MnistDataset::new(
+        "./zenu/examples/mnist_train_flattened.txt",
+        "./zenu/examples/mnist_train_labels.txt",
+    );
+    let test = MnistDataset::new(
+        "./zenu/examples/mnist_test_flattened.txt",
+        "./zenu/examples/mnist_test_labels.txt",
+    );
+    let (train, val) = train_val_split(&train.data, 0.8, true);
 
-    let test_dataloader = DataLoader::new(MnistDataset { data: test }, 1);
+    let test_dataloader = DataLoader::new(test, 1);
 
-    let optimizer = SGD::<f32, Cpu>::new(0.01);
+    let optimizer = SGD::<f32, Nvidia>::new(0.001);
 
     for num_epoch in 0..20 {
+        println!("Epoch: {num_epoch}");
         set_train();
         let mut train_dataloader = DataLoader::new(
             MnistDataset {
                 data: train.clone(),
             },
-            32,
+            1024,
         );
 
         train_dataloader.shuffle();
@@ -104,12 +129,13 @@ fn main() {
         for batch in train_dataloader {
             let input = batch[0].clone();
             let target = batch[1].clone();
+            let input = input.to();
             let pred = model.call(input);
+            let target = target.to();
             let loss = cross_entropy(pred, target);
-            let loss_asum = loss.get_data().asum();
-            // update_parameters(&loss, &optimizer);
             loss.backward();
             optimizer.update(&model);
+            let loss_asum = loss.get_data().asum();
             loss.clear_grad();
             train_loss += loss_asum;
             num_iter += 1;
@@ -124,8 +150,8 @@ fn main() {
         for batch in val_loader {
             let input = batch[0].clone();
             let target = batch[1].clone();
-            let pred = model.call(input);
-            let loss = cross_entropy(pred.clone(), target.clone());
+            let pred = model.call(input.to());
+            let loss = cross_entropy(pred.clone(), target.clone().to());
             val_loss += loss.get_data().asum();
             num_iter += 1;
         }
@@ -140,8 +166,8 @@ fn main() {
     for batch in test_dataloader {
         let input = batch[0].clone();
         let target = batch[1].clone();
-        let pred = model.call(input);
-        let loss = cross_entropy(pred, target);
+        let pred = model.call(input.to());
+        let loss = cross_entropy(pred, target.to());
         test_loss += loss.get_data().asum();
         num_iter += 1;
     }

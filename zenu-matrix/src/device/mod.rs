@@ -53,6 +53,9 @@ pub trait DeviceBase: Copy + Default + Serialize + 'static {
     fn zeros<T: Num>(len: usize) -> *mut T;
     #[expect(clippy::missing_errors_doc)]
     fn alloc(num_bytes: usize) -> Result<*mut u8, MemPoolError> {
+        if num_bytes == 0 {
+            return Ok(std::ptr::null_mut());
+        }
         let state = &ZENU_MATRIX_STATE;
         if state.is_mem_pool_used {
             Self::mem_pool_alloc(num_bytes)

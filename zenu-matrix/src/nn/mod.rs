@@ -24,7 +24,6 @@ impl<D: DeviceBase> NNCache<D> {
     #[allow(unused)]
     pub(crate) fn new(bytes: usize) -> Self {
         let ptr = D::alloc(bytes).unwrap();
-        assert!(!ptr.is_null(), "Failed to allocate memory");
         Self {
             bytes,
             ptr,
