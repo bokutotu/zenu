@@ -1,19 +1,33 @@
 use std::any::TypeId;
 
 use zenu_cudnn_sys::{
-    cudnnCreateFilterDescriptor, cudnnCreateTensorDescriptor, cudnnDataType_t,
-    cudnnFilterDescriptor_t, cudnnSetFilter4dDescriptor, cudnnSetTensor4dDescriptor,
+    cudnnCreate, cudnnCreateFilterDescriptor, cudnnCreateTensorDescriptor, cudnnDataType_t,
+    cudnnFilterDescriptor_t, cudnnHandle_t, cudnnSetFilter4dDescriptor, cudnnSetTensor4dDescriptor,
     cudnnSetTensorNdDescriptor, cudnnStatus_t, cudnnTensorDescriptor_t, cudnnTensorFormat_t,
 };
 
 use self::error::ZenuCudnnError;
 
 pub mod batch_norm;
-pub mod conv;
 pub mod dropout;
 pub mod error;
+pub mod graph_batchnorm;
+pub mod graph_conv;
 pub mod pooling;
 pub mod rnn;
+
+mod graph_utils;
+
+pub fn zenu_create_cudnn_handle() -> Result<cudnnHandle_t, ZenuCudnnError> {
+    let mut handle: cudnnHandle_t = std::ptr::null_mut();
+    unsafe {
+        let status = cudnnCreate(std::ptr::from_mut(&mut handle));
+        if status != cudnnStatus_t::CUDNN_STATUS_SUCCESS {
+            return Err(ZenuCudnnError::from(status));
+        }
+    }
+    Ok(handle)
+}
 
 pub(crate) fn zenu_cudnn_data_type<T: 'static>() -> cudnnDataType_t {
     if TypeId::of::<T>() == TypeId::of::<f32>() {

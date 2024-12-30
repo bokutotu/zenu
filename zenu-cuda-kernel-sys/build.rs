@@ -8,6 +8,7 @@ fn main() {
         "kernel/memory_access.cu",
         "kernel/array_array.cu",
         "kernel/activations.cu",
+        "kernel/conv2d_bkwd_data.cu",
     ];
 
     for cuda_file in &cuda_files {

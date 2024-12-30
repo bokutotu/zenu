@@ -17,3 +17,4 @@ zenu-cuda-runtime-sys = { path = "../zenu-cuda-runtime-sys", version="0.1.0" }
 zenu-cudnn-sys = { path = "../zenu-cudnn-sys", version="0.1.0" }
 zenu-cublas-sys = { path = "../zenu-cublas-sys", version="0.1.0" }
 zenu-cuda-kernel-sys = { path = "../zenu-cuda-kernel-sys", version="0.1.0" }
+zenu-cudnn-frontend-wrapper-sys = { path = "../zenu-cudnn-frontend-wrapper-sys", version="0.1.0" }

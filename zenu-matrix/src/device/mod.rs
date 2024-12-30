@@ -2,7 +2,12 @@ use serde::Serialize;
 
 use crate::{
     memory_pool::MemPoolError,
-    nn::{batch_norm::BatchNormalization, conv2d::Conv2d, dropout::Dropout, pool2d::Pool2dImpl},
+    nn::{
+        batch_norm::BatchNormalization,
+        conv::interface::{ConvBias, ConvBkwdData, ConvBkwdFilter, ConvFwd},
+        dropout::Dropout,
+        pool2d::Pool2dImpl,
+    },
     num::Num,
     operation::{
         asum::Asum,
@@ -47,6 +52,9 @@ pub trait DeviceBase: Copy + Default + Serialize + 'static {
     fn zeros<T: Num>(len: usize) -> *mut T;
     #[expect(clippy::missing_errors_doc)]
     fn alloc(num_bytes: usize) -> Result<*mut u8, MemPoolError> {
+        if num_bytes == 0 {
+            return Ok(std::ptr::null_mut());
+        }
         let state = &ZENU_MATRIX_STATE;
         if state.is_mem_pool_used {
             Self::mem_pool_alloc(num_bytes)
@@ -87,7 +95,10 @@ pub trait Device:
     + Gemm
     + PowOws
     + BatchNormalization
-    + Conv2d
+    + ConvFwd
+    + ConvBkwdData
+    + ConvBkwdFilter
+    + ConvBias
     + Sized
     + Pool2dImpl
     + Dropout

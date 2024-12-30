@@ -195,8 +195,24 @@ mod save_and_load_paramters {
 
     fn hoge<D: Device>() {
         let model = ConvNet::<f32, D> {
-            conv1: zenu_layer::layers::conv2d::Conv2d::new(1, 20, (5, 5), (1, 1), (0, 0), true),
-            conv2: zenu_layer::layers::conv2d::Conv2d::new(20, 50, (5, 5), (1, 1), (0, 0), true),
+            conv1: zenu_layer::layers::conv2d::Conv2d::new(
+                1,
+                20,
+                (5, 5),
+                (1, 1),
+                (0, 0),
+                (1, 1),
+                true,
+            ),
+            conv2: zenu_layer::layers::conv2d::Conv2d::new(
+                20,
+                50,
+                (5, 5),
+                (1, 1),
+                (0, 0),
+                (1, 1),
+                true,
+            ),
             fc1: Linear::new(4 * 4 * 50, 500, true),
             fc2: Linear::new(500, 10, true),
         };
@@ -205,8 +221,24 @@ mod save_and_load_paramters {
         save_model(&model, save_path).unwrap();
 
         let model = ConvNet::<f32, D> {
-            conv1: zenu_layer::layers::conv2d::Conv2d::new(1, 20, (5, 5), (1, 1), (0, 0), true),
-            conv2: zenu_layer::layers::conv2d::Conv2d::new(20, 50, (5, 5), (1, 1), (0, 0), true),
+            conv1: zenu_layer::layers::conv2d::Conv2d::new(
+                1,
+                20,
+                (5, 5),
+                (1, 1),
+                (0, 0),
+                (1, 1),
+                true,
+            ),
+            conv2: zenu_layer::layers::conv2d::Conv2d::new(
+                20,
+                50,
+                (5, 5),
+                (1, 1),
+                (0, 0),
+                (1, 1),
+                true,
+            ),
             fc1: Linear::new(4 * 4 * 50, 500, true),
             fc2: Linear::new(500, 10, true),
         };

@@ -11,6 +11,7 @@ extern "C" {
 #include "element_wise.h"
 #include "memory_access.h"
 #include "activations.h"
+#include "conv2d_bkwd_data.h"
 
 #ifdef __cplusplus
 }

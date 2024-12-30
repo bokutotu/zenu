@@ -28,6 +28,9 @@ pub fn cuda_malloc<T>(size: usize) -> Result<*mut T, ZenuCudaRuntimeError> {
 }
 
 pub fn cuda_malloc_bytes(bytes: usize) -> Result<*mut u8, ZenuCudaRuntimeError> {
+    if bytes == 0 {
+        return Ok(std::ptr::null_mut());
+    }
     let mut ptr = std::ptr::null_mut();
     let stream = ZENU_CUDA_STATE.lock().unwrap().get_stream();
     let err = unsafe {

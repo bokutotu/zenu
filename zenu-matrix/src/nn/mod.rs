@@ -2,7 +2,7 @@ use crate::device::DeviceBase;
 
 pub mod batch_norm;
 pub mod col2im;
-pub mod conv2d;
+pub mod conv;
 pub mod dropout;
 pub mod im2col;
 pub mod pool2d;
@@ -10,6 +10,8 @@ pub mod pool2d;
 #[cfg(feature = "nvidia")]
 pub mod rnn;
 
+/// matrixでメモリ管理されないblobをrustのメモリ管理に任せるための構造体
+/// `cudnn`などで、計算する際にworkspaceを確保することが求められる。
 #[expect(unused)]
 pub(crate) struct NNCache<D: DeviceBase> {
     pub(crate) bytes: usize,
@@ -18,9 +20,9 @@ pub(crate) struct NNCache<D: DeviceBase> {
 }
 
 impl<D: DeviceBase> NNCache<D> {
+    #[allow(unused)]
     pub(crate) fn new(bytes: usize) -> Self {
         let ptr = D::alloc(bytes).unwrap();
-        assert!(!ptr.is_null(), "Failed to allocate memory");
         Self {
             bytes,
             ptr,

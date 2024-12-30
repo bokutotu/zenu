@@ -129,7 +129,7 @@ impl<D: DeviceBase> MemPool<D> {
     }
 
     pub fn try_free(&self, ptr: *mut u8) -> Result<(), MemPoolError> {
-        let mut small_pool = self.small.lock().unwrap();
+        let mut small_pool = self.small.try_lock().unwrap();
         let mut large_pool = self.large.lock().unwrap();
         let mut dynamic_pool = self.dynamic.lock().unwrap();
         if small_pool.contains(ptr) {

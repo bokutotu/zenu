@@ -53,7 +53,7 @@ pub fn softmax<T: Num, D: Device>(input: Variable<T, D>, axis: usize) -> Variabl
 }
 
 #[cfg(test)]
-mod softmax {
+mod softmax_test {
     use zenu_matrix::{
         device::Device,
         dim::DimDyn,
