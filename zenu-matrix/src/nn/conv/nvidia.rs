@@ -1,14 +1,16 @@
+use zenu_cuda::kernel::{conv_bias_add, conv_bias_bkwd};
+
 use crate::{
     device::nvidia::Nvidia,
-    dim::DimDyn,
+    dim::{DimDyn, DimTrait},
     matrix::{Matrix, Ref},
     nn::NNCache,
     num::Num,
 };
 
 use super::interface::{
-    ConvBkwdData, ConvBkwdDataConfig, ConvBkwdFilter, ConvBkwdFilterConfig, ConvConfigInner,
-    ConvFwd, ConvFwdConfig,
+    ConvBias, ConvBkwdData, ConvBkwdDataConfig, ConvBkwdFilter, ConvBkwdFilterConfig,
+    ConvConfigInner, ConvFwd, ConvFwdConfig,
 };
 
 impl ConvFwd for Nvidia {
@@ -116,5 +118,38 @@ impl ConvBkwdFilter for Nvidia {
             dw.as_mut_ptr(),
             workspace.ptr.cast(),
         );
+    }
+}
+
+impl ConvBias for Nvidia {
+    fn conv2d_bias<T: Num>(
+        input: Matrix<Ref<&T>, DimDyn, Self>,
+        bias: Matrix<Ref<&T>, DimDyn, Self>,
+        output: Matrix<Ref<&mut T>, DimDyn, Self>,
+    ) {
+        let input_channel_stride = input.stride()[1];
+        let input_num_elm = input.shape().num_elm();
+        let bias_num_elm = bias.shape().num_elm();
+
+        conv_bias_add(
+            input.as_ptr().cast(),
+            bias.as_ptr().cast(),
+            input_num_elm,
+            input_channel_stride,
+            bias_num_elm,
+            output.as_mut_ptr(),
+        );
+    }
+
+    fn conv2d_bias_bkwd<T: Num>(
+        d_output: Matrix<Ref<&T>, DimDyn, Self>,
+        bias: Matrix<Ref<&mut T>, DimDyn, Self>,
+    ) {
+        let n = d_output.shape()[0];
+        let c = d_output.shape()[1];
+        let h = d_output.shape()[2];
+        let w = d_output.shape()[3];
+
+        conv_bias_bkwd(d_output.as_ptr(), bias.as_mut_ptr(), n, c, h, w);
     }
 }

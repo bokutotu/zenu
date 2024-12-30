@@ -11,11 +11,13 @@ use super::interface::{
     ConvBkwdData, ConvBkwdDataConfig, ConvBkwdFilter, ConvBkwdFilterConfig, ConvFwd, ConvFwdConfig,
 };
 
+pub(super) mod bias;
 pub(super) mod col2im;
+pub(super) mod im2col;
+
 mod conv_bkwd_data;
 mod conv_bkwd_filter;
 mod conv_fwd;
-pub(super) mod im2col;
 
 impl ConvFwd for Cpu {
     fn conv_fwd<T: Num>(

@@ -80,6 +80,32 @@ pub fn conv_bkwd_weight<T: Num, D: Device>(
     D::conv_bkwd_filter(dy, x, dw, config);
 }
 
+#[expect(clippy::module_name_repetitions, clippy::missing_panics_doc)]
+pub fn conv2d_bias_add<T: Num, D: Device>(
+    input: Matrix<Ref<&T>, DimDyn, D>,
+    bias: Matrix<Ref<&T>, DimDyn, D>,
+    output: Matrix<Ref<&mut T>, DimDyn, D>,
+) {
+    assert_eq!(input.shape(), output.shape());
+    assert_eq!(bias.shape()[0], 1);
+    assert_eq!(bias.shape()[1], output.shape()[1]);
+    assert_eq!(bias.shape()[2], 1);
+    assert_eq!(bias.shape()[3], 1);
+    D::conv2d_bias(input, bias, output);
+}
+
+#[expect(clippy::module_name_repetitions, clippy::missing_panics_doc)]
+pub fn conv2d_bias_bkwd<T: Num, D: Device>(
+    d_output: Matrix<Ref<&T>, DimDyn, D>,
+    d_bias: Matrix<Ref<&mut T>, DimDyn, D>,
+) {
+    assert_eq!(d_output.shape()[0], 1);
+    assert_eq!(d_output.shape()[1], d_bias.shape()[1]);
+    assert_eq!(d_output.shape()[2], 1);
+    assert_eq!(d_output.shape()[3], 1);
+    D::conv2d_bias_bkwd(d_output, d_bias);
+}
+
 #[cfg(test)]
 mod conv_test {
     use std::collections::HashMap;

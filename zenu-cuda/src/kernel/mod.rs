@@ -36,9 +36,9 @@ use zenu_cuda_kernel_sys::{
     array_sinh_assign_float, array_sinh_double, array_sinh_float, array_sqrt_assign_double,
     array_sqrt_assign_float, array_sqrt_double, array_sqrt_float, array_tan_assign_double,
     array_tan_assign_float, array_tan_double, array_tan_float, array_tanh_assign_double,
-    array_tanh_assign_float, array_tanh_double, array_tanh_float, conv_bias_add_double,
-    conv_bias_add_float, memory_access_double, memory_access_float, memory_set_double,
-    memory_set_float,
+    array_tanh_assign_float, array_tanh_double, array_tanh_float, conv2d_bias_bkwd_double,
+    conv2d_bias_bkwd_float, conv_bias_add_double, conv_bias_add_float, memory_access_double,
+    memory_access_float, memory_set_double, memory_set_float,
 };
 
 pub mod activation;
@@ -585,6 +585,29 @@ pub fn array_max_idx<T: 'static>(input: *const T, size: usize, stride: usize) ->
         panic!("Not supported type");
     }
     usize::try_from(ans).unwrap()
+}
+
+pub fn conv_bias_bkwd<T: 'static>(
+    d_output: *const T,
+    d_bias: *mut T,
+    n: usize,
+    c: usize,
+    h: usize,
+    w: usize,
+) {
+    let n = ::libc::c_int::try_from(n).unwrap();
+    let c = ::libc::c_int::try_from(c).unwrap();
+    let h = ::libc::c_int::try_from(h).unwrap();
+    let w = ::libc::c_int::try_from(w).unwrap();
+    if TypeId::of::<T>() == TypeId::of::<f32>() {
+        let d_output = d_output.cast::<f32>().cast_mut();
+        let d_bias = unsafe { d_bias.cast::<f32>().as_mut().unwrap() };
+        unsafe { conv2d_bias_bkwd_float(d_output, d_bias, n, c, h, w) };
+    } else if TypeId::of::<T>() == TypeId::of::<f64>() {
+        let d_output = d_output.cast::<f64>().cast_mut();
+        let d_bias = unsafe { d_bias.cast::<f64>().as_mut().unwrap() };
+        unsafe { conv2d_bias_bkwd_double(d_output, d_bias, n, c, h, w) };
+    }
 }
 
 pub fn conv_bias_add<T: 'static>(

@@ -4,7 +4,7 @@ use crate::{
     memory_pool::MemPoolError,
     nn::{
         batch_norm::BatchNormalization,
-        conv::interface::{ConvBkwdData, ConvBkwdFilter, ConvFwd},
+        conv::interface::{ConvBias, ConvBkwdData, ConvBkwdFilter, ConvFwd},
         conv2d::Conv2d,
         dropout::Dropout,
         pool2d::Pool2dImpl,
@@ -100,6 +100,7 @@ pub trait Device:
     + ConvFwd
     + ConvBkwdData
     + ConvBkwdFilter
+    + ConvBias
     + Sized
     + Pool2dImpl
     + Dropout

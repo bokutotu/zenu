@@ -43,6 +43,19 @@ pub trait ConvFwd: DeviceBase {
     );
 }
 
+pub trait ConvBias: DeviceBase {
+    fn conv2d_bias<T: Num>(
+        input: Matrix<Ref<&T>, DimDyn, Self>,
+        bias: Matrix<Ref<&T>, DimDyn, Self>,
+        output: Matrix<Ref<&mut T>, DimDyn, Self>,
+    );
+
+    fn conv2d_bias_bkwd<T: Num>(
+        d_output: Matrix<Ref<&T>, DimDyn, Self>,
+        bias: Matrix<Ref<&mut T>, DimDyn, Self>,
+    );
+}
+
 pub struct ConvBkwdDataConfig<T> {
     #[allow(dead_code)]
     pub(super) inner: ConvConfigInner<T>,
