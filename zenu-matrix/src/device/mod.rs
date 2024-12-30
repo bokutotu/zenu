@@ -5,7 +5,6 @@ use crate::{
     nn::{
         batch_norm::BatchNormalization,
         conv::interface::{ConvBias, ConvBkwdData, ConvBkwdFilter, ConvFwd},
-        conv2d::Conv2d,
         dropout::Dropout,
         pool2d::Pool2dImpl,
     },
@@ -96,7 +95,6 @@ pub trait Device:
     + Gemm
     + PowOws
     + BatchNormalization
-    + Conv2d
     + ConvFwd
     + ConvBkwdData
     + ConvBkwdFilter

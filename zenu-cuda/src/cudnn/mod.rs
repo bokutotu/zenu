@@ -9,7 +9,6 @@ use zenu_cudnn_sys::{
 use self::error::ZenuCudnnError;
 
 pub mod batch_norm;
-pub mod conv;
 pub mod dropout;
 pub mod error;
 pub mod graph_batchnorm;
