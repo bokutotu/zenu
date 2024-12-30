@@ -34,7 +34,7 @@ impl<T: Num, D: Device> ConvNet<T, D> {
     {
         Self {
             conv_block: ConvBlock {
-                conv2d: Conv2d::new(3, 3, (1, 1), (1, 1), (1, 1), true),
+                conv2d: Conv2d::new(3, 3, (1, 1), (1, 1), (1, 1), (1, 1), true),
                 max_pool: MaxPool2d::new((2, 2), (2, 2), (0, 0)),
             },
             linear_block: LinearBlock {

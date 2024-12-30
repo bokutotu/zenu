@@ -99,10 +99,10 @@ pub fn conv2d_bias_bkwd<T: Num, D: Device>(
     d_output: Matrix<Ref<&T>, DimDyn, D>,
     d_bias: Matrix<Ref<&mut T>, DimDyn, D>,
 ) {
-    assert_eq!(d_output.shape()[0], 1);
+    assert_eq!(d_bias.shape()[0], 1);
     assert_eq!(d_output.shape()[1], d_bias.shape()[1]);
-    assert_eq!(d_output.shape()[2], 1);
-    assert_eq!(d_output.shape()[3], 1);
+    assert_eq!(d_bias.shape()[2], 1);
+    assert_eq!(d_bias.shape()[3], 1);
     D::conv2d_bias_bkwd(d_output, d_bias);
 }
 

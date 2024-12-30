@@ -15,6 +15,8 @@
  * ブロックごとに partial sum を集約、atomicAdd で dbias[c] に加算。
  ******************************************************************************/
 
+#include "conv2d_bkwd_data.h"
+
 #include <cstdio>
 #include <cstdlib>
 #include <cuda_runtime.h>
