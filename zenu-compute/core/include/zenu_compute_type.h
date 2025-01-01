@@ -13,6 +13,7 @@ typedef enum {
     Success,
     OutOfMemory,
     InvalidArgument,
+    DeviceError,
 } ZenuStatus;
 
 #ifdef __cplusplus

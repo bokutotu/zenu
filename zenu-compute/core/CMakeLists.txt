@@ -2,7 +2,6 @@ cmake_minimum_required(VERSION 3.18)
 project(ZenuCore VERSION 1.8.0)
 
 # --- CMAKE_MODULE_PATH の設定 (自作モジュールを置いている場所) ---
-# "cmake/Modules" の部分は実際のディレクトリに合わせてください
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules")
 
 option(CUDNN_FRONTEND_SKIP_JSON_LIB "Defines whether FE should not include nlohmann/json.hpp." OFF)
@@ -16,75 +15,88 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # ---- CUDA を使う場合は言語を有効化しておく ----
 enable_language(CUDA)
 
-# ---- スレッドライブラリの検出 ----
 find_package(Threads REQUIRED)
-
-# ---- CUDA Toolkit の検出 ----
 find_package(CUDAToolkit REQUIRED)
-
-# ---- cuDNNをCUDNN::cudnnターゲットとして読み込み ----
 include(${PROJECT_SOURCE_DIR}/cudnn-frontend/cmake/cuDNN.cmake)
-
-# ---- OpenBLAS 探索 (REQUIRED にすると見つからなかった場合ビルドエラー) ----
 find_package(OpenBLAS REQUIRED)
-
-# OpenMPを検索
 find_package(OpenMP REQUIRED)
 
-# ---- ソースファイル ----
+include(CheckCXXCompilerFlag)
+
+# AVX 判定
+check_cxx_compiler_flag("-mavx" HAS_AVX)
+if(HAS_AVX)
+    message(STATUS "AVX is supported")
+    add_compile_options(-mavx)
+endif()
+
+# AVX2 判定
+check_cxx_compiler_flag("-mavx2" HAS_AVX2)
+if(HAS_AVX2)
+    message(STATUS "AVX2 is supported")
+    add_compile_options(-mavx2)
+endif()
+
+# AVX512 判定
+check_cxx_compiler_flag("-mavx512f" HAS_AVX512)
+if(HAS_AVX512)
+    message(STATUS "AVX512 is supported")
+    add_compile_options(-mavx512f)
+endif()
+
+# FMA 判定
+check_cxx_compiler_flag("-mfma" HAS_FMA)
+if(HAS_FMA)
+    message(STATUS "FMA is supported")
+    add_compile_options(-mfma)
+endif()
+
+# NEON 判定 (ARM)
+check_cxx_compiler_flag("-mfpu=neon" HAS_NEON)
+if(HAS_NEON)
+    message(STATUS "NEON is supported")
+    add_compile_options(-mfpu=neon)
+endif()
+
 set(SRC_FILES
     ${PROJECT_SOURCE_DIR}/src/cpu/memory.cpp
-    ${PROJECT_SOURCE_DIR}/src/cpu/random_normal.cpp
-    ${PROJECT_SOURCE_DIR}/src/cpu/random_uniform.cpp
+    ${PROJECT_SOURCE_DIR}/src/cpu/random.cpp
     ${PROJECT_SOURCE_DIR}/src/nvidia/memory.cpp
     ${PROJECT_SOURCE_DIR}/src/nvidia/random.cpp
 )
 
-# ---- 静的ライブラリ作成 ----
 add_library(ZenuCore STATIC ${SRC_FILES})
 
-# OpenMPが見つかった場合、コンパイルオプションとリンクオプションを追加
 if(OpenMP_CXX_FOUND)
     target_compile_options(ZenuCore PUBLIC ${OpenMP_CXX_FLAGS})
     target_link_libraries(ZenuCore PUBLIC ${OpenMP_CXX_LIBRARIES})
 endif()
 
-# ---- コンパイル定義フラグをターゲットへ設定 ----
 target_compile_definitions(ZenuCore PUBLIC
     $<$<BOOL:${CUDNN_FRONTEND_SKIP_JSON_LIB}>:CUDNN_FRONTEND_SKIP_JSON_LIB>
 )
 
-# ---- インクルードディレクトリ設定 ----
 target_include_directories(ZenuCore PUBLIC
     ${PROJECT_SOURCE_DIR}/include
     ${PROJECT_SOURCE_DIR}/src
     ${PROJECT_SOURCE_DIR}/cudnn-frontend/include
     ${CUDAToolkit_INCLUDE_DIRS}
-
-    # OpenBLAS が見つかった場合にインクルードディレクトリを追加
     ${OpenBLAS_INCLUDE_DIRS}
 )
 
-# ---- デバッグビルドでは-gオプションを付与 ----
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     target_compile_options(ZenuCore PUBLIC -g)
 endif()
 
-# ---- リンクライブラリ設定 ----
 target_link_libraries(ZenuCore
     PRIVATE
     Threads::Threads
-    CUDA::cudart         # または CUDAToolkit::cudart 等、環境に合わせる
-    CUDA::cuda_driver    # または CUDAToolkit::nvrtc 等
+    CUDA::cudart
+    CUDA::cuda_driver
     CUDNN::cudnn
-
-    # OpenBLAS が見つかった場合にライブラリを追加
     ${OpenBLAS_LIBRARIES}
 )
 
-###
-# ccls 用の設定ファイル出力（例）
-###
 file(WRITE ${CMAKE_CURRENT_SOURCE_DIR}/../../.ccls "
 %compile_commands.json=build/compile_commands.json
 %clang
@@ -92,13 +104,9 @@ file(WRITE ${CMAKE_CURRENT_SOURCE_DIR}/../../.ccls "
 -I${CMAKE_CURRENT_SOURCE_DIR}/cudnn-frontend/include
 ")
 
-###
-# テストターゲットの追加 (option で ON/OFF)
-###
 if(CUDNN_FRONTEND_BUILD_TESTS)
     enable_testing()
 
-    # --- Google Test を FetchContent で取得する ---
     include(FetchContent)
     FetchContent_Declare(
       googletest
@@ -109,17 +117,13 @@ if(CUDNN_FRONTEND_BUILD_TESTS)
     set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)
     FetchContent_MakeAvailable(googletest)
 
-    # --- 新しいテスト (test_random) ---
     add_executable(test_random
         ${PROJECT_SOURCE_DIR}/tests/test_random.cpp
     )
     target_link_libraries(test_random PRIVATE ZenuCore gtest_main ${OpenMP_CXX_LIBRARIES})
-
     add_test(NAME test_random COMMAND test_random)
 endif()
 
-
-# ---- インストール設定 ----
 install(TARGETS ZenuCore
     ARCHIVE DESTINATION lib
     LIBRARY DESTINATION lib
