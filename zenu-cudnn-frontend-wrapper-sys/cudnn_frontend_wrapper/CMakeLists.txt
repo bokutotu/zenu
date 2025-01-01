@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.18)
 project(cudnn_frontend_wrapper VERSION 1.8.0)
 
+list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}")
+
 option(CUDNN_FRONTEND_SKIP_JSON_LIB "Defines whether FE should not include nlohmann/json.hpp." OFF)
 option(CUDNN_FRONTEND_BUILD_TESTS "Build tests for cudnn_frontend_wrapper" OFF)
 

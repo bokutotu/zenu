@@ -18,7 +18,7 @@ members = [
     "zenu-optimizer", 
     "zenu-macros", 
     "zenu-cudnn-frontend-wrapper-sys"
-]
+, "zenu-compute"]
 
 [workspace.lints.clippy]
 pedantic = "warn"
