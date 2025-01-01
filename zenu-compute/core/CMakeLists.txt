@@ -28,13 +28,26 @@ include(${PROJECT_SOURCE_DIR}/cudnn-frontend/cmake/cuDNN.cmake)
 # ---- OpenBLAS 探索 (REQUIRED にすると見つからなかった場合ビルドエラー) ----
 find_package(OpenBLAS REQUIRED)
 
+# OpenMPを検索
+find_package(OpenMP REQUIRED)
+
 # ---- ソースファイル ----
 set(SRC_FILES
-    ${PROJECT_SOURCE_DIR}/src/conv.cpp
+    ${PROJECT_SOURCE_DIR}/src/cpu/memory.cpp
+    ${PROJECT_SOURCE_DIR}/src/cpu/random_normal.cpp
+    ${PROJECT_SOURCE_DIR}/src/cpu/random_uniform.cpp
+    ${PROJECT_SOURCE_DIR}/src/nvidia/memory.cpp
+    ${PROJECT_SOURCE_DIR}/src/nvidia/random.cpp
 )
 
 # ---- 静的ライブラリ作成 ----
 add_library(ZenuCore STATIC ${SRC_FILES})
+
+# OpenMPが見つかった場合、コンパイルオプションとリンクオプションを追加
+if(OpenMP_CXX_FOUND)
+    target_compile_options(ZenuCore PUBLIC ${OpenMP_CXX_FLAGS})
+    target_link_libraries(ZenuCore PUBLIC ${OpenMP_CXX_LIBRARIES})
+endif()
 
 # ---- コンパイル定義フラグをターゲットへ設定 ----
 target_compile_definitions(ZenuCore PUBLIC
@@ -85,15 +98,26 @@ file(WRITE ${CMAKE_CURRENT_SOURCE_DIR}/../../.ccls "
 if(CUDNN_FRONTEND_BUILD_TESTS)
     enable_testing()
 
-    # 例: conv のテストを行う実行ファイル
-    add_executable(test_ZenuCore
-        ${PROJECT_SOURCE_DIR}/test/test_conv.cpp
+    # --- Google Test を FetchContent で取得する ---
+    include(FetchContent)
+    FetchContent_Declare(
+      googletest
+      URL https://github.com/google/googletest/archive/refs/tags/release-1.12.1.zip
     )
-    target_link_libraries(test_ZenuCore PRIVATE ZenuCore)
-    
-    # ctest で実行できるようテスト登録
-    add_test(NAME TestCudnnFrontendWrapper COMMAND test_ZenuCore)
+    set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+    set(BUILD_GMOCK OFF CACHE BOOL "" FORCE)
+    set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)
+    FetchContent_MakeAvailable(googletest)
+
+    # --- 新しいテスト (test_random) ---
+    add_executable(test_random
+        ${PROJECT_SOURCE_DIR}/tests/test_random.cpp
+    )
+    target_link_libraries(test_random PRIVATE ZenuCore gtest_main ${OpenMP_CXX_LIBRARIES})
+
+    add_test(NAME test_random COMMAND test_random)
 endif()
+
 
 # ---- インストール設定 ----
 install(TARGETS ZenuCore
