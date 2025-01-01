@@ -23,46 +23,13 @@ find_package(OpenMP REQUIRED)
 
 include(CheckCXXCompilerFlag)
 
-# AVX 判定
-check_cxx_compiler_flag("-mavx" HAS_AVX)
-if(HAS_AVX)
-    message(STATUS "AVX is supported")
-    add_compile_options(-mavx)
-endif()
-
-# AVX2 判定
-check_cxx_compiler_flag("-mavx2" HAS_AVX2)
-if(HAS_AVX2)
-    message(STATUS "AVX2 is supported")
-    add_compile_options(-mavx2)
-endif()
-
-# AVX512 判定
-check_cxx_compiler_flag("-mavx512f" HAS_AVX512)
-if(HAS_AVX512)
-    message(STATUS "AVX512 is supported")
-    add_compile_options(-mavx512f)
-endif()
-
-# FMA 判定
-check_cxx_compiler_flag("-mfma" HAS_FMA)
-if(HAS_FMA)
-    message(STATUS "FMA is supported")
-    add_compile_options(-mfma)
-endif()
-
-# NEON 判定 (ARM)
-check_cxx_compiler_flag("-mfpu=neon" HAS_NEON)
-if(HAS_NEON)
-    message(STATUS "NEON is supported")
-    add_compile_options(-mfpu=neon)
-endif()
+add_compile_options(-march=native)
 
 set(SRC_FILES
     ${PROJECT_SOURCE_DIR}/src/cpu/memory.cpp
     ${PROJECT_SOURCE_DIR}/src/cpu/random.cpp
     ${PROJECT_SOURCE_DIR}/src/nvidia/memory.cpp
-    ${PROJECT_SOURCE_DIR}/src/nvidia/random.cpp
+    ${PROJECT_SOURCE_DIR}/src/nvidia/random.cu
 )
 
 add_library(ZenuCore STATIC ${SRC_FILES})
@@ -93,6 +60,7 @@ target_link_libraries(ZenuCore
     Threads::Threads
     CUDA::cudart
     CUDA::cuda_driver
+    CUDA::curand
     CUDNN::cudnn
     ${OpenBLAS_LIBRARIES}
 )
