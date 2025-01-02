@@ -28,6 +28,7 @@ add_compile_options(-march=native)
 set(SRC_FILES
     ${PROJECT_SOURCE_DIR}/src/cpu/memory.cpp
     ${PROJECT_SOURCE_DIR}/src/cpu/random.cpp
+    ${PROJECT_SOURCE_DIR}/src/cpu/arithmetic.cpp
     ${PROJECT_SOURCE_DIR}/src/nvidia/memory.cpp
     ${PROJECT_SOURCE_DIR}/src/nvidia/random.cu
 )
