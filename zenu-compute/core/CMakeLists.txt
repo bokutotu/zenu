@@ -86,11 +86,23 @@ if(CUDNN_FRONTEND_BUILD_TESTS)
     set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)
     FetchContent_MakeAvailable(googletest)
 
-    add_executable(test_random
+    # 例) テストバイナリ "test_all" に、以下2つのソースをまとめる
+    #     (もちろん3つ以上でもOK)
+    add_executable(test_all
         ${PROJECT_SOURCE_DIR}/tests/test_random.cpp
+        ${PROJECT_SOURCE_DIR}/tests/test_arithmetic.cpp
     )
-    target_link_libraries(test_random PRIVATE ZenuCore gtest_main ${OpenMP_CXX_LIBRARIES})
-    add_test(NAME test_random COMMAND test_random)
+
+    # テストバイナリにリンクするライブラリを指定
+    target_link_libraries(test_all 
+        PRIVATE 
+        ZenuCore 
+        gtest_main 
+        ${OpenMP_CXX_LIBRARIES}
+    )
+
+    # CTest で実行するテストとして登録
+    add_test(NAME test_all COMMAND test_all)
 endif()
 
 install(TARGETS ZenuCore
