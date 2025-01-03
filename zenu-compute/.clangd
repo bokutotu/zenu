@@ -1,0 +1,8 @@
+If:
+  PathMatch: '.*\\.h$'
+CompileFlags:
+  Remove: [-xc, -xc-header, -xc++-header]
+  Add: 
+    - -xc++          # ここで .h ファイルを C++ とみなす
+    - -std=c++17     # 必要であれば C++ のバージョン指定
+

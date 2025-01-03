@@ -1,7 +1,6 @@
 #include <gtest/gtest.h>
 #include <cmath>
 #include <vector>
-#include <algorithm>
 
 // CUDA runtime ヘッダ (GPUテストで cudaMalloc/cudaMemcpy 等を使う)
 #include <cuda_runtime.h>

@@ -23,7 +23,7 @@ ZenuStatus zenu_compute_normal_distribution_cpu(
     float mean,
     float stddev,
     ZenuDataType data_type,
-    unsigned long long seed = 1234
+    unsigned long long seed
 );
 
 /**
@@ -43,7 +43,7 @@ ZenuStatus zenu_compute_uniform_distribution_cpu(
     float low,
     float high,
     ZenuDataType data_type,
-    unsigned long long seed = 1234
+    unsigned long long seed
 );
 
 /**
@@ -66,7 +66,7 @@ ZenuStatus zenu_compute_normal_distribution_nvidia(
     float stddev,
     ZenuDataType data_type,
     int device_id,
-    unsigned long long seed = 1234
+    unsigned long long seed
 );
 
 /**
@@ -89,7 +89,7 @@ ZenuStatus zenu_compute_uniform_distribution_nvidia(
     float high,
     ZenuDataType data_type,
     int device_id,
-    unsigned long long seed = 1234
+    unsigned long long seed
 );
 
 #ifdef __cplusplus
