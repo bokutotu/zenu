@@ -1,0 +1,29 @@
+---
+If:
+  PathMatch: '.*\.(cpp|h|cuh)$'
+CompileFlags:
+  Remove: [-xc, -xc-header]
+  Add:
+    - -xc++
+    - -std=c++17
+    - -I/home/bokutotu/zenu/zenu-compute/core/include
+    - -I/home/bokutotu/zenu/zenu-compute/core/src
+    - -I/home/bokutotu/zenu/zenu-compute/core/cudnn-frontend/include
+    - -I/usr/local/cuda/include
+    - -I/home/bokutotu/zenu/zenu-compute/core/b/_deps/googletest-src/googletest/include
+
+---
+If:
+  PathMatch: '.*\.cu$'
+CompileFlags:
+  Remove: [-xc, -xc-header]
+  Add:
+    - -x
+    - cuda
+    - -std=c++17
+    - -I/home/bokutotu/zenu/zenu-compute/core/include
+    - -I/home/bokutotu/zenu/zenu-compute/core/src
+    - -I/home/bokutotu/zenu/zenu-compute/core/cudnn-frontend/include
+    - -I/usr/local/cuda/include
+    - -I/home/bokutotu/zenu/zenu-compute/core/b/_deps/googletest-src/googletest/include
+

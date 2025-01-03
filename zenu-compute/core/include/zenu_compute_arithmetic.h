@@ -28,6 +28,7 @@ extern "C" {
  */
 
 #include <stddef.h> // for size_t
+#include "zenu_compute.h"
 
 /*======================================================================
  *                        ADD  (mat + ...)
@@ -90,11 +91,11 @@ ZenuStatus zenu_compute_add_mat_mat_nvidia(
  * @param[in,out] dst         CPU memory pointer to output buffer
  * @param[in]     src         CPU memory pointer to input matrix
  * @param[in]     stride_dst  Stride for dst
- * @param[in]     stride_src   Stride for src
+ * @param[in]     stride_src  Stride for src
  * @param[in]     scalar_ptr  Pointer to scalar (float* or double*)
  * @param[in]     n           Number of elements
  * @param[in]     data_type   f32 or f64
- * @return ZenuStatus          Success or error code
+ * @return ZenuStatus         Success or error code
  */
 ZenuStatus zenu_compute_add_mat_scalar_ptr_cpu(
     void*       dst,
@@ -113,11 +114,11 @@ ZenuStatus zenu_compute_add_mat_scalar_ptr_cpu(
  * @param[in,out] dst         GPU memory pointer to output buffer
  * @param[in]     src         GPU memory pointer to input matrix
  * @param[in]     stride_dst  Stride for dst
- * @param[in]     stride_src   Stride for src
+ * @param[in]     stride_src  Stride for src
  * @param[in]     scalar_ptr  Pointer to scalar (float* or double*)
  * @param[in]     n           Number of elements
  * @param[in]     data_type   f32 or f64
- * @return ZenuStatus          Success or error code
+ * @return ZenuStatus         Success or error code
  */
 ZenuStatus zenu_compute_add_mat_scalar_ptr_nvidia(
     void*       dst,
@@ -136,10 +137,10 @@ ZenuStatus zenu_compute_add_mat_scalar_ptr_nvidia(
  * @param[in,out] dst         CPU memory pointer to output buffer
  * @param[in]     src         CPU memory pointer to input matrix
  * @param[in]     stride_dst  Stride for dst
- * @param[in]     stride_src   Stride for src
+ * @param[in]     stride_src  Stride for src
  * @param[in]     n           Number of elements
  * @param[in]     data_type   f32 or f64
- * @return ZenuStatus          Success or error code
+ * @return ZenuStatus         Success or error code
  */
 ZenuStatus zenu_compute_add_mat_mat_assign_cpu(
     void*       dst,
@@ -156,10 +157,10 @@ ZenuStatus zenu_compute_add_mat_mat_assign_cpu(
  * @param[in,out] dst         GPU memory pointer to output buffer
  * @param[in]     src         GPU memory pointer to input matrix
  * @param[in]     stride_dst  Stride for dst
- * @param[in]     stride_src   Stride for src
+ * @param[in]     stride_src  Stride for src
  * @param[in]     n           Number of elements
  * @param[in]     data_type   f32 or f64
- * @return ZenuStatus          Success or error code
+ * @return ZenuStatus         Success or error code
  */
 ZenuStatus zenu_compute_add_mat_mat_assign_nvidia(
     void*       dst,
@@ -174,20 +175,18 @@ ZenuStatus zenu_compute_add_mat_mat_assign_nvidia(
 /**
  * @brief Add scalar_ptr assignment (CPU): dst[i] += *(scalar_ptr)
  *
+ * This function does not use any source matrix pointer, and does not use any stride for a source matrix.
+ *
  * @param[in,out] dst         CPU memory pointer to output buffer
- * @param[in]     src         CPU memory pointer to input matrix
  * @param[in]     stride_dst  Stride for dst
- * @param[in]     stride_src   Stride for src
  * @param[in]     scalar_ptr  Pointer to scalar (float* or double*)
  * @param[in]     n           Number of elements
  * @param[in]     data_type   f32 or f64
- * @return ZenuStatus          Success or error code
+ * @return ZenuStatus         Success or error code
  */
 ZenuStatus zenu_compute_add_mat_scalar_ptr_assign_cpu(
     void*       dst,
-    const void* src,
     int         stride_dst,
-    int         stride_src,
     const void* scalar_ptr,
     size_t      n,
     ZenuDataType data_type
@@ -196,20 +195,18 @@ ZenuStatus zenu_compute_add_mat_scalar_ptr_assign_cpu(
 /**
  * @brief Add scalar_ptr assignment ("nvidia"): dst[i] += *(scalar_ptr)
  *
+ * This function does not use any source matrix pointer, and does not use any stride for a source matrix.
+ *
  * @param[in,out] dst         GPU memory pointer to output buffer
- * @param[in]     src         GPU memory pointer to input matrix
  * @param[in]     stride_dst  Stride for dst
- * @param[in]     stride_src   Stride for src
  * @param[in]     scalar_ptr  Pointer to scalar (float* or double*)
  * @param[in]     n           Number of elements
  * @param[in]     data_type   f32 or f64
- * @return ZenuStatus          Success or error code
+ * @return ZenuStatus         Success or error code
  */
 ZenuStatus zenu_compute_add_mat_scalar_ptr_assign_nvidia(
     void*       dst,
-    const void* src,
     int         stride_dst,
-    int         stride_src,
     const void* scalar_ptr,
     size_t      n,
     ZenuDataType data_type
@@ -276,11 +273,11 @@ ZenuStatus zenu_compute_sub_mat_mat_nvidia(
  * @param[in,out] dst         CPU memory pointer to output buffer
  * @param[in]     src         CPU memory pointer to input matrix
  * @param[in]     stride_dst  Stride for dst
- * @param[in]     stride_src   Stride for src
+ * @param[in]     stride_src  Stride for src
  * @param[in]     scalar_ptr  Pointer to scalar (float* or double*)
  * @param[in]     n           Number of elements
  * @param[in]     data_type   f32 or f64
- * @return ZenuStatus          Success or error code
+ * @return ZenuStatus         Success or error code
  */
 ZenuStatus zenu_compute_sub_mat_scalar_ptr_cpu(
     void*       dst,
@@ -299,11 +296,11 @@ ZenuStatus zenu_compute_sub_mat_scalar_ptr_cpu(
  * @param[in,out] dst         GPU memory pointer to output buffer
  * @param[in]     src         GPU memory pointer to input matrix
  * @param[in]     stride_dst  Stride for dst
- * @param[in]     stride_src   Stride for src
+ * @param[in]     stride_src  Stride for src
  * @param[in]     scalar_ptr  Pointer to scalar (float* or double*)
  * @param[in]     n           Number of elements
  * @param[in]     data_type   f32 or f64
- * @return ZenuStatus          Success or error code
+ * @return ZenuStatus         Success or error code
  */
 ZenuStatus zenu_compute_sub_mat_scalar_ptr_nvidia(
     void*       dst,
@@ -322,10 +319,10 @@ ZenuStatus zenu_compute_sub_mat_scalar_ptr_nvidia(
  * @param[in,out] dst         CPU memory pointer to output buffer
  * @param[in]     src         CPU memory pointer to input matrix
  * @param[in]     stride_dst  Stride for dst
- * @param[in]     stride_src   Stride for src
+ * @param[in]     stride_src  Stride for src
  * @param[in]     n           Number of elements
  * @param[in]     data_type   f32 or f64
- * @return ZenuStatus          Success or error code
+ * @return ZenuStatus         Success or error code
  */
 ZenuStatus zenu_compute_sub_mat_mat_assign_cpu(
     void*       dst,
@@ -342,10 +339,10 @@ ZenuStatus zenu_compute_sub_mat_mat_assign_cpu(
  * @param[in,out] dst         GPU memory pointer to output buffer
  * @param[in]     src         GPU memory pointer to input matrix
  * @param[in]     stride_dst  Stride for dst
- * @param[in]     stride_src   Stride for src
+ * @param[in]     stride_src  Stride for src
  * @param[in]     n           Number of elements
  * @param[in]     data_type   f32 or f64
- * @return ZenuStatus          Success or error code
+ * @return ZenuStatus         Success or error code
  */
 ZenuStatus zenu_compute_sub_mat_mat_assign_nvidia(
     void*       dst,
@@ -356,25 +353,22 @@ ZenuStatus zenu_compute_sub_mat_mat_assign_nvidia(
     ZenuDataType data_type
 );
 
-
 /*------------------ 6) SUB: mat_scalar_ptr_assign (dst -= *(scalar_ptr)) ------------------*/
 /**
  * @brief Subtract scalar_ptr assignment (CPU): dst[i] -= *(scalar_ptr)
  *
+ * This function does not use any source matrix pointer, and does not use any stride for a source matrix.
+ *
  * @param[in,out] dst         CPU memory pointer to output buffer
- * @param[in]     src         CPU memory pointer to input matrix
  * @param[in]     stride_dst  Stride for dst
- * @param[in]     stride_src   Stride for src
  * @param[in]     scalar_ptr  Pointer to scalar (float* or double*)
  * @param[in]     n           Number of elements
  * @param[in]     data_type   f32 or f64
- * @return ZenuStatus          Success or error code
+ * @return ZenuStatus         Success or error code
  */
 ZenuStatus zenu_compute_sub_mat_scalar_ptr_assign_cpu(
     void*       dst,
-    const void* src,
     int         stride_dst,
-    int         stride_src,
     const void* scalar_ptr,
     size_t      n,
     ZenuDataType data_type
@@ -383,20 +377,18 @@ ZenuStatus zenu_compute_sub_mat_scalar_ptr_assign_cpu(
 /**
  * @brief Subtract scalar_ptr assignment ("nvidia"): dst[i] -= *(scalar_ptr)
  *
+ * This function does not use any source matrix pointer, and does not use any stride for a source matrix.
+ *
  * @param[in,out] dst         GPU memory pointer to output buffer
- * @param[in]     src         GPU memory pointer to input matrix
  * @param[in]     stride_dst  Stride for dst
- * @param[in]     stride_src   Stride for src
  * @param[in]     scalar_ptr  Pointer to scalar (float* or double*)
  * @param[in]     n           Number of elements
  * @param[in]     data_type   f32 or f64
- * @return ZenuStatus          Success or error code
+ * @return ZenuStatus         Success or error code
  */
 ZenuStatus zenu_compute_sub_mat_scalar_ptr_assign_nvidia(
     void*       dst,
-    const void* src,
     int         stride_dst,
-    int         stride_src,
     const void* scalar_ptr,
     size_t      n,
     ZenuDataType data_type
@@ -463,11 +455,11 @@ ZenuStatus zenu_compute_mul_mat_mat_nvidia(
  * @param[in,out] dst         CPU memory pointer to output buffer
  * @param[in]     src         CPU memory pointer to input matrix
  * @param[in]     stride_dst  Stride for dst
- * @param[in]     stride_src   Stride for src
+ * @param[in]     stride_src  Stride for src
  * @param[in]     scalar_ptr  Pointer to scalar (float* or double*)
  * @param[in]     n           Number of elements
  * @param[in]     data_type   f32 or f64
- * @return ZenuStatus          Success or error code
+ * @return ZenuStatus         Success or error code
  */
 ZenuStatus zenu_compute_mul_mat_scalar_ptr_cpu(
     void*       dst,
@@ -486,11 +478,11 @@ ZenuStatus zenu_compute_mul_mat_scalar_ptr_cpu(
  * @param[in,out] dst         GPU memory pointer to output buffer
  * @param[in]     src         GPU memory pointer to input matrix
  * @param[in]     stride_dst  Stride for dst
- * @param[in]     stride_src   Stride for src
+ * @param[in]     stride_src  Stride for src
  * @param[in]     scalar_ptr  Pointer to scalar (float* or double*)
  * @param[in]     n           Number of elements
  * @param[in]     data_type   f32 or f64
- * @return ZenuStatus          Success or error code
+ * @return ZenuStatus         Success or error code
  */
 ZenuStatus zenu_compute_mul_mat_scalar_ptr_nvidia(
     void*       dst,
@@ -509,10 +501,10 @@ ZenuStatus zenu_compute_mul_mat_scalar_ptr_nvidia(
  * @param[in,out] dst         CPU memory pointer to output buffer
  * @param[in]     src         CPU memory pointer to input matrix
  * @param[in]     stride_dst  Stride for dst
- * @param[in]     stride_src   Stride for src
+ * @param[in]     stride_src  Stride for src
  * @param[in]     n           Number of elements
  * @param[in]     data_type   f32 or f64
- * @return ZenuStatus          Success or error code
+ * @return ZenuStatus         Success or error code
  */
 ZenuStatus zenu_compute_mul_mat_mat_assign_cpu(
     void*       dst,
@@ -529,10 +521,10 @@ ZenuStatus zenu_compute_mul_mat_mat_assign_cpu(
  * @param[in,out] dst         GPU memory pointer to output buffer
  * @param[in]     src         GPU memory pointer to input matrix
  * @param[in]     stride_dst  Stride for dst
- * @param[in]     stride_src   Stride for src
+ * @param[in]     stride_src  Stride for src
  * @param[in]     n           Number of elements
  * @param[in]     data_type   f32 or f64
- * @return ZenuStatus          Success or error code
+ * @return ZenuStatus         Success or error code
  */
 ZenuStatus zenu_compute_mul_mat_mat_assign_nvidia(
     void*       dst,
@@ -547,20 +539,18 @@ ZenuStatus zenu_compute_mul_mat_mat_assign_nvidia(
 /**
  * @brief Multiply scalar_ptr assignment (CPU): dst[i] *= *(scalar_ptr)
  *
+ * This function does not use any source matrix pointer, and does not use any stride for a source matrix.
+ *
  * @param[in,out] dst         CPU memory pointer to output buffer
- * @param[in]     src         CPU memory pointer to input matrix
  * @param[in]     stride_dst  Stride for dst
- * @param[in]     stride_src   Stride for src
  * @param[in]     scalar_ptr  Pointer to scalar (float* or double*)
  * @param[in]     n           Number of elements
  * @param[in]     data_type   f32 or f64
- * @return ZenuStatus          Success or error code
+ * @return ZenuStatus         Success or error code
  */
 ZenuStatus zenu_compute_mul_mat_scalar_ptr_assign_cpu(
     void*       dst,
-    const void* src,
     int         stride_dst,
-    int         stride_src,
     const void* scalar_ptr,
     size_t      n,
     ZenuDataType data_type
@@ -569,20 +559,18 @@ ZenuStatus zenu_compute_mul_mat_scalar_ptr_assign_cpu(
 /**
  * @brief Multiply scalar_ptr assignment ("nvidia"): dst[i] *= *(scalar_ptr)
  *
+ * This function does not use any source matrix pointer, and does not use any stride for a source matrix.
+ *
  * @param[in,out] dst         GPU memory pointer to output buffer
- * @param[in]     src         GPU memory pointer to input matrix
  * @param[in]     stride_dst  Stride for dst
- * @param[in]     stride_src   Stride for src
  * @param[in]     scalar_ptr  Pointer to scalar (float* or double*)
  * @param[in]     n           Number of elements
  * @param[in]     data_type   f32 or f64
- * @return ZenuStatus          Success or error code
+ * @return ZenuStatus         Success or error code
  */
 ZenuStatus zenu_compute_mul_mat_scalar_ptr_assign_nvidia(
     void*       dst,
-    const void* src,
     int         stride_dst,
-    int         stride_src,
     const void* scalar_ptr,
     size_t      n,
     ZenuDataType data_type
@@ -649,11 +637,11 @@ ZenuStatus zenu_compute_div_mat_mat_nvidia(
  * @param[in,out] dst         CPU memory pointer to output buffer
  * @param[in]     src         CPU memory pointer to input matrix
  * @param[in]     stride_dst  Stride for dst
- * @param[in]     stride_src   Stride for src
+ * @param[in]     stride_src  Stride for src
  * @param[in]     scalar_ptr  Pointer to scalar (float* or double*)
  * @param[in]     n           Number of elements
  * @param[in]     data_type   f32 or f64
- * @return ZenuStatus          Success or error code
+ * @return ZenuStatus         Success or error code
  */
 ZenuStatus zenu_compute_div_mat_scalar_ptr_cpu(
     void*       dst,
@@ -672,11 +660,11 @@ ZenuStatus zenu_compute_div_mat_scalar_ptr_cpu(
  * @param[in,out] dst         GPU memory pointer to output buffer
  * @param[in]     src         GPU memory pointer to input matrix
  * @param[in]     stride_dst  Stride for dst
- * @param[in]     stride_src   Stride for src
+ * @param[in]     stride_src  Stride for src
  * @param[in]     scalar_ptr  Pointer to scalar (float* or double*)
  * @param[in]     n           Number of elements
  * @param[in]     data_type   f32 or f64
- * @return ZenuStatus          Success or error code
+ * @return ZenuStatus         Success or error code
  */
 ZenuStatus zenu_compute_div_mat_scalar_ptr_nvidia(
     void*       dst,
@@ -695,10 +683,10 @@ ZenuStatus zenu_compute_div_mat_scalar_ptr_nvidia(
  * @param[in,out] dst         CPU memory pointer to output buffer
  * @param[in]     src         CPU memory pointer to input matrix
  * @param[in]     stride_dst  Stride for dst
- * @param[in]     stride_src   Stride for src
+ * @param[in]     stride_src  Stride for src
  * @param[in]     n           Number of elements
  * @param[in]     data_type   f32 or f64
- * @return ZenuStatus          Success or error code
+ * @return ZenuStatus         Success or error code
  */
 ZenuStatus zenu_compute_div_mat_mat_assign_cpu(
     void*       dst,
@@ -715,10 +703,10 @@ ZenuStatus zenu_compute_div_mat_mat_assign_cpu(
  * @param[in,out] dst         GPU memory pointer to output buffer
  * @param[in]     src         GPU memory pointer to input matrix
  * @param[in]     stride_dst  Stride for dst
- * @param[in]     stride_src   Stride for src
+ * @param[in]     stride_src  Stride for src
  * @param[in]     n           Number of elements
  * @param[in]     data_type   f32 or f64
- * @return ZenuStatus          Success or error code
+ * @return ZenuStatus         Success or error code
  */
 ZenuStatus zenu_compute_div_mat_mat_assign_nvidia(
     void*       dst,
@@ -733,20 +721,18 @@ ZenuStatus zenu_compute_div_mat_mat_assign_nvidia(
 /**
  * @brief Divide scalar_ptr assignment (CPU): dst[i] /= *(scalar_ptr)
  *
+ * This function does not use any source matrix pointer, and does not use any stride for a source matrix.
+ *
  * @param[in,out] dst         CPU memory pointer to output buffer
- * @param[in]     src         CPU memory pointer to input matrix
  * @param[in]     stride_dst  Stride for dst
- * @param[in]     stride_src   Stride for src
  * @param[in]     scalar_ptr  Pointer to scalar (float* or double*)
  * @param[in]     n           Number of elements
  * @param[in]     data_type   f32 or f64
- * @return ZenuStatus          Success or error code
+ * @return ZenuStatus         Success or error code
  */
 ZenuStatus zenu_compute_div_mat_scalar_ptr_assign_cpu(
     void*       dst,
-    const void* src,
     int         stride_dst,
-    int         stride_src,
     const void* scalar_ptr,
     size_t      n,
     ZenuDataType data_type
@@ -755,20 +741,18 @@ ZenuStatus zenu_compute_div_mat_scalar_ptr_assign_cpu(
 /**
  * @brief Divide scalar_ptr assignment ("nvidia"): dst[i] /= *(scalar_ptr)
  *
+ * This function does not use any source matrix pointer, and does not use any stride for a source matrix.
+ *
  * @param[in,out] dst         GPU memory pointer to output buffer
- * @param[in]     src         GPU memory pointer to input matrix
  * @param[in]     stride_dst  Stride for dst
- * @param[in]     stride_src   Stride for src
  * @param[in]     scalar_ptr  Pointer to scalar (float* or double*)
  * @param[in]     n           Number of elements
  * @param[in]     data_type   f32 or f64
- * @return ZenuStatus          Success or error code
+ * @return ZenuStatus         Success or error code
  */
 ZenuStatus zenu_compute_div_mat_scalar_ptr_assign_nvidia(
     void*       dst,
-    const void* src,
     int         stride_dst,
-    int         stride_src,
     const void* scalar_ptr,
     size_t      n,
     ZenuDataType data_type

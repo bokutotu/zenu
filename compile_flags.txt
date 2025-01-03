@@ -1,0 +1,4 @@
+
+-I/home/bokutotu/zenu/zenu-compute/core/include
+-I/home/bokutotu/zenu/zenu-compute/core/src
+-I/home/bokutotu/zenu/zenu-compute/core/cudnn-frontend/include
