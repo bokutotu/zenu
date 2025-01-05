@@ -212,3 +212,263 @@ CPU_TEST_ASSIGN_SCALAR(DivMatScalarPtrAssignCpu_F32, /*テスト名*/
                        "/=",/*OP_DESC*/
                        /   /*OP*/)
 
+//==================================================
+// GPUテスト用マクロ
+//
+// 1) NVIDIA_TEST_BIN
+//     - mat_mat 演算 (Add, Sub, Mul, Div)
+// 2) NVIDIA_TEST_SCALAR_PTR
+//     - mat - scalar_ptr など
+// 3) NVIDIA_TEST_ASSIGN_BIN
+//     - mat_mat_assign
+// 4) NVIDIA_TEST_ASSIGN_SCALAR
+//     - mat_scalar_ptr_assign
+//
+// いずれも stride=1 のみ。必要なら拡張してください。
+//==================================================
+
+/**
+ * @brief 1) NVIDIA_TEST_BIN: 2入力 (dst[i] = src1[i] OP src2[i])
+ *
+ * FUNC  : 実際に呼ぶ nvidia演算関数 (例: zenu_compute_add_mat_mat_nvidia)
+ * TEST_NAME  : GTestのテスト名
+ * N          : 要素数
+ * OP_DESC    : 人間向け演算記述文字列
+ * OP         : dst[i]の期待値を計算するC++演算子 (+, -, *, /など)
+ */
+#define NVIDIA_TEST_BIN(TEST_NAME, FUNC, N, OP_DESC, OP)                         \
+TEST(ZenuArithNvidiaTest, TEST_NAME)                                            \
+{                                                                                \
+    /* 1) CPU側で入力データを準備 */                                             \
+    std::vector<float> src1_cpu(N), src2_cpu(N), dst_cpu(N, 0.0f);               \
+    for (size_t i = 0; i < N; i++) {                                             \
+        src1_cpu[i] = static_cast<float>(i + 1);       /* 1,2,3... */            \
+        src2_cpu[i] = static_cast<float>(0.5f * (i+1)); /* 0.5,1.0,1.5... */      \
+    }                                                                            \
+                                                                                 \
+    /* 2) GPUバッファ確保 */                                                     \
+    void* src1_gpu = nullptr;                                                    \
+    void* src2_gpu = nullptr;                                                    \
+    void* dst_gpu  = nullptr;                                                    \
+    int num_bytes = static_cast<int>(N * sizeof(float));                          \
+    ASSERT_EQ(zenu_compute_malloc_nvidia(&src1_gpu, num_bytes), Success);         \
+    ASSERT_EQ(zenu_compute_malloc_nvidia(&src2_gpu, num_bytes), Success);         \
+    ASSERT_EQ(zenu_compute_malloc_nvidia(&dst_gpu,  num_bytes), Success);         \
+                                                                                 \
+    /* 3) CPU->GPUコピー */                                                      \
+    zenu_compute_copy_nvidia(src1_gpu, (void*)src1_cpu.data(), num_bytes);       \
+    zenu_compute_copy_nvidia(src2_gpu, (void*)src2_cpu.data(), num_bytes);       \
+                                                                                 \
+    /* 4) 演算呼び出し */                                                        \
+    ZenuStatus st = FUNC(                                                        \
+        dst_gpu,                                                                 \
+        src1_gpu,                                                                \
+        src2_gpu,                                                                \
+        /*stride_dst*/1, /*stride_src1*/1, /*stride_src2*/1,                    \
+        N, f32                                                                   \
+    );                                                                           \
+    EXPECT_EQ(st, Success) << "FUNC returned error for " << OP_DESC;             \
+                                                                                 \
+    /* 5) GPU->CPUコピー */                                                      \
+    zenu_compute_copy_nvidia((void*)dst_cpu.data(), dst_gpu, num_bytes);         \
+                                                                                 \
+    /* 6) 検証 */                                                                \
+    for (size_t i = 0; i < N; i++) {                                             \
+        float expectVal = src1_cpu[i] OP src2_cpu[i];                            \
+        EXPECT_TRUE(isNearlyEqualF32(dst_cpu[i], expectVal))                     \
+            << "i=" << i << "  " << OP_DESC << " mismatch: got=" << dst_cpu[i]   \
+            << " expected=" << expectVal;                                        \
+    }                                                                            \
+                                                                                 \
+    /* 7) GPUメモリ解放 */                                                       \
+    zenu_compute_free_nvidia(src1_gpu);                                          \
+    zenu_compute_free_nvidia(src2_gpu);                                          \
+    zenu_compute_free_nvidia(dst_gpu);                                           \
+}
+
+/**
+ * @brief 2) NVIDIA_TEST_SCALAR_PTR: (dst[i] = src[i] OP c)
+ * 例: Sub (dst[i] = src[i] - c)
+ */
+#define NVIDIA_TEST_SCALAR_PTR(TEST_NAME, FUNC, N, OP_DESC, OP)                  \
+TEST(ZenuArithNvidiaTest, TEST_NAME)                                            \
+{                                                                                \
+    /* CPU側で入力データ準備 */                                                  \
+    std::vector<float> src_cpu(N), dst_cpu(N, 0.0f);                             \
+    for (size_t i = 0; i < N; i++) {                                             \
+        src_cpu[i] = static_cast<float>(i + 1);                                  \
+    }                                                                            \
+    float scalarVal = 2.0f;                                                     \
+                                                                                 \
+    /* GPUメモリ確保 */                                                          \
+    void* src_gpu = nullptr;                                                    \
+    void* dst_gpu = nullptr;                                                    \
+    void* scalar_gpu = nullptr;                                                 \
+    int num_bytes = static_cast<int>(N * sizeof(float));                         \
+    ASSERT_EQ(zenu_compute_malloc_nvidia(&src_gpu, num_bytes), Success);         \
+    ASSERT_EQ(zenu_compute_malloc_nvidia(&dst_gpu, num_bytes), Success);         \
+    ASSERT_EQ(zenu_compute_malloc_nvidia(&scalar_gpu, sizeof(float)), Success);  \
+                                                                                 \
+    /* CPU->GPUコピー */                                                        \
+    zenu_compute_copy_nvidia(src_gpu,    (void*)src_cpu.data(), num_bytes);      \
+    zenu_compute_copy_nvidia(scalar_gpu, (void*)&scalarVal, sizeof(float));      \
+                                                                                 \
+    /* 演算呼び出し */                                                           \
+    ZenuStatus st = FUNC(                                                       \
+        dst_gpu,                                                                \
+        src_gpu,                                                                \
+        /*stride_dst*/1, /*stride_src*/1,                                       \
+        scalar_gpu,                                                             \
+        N, f32                                                                  \
+    );                                                                          \
+    EXPECT_EQ(st, Success) << "FUNC returned error for " << OP_DESC;            \
+                                                                                 \
+    /* 結果をCPUへ */                                                            \
+    zenu_compute_copy_nvidia((void*)dst_cpu.data(), dst_gpu, num_bytes);        \
+                                                                                 \
+    /* 検証 */                                                                   \
+    for (size_t i = 0; i < N; i++) {                                             \
+        float expectVal = src_cpu[i] OP scalarVal;                               \
+        EXPECT_TRUE(isNearlyEqualF32(dst_cpu[i], expectVal))                     \
+            << "i=" << i << "  " << OP_DESC << " mismatch: got=" << dst_cpu[i]   \
+            << " expected=" << expectVal;                                        \
+    }                                                                            \
+                                                                                 \
+    /* 後始末 */                                                                 \
+    zenu_compute_free_nvidia(src_gpu);                                           \
+    zenu_compute_free_nvidia(dst_gpu);                                           \
+    zenu_compute_free_nvidia(scalar_gpu);                                        \
+}
+
+/**
+ * @brief 3) NVIDIA_TEST_ASSIGN_BIN: (dst[i] OP= src[i])
+ * 例: Mul (dst[i] *= src[i])
+ */
+#define NVIDIA_TEST_ASSIGN_BIN(TEST_NAME, FUNC, N, OP_DESC, OP)                  \
+TEST(ZenuArithNvidiaTest, TEST_NAME)                                            \
+{                                                                                \
+    /* CPU側で入力データ準備 */                                                  \
+    std::vector<float> dst_cpu(N), src_cpu(N);                                   \
+    for (size_t i = 0; i < N; i++) {                                             \
+        dst_cpu[i] = static_cast<float>(i + 1);    /* 1,2,3,... */               \
+        src_cpu[i] = 2.0f;                         /* 全要素2.0 */               \
+    }                                                                            \
+                                                                                 \
+    /* GPUメモリ確保 */                                                          \
+    void* dst_gpu = nullptr;                                                    \
+    void* src_gpu = nullptr;                                                    \
+    int num_bytes = static_cast<int>(N * sizeof(float));                         \
+    ASSERT_EQ(zenu_compute_malloc_nvidia(&dst_gpu, num_bytes), Success);         \
+    ASSERT_EQ(zenu_compute_malloc_nvidia(&src_gpu, num_bytes), Success);         \
+                                                                                 \
+    /* CPU->GPUコピー */                                                        \
+    zenu_compute_copy_nvidia(dst_gpu, (void*)dst_cpu.data(), num_bytes);         \
+    zenu_compute_copy_nvidia(src_gpu, (void*)src_cpu.data(), num_bytes);         \
+                                                                                 \
+    /* 演算呼び出し */                                                           \
+    ZenuStatus st = FUNC(                                                       \
+        dst_gpu,                                                                \
+        src_gpu,                                                                \
+        /*stride_dst*/1, /*stride_src*/1,                                       \
+        N, f32                                                                  \
+    );                                                                          \
+    EXPECT_EQ(st, Success) << "FUNC returned error for " << OP_DESC;            \
+                                                                                 \
+    /* 結果CPUへ */                                                              \
+    zenu_compute_copy_nvidia((void*)dst_cpu.data(), dst_gpu, num_bytes);        \
+                                                                                 \
+    /* 検証 */                                                                   \
+    for (size_t i = 0; i < N; i++) {                                             \
+        float expectVal = static_cast<float>(i + 1) OP 2.0f;                     \
+        EXPECT_TRUE(isNearlyEqualF32(dst_cpu[i], expectVal))                     \
+            << "i=" << i << "  " << OP_DESC << " mismatch: got=" << dst_cpu[i]   \
+            << " expected=" << expectVal;                                        \
+    }                                                                            \
+                                                                                 \
+    /* 後始末 */                                                                 \
+    zenu_compute_free_nvidia(dst_gpu);                                           \
+    zenu_compute_free_nvidia(src_gpu);                                           \
+}
+
+/**
+ * @brief 4) NVIDIA_TEST_ASSIGN_SCALAR: (dst[i] OP= c)
+ * 例: Div (dst[i] /= c)
+ */
+#define NVIDIA_TEST_ASSIGN_SCALAR(TEST_NAME, FUNC, N, OP_DESC, OP)               \
+TEST(ZenuArithNvidiaTest, TEST_NAME)                                            \
+{                                                                                \
+    /* CPU側で入力データ準備 */                                                  \
+    std::vector<float> dst_cpu(N);                                               \
+    for (size_t i = 0; i < N; i++) {                                             \
+        dst_cpu[i] = static_cast<float>((i+1) * 10.0f);                          \
+    }                                                                            \
+    float scalarVal = 10.0f;                                                    \
+                                                                                 \
+    /* GPUメモリ確保 */                                                          \
+    void* dst_gpu = nullptr;                                                    \
+    void* scalar_gpu = nullptr;                                                 \
+    int num_bytes = static_cast<int>(N * sizeof(float));                         \
+    ASSERT_EQ(zenu_compute_malloc_nvidia(&dst_gpu, num_bytes), Success);         \
+    ASSERT_EQ(zenu_compute_malloc_nvidia(&scalar_gpu, sizeof(float)), Success);  \
+                                                                                 \
+    /* CPU->GPUコピー */                                                        \
+    zenu_compute_copy_nvidia(dst_gpu, (void*)dst_cpu.data(), num_bytes);         \
+    zenu_compute_copy_nvidia(scalar_gpu, &scalarVal, sizeof(float));             \
+                                                                                 \
+    /* 演算呼び出し */                                                           \
+    ZenuStatus st = FUNC(                                                       \
+        dst_gpu,                                                                \
+        /*stride_dst*/1,                                                        \
+        scalar_gpu,                                                             \
+        N, f32                                                                  \
+    );                                                                          \
+    EXPECT_EQ(st, Success) << "FUNC returned error for " << OP_DESC;            \
+                                                                                 \
+    /* 結果CPUへ */                                                              \
+    zenu_compute_copy_nvidia((void*)dst_cpu.data(), dst_gpu, num_bytes);        \
+                                                                                 \
+    /* 検証 */                                                                   \
+    for (size_t i = 0; i < N; i++) {                                             \
+        float oldVal = static_cast<float>((i+1) * 10.0f);                        \
+        float expectVal = oldVal OP scalarVal;                                   \
+        EXPECT_TRUE(isNearlyEqualF32(dst_cpu[i], expectVal))                     \
+            << "i=" << i << "  " << OP_DESC << " mismatch: got=" << dst_cpu[i]   \
+            << " expected=" << expectVal;                                        \
+    }                                                                            \
+                                                                                 \
+    /* 後始末 */                                                                 \
+    zenu_compute_free_nvidia(dst_gpu);                                           \
+    zenu_compute_free_nvidia(scalar_gpu);                                        \
+}
+
+//==================================================
+// 実際のテスト定義
+//==================================================
+
+/* 1) Add (mat + mat) */
+NVIDIA_TEST_BIN(AddMatMatNvidia_F32,
+                zenu_compute_add_mat_mat_nvidia,
+                8, /*N*/
+                "+",
+                +)
+
+/* 2) Sub (mat - scalar_ptr) */
+NVIDIA_TEST_SCALAR_PTR(SubMatScalarPtrNvidia_F32,
+                       zenu_compute_sub_mat_scalar_ptr_nvidia,
+                       8,
+                       "-",
+                       -)
+
+/* 3) Mul (mat_mat_assign) */
+NVIDIA_TEST_ASSIGN_BIN(MulMatMatAssignNvidia_F32,
+                       zenu_compute_mul_mat_mat_assign_nvidia,
+                       8,
+                       "*=",
+                       *)
+
+/* 4) Div (mat_scalar_ptr_assign) */
+NVIDIA_TEST_ASSIGN_SCALAR(DivMatScalarPtrAssignNvidia_F32,
+                          zenu_compute_div_mat_scalar_ptr_assign_nvidia,
+                          8,
+                          "/=",
+                          /)
