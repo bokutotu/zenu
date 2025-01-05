@@ -23,6 +23,38 @@ find_package(OpenMP REQUIRED)
 
 include(CheckCXXCompilerFlag)
 
+# =======================================================
+# (1) GPUのCompute Capabilityをnvidia-smiで自動取得
+# =======================================================
+execute_process(
+    COMMAND nvidia-smi --query-gpu=compute_cap --format=csv,noheader
+    OUTPUT_VARIABLE GPU_CAP_LIST
+    ERROR_VARIABLE  GPU_CAP_LIST_ERROR
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+
+if(GPU_CAP_LIST_ERROR)
+    message(STATUS "nvidia-smi error message: ${GPU_CAP_LIST_ERROR}")
+endif()
+
+# GPU_CAP_LIST には、例えば "7.5\n8.0\n7.0\n" のように複数行が入る可能性がある
+# とりあえず最初の行(最初のGPU)を取り出す
+string(REPLACE "\n" ";" GPU_CAP_LIST "${GPU_CAP_LIST}")
+list(GET GPU_CAP_LIST 0 GPU_CAP)  # 0番目を取得 (7.5 等)
+
+# Compute Capability を "7.5" から "75" に変換
+string(REPLACE "." "" GPU_CAP_STR "${GPU_CAP}")
+
+# nvcc 用の -arch sm_XX 文字列を作る
+set(NVCC_ARCH "sm_${GPU_CAP_STR}")
+message(STATUS "Detected GPU Compute Capability: ${GPU_CAP}, => using ${NVCC_ARCH} for nvcc")
+
+# =======================================================
+# (3) CUDA(NVCC)用の -arch=sm_XX を指定
+#     例として PRIVATE に付与
+# =======================================================
+add_compile_options($<$<COMPILE_LANGUAGE:CUDA>:-arch=${NVCC_ARCH}>)
+
 add_compile_options(-march=native)
 
 set(SRC_FILES
