@@ -64,6 +64,7 @@ set(SRC_FILES
     ${PROJECT_SOURCE_DIR}/src/nvidia/memory.cpp
     ${PROJECT_SOURCE_DIR}/src/nvidia/random.cu
     ${PROJECT_SOURCE_DIR}/src/nvidia/arithmetic.cu
+    ${PROJECT_SOURCE_DIR}/src/nvidia/memory_kernel.cu
 )
 
 add_library(ZenuCore STATIC ${SRC_FILES})

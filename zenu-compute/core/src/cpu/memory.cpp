@@ -36,10 +36,18 @@ void zenu_compute_free_cpu(void* ptr) {
     free(ptr);
 }
 
-void zenu_compute_copy_cpu(void* dst, void* src, int num_bytes) {
-    // TODO: Copy memory on the CPU
-}
-
-void zenu_compute_set_cpu(void* dst, int value, int num_bytes) {
-    memset(dst, value, num_bytes);
+void zenu_compute_set_cpu(void* dst, void* value, int num_bytes, ZenuDataType type) {
+    if (type == f32) {
+        float* dst_f32 = static_cast<float*>(dst);
+        float* value_f32 = static_cast<float*>(value);
+        for (int i = 0; i < num_bytes / sizeof(float); i++) {
+            dst_f32[i] = *value_f32;
+        }
+    } else if (type == f64) {
+        int* dst_i32 = static_cast<int*>(dst);
+        int* value_i32 = static_cast<int*>(value);
+        for (int i = 0; i < num_bytes / sizeof(int); i++) {
+            dst_i32[i] = *value_i32;
+        }
+    }
 }

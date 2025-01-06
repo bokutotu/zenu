@@ -256,8 +256,8 @@ TEST(ZenuArithNvidiaTest, TEST_NAME)                                            
     ASSERT_EQ(zenu_compute_malloc_nvidia(&dst_gpu,  num_bytes), Success);         \
                                                                                  \
     /* 3) CPU->GPUコピー */                                                      \
-    zenu_compute_copy_nvidia(src1_gpu, (void*)src1_cpu.data(), num_bytes);       \
-    zenu_compute_copy_nvidia(src2_gpu, (void*)src2_cpu.data(), num_bytes);       \
+    zenu_compute_cpu_to_nvidia(src1_gpu, (void*)src1_cpu.data(), num_bytes);       \
+    zenu_compute_cpu_to_nvidia(src2_gpu, (void*)src2_cpu.data(), num_bytes);       \
                                                                                  \
     /* 4) 演算呼び出し */                                                        \
     ZenuStatus st = FUNC(                                                        \
@@ -270,7 +270,7 @@ TEST(ZenuArithNvidiaTest, TEST_NAME)                                            
     EXPECT_EQ(st, Success) << "FUNC returned error for " << OP_DESC;             \
                                                                                  \
     /* 5) GPU->CPUコピー */                                                      \
-    zenu_compute_copy_nvidia((void*)dst_cpu.data(), dst_gpu, num_bytes);         \
+    zenu_compute_nvidia_to_cpu((void*)dst_cpu.data(), dst_gpu, num_bytes);         \
                                                                                  \
     /* 6) 検証 */                                                                \
     for (size_t i = 0; i < N; i++) {                                             \
@@ -310,8 +310,8 @@ TEST(ZenuArithNvidiaTest, TEST_NAME)                                            
     ASSERT_EQ(zenu_compute_malloc_nvidia(&scalar_gpu, sizeof(float)), Success);  \
                                                                                  \
     /* CPU->GPUコピー */                                                        \
-    zenu_compute_copy_nvidia(src_gpu,    (void*)src_cpu.data(), num_bytes);      \
-    zenu_compute_copy_nvidia(scalar_gpu, (void*)&scalarVal, sizeof(float));      \
+    zenu_compute_cpu_to_nvidia(src_gpu,    (void*)src_cpu.data(), num_bytes);      \
+    zenu_compute_cpu_to_nvidia(scalar_gpu, (void*)&scalarVal, sizeof(float));      \
                                                                                  \
     /* 演算呼び出し */                                                           \
     ZenuStatus st = FUNC(                                                       \
@@ -324,7 +324,7 @@ TEST(ZenuArithNvidiaTest, TEST_NAME)                                            
     EXPECT_EQ(st, Success) << "FUNC returned error for " << OP_DESC;            \
                                                                                  \
     /* 結果をCPUへ */                                                            \
-    zenu_compute_copy_nvidia((void*)dst_cpu.data(), dst_gpu, num_bytes);        \
+    zenu_compute_nvidia_to_cpu((void*)dst_cpu.data(), dst_gpu, num_bytes);        \
                                                                                  \
     /* 検証 */                                                                   \
     for (size_t i = 0; i < N; i++) {                                             \
@@ -362,8 +362,8 @@ TEST(ZenuArithNvidiaTest, TEST_NAME)                                            
     ASSERT_EQ(zenu_compute_malloc_nvidia(&src_gpu, num_bytes), Success);         \
                                                                                  \
     /* CPU->GPUコピー */                                                        \
-    zenu_compute_copy_nvidia(dst_gpu, (void*)dst_cpu.data(), num_bytes);         \
-    zenu_compute_copy_nvidia(src_gpu, (void*)src_cpu.data(), num_bytes);         \
+    zenu_compute_cpu_to_nvidia(dst_gpu, (void*)dst_cpu.data(), num_bytes);         \
+    zenu_compute_cpu_to_nvidia(src_gpu, (void*)src_cpu.data(), num_bytes);         \
                                                                                  \
     /* 演算呼び出し */                                                           \
     ZenuStatus st = FUNC(                                                       \
@@ -375,7 +375,7 @@ TEST(ZenuArithNvidiaTest, TEST_NAME)                                            
     EXPECT_EQ(st, Success) << "FUNC returned error for " << OP_DESC;            \
                                                                                  \
     /* 結果CPUへ */                                                              \
-    zenu_compute_copy_nvidia((void*)dst_cpu.data(), dst_gpu, num_bytes);        \
+    zenu_compute_nvidia_to_cpu((void*)dst_cpu.data(), dst_gpu, num_bytes);        \
                                                                                  \
     /* 検証 */                                                                   \
     for (size_t i = 0; i < N; i++) {                                             \
@@ -412,8 +412,8 @@ TEST(ZenuArithNvidiaTest, TEST_NAME)                                            
     ASSERT_EQ(zenu_compute_malloc_nvidia(&scalar_gpu, sizeof(float)), Success);  \
                                                                                  \
     /* CPU->GPUコピー */                                                        \
-    zenu_compute_copy_nvidia(dst_gpu, (void*)dst_cpu.data(), num_bytes);         \
-    zenu_compute_copy_nvidia(scalar_gpu, &scalarVal, sizeof(float));             \
+    zenu_compute_cpu_to_nvidia(dst_gpu, (void*)dst_cpu.data(), num_bytes);         \
+    zenu_compute_cpu_to_nvidia(scalar_gpu, &scalarVal, sizeof(float));             \
                                                                                  \
     /* 演算呼び出し */                                                           \
     ZenuStatus st = FUNC(                                                       \
@@ -425,7 +425,7 @@ TEST(ZenuArithNvidiaTest, TEST_NAME)                                            
     EXPECT_EQ(st, Success) << "FUNC returned error for " << OP_DESC;            \
                                                                                  \
     /* 結果CPUへ */                                                              \
-    zenu_compute_copy_nvidia((void*)dst_cpu.data(), dst_gpu, num_bytes);        \
+    zenu_compute_nvidia_to_cpu((void*)dst_cpu.data(), dst_gpu, num_bytes);        \
                                                                                  \
     /* 検証 */                                                                   \
     for (size_t i = 0; i < N; i++) {                                             \

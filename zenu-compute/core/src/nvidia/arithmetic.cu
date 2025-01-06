@@ -9,21 +9,9 @@
  */
 
 #include "zenu_compute.h"
+#include "utils.h"
 #include <cuda_runtime.h>
 #include <stdio.h>
-
-//---------------------------------------------
-// Open-coded error conversion (minimal)
-//---------------------------------------------
-static inline ZenuStatus convertCudaError(cudaError_t err)
-{
-    if (err == cudaSuccess) {
-        return Success;
-    } else {
-        // 必要に応じて個別のエラーを振り分けても良い
-        return DeviceError;
-    }
-}
 
 //---------------------------------------------
 // kernel launch config
@@ -53,11 +41,11 @@ template<typename T, typename OP>
 __global__ void ScalarOpKernel(
     T* dst, const T* s,
     int sd, int ss,
-    T c, size_t n, OP op)
+    const T* c, size_t n, OP op)
 {
     size_t idx = blockDim.x * blockIdx.x + threadIdx.x;
     if (idx < n) {
-        dst[idx * sd] = op(s[idx * ss], c);
+        dst[idx * sd] = op(s[idx * ss], c[0]);
     }
 }
 
@@ -77,13 +65,13 @@ template<typename T, typename OP>
 __global__ void AssignScalarOpKernel(
     T* dst,
     int sd,
-    T c,
+    const T* c,
     size_t n,
     OP op)
 {
     size_t idx = blockDim.x * blockIdx.x + threadIdx.x;
     if (idx < n) {
-        dst[idx * sd] = op(dst[idx * sd], c);
+        dst[idx * sd] = op(dst[idx * sd], c[0]);
     }
 }
 
@@ -146,15 +134,13 @@ ZenuStatus FUNC_NAME(                                                           
     dim3 block(THREADS_PER_BLOCK);                                              \
     dim3 grid((unsigned int)((n + block.x - 1) / block.x));                     \
     if (dt == f32) {                                                            \
-        float c_val = *(const float*)sc;                                        \
         ScalarOpKernel<float, OP_FUNCTOR><<<grid, block>>>(                     \
             (float*)dst, (const float*)s,                                       \
-            sd, ss, c_val, n, OP_FUNCTOR());                                    \
+            sd, ss, (const float*)sc, n, OP_FUNCTOR());                         \
     } else {                                                                    \
-        double c_val = *(const double*)sc;                                      \
         ScalarOpKernel<double, OP_FUNCTOR><<<grid, block>>>(                    \
             (double*)dst, (const double*)s,                                     \
-            sd, ss, c_val, n, OP_FUNCTOR());                                    \
+            sd, ss, (const double*)sc, n, OP_FUNCTOR());                        \
     }                                                                           \
     cudaError_t e = cudaDeviceSynchronize();                                    \
     return convertCudaError(e);                                                \
@@ -188,13 +174,11 @@ ZenuStatus FUNC_NAME(                                                           
     dim3 block(THREADS_PER_BLOCK);                                              \
     dim3 grid((unsigned int)((n + block.x - 1) / block.x));                     \
     if (dt == f32) {                                                            \
-        float c_val = *(const float*)sc;                                        \
         AssignScalarOpKernel<float, OP_FUNCTOR><<<grid, block>>>(               \
-            (float*)dst, sd, c_val, n, OP_FUNCTOR());                          \
+            (float*)dst, sd, (const float*)sc, n, OP_FUNCTOR());                \
     } else {                                                                    \
-        double c_val = *(const double*)sc;                                      \
         AssignScalarOpKernel<double, OP_FUNCTOR><<<grid, block>>>(              \
-            (double*)dst, sd, c_val, n, OP_FUNCTOR());                         \
+            (double*)dst, sd, (const double*)sc, n, OP_FUNCTOR());              \
     }                                                                           \
     cudaError_t e = cudaDeviceSynchronize();                                    \
     return convertCudaError(e);                                                \
