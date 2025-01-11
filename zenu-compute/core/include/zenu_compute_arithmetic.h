@@ -5,30 +5,25 @@ extern "C" {
 #endif
 
 /**
- * @file zenu_arith.h
- * @brief Arithmetic functions (add/sub/mul/div) on CPU / "nvidia" GPU, with detailed docs for each function.
+ * @file zenu_compute_arithmetic.h
+ * @brief 四則演算 (加減乗除) を行う関数群 (CPU / "nvidia" GPU 対応)。
  *
- * Each operation has 6 forms:
- *  1) mat_mat
- *  2) mat_scalar
- *  3) mat_scalar_ptr
- *  4) mat_mat_assign
- *  5) mat_scalar_assign
- *  6) mat_scalar_ptr_assign
+ * 本ヘッダファイルでは、zenu_compute.h に定義された ZenuDataType や ZenuStatus を用いて
+ * CPU / "nvidia" GPU 上での加減乗除を行う関数を提供します。
  *
- * For each form, we provide:
- *  - A CPU version (suffix `_cpu`)
- *  - A "nvidia" version (suffix `_nvidia`)
+ * 各演算 (add, sub, mul, div) は、下記のような形で定義されています。
+ *  - mat_mat:         dst = src1 (+,-,*,/) src2
+ *  - mat_scalar:      dst = src (+,-,*,/) scalar        (今回は例示のみ、コード省略)
+ *  - mat_scalar_ptr:  dst = src (+,-,*,/) *scalar_ptr
+ *  - mat_mat_assign:  dst += src  (または -=, *=, /=)
+ *  - mat_scalar_assign:     dst += scalar       (今回は例示のみ、コード省略)
+ *  - mat_scalar_ptr_assign: dst += *scalar_ptr
  *
- * Both versions include:
- *  - `n` (number of elements)
- *  - `ZenuDataType data_type`
- *
- * The "nvidia" version does NOT require a device_id, per requirement.
+ * それぞれ CPU 用 (関数名末尾 `_cpu`) と "nvidia" GPU 用 (関数名末尾 `_nvidia`) が存在します。
  */
 
 #include <stddef.h> // for size_t
-#include "zenu_compute.h"
+#include "zenu_compute.h" // ZenuDataType, ZenuStatus などが定義されていると仮定
 
 /*======================================================================
  *                        ADD  (mat + ...)
@@ -36,17 +31,17 @@ extern "C" {
 
 /*------------------ 1) ADD: mat + mat ------------------*/
 /**
- * @brief Add two matrices (CPU): dst[i] = src1[i] + src2[i]
+ * @brief 2つの配列要素を加算 (CPU): dst[i] = src1[i] + src2[i]
  *
- * @param[in,out] dst         CPU memory pointer to output buffer
- * @param[in]     src1        CPU memory pointer to first operand
- * @param[in]     src2        CPU memory pointer to second operand
- * @param[in]     stride_dst  Stride for dst
- * @param[in]     stride_src1 Stride for src1
- * @param[in]     stride_src2 Stride for src2
- * @param[in]     n           Number of elements to process
- * @param[in]     data_type   f32 or f64
- * @return ZenuStatus         Success or error code
+ * @param[in,out] dst         CPU メモリ上の出力バッファへのポインタ
+ * @param[in]     src1        CPU メモリ上の第1オペランド
+ * @param[in]     src2        CPU メモリ上の第2オペランド
+ * @param[in]     stride_dst  dst のストライド (要素間隔)
+ * @param[in]     stride_src1 src1 のストライド (要素間隔)
+ * @param[in]     stride_src2 src2 のストライド (要素間隔)
+ * @param[in]     n           処理する要素数
+ * @param[in]     data_type   f32 または f64
+ * @return ZenuStatus         成功またはエラーコード
  */
 ZenuStatus zenu_compute_add_mat_mat_cpu(
     void*       dst,
@@ -60,17 +55,17 @@ ZenuStatus zenu_compute_add_mat_mat_cpu(
 );
 
 /**
- * @brief Add two matrices ("nvidia"): dst[i] = src1[i] + src2[i]
+ * @brief 2つの配列要素を加算 ("nvidia"): dst[i] = src1[i] + src2[i]
  *
- * @param[in,out] dst         GPU memory pointer to output buffer
- * @param[in]     src1        GPU memory pointer to first operand
- * @param[in]     src2        GPU memory pointer to second operand
- * @param[in]     stride_dst  Stride for dst
- * @param[in]     stride_src1 Stride for src1
- * @param[in]     stride_src2 Stride for src2
- * @param[in]     n           Number of elements
- * @param[in]     data_type   f32 or f64
- * @return ZenuStatus         Success or error code
+ * @param[in,out] dst         GPU メモリ上の出力バッファへのポインタ
+ * @param[in]     src1        GPU メモリ上の第1オペランド
+ * @param[in]     src2        GPU メモリ上の第2オペランド
+ * @param[in]     stride_dst  dst のストライド (要素間隔)
+ * @param[in]     stride_src1 src1 のストライド (要素間隔)
+ * @param[in]     stride_src2 src2 のストライド (要素間隔)
+ * @param[in]     n           処理する要素数
+ * @param[in]     data_type   f32 または f64
+ * @return ZenuStatus         成功またはエラーコード
  */
 ZenuStatus zenu_compute_add_mat_mat_nvidia(
     void*       dst,
@@ -85,17 +80,16 @@ ZenuStatus zenu_compute_add_mat_mat_nvidia(
 
 /*------------------ 3) ADD: mat + *(scalar_ptr) ------------------*/
 /**
- * @brief Add a pointer-based scalar to each element (CPU).
- *        dst[i] = src[i] + (*(scalar_ptr))
+ * @brief スカラー(ポインタ)を加算 (CPU): dst[i] = src[i] + (*(scalar_ptr))
  *
- * @param[in,out] dst         CPU memory pointer to output buffer
- * @param[in]     src         CPU memory pointer to input matrix
- * @param[in]     stride_dst  Stride for dst
- * @param[in]     stride_src  Stride for src
- * @param[in]     scalar_ptr  Pointer to scalar (float* or double*)
- * @param[in]     n           Number of elements
- * @param[in]     data_type   f32 or f64
- * @return ZenuStatus         Success or error code
+ * @param[in,out] dst         CPU メモリ上の出力バッファへのポインタ
+ * @param[in]     src         CPU メモリ上の入力バッファ
+ * @param[in]     stride_dst  dst のストライド (要素間隔)
+ * @param[in]     stride_src  src のストライド (要素間隔)
+ * @param[in]     scalar_ptr  スカラー (float* または double*) へのポインタ
+ * @param[in]     n           処理する要素数
+ * @param[in]     data_type   f32 または f64
+ * @return ZenuStatus         成功またはエラーコード
  */
 ZenuStatus zenu_compute_add_mat_scalar_ptr_cpu(
     void*       dst,
@@ -108,17 +102,16 @@ ZenuStatus zenu_compute_add_mat_scalar_ptr_cpu(
 );
 
 /**
- * @brief Add a pointer-based scalar to each element ("nvidia").
- *        dst[i] = src[i] + (*(scalar_ptr))
+ * @brief スカラー(ポインタ)を加算 ("nvidia"): dst[i] = src[i] + (*(scalar_ptr))
  *
- * @param[in,out] dst         GPU memory pointer to output buffer
- * @param[in]     src         GPU memory pointer to input matrix
- * @param[in]     stride_dst  Stride for dst
- * @param[in]     stride_src  Stride for src
- * @param[in]     scalar_ptr  Pointer to scalar (float* or double*)
- * @param[in]     n           Number of elements
- * @param[in]     data_type   f32 or f64
- * @return ZenuStatus         Success or error code
+ * @param[in,out] dst         GPU メモリ上の出力バッファへのポインタ
+ * @param[in]     src         GPU メモリ上の入力バッファ
+ * @param[in]     stride_dst  dst のストライド (要素間隔)
+ * @param[in]     stride_src  src のストライド (要素間隔)
+ * @param[in]     scalar_ptr  スカラー (float* または double*) へのポインタ
+ * @param[in]     n           処理する要素数
+ * @param[in]     data_type   f32 または f64
+ * @return ZenuStatus         成功またはエラーコード
  */
 ZenuStatus zenu_compute_add_mat_scalar_ptr_nvidia(
     void*       dst,
@@ -132,15 +125,15 @@ ZenuStatus zenu_compute_add_mat_scalar_ptr_nvidia(
 
 /*------------------ 4) ADD: mat_mat_assign (dst += src) ------------------*/
 /**
- * @brief Add assignment (CPU): dst[i] += src[i]
+ * @brief 加算代入 (CPU): dst[i] += src[i]
  *
- * @param[in,out] dst         CPU memory pointer to output buffer
- * @param[in]     src         CPU memory pointer to input matrix
- * @param[in]     stride_dst  Stride for dst
- * @param[in]     stride_src  Stride for src
- * @param[in]     n           Number of elements
- * @param[in]     data_type   f32 or f64
- * @return ZenuStatus         Success or error code
+ * @param[in,out] dst         CPU メモリ上のバッファ
+ * @param[in]     src         CPU メモリ上の入力バッファ
+ * @param[in]     stride_dst  dst のストライド (要素間隔)
+ * @param[in]     stride_src  src のストライド (要素間隔)
+ * @param[in]     n           処理する要素数
+ * @param[in]     data_type   f32 または f64
+ * @return ZenuStatus         成功またはエラーコード
  */
 ZenuStatus zenu_compute_add_mat_mat_assign_cpu(
     void*       dst,
@@ -152,15 +145,15 @@ ZenuStatus zenu_compute_add_mat_mat_assign_cpu(
 );
 
 /**
- * @brief Add assignment ("nvidia"): dst[i] += src[i]
+ * @brief 加算代入 ("nvidia"): dst[i] += src[i]
  *
- * @param[in,out] dst         GPU memory pointer to output buffer
- * @param[in]     src         GPU memory pointer to input matrix
- * @param[in]     stride_dst  Stride for dst
- * @param[in]     stride_src  Stride for src
- * @param[in]     n           Number of elements
- * @param[in]     data_type   f32 or f64
- * @return ZenuStatus         Success or error code
+ * @param[in,out] dst         GPU メモリ上のバッファ
+ * @param[in]     src         GPU メモリ上の入力バッファ
+ * @param[in]     stride_dst  dst のストライド (要素間隔)
+ * @param[in]     stride_src  src のストライド (要素間隔)
+ * @param[in]     n           処理する要素数
+ * @param[in]     data_type   f32 または f64
+ * @return ZenuStatus         成功またはエラーコード
  */
 ZenuStatus zenu_compute_add_mat_mat_assign_nvidia(
     void*       dst,
@@ -173,16 +166,14 @@ ZenuStatus zenu_compute_add_mat_mat_assign_nvidia(
 
 /*------------------ 6) ADD: mat_scalar_ptr_assign (dst += *(scalar_ptr)) ------------------*/
 /**
- * @brief Add scalar_ptr assignment (CPU): dst[i] += *(scalar_ptr)
+ * @brief スカラー(ポインタ)の加算代入 (CPU): dst[i] += *(scalar_ptr)
  *
- * This function does not use any source matrix pointer, and does not use any stride for a source matrix.
- *
- * @param[in,out] dst         CPU memory pointer to output buffer
- * @param[in]     stride_dst  Stride for dst
- * @param[in]     scalar_ptr  Pointer to scalar (float* or double*)
- * @param[in]     n           Number of elements
- * @param[in]     data_type   f32 or f64
- * @return ZenuStatus         Success or error code
+ * @param[in,out] dst         CPU メモリ上のバッファ
+ * @param[in]     stride_dst  dst のストライド (要素間隔)
+ * @param[in]     scalar_ptr  スカラー (float* または double*) へのポインタ
+ * @param[in]     n           処理する要素数
+ * @param[in]     data_type   f32 または f64
+ * @return ZenuStatus         成功またはエラーコード
  */
 ZenuStatus zenu_compute_add_mat_scalar_ptr_assign_cpu(
     void*       dst,
@@ -193,16 +184,14 @@ ZenuStatus zenu_compute_add_mat_scalar_ptr_assign_cpu(
 );
 
 /**
- * @brief Add scalar_ptr assignment ("nvidia"): dst[i] += *(scalar_ptr)
+ * @brief スカラー(ポインタ)の加算代入 ("nvidia"): dst[i] += *(scalar_ptr)
  *
- * This function does not use any source matrix pointer, and does not use any stride for a source matrix.
- *
- * @param[in,out] dst         GPU memory pointer to output buffer
- * @param[in]     stride_dst  Stride for dst
- * @param[in]     scalar_ptr  Pointer to scalar (float* or double*)
- * @param[in]     n           Number of elements
- * @param[in]     data_type   f32 or f64
- * @return ZenuStatus         Success or error code
+ * @param[in,out] dst         GPU メモリ上のバッファ
+ * @param[in]     stride_dst  dst のストライド (要素間隔)
+ * @param[in]     scalar_ptr  スカラー (float* または double*) へのポインタ
+ * @param[in]     n           処理する要素数
+ * @param[in]     data_type   f32 または f64
+ * @return ZenuStatus         成功またはエラーコード
  */
 ZenuStatus zenu_compute_add_mat_scalar_ptr_assign_nvidia(
     void*       dst,
@@ -218,17 +207,17 @@ ZenuStatus zenu_compute_add_mat_scalar_ptr_assign_nvidia(
 
 /*------------------ 1) SUB: mat - mat ------------------*/
 /**
- * @brief Subtract two matrices (CPU): dst[i] = src1[i] - src2[i]
+ * @brief 2つの配列要素を減算 (CPU): dst[i] = src1[i] - src2[i]
  *
- * @param[in,out] dst         CPU memory pointer to output buffer
- * @param[in]     src1        CPU memory pointer to first operand
- * @param[in]     src2        CPU memory pointer to second operand
- * @param[in]     stride_dst  Stride for dst
- * @param[in]     stride_src1 Stride for src1
- * @param[in]     stride_src2 Stride for src2
- * @param[in]     n           Number of elements to process
- * @param[in]     data_type   f32 or f64
- * @return ZenuStatus         Success or error code
+ * @param[in,out] dst         CPU メモリ上の出力バッファ
+ * @param[in]     src1        CPU メモリ上の第1オペランド
+ * @param[in]     src2        CPU メモリ上の第2オペランド
+ * @param[in]     stride_dst  dst のストライド
+ * @param[in]     stride_src1 src1 のストライド
+ * @param[in]     stride_src2 src2 のストライド
+ * @param[in]     n           要素数
+ * @param[in]     data_type   f32 または f64
+ * @return ZenuStatus         成功またはエラーコード
  */
 ZenuStatus zenu_compute_sub_mat_mat_cpu(
     void*       dst,
@@ -242,17 +231,17 @@ ZenuStatus zenu_compute_sub_mat_mat_cpu(
 );
 
 /**
- * @brief Subtract two matrices ("nvidia"): dst[i] = src1[i] - src2[i]
+ * @brief 2つの配列要素を減算 ("nvidia"): dst[i] = src1[i] - src2[i]
  *
- * @param[in,out] dst         GPU memory pointer to output buffer
- * @param[in]     src1        GPU memory pointer to first operand
- * @param[in]     src2        GPU memory pointer to second operand
- * @param[in]     stride_dst  Stride for dst
- * @param[in]     stride_src1 Stride for src1
- * @param[in]     stride_src2 Stride for src2
- * @param[in]     n           Number of elements
- * @param[in]     data_type   f32 or f64
- * @return ZenuStatus         Success or error code
+ * @param[in,out] dst         GPU メモリ上の出力バッファ
+ * @param[in]     src1        GPU メモリ上の第1オペランド
+ * @param[in]     src2        GPU メモリ上の第2オペランド
+ * @param[in]     stride_dst  dst のストライド
+ * @param[in]     stride_src1 src1 のストライド
+ * @param[in]     stride_src2 src2 のストライド
+ * @param[in]     n           要素数
+ * @param[in]     data_type   f32 または f64
+ * @return ZenuStatus         成功またはエラーコード
  */
 ZenuStatus zenu_compute_sub_mat_mat_nvidia(
     void*       dst,
@@ -267,17 +256,16 @@ ZenuStatus zenu_compute_sub_mat_mat_nvidia(
 
 /*------------------ 3) SUB: mat - *(scalar_ptr) ------------------*/
 /**
- * @brief Subtract a pointer-based scalar from each element (CPU).
- *        dst[i] = src[i] - (*(scalar_ptr))
+ * @brief スカラー(ポインタ)の減算 (CPU): dst[i] = src[i] - (*(scalar_ptr))
  *
- * @param[in,out] dst         CPU memory pointer to output buffer
- * @param[in]     src         CPU memory pointer to input matrix
- * @param[in]     stride_dst  Stride for dst
- * @param[in]     stride_src  Stride for src
- * @param[in]     scalar_ptr  Pointer to scalar (float* or double*)
- * @param[in]     n           Number of elements
- * @param[in]     data_type   f32 or f64
- * @return ZenuStatus         Success or error code
+ * @param[in,out] dst         CPU メモリ上の出力バッファ
+ * @param[in]     src         CPU メモリ上の入力バッファ
+ * @param[in]     stride_dst  dst のストライド
+ * @param[in]     stride_src  src のストライド
+ * @param[in]     scalar_ptr  スカラー (float* または double*) へのポインタ
+ * @param[in]     n           要素数
+ * @param[in]     data_type   f32 または f64
+ * @return ZenuStatus         成功またはエラーコード
  */
 ZenuStatus zenu_compute_sub_mat_scalar_ptr_cpu(
     void*       dst,
@@ -290,17 +278,16 @@ ZenuStatus zenu_compute_sub_mat_scalar_ptr_cpu(
 );
 
 /**
- * @brief Subtract a pointer-based scalar from each element ("nvidia").
- *        dst[i] = src[i] - (*(scalar_ptr))
+ * @brief スカラー(ポインタ)の減算 ("nvidia"): dst[i] = src[i] - (*(scalar_ptr))
  *
- * @param[in,out] dst         GPU memory pointer to output buffer
- * @param[in]     src         GPU memory pointer to input matrix
- * @param[in]     stride_dst  Stride for dst
- * @param[in]     stride_src  Stride for src
- * @param[in]     scalar_ptr  Pointer to scalar (float* or double*)
- * @param[in]     n           Number of elements
- * @param[in]     data_type   f32 or f64
- * @return ZenuStatus         Success or error code
+ * @param[in,out] dst         GPU メモリ上の出力バッファ
+ * @param[in]     src         GPU メモリ上の入力バッファ
+ * @param[in]     stride_dst  dst のストライド
+ * @param[in]     stride_src  src のストライド
+ * @param[in]     scalar_ptr  スカラー (float* または double*) へのポインタ
+ * @param[in]     n           要素数
+ * @param[in]     data_type   f32 または f64
+ * @return ZenuStatus         成功またはエラーコード
  */
 ZenuStatus zenu_compute_sub_mat_scalar_ptr_nvidia(
     void*       dst,
@@ -314,15 +301,15 @@ ZenuStatus zenu_compute_sub_mat_scalar_ptr_nvidia(
 
 /*------------------ 4) SUB: mat_mat_assign (dst -= src) ------------------*/
 /**
- * @brief Subtract assignment (CPU): dst[i] -= src[i]
+ * @brief 減算代入 (CPU): dst[i] -= src[i]
  *
- * @param[in,out] dst         CPU memory pointer to output buffer
- * @param[in]     src         CPU memory pointer to input matrix
- * @param[in]     stride_dst  Stride for dst
- * @param[in]     stride_src  Stride for src
- * @param[in]     n           Number of elements
- * @param[in]     data_type   f32 or f64
- * @return ZenuStatus         Success or error code
+ * @param[in,out] dst         CPU メモリ上のバッファ
+ * @param[in]     src         CPU メモリ上の入力バッファ
+ * @param[in]     stride_dst  dst のストライド
+ * @param[in]     stride_src  src のストライド
+ * @param[in]     n           要素数
+ * @param[in]     data_type   f32 または f64
+ * @return ZenuStatus         成功またはエラーコード
  */
 ZenuStatus zenu_compute_sub_mat_mat_assign_cpu(
     void*       dst,
@@ -334,15 +321,15 @@ ZenuStatus zenu_compute_sub_mat_mat_assign_cpu(
 );
 
 /**
- * @brief Subtract assignment ("nvidia"): dst[i] -= src[i]
+ * @brief 減算代入 ("nvidia"): dst[i] -= src[i]
  *
- * @param[in,out] dst         GPU memory pointer to output buffer
- * @param[in]     src         GPU memory pointer to input matrix
- * @param[in]     stride_dst  Stride for dst
- * @param[in]     stride_src  Stride for src
- * @param[in]     n           Number of elements
- * @param[in]     data_type   f32 or f64
- * @return ZenuStatus         Success or error code
+ * @param[in,out] dst         GPU メモリ上のバッファ
+ * @param[in]     src         GPU メモリ上の入力バッファ
+ * @param[in]     stride_dst  dst のストライド
+ * @param[in]     stride_src  src のストライド
+ * @param[in]     n           要素数
+ * @param[in]     data_type   f32 または f64
+ * @return ZenuStatus         成功またはエラーコード
  */
 ZenuStatus zenu_compute_sub_mat_mat_assign_nvidia(
     void*       dst,
@@ -355,16 +342,14 @@ ZenuStatus zenu_compute_sub_mat_mat_assign_nvidia(
 
 /*------------------ 6) SUB: mat_scalar_ptr_assign (dst -= *(scalar_ptr)) ------------------*/
 /**
- * @brief Subtract scalar_ptr assignment (CPU): dst[i] -= *(scalar_ptr)
+ * @brief スカラー(ポインタ)の減算代入 (CPU): dst[i] -= *(scalar_ptr)
  *
- * This function does not use any source matrix pointer, and does not use any stride for a source matrix.
- *
- * @param[in,out] dst         CPU memory pointer to output buffer
- * @param[in]     stride_dst  Stride for dst
- * @param[in]     scalar_ptr  Pointer to scalar (float* or double*)
- * @param[in]     n           Number of elements
- * @param[in]     data_type   f32 or f64
- * @return ZenuStatus         Success or error code
+ * @param[in,out] dst         CPU メモリ上のバッファ
+ * @param[in]     stride_dst  dst のストライド
+ * @param[in]     scalar_ptr  スカラー (float* または double*) へのポインタ
+ * @param[in]     n           要素数
+ * @param[in]     data_type   f32 または f64
+ * @return ZenuStatus         成功またはエラーコード
  */
 ZenuStatus zenu_compute_sub_mat_scalar_ptr_assign_cpu(
     void*       dst,
@@ -375,16 +360,14 @@ ZenuStatus zenu_compute_sub_mat_scalar_ptr_assign_cpu(
 );
 
 /**
- * @brief Subtract scalar_ptr assignment ("nvidia"): dst[i] -= *(scalar_ptr)
+ * @brief スカラー(ポインタ)の減算代入 ("nvidia"): dst[i] -= *(scalar_ptr)
  *
- * This function does not use any source matrix pointer, and does not use any stride for a source matrix.
- *
- * @param[in,out] dst         GPU memory pointer to output buffer
- * @param[in]     stride_dst  Stride for dst
- * @param[in]     scalar_ptr  Pointer to scalar (float* or double*)
- * @param[in]     n           Number of elements
- * @param[in]     data_type   f32 or f64
- * @return ZenuStatus         Success or error code
+ * @param[in,out] dst         GPU メモリ上のバッファ
+ * @param[in]     stride_dst  dst のストライド
+ * @param[in]     scalar_ptr  スカラー (float* または double*) へのポインタ
+ * @param[in]     n           要素数
+ * @param[in]     data_type   f32 または f64
+ * @return ZenuStatus         成功またはエラーコード
  */
 ZenuStatus zenu_compute_sub_mat_scalar_ptr_assign_nvidia(
     void*       dst,
@@ -400,17 +383,17 @@ ZenuStatus zenu_compute_sub_mat_scalar_ptr_assign_nvidia(
 
 /*------------------ 1) MUL: mat * mat ------------------*/
 /**
- * @brief Multiply two matrices (CPU): dst[i] = src1[i] * src2[i]
+ * @brief 2つの配列要素を乗算 (CPU): dst[i] = src1[i] * src2[i]
  *
- * @param[in,out] dst         CPU memory pointer to output buffer
- * @param[in]     src1        CPU memory pointer to first operand
- * @param[in]     src2        CPU memory pointer to second operand
- * @param[in]     stride_dst  Stride for dst
- * @param[in]     stride_src1 Stride for src1
- * @param[in]     stride_src2 Stride for src2
- * @param[in]     n           Number of elements to process
- * @param[in]     data_type   f32 or f64
- * @return ZenuStatus         Success or error code
+ * @param[in,out] dst         CPU メモリ上の出力バッファ
+ * @param[in]     src1        CPU メモリ上の第1オペランド
+ * @param[in]     src2        CPU メモリ上の第2オペランド
+ * @param[in]     stride_dst  dst のストライド
+ * @param[in]     stride_src1 src1 のストライド
+ * @param[in]     stride_src2 src2 のストライド
+ * @param[in]     n           要素数
+ * @param[in]     data_type   f32 または f64
+ * @return ZenuStatus         成功またはエラーコード
  */
 ZenuStatus zenu_compute_mul_mat_mat_cpu(
     void*       dst,
@@ -424,17 +407,17 @@ ZenuStatus zenu_compute_mul_mat_mat_cpu(
 );
 
 /**
- * @brief Multiply two matrices ("nvidia"): dst[i] = src1[i] * src2[i]
+ * @brief 2つの配列要素を乗算 ("nvidia"): dst[i] = src1[i] * src2[i]
  *
- * @param[in,out] dst         GPU memory pointer to output buffer
- * @param[in]     src1        GPU memory pointer to first operand
- * @param[in]     src2        GPU memory pointer to second operand
- * @param[in]     stride_dst  Stride for dst
- * @param[in]     stride_src1 Stride for src1
- * @param[in]     stride_src2 Stride for src2
- * @param[in]     n           Number of elements
- * @param[in]     data_type   f32 or f64
- * @return ZenuStatus         Success or error code
+ * @param[in,out] dst         GPU メモリ上の出力バッファ
+ * @param[in]     src1        GPU メモリ上の第1オペランド
+ * @param[in]     src2        GPU メモリ上の第2オペランド
+ * @param[in]     stride_dst  dst のストライド
+ * @param[in]     stride_src1 src1 のストライド
+ * @param[in]     stride_src2 src2 のストライド
+ * @param[in]     n           要素数
+ * @param[in]     data_type   f32 または f64
+ * @return ZenuStatus         成功またはエラーコード
  */
 ZenuStatus zenu_compute_mul_mat_mat_nvidia(
     void*       dst,
@@ -449,17 +432,16 @@ ZenuStatus zenu_compute_mul_mat_mat_nvidia(
 
 /*------------------ 3) MUL: mat * *(scalar_ptr) ------------------*/
 /**
- * @brief Multiply a pointer-based scalar with each element (CPU):
- *        dst[i] = src[i] * (*(scalar_ptr))
+ * @brief スカラー(ポインタ)との乗算 (CPU): dst[i] = src[i] * (*(scalar_ptr))
  *
- * @param[in,out] dst         CPU memory pointer to output buffer
- * @param[in]     src         CPU memory pointer to input matrix
- * @param[in]     stride_dst  Stride for dst
- * @param[in]     stride_src  Stride for src
- * @param[in]     scalar_ptr  Pointer to scalar (float* or double*)
- * @param[in]     n           Number of elements
- * @param[in]     data_type   f32 or f64
- * @return ZenuStatus         Success or error code
+ * @param[in,out] dst         CPU メモリ上の出力バッファ
+ * @param[in]     src         CPU メモリ上の入力バッファ
+ * @param[in]     stride_dst  dst のストライド
+ * @param[in]     stride_src  src のストライド
+ * @param[in]     scalar_ptr  スカラー (float* または double*) へのポインタ
+ * @param[in]     n           要素数
+ * @param[in]     data_type   f32 または f64
+ * @return ZenuStatus         成功またはエラーコード
  */
 ZenuStatus zenu_compute_mul_mat_scalar_ptr_cpu(
     void*       dst,
@@ -472,17 +454,16 @@ ZenuStatus zenu_compute_mul_mat_scalar_ptr_cpu(
 );
 
 /**
- * @brief Multiply a pointer-based scalar with each element ("nvidia"):
- *        dst[i] = src[i] * (*(scalar_ptr))
+ * @brief スカラー(ポインタ)との乗算 ("nvidia"): dst[i] = src[i] * (*(scalar_ptr))
  *
- * @param[in,out] dst         GPU memory pointer to output buffer
- * @param[in]     src         GPU memory pointer to input matrix
- * @param[in]     stride_dst  Stride for dst
- * @param[in]     stride_src  Stride for src
- * @param[in]     scalar_ptr  Pointer to scalar (float* or double*)
- * @param[in]     n           Number of elements
- * @param[in]     data_type   f32 or f64
- * @return ZenuStatus         Success or error code
+ * @param[in,out] dst         GPU メモリ上の出力バッファ
+ * @param[in]     src         GPU メモリ上の入力バッファ
+ * @param[in]     stride_dst  dst のストライド
+ * @param[in]     stride_src  src のストライド
+ * @param[in]     scalar_ptr  スカラー (float* または double*) へのポインタ
+ * @param[in]     n           要素数
+ * @param[in]     data_type   f32 または f64
+ * @return ZenuStatus         成功またはエラーコード
  */
 ZenuStatus zenu_compute_mul_mat_scalar_ptr_nvidia(
     void*       dst,
@@ -496,15 +477,15 @@ ZenuStatus zenu_compute_mul_mat_scalar_ptr_nvidia(
 
 /*------------------ 4) MUL: mat_mat_assign (dst *= src) ------------------*/
 /**
- * @brief Multiply assignment (CPU): dst[i] *= src[i]
+ * @brief 乗算代入 (CPU): dst[i] *= src[i]
  *
- * @param[in,out] dst         CPU memory pointer to output buffer
- * @param[in]     src         CPU memory pointer to input matrix
- * @param[in]     stride_dst  Stride for dst
- * @param[in]     stride_src  Stride for src
- * @param[in]     n           Number of elements
- * @param[in]     data_type   f32 or f64
- * @return ZenuStatus         Success or error code
+ * @param[in,out] dst         CPU メモリ上のバッファ
+ * @param[in]     src         CPU メモリ上の入力バッファ
+ * @param[in]     stride_dst  dst のストライド
+ * @param[in]     stride_src  src のストライド
+ * @param[in]     n           要素数
+ * @param[in]     data_type   f32 または f64
+ * @return ZenuStatus         成功またはエラーコード
  */
 ZenuStatus zenu_compute_mul_mat_mat_assign_cpu(
     void*       dst,
@@ -516,15 +497,15 @@ ZenuStatus zenu_compute_mul_mat_mat_assign_cpu(
 );
 
 /**
- * @brief Multiply assignment ("nvidia"): dst[i] *= src[i]
+ * @brief 乗算代入 ("nvidia"): dst[i] *= src[i]
  *
- * @param[in,out] dst         GPU memory pointer to output buffer
- * @param[in]     src         GPU memory pointer to input matrix
- * @param[in]     stride_dst  Stride for dst
- * @param[in]     stride_src  Stride for src
- * @param[in]     n           Number of elements
- * @param[in]     data_type   f32 or f64
- * @return ZenuStatus         Success or error code
+ * @param[in,out] dst         GPU メモリ上のバッファ
+ * @param[in]     src         GPU メモリ上の入力バッファ
+ * @param[in]     stride_dst  dst のストライド
+ * @param[in]     stride_src  src のストライド
+ * @param[in]     n           要素数
+ * @param[in]     data_type   f32 または f64
+ * @return ZenuStatus         成功またはエラーコード
  */
 ZenuStatus zenu_compute_mul_mat_mat_assign_nvidia(
     void*       dst,
@@ -537,16 +518,14 @@ ZenuStatus zenu_compute_mul_mat_mat_assign_nvidia(
 
 /*------------------ 6) MUL: mat_scalar_ptr_assign (dst *= *(scalar_ptr)) ------------------*/
 /**
- * @brief Multiply scalar_ptr assignment (CPU): dst[i] *= *(scalar_ptr)
+ * @brief スカラー(ポインタ)の乗算代入 (CPU): dst[i] *= *(scalar_ptr)
  *
- * This function does not use any source matrix pointer, and does not use any stride for a source matrix.
- *
- * @param[in,out] dst         CPU memory pointer to output buffer
- * @param[in]     stride_dst  Stride for dst
- * @param[in]     scalar_ptr  Pointer to scalar (float* or double*)
- * @param[in]     n           Number of elements
- * @param[in]     data_type   f32 or f64
- * @return ZenuStatus         Success or error code
+ * @param[in,out] dst         CPU メモリ上のバッファ
+ * @param[in]     stride_dst  dst のストライド
+ * @param[in]     scalar_ptr  スカラー (float* または double*) へのポインタ
+ * @param[in]     n           要素数
+ * @param[in]     data_type   f32 または f64
+ * @return ZenuStatus         成功またはエラーコード
  */
 ZenuStatus zenu_compute_mul_mat_scalar_ptr_assign_cpu(
     void*       dst,
@@ -557,16 +536,14 @@ ZenuStatus zenu_compute_mul_mat_scalar_ptr_assign_cpu(
 );
 
 /**
- * @brief Multiply scalar_ptr assignment ("nvidia"): dst[i] *= *(scalar_ptr)
+ * @brief スカラー(ポインタ)の乗算代入 ("nvidia"): dst[i] *= *(scalar_ptr)
  *
- * This function does not use any source matrix pointer, and does not use any stride for a source matrix.
- *
- * @param[in,out] dst         GPU memory pointer to output buffer
- * @param[in]     stride_dst  Stride for dst
- * @param[in]     scalar_ptr  Pointer to scalar (float* or double*)
- * @param[in]     n           Number of elements
- * @param[in]     data_type   f32 or f64
- * @return ZenuStatus         Success or error code
+ * @param[in,out] dst         GPU メモリ上のバッファ
+ * @param[in]     stride_dst  dst のストライド
+ * @param[in]     scalar_ptr  スカラー (float* または double*) へのポインタ
+ * @param[in]     n           要素数
+ * @param[in]     data_type   f32 または f64
+ * @return ZenuStatus         成功またはエラーコード
  */
 ZenuStatus zenu_compute_mul_mat_scalar_ptr_assign_nvidia(
     void*       dst,
@@ -582,17 +559,17 @@ ZenuStatus zenu_compute_mul_mat_scalar_ptr_assign_nvidia(
 
 /*------------------ 1) DIV: mat / mat ------------------*/
 /**
- * @brief Divide two matrices (CPU): dst[i] = src1[i] / src2[i]
+ * @brief 2つの配列要素を除算 (CPU): dst[i] = src1[i] / src2[i]
  *
- * @param[in,out] dst         CPU memory pointer to output buffer
- * @param[in]     src1        CPU memory pointer to first operand
- * @param[in]     src2        CPU memory pointer to second operand
- * @param[in]     stride_dst  Stride for dst
- * @param[in]     stride_src1 Stride for src1
- * @param[in]     stride_src2 Stride for src2
- * @param[in]     n           Number of elements to process
- * @param[in]     data_type   f32 or f64
- * @return ZenuStatus         Success or error code
+ * @param[in,out] dst         CPU メモリ上の出力バッファ
+ * @param[in]     src1        CPU メモリ上の第1オペランド
+ * @param[in]     src2        CPU メモリ上の第2オペランド
+ * @param[in]     stride_dst  dst のストライド
+ * @param[in]     stride_src1 src1 のストライド
+ * @param[in]     stride_src2 src2 のストライド
+ * @param[in]     n           要素数
+ * @param[in]     data_type   f32 または f64
+ * @return ZenuStatus         成功またはエラーコード
  */
 ZenuStatus zenu_compute_div_mat_mat_cpu(
     void*       dst,
@@ -606,17 +583,17 @@ ZenuStatus zenu_compute_div_mat_mat_cpu(
 );
 
 /**
- * @brief Divide two matrices ("nvidia"): dst[i] = src1[i] / src2[i]
+ * @brief 2つの配列要素を除算 ("nvidia"): dst[i] = src1[i] / src2[i]
  *
- * @param[in,out] dst         GPU memory pointer to output buffer
- * @param[in]     src1        GPU memory pointer to first operand
- * @param[in]     src2        GPU memory pointer to second operand
- * @param[in]     stride_dst  Stride for dst
- * @param[in]     stride_src1 Stride for src1
- * @param[in]     stride_src2 Stride for src2
- * @param[in]     n           Number of elements
- * @param[in]     data_type   f32 or f64
- * @return ZenuStatus         Success or error code
+ * @param[in,out] dst         GPU メモリ上の出力バッファ
+ * @param[in]     src1        GPU メモリ上の第1オペランド
+ * @param[in]     src2        GPU メモリ上の第2オペランド
+ * @param[in]     stride_dst  dst のストライド
+ * @param[in]     stride_src1 src1 のストライド
+ * @param[in]     stride_src2 src2 のストライド
+ * @param[in]     n           要素数
+ * @param[in]     data_type   f32 または f64
+ * @return ZenuStatus         成功またはエラーコード
  */
 ZenuStatus zenu_compute_div_mat_mat_nvidia(
     void*       dst,
@@ -631,17 +608,16 @@ ZenuStatus zenu_compute_div_mat_mat_nvidia(
 
 /*------------------ 3) DIV: mat / *(scalar_ptr) ------------------*/
 /**
- * @brief Divide each element of a matrix by a pointer-based scalar (CPU):
- *        dst[i] = src[i] / (*(scalar_ptr))
+ * @brief スカラー(ポインタ)による除算 (CPU): dst[i] = src[i] / (*(scalar_ptr))
  *
- * @param[in,out] dst         CPU memory pointer to output buffer
- * @param[in]     src         CPU memory pointer to input matrix
- * @param[in]     stride_dst  Stride for dst
- * @param[in]     stride_src  Stride for src
- * @param[in]     scalar_ptr  Pointer to scalar (float* or double*)
- * @param[in]     n           Number of elements
- * @param[in]     data_type   f32 or f64
- * @return ZenuStatus         Success or error code
+ * @param[in,out] dst         CPU メモリ上の出力バッファ
+ * @param[in]     src         CPU メモリ上の入力バッファ
+ * @param[in]     stride_dst  dst のストライド
+ * @param[in]     stride_src  src のストライド
+ * @param[in]     scalar_ptr  スカラー (float* または double*) へのポインタ
+ * @param[in]     n           要素数
+ * @param[in]     data_type   f32 または f64
+ * @return ZenuStatus         成功またはエラーコード
  */
 ZenuStatus zenu_compute_div_mat_scalar_ptr_cpu(
     void*       dst,
@@ -654,17 +630,16 @@ ZenuStatus zenu_compute_div_mat_scalar_ptr_cpu(
 );
 
 /**
- * @brief Divide each element of a matrix by a pointer-based scalar ("nvidia"):
- *        dst[i] = src[i] / (*(scalar_ptr))
+ * @brief スカラー(ポインタ)による除算 ("nvidia"): dst[i] = src[i] / (*(scalar_ptr))
  *
- * @param[in,out] dst         GPU memory pointer to output buffer
- * @param[in]     src         GPU memory pointer to input matrix
- * @param[in]     stride_dst  Stride for dst
- * @param[in]     stride_src  Stride for src
- * @param[in]     scalar_ptr  Pointer to scalar (float* or double*)
- * @param[in]     n           Number of elements
- * @param[in]     data_type   f32 or f64
- * @return ZenuStatus         Success or error code
+ * @param[in,out] dst         GPU メモリ上の出力バッファ
+ * @param[in]     src         GPU メモリ上の入力バッファ
+ * @param[in]     stride_dst  dst のストライド
+ * @param[in]     stride_src  src のストライド
+ * @param[in]     scalar_ptr  スカラー (float* または double*) へのポインタ
+ * @param[in]     n           要素数
+ * @param[in]     data_type   f32 または f64
+ * @return ZenuStatus         成功またはエラーコード
  */
 ZenuStatus zenu_compute_div_mat_scalar_ptr_nvidia(
     void*       dst,
@@ -678,15 +653,15 @@ ZenuStatus zenu_compute_div_mat_scalar_ptr_nvidia(
 
 /*------------------ 4) DIV: mat_mat_assign (dst /= src) ------------------*/
 /**
- * @brief Divide assignment (CPU): dst[i] /= src[i]
+ * @brief 除算代入 (CPU): dst[i] /= src[i]
  *
- * @param[in,out] dst         CPU memory pointer to output buffer
- * @param[in]     src         CPU memory pointer to input matrix
- * @param[in]     stride_dst  Stride for dst
- * @param[in]     stride_src  Stride for src
- * @param[in]     n           Number of elements
- * @param[in]     data_type   f32 or f64
- * @return ZenuStatus         Success or error code
+ * @param[in,out] dst         CPU メモリ上のバッファ
+ * @param[in]     src         CPU メモリ上の入力バッファ
+ * @param[in]     stride_dst  dst のストライド
+ * @param[in]     stride_src  src のストライド
+ * @param[in]     n           要素数
+ * @param[in]     data_type   f32 または f64
+ * @return ZenuStatus         成功またはエラーコード
  */
 ZenuStatus zenu_compute_div_mat_mat_assign_cpu(
     void*       dst,
@@ -698,15 +673,15 @@ ZenuStatus zenu_compute_div_mat_mat_assign_cpu(
 );
 
 /**
- * @brief Divide assignment ("nvidia"): dst[i] /= src[i]
+ * @brief 除算代入 ("nvidia"): dst[i] /= src[i]
  *
- * @param[in,out] dst         GPU memory pointer to output buffer
- * @param[in]     src         GPU memory pointer to input matrix
- * @param[in]     stride_dst  Stride for dst
- * @param[in]     stride_src  Stride for src
- * @param[in]     n           Number of elements
- * @param[in]     data_type   f32 or f64
- * @return ZenuStatus         Success or error code
+ * @param[in,out] dst         GPU メモリ上のバッファ
+ * @param[in]     src         GPU メモリ上の入力バッファ
+ * @param[in]     stride_dst  dst のストライド
+ * @param[in]     stride_src  src のストライド
+ * @param[in]     n           要素数
+ * @param[in]     data_type   f32 または f64
+ * @return ZenuStatus         成功またはエラーコード
  */
 ZenuStatus zenu_compute_div_mat_mat_assign_nvidia(
     void*       dst,
@@ -719,16 +694,14 @@ ZenuStatus zenu_compute_div_mat_mat_assign_nvidia(
 
 /*------------------ 6) DIV: mat_scalar_ptr_assign (dst /= *(scalar_ptr)) ------------------*/
 /**
- * @brief Divide scalar_ptr assignment (CPU): dst[i] /= *(scalar_ptr)
+ * @brief スカラー(ポインタ)の除算代入 (CPU): dst[i] /= *(scalar_ptr)
  *
- * This function does not use any source matrix pointer, and does not use any stride for a source matrix.
- *
- * @param[in,out] dst         CPU memory pointer to output buffer
- * @param[in]     stride_dst  Stride for dst
- * @param[in]     scalar_ptr  Pointer to scalar (float* or double*)
- * @param[in]     n           Number of elements
- * @param[in]     data_type   f32 or f64
- * @return ZenuStatus         Success or error code
+ * @param[in,out] dst         CPU メモリ上のバッファ
+ * @param[in]     stride_dst  dst のストライド
+ * @param[in]     scalar_ptr  スカラー (float* または double*) へのポインタ
+ * @param[in]     n           要素数
+ * @param[in]     data_type   f32 または f64
+ * @return ZenuStatus         成功またはエラーコード
  */
 ZenuStatus zenu_compute_div_mat_scalar_ptr_assign_cpu(
     void*       dst,
@@ -739,16 +712,14 @@ ZenuStatus zenu_compute_div_mat_scalar_ptr_assign_cpu(
 );
 
 /**
- * @brief Divide scalar_ptr assignment ("nvidia"): dst[i] /= *(scalar_ptr)
+ * @brief スカラー(ポインタ)の除算代入 ("nvidia"): dst[i] /= *(scalar_ptr)
  *
- * This function does not use any source matrix pointer, and does not use any stride for a source matrix.
- *
- * @param[in,out] dst         GPU memory pointer to output buffer
- * @param[in]     stride_dst  Stride for dst
- * @param[in]     scalar_ptr  Pointer to scalar (float* or double*)
- * @param[in]     n           Number of elements
- * @param[in]     data_type   f32 or f64
- * @return ZenuStatus         Success or error code
+ * @param[in,out] dst         GPU メモリ上のバッファ
+ * @param[in]     stride_dst  dst のストライド
+ * @param[in]     scalar_ptr  スカラー (float* または double*) へのポインタ
+ * @param[in]     n           要素数
+ * @param[in]     data_type   f32 または f64
+ * @return ZenuStatus         成功またはエラーコード
  */
 ZenuStatus zenu_compute_div_mat_scalar_ptr_assign_nvidia(
     void*       dst,

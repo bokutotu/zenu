@@ -120,3 +120,69 @@
     }
 
 
+
+/*---------------------------
+ * 単項演算 (unary op)
+ *   dst[i] = <func>( src[i] )
+ *---------------------------*/
+#define ZENU_CPU_UNARY_MATH_FUNC(FUNC_NAME, MATH_FUNC_F32, MATH_FUNC_F64)                 \
+    ZenuStatus FUNC_NAME(                                                                 \
+        void*       dst,                                                                  \
+        const void* src,                                                                  \
+        int         stride_dst,                                                           \
+        int         stride_src,                                                           \
+        size_t      n,                                                                    \
+        ZenuDataType data_type)                                                           \
+    {                                                                                     \
+        ZenuStatus st = check_common_args(dst, n, data_type);                            \
+        if (st != Success) return st;                                                     \
+        if (!src) return InvalidArgument;                                                 \
+        if (n == 0) return Success;                                                       \
+        if (data_type == f32) {                                                           \
+            float*       pDst = (float*)dst;                                             \
+            const float* pSrc = (const float*)src;                                       \
+            _Pragma("omp parallel for simd")                                             \
+            for (size_t i = 0; i < n; i++) {                                             \
+                pDst[i * stride_dst] = MATH_FUNC_F32(pSrc[i * stride_src]);               \
+            }                                                                             \
+        } else { /* f64 */                                                               \
+            double*       pDst = (double*)dst;                                           \
+            const double* pSrc = (const double*)src;                                     \
+            _Pragma("omp parallel for simd")                                             \
+            for (size_t i = 0; i < n; i++) {                                             \
+                pDst[i * stride_dst] = MATH_FUNC_F64(pSrc[i * stride_src]);               \
+            }                                                                             \
+        }                                                                                 \
+        return Success;                                                                   \
+    }
+
+/*---------------------------
+ * 単項演算 (unary op, in-place)
+ *   dst[i] = <func>( dst[i] )
+ *---------------------------*/
+#define ZENU_CPU_UNARY_MATH_FUNC_ASSIGN(FUNC_NAME, MATH_FUNC_F32, MATH_FUNC_F64)          \
+    ZenuStatus FUNC_NAME(                                                                 \
+        void*       dst,                                                                  \
+        int         stride_dst,                                                           \
+        size_t      n,                                                                    \
+        ZenuDataType data_type)                                                           \
+    {                                                                                     \
+        ZenuStatus st = check_common_args(dst, n, data_type);                            \
+        if (st != Success) return st;                                                     \
+        if (n == 0) return Success;                                                       \
+        if (data_type == f32) {                                                           \
+            float* pDst = (float*)dst;                                                   \
+            _Pragma("omp parallel for simd")                                             \
+            for (size_t i = 0; i < n; i++) {                                             \
+                pDst[i * stride_dst] = MATH_FUNC_F32(pDst[i * stride_dst]);               \
+            }                                                                             \
+        } else { /* f64 */                                                               \
+            double* pDst = (double*)dst;                                                 \
+            _Pragma("omp parallel for simd")                                             \
+            for (size_t i = 0; i < n; i++) {                                             \
+                pDst[i * stride_dst] = MATH_FUNC_F64(pDst[i * stride_dst]);               \
+            }                                                                             \
+        }                                                                                 \
+        return Success;                                                                   \
+    }
+
