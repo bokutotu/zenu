@@ -16,6 +16,11 @@ typedef enum {
     DeviceError,
 } ZenuStatus;
 
+typedef enum {
+    Transpose,
+    NoTranspose,
+} ZenuTranspose;
+
 #ifdef __cplusplus
 }
 #endif
