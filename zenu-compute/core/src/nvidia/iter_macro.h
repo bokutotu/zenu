@@ -1,8 +1,5 @@
 #pragma once
 
-#include "zenu_compute.h"
-#include "utils.h"
-
 #include <cuda_runtime.h>
 
 //=====================================================

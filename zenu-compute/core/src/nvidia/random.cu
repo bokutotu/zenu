@@ -1,8 +1,7 @@
 #include "zenu_compute_random.h"
 #include <cuda_runtime.h>
 #include <curand.h>
-#include <mutex> // std::mutex
-#include <atomic>
+#include <mutex>
 
 //==============================
 // RandGPUContext

@@ -8,8 +8,9 @@
  *
  */
 
-#include "zenu_compute.h"
+#include "zenu_compute_type.h"
 #include "utils.h"
+#include "zenu_compute_arithmetic.h"
 #include "iter_macro.h"
 #include <cuda_runtime.h>
 #include <stdio.h>

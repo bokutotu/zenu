@@ -1,10 +1,6 @@
 #include <math.h>
-#include "zenu_compute.h"
-#include "utils.h"
 #include "iter_macro.h"
 #include <omp.h>
-#include <string.h>
-#include <stdio.h>
 
 /*-----------------------------------------
  * 1) ファンクタ (三角, 双曲線) 定義

@@ -3,13 +3,9 @@
  * @brief Implementation of arithmetic functions (add/sub/mul/div) on CPU
  */
 
-#include "zenu_compute.h"
-#include "utils.h"
 #include "iter_macro.h"
 
 #include <omp.h>                     // OpenMP
-#include <string.h>
-#include <stdio.h>
 
 //========== 1) 演算ファンクタ定義 ==========
 struct AddFunctor {

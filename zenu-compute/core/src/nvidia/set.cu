@@ -1,6 +1,6 @@
 #include <cuda_runtime.h>
 #include "zenu_compute_memory.h"
-#include <cstdio>   // デバッグ目的などで使用
+#include <cstdio>
 
 //------------------------------------------------------------------------------
 // カーネル (単精度 float 用):

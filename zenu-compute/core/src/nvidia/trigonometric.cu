@@ -1,4 +1,6 @@
-#include "zenu_compute.h"
+#include "zenu_compute_type.h"
+#include "utils.h"
+#include "zenu_compute_trigonometric.h"
 #include "iter_macro.h"
 #include <cuda_runtime.h>
 #include <math.h>
