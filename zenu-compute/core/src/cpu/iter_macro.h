@@ -7,156 +7,205 @@
 #include <stdio.h>
 
 /*-----------------------------------------
- * 2 入力演算 (binary op)
- *   dst[i] = src1[i] <op> src2[i]
+ * 1) 2入力演算 (binary op)
+ *    dst[i] = OP_FUNCTOR()( src1[i], src2[i] )
  *-----------------------------------------*/
-#define ZENU_CPU_BINARY_OP(FUNC_NAME, OP, TYPE)                                        \
-ZenuStatus FUNC_NAME(                                                                  \
-    void* dst, const void* src1, const void* src2,                                     \
-    int stride_dst, int stride_src1, int stride_src2,                                  \
-    size_t n, ZenuDataType data_type)                                                  \
-{                                                                                      \
-    ZenuStatus st = check_common_args(dst, n, data_type);                             \
-    if (st != Success) return st;                                                      \
-    if (!src1 || !src2) return InvalidArgument;                                        \
-    if (n == 0) return Success;                                                        \
-    TYPE*       pDst  = (TYPE*)dst;                                                   \
-    const TYPE* pSrc1 = (const TYPE*)src1;                                             \
-    const TYPE* pSrc2 = (const TYPE*)src2;                                             \
-    _Pragma("omp parallel for simd")                                                  \
-    for (size_t i = 0; i < n; i++) {                                                  \
-        pDst[i * stride_dst] = pSrc1[i * stride_src1] OP pSrc2[i * stride_src2];       \
-    }                                                                                  \
-    return Success;                                                                    \
-}
-
-/*-----------------------------------------
- * スカラー演算 (scalar op)
- *   dst[i] = src[i] <op> c
- *-----------------------------------------*/
-#define ZENU_CPU_SCALAR_OP(FUNC_NAME, OP, TYPE)                                       \
+#define ZENU_CPU_BINARY_OP(FUNC_NAME, OP_FUNCTOR)                                     \
 ZenuStatus FUNC_NAME(                                                                 \
-    void* dst, const void* src,                                                       \
-    int stride_dst, int stride_src,                                                   \
-    const void* scalar_ptr,                                                           \
-    size_t n, ZenuDataType data_type)                                                 \
+    void* dst, const void* src1, const void* src2,                                    \
+    int stride_dst, int stride_src1, int stride_src2,                                 \
+    size_t n, ZenuDataType dt)                                                        \
 {                                                                                     \
-    ZenuStatus st = check_common_args(dst, n, data_type);                            \
-    if (st != Success) return st;                                                     \
-    if (!src || !scalar_ptr) return InvalidArgument;                                  \
+    if (!dst || !src1 || !src2) return InvalidArgument;                               \
     if (n == 0) return Success;                                                       \
-    TYPE*       pDst = (TYPE*)dst;                                                   \
-    const TYPE* pSrc = (const TYPE*)src;                                             \
-    const TYPE  c    = *(const TYPE*)scalar_ptr;                                      \
-    _Pragma("omp parallel for simd")                                                 \
-    for (size_t i = 0; i < n; i++) {                                                 \
-        pDst[i * stride_dst] = pSrc[i * stride_src] OP c;                            \
+    if (dt == f32) {                                                                  \
+        float*       pDst  = (float*)dst;                                            \
+        const float* pSrc1 = (const float*)src1;                                      \
+        const float* pSrc2 = (const float*)src2;                                      \
+        _Pragma("omp parallel for simd")                                             \
+        for (size_t i = 0; i < n; i++) {                                             \
+            pDst[i * stride_dst] = OP_FUNCTOR()(                                     \
+                pSrc1[i * stride_src1],                                              \
+                pSrc2[i * stride_src2]);                                             \
+        }                                                                             \
+    } else if (dt == f64) {                                                           \
+        double*       pDst  = (double*)dst;                                          \
+        const double* pSrc1 = (const double*)src1;                                    \
+        const double* pSrc2 = (const double*)src2;                                    \
+        _Pragma("omp parallel for simd")                                             \
+        for (size_t i = 0; i < n; i++) {                                             \
+            pDst[i * stride_dst] = OP_FUNCTOR()(                                     \
+                pSrc1[i * stride_src1],                                              \
+                pSrc2[i * stride_src2]);                                             \
+        }                                                                             \
+    } else {                                                                          \
+        return InvalidArgument;                                                       \
     }                                                                                 \
     return Success;                                                                   \
 }
 
 /*-----------------------------------------
- * 複合代入 (assign op)
- *   dst[i] <op>= src[i]
+ * 2) スカラー演算 (scalar op)
+ *    dst[i] = OP_FUNCTOR()( src[i], c )
  *-----------------------------------------*/
-#define ZENU_CPU_ASSIGN_OP(FUNC_NAME, OP, TYPE)                                       \
+#define ZENU_CPU_SCALAR_OP(FUNC_NAME, OP_FUNCTOR)                                     \
 ZenuStatus FUNC_NAME(                                                                 \
-    void* dst, const void* src,                                                       \
-    int stride_dst, int stride_src,                                                   \
-    size_t n, ZenuDataType data_type)                                                 \
+    void* dst, const void* src,                                                      \
+    int stride_dst, int stride_src,                                                  \
+    const void* scalar_ptr,                                                          \
+    size_t n, ZenuDataType dt)                                                       \
 {                                                                                     \
-    ZenuStatus st = check_common_args(dst, n, data_type);                            \
-    if (st != Success) return st;                                                     \
-    if (!src) return InvalidArgument;                                                 \
+    if (!dst || !src || !scalar_ptr) return InvalidArgument;                         \
     if (n == 0) return Success;                                                       \
-    TYPE*       pDst = (TYPE*)dst;                                                   \
-    const TYPE* pSrc = (const TYPE*)src;                                             \
-    _Pragma("omp parallel for simd")                                                 \
-    for (size_t i = 0; i < n; i++) {                                                 \
-        pDst[i * stride_dst] OP pSrc[i * stride_src];                                \
+    if (dt == f32) {                                                                  \
+        float*       pDst = (float*)dst;                                             \
+        const float* pSrc = (const float*)src;                                       \
+        float        c    = *(const float*)scalar_ptr;                               \
+        _Pragma("omp parallel for simd")                                             \
+        for (size_t i = 0; i < n; i++) {                                             \
+            pDst[i * stride_dst] = OP_FUNCTOR()(                                     \
+                pSrc[i * stride_src], c );                                           \
+        }                                                                             \
+    } else if (dt == f64) {                                                           \
+        double*       pDst = (double*)dst;                                           \
+        const double* pSrc = (const double*)src;                                     \
+        double        c    = *(const double*)scalar_ptr;                             \
+        _Pragma("omp parallel for simd")                                             \
+        for (size_t i = 0; i < n; i++) {                                             \
+            pDst[i * stride_dst] = OP_FUNCTOR()(                                     \
+                pSrc[i * stride_src], c );                                           \
+        }                                                                             \
+    } else {                                                                          \
+        return InvalidArgument;                                                       \
     }                                                                                 \
     return Success;                                                                   \
 }
 
 /*-----------------------------------------
- * スカラー複合代入 (assign scalar op)
- *   dst[i] <op>= c
+ * 3) 複合代入 (assign op)
+ *    dst[i] = OP_FUNCTOR()( dst[i], src[i] )
  *-----------------------------------------*/
-#define ZENU_CPU_ASSIGN_SCALAR_OP(FUNC_NAME, OP, TYPE)                                \
+#define ZENU_CPU_ASSIGN_OP(FUNC_NAME, OP_FUNCTOR)                                     \
 ZenuStatus FUNC_NAME(                                                                 \
-    void* dst, int stride_dst,                                                        \
-    const void* scalar_ptr,                                                           \
-    size_t n, ZenuDataType data_type)                                                 \
+    void* dst, const void* src,                                                      \
+    int stride_dst, int stride_src,                                                  \
+    size_t n, ZenuDataType dt)                                                       \
 {                                                                                     \
-    ZenuStatus st = check_common_args(dst, n, data_type);                            \
-    if (st != Success) return st;                                                     \
-    if (!scalar_ptr) return InvalidArgument;                                          \
+    if (!dst || !src) return InvalidArgument;                                        \
     if (n == 0) return Success;                                                       \
-    TYPE* pDst = (TYPE*)dst;                                                         \
-    const TYPE c = *(const TYPE*)scalar_ptr;                                          \
-    _Pragma("omp parallel for simd")                                                 \
-    for (size_t i = 0; i < n; i++) {                                                 \
-        pDst[i * stride_dst] OP c;                                                   \
-    }                                                                                 \
-    return Success;                                                                   \
-}
-
-/*-----------------------------------------
- * 単項演算 (unary op)
- *   dst[i] = f( src[i] )
- *-----------------------------------------*/
-#define ZENU_CPU_UNARY_OP(FUNC_NAME, MATH_FUNC_F32, MATH_FUNC_F64)                    \
-ZenuStatus FUNC_NAME(                                                                 \
-    void* dst, const void* src,                                                       \
-    int stride_dst, int stride_src,                                                   \
-    size_t n, ZenuDataType data_type)                                                 \
-{                                                                                     \
-    ZenuStatus st = check_common_args(dst, n, data_type);                            \
-    if (st != Success) return st;                                                     \
-    if (!src) return InvalidArgument;                                                 \
-    if (n == 0) return Success;                                                       \
-    if (data_type == f32) {                                                           \
+    if (dt == f32) {                                                                  \
         float*       pDst = (float*)dst;                                             \
         const float* pSrc = (const float*)src;                                       \
         _Pragma("omp parallel for simd")                                             \
         for (size_t i = 0; i < n; i++) {                                             \
-            pDst[i * stride_dst] = MATH_FUNC_F32(pSrc[i * stride_src]);              \
+            pDst[i * stride_dst] = OP_FUNCTOR()(                                     \
+                pDst[i * stride_dst], pSrc[i * stride_src]);                         \
         }                                                                             \
-    } else { /* f64 */                                                               \
+    } else if (dt == f64) {                                                           \
         double*       pDst = (double*)dst;                                           \
         const double* pSrc = (const double*)src;                                     \
         _Pragma("omp parallel for simd")                                             \
         for (size_t i = 0; i < n; i++) {                                             \
-            pDst[i * stride_dst] = MATH_FUNC_F64(pSrc[i * stride_src]);              \
+            pDst[i * stride_dst] = OP_FUNCTOR()(                                     \
+                pDst[i * stride_dst], pSrc[i * stride_src]);                         \
         }                                                                             \
+    } else {                                                                          \
+        return InvalidArgument;                                                       \
     }                                                                                 \
     return Success;                                                                   \
 }
 
 /*-----------------------------------------
- * 単項演算 (unary op, in-place)
- *   dst[i] = f( dst[i] )
+ * 4) スカラー複合代入 (assign scalar op)
+ *    dst[i] = OP_FUNCTOR()( dst[i], c )
  *-----------------------------------------*/
-#define ZENU_CPU_UNARY_ASSIGN_OP(FUNC_NAME, MATH_FUNC_F32, MATH_FUNC_F64)             \
+#define ZENU_CPU_ASSIGN_SCALAR_OP(FUNC_NAME, OP_FUNCTOR)                              \
 ZenuStatus FUNC_NAME(                                                                 \
-    void* dst, int stride_dst,                                                        \
-    size_t n, ZenuDataType data_type)                                                 \
+    void* dst, int stride_dst,                                                       \
+    const void* scalar_ptr,                                                          \
+    size_t n, ZenuDataType dt)                                                       \
 {                                                                                     \
-    ZenuStatus st = check_common_args(dst, n, data_type);                            \
-    if (st != Success) return st;                                                     \
+    if (!dst || !scalar_ptr) return InvalidArgument;                                 \
     if (n == 0) return Success;                                                       \
-    if (data_type == f32) {                                                           \
+    if (dt == f32) {                                                                  \
+        float* pDst = (float*)dst;                                                   \
+        float  c    = *(const float*)scalar_ptr;                                     \
+        _Pragma("omp parallel for simd")                                             \
+        for (size_t i = 0; i < n; i++) {                                             \
+            pDst[i * stride_dst] = OP_FUNCTOR()(                                     \
+                pDst[i * stride_dst], c );                                           \
+        }                                                                             \
+    } else if (dt == f64) {                                                           \
+        double* pDst = (double*)dst;                                                 \
+        double  c    = *(const double*)scalar_ptr;                                   \
+        _Pragma("omp parallel for simd")                                             \
+        for (size_t i = 0; i < n; i++) {                                             \
+            pDst[i * stride_dst] = OP_FUNCTOR()(                                     \
+                pDst[i * stride_dst], c );                                           \
+        }                                                                             \
+    } else {                                                                          \
+        return InvalidArgument;                                                       \
+    }                                                                                 \
+    return Success;                                                                   \
+}
+
+/*-----------------------------------------
+ * 5) 単項演算 (unary op)
+ *    dst[i] = OP_FUNCTOR()( src[i] )
+ *-----------------------------------------*/
+#define ZENU_CPU_UNARY_OP(FUNC_NAME, OP_FUNCTOR)                                      \
+ZenuStatus FUNC_NAME(                                                                 \
+    void* dst, const void* src,                                                      \
+    int stride_dst, int stride_src,                                                  \
+    size_t n, ZenuDataType dt)                                                       \
+{                                                                                     \
+    if (!dst || !src) return InvalidArgument;                                        \
+    if (n == 0) return Success;                                                       \
+    if (dt == f32) {                                                                  \
+        float*       pDst = (float*)dst;                                             \
+        const float* pSrc = (const float*)src;                                       \
+        _Pragma("omp parallel for simd")                                             \
+        for (size_t i = 0; i < n; i++) {                                             \
+            pDst[i * stride_dst] = OP_FUNCTOR()( pSrc[i * stride_src] );             \
+        }                                                                             \
+    } else if (dt == f64) {                                                           \
+        double*       pDst = (double*)dst;                                           \
+        const double* pSrc = (const double*)src;                                     \
+        _Pragma("omp parallel for simd")                                             \
+        for (size_t i = 0; i < n; i++) {                                             \
+            pDst[i * stride_dst] = OP_FUNCTOR()( pSrc[i * stride_src] );             \
+        }                                                                             \
+    } else {                                                                          \
+        return InvalidArgument;                                                       \
+    }                                                                                 \
+    return Success;                                                                   \
+}
+
+/*-----------------------------------------
+ * 6) 単項演算 (unary op, in-place)
+ *    dst[i] = OP_FUNCTOR()( dst[i] )
+ *-----------------------------------------*/
+#define ZENU_CPU_UNARY_ASSIGN_OP(FUNC_NAME, OP_FUNCTOR)                               \
+ZenuStatus FUNC_NAME(                                                                 \
+    void* dst, int stride_dst,                                                       \
+    size_t n, ZenuDataType dt)                                                       \
+{                                                                                     \
+    if (!dst) return InvalidArgument;                                                \
+    if (n == 0) return Success;                                                       \
+    if (dt == f32) {                                                                  \
         float* pDst = (float*)dst;                                                   \
         _Pragma("omp parallel for simd")                                             \
         for (size_t i = 0; i < n; i++) {                                             \
-            pDst[i * stride_dst] = MATH_FUNC_F32(pDst[i * stride_dst]);              \
+            pDst[i * stride_dst] = OP_FUNCTOR()( pDst[i * stride_dst] );             \
         }                                                                             \
-    } else { /* f64 */                                                               \
+    } else if (dt == f64) {                                                           \
         double* pDst = (double*)dst;                                                 \
         _Pragma("omp parallel for simd")                                             \
         for (size_t i = 0; i < n; i++) {                                             \
-            pDst[i * stride_dst] = MATH_FUNC_F64(pDst[i * stride_dst]);              \
+            pDst[i * stride_dst] = OP_FUNCTOR()( pDst[i * stride_dst] );             \
         }                                                                             \
+    } else {                                                                          \
+        return InvalidArgument;                                                       \
     }                                                                                 \
     return Success;                                                                   \
 }

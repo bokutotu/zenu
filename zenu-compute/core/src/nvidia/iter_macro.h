@@ -1,6 +1,9 @@
 #pragma once
+
 #include "zenu_compute.h"
 #include "utils.h"
+
+#include <cuda_runtime.h>
 
 //=====================================================
 //  NVIDIA 実装 (CUDA) 用のマクロ群
@@ -109,6 +112,24 @@ ZenuStatus FUNC_NAME(                                                           
     }                                                                             \
     cudaError_t e = cudaDeviceSynchronize();                                      \
     return convertCudaError(e);                                                  \
+}
+
+template<typename T, typename OP>
+__global__ void UnaryOpKernel(T* dst, const T* src, int sd, int ss, size_t n, OP op)
+{
+    size_t i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i < n) {
+        dst[sd * i] = op(src[ss * i]);
+    }
+}
+
+template<typename T, typename OP>
+__global__ void UnaryAssignOpKernel(T* dst, int sd, size_t n, OP op)
+{
+    size_t i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i < n) {
+        dst[sd * i] = op(dst[sd * i]);
+    }
 }
 
 /*-----------------------------------------
