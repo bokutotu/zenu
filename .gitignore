@@ -1,6 +1,7 @@
 /target
 Cargo.lock
 *ccls*
+*.cache*
 *bindings.rs
 .DS_Store
 .bash_history
