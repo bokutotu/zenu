@@ -122,6 +122,8 @@ if(CUDNN_FRONTEND_BUILD_TESTS)
 
     add_executable(test_all
         ${PROJECT_SOURCE_DIR}/tests/test_random.cpp
+        ${PROJECT_SOURCE_DIR}/tests/test.cpp
+        ${PROJECT_SOURCE_DIR}/tests/test_trigonometric.cpp
         ${PROJECT_SOURCE_DIR}/tests/test_arithmetic.cpp
     )
     target_link_libraries(test_all

@@ -8,6 +8,7 @@ extern "C" {
 #include "zenu_compute_arithmetic.h"
 #include "zenu_compute_memory.h"
 #include "zenu_compute_random.h"
+#include "zenu_compute_trigonometric.h"
 
 #ifdef __cplusplus
 }
