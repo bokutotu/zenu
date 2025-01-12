@@ -16,63 +16,6 @@
 #include <stdio.h>
 
 //---------------------------------------------
-// GPU kernels
-//   1) BinaryOpKernel : dst[i] = op(s1[i], s2[i])
-//   2) ScalarOpKernel : dst[i] = op(s[i], c)
-//   3) AssignOpKernel : dst[i] = op(dst[i], s[i])
-//   4) AssignScalarOpKernel : dst[i] = op(dst[i], c)
-//---------------------------------------------
-template<typename T, typename OP>
-__global__ void BinaryOpKernel(
-    T* dst, const T* s1, const T* s2,
-    int sd, int ss1, int ss2,
-    size_t n, OP op)
-{
-    size_t idx = blockDim.x * blockIdx.x + threadIdx.x;
-    if (idx < n) {
-        dst[idx * sd] = op(s1[idx * ss1], s2[idx * ss2]);
-    }
-}
-
-template<typename T, typename OP>
-__global__ void ScalarOpKernel(
-    T* dst, const T* s,
-    int sd, int ss,
-    const T* c, size_t n, OP op)
-{
-    size_t idx = blockDim.x * blockIdx.x + threadIdx.x;
-    if (idx < n) {
-        dst[idx * sd] = op(s[idx * ss], c[0]);
-    }
-}
-
-template<typename T, typename OP>
-__global__ void AssignOpKernel(
-    T* dst, const T* s,
-    int sd, int ss,
-    size_t n, OP op)
-{
-    size_t idx = blockDim.x * blockIdx.x + threadIdx.x;
-    if (idx < n) {
-        dst[idx * sd] = op(dst[idx * sd], s[idx * ss]);
-    }
-}
-
-template<typename T, typename OP>
-__global__ void AssignScalarOpKernel(
-    T* dst,
-    int sd,
-    const T* c,
-    size_t n,
-    OP op)
-{
-    size_t idx = blockDim.x * blockIdx.x + threadIdx.x;
-    if (idx < n) {
-        dst[idx * sd] = op(dst[idx * sd], c[0]);
-    }
-}
-
-//---------------------------------------------
 // Functors for +, -, *, /
 //---------------------------------------------
 struct AddOp {

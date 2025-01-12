@@ -392,8 +392,6 @@ ZenuStatus zenu_compute_pow_mat_nvidia(
     double      exponent
 );
 
-/*------------------ 2) in-place: dst = pow(dst, exponent) ------------------*/
-
 /**
  * @brief 配列 dst の各要素に対してべき乗 (pow) を適用し、そのまま上書きする (CPU版)
  *

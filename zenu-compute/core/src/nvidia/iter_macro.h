@@ -7,6 +7,82 @@
 //=====================================================
 static const int THREADS_PER_BLOCK = 256;
 
+//---------------------------------------------
+// GPU kernels
+//   1) BinaryOpKernel : dst[i] = op(s1[i], s2[i])
+//   2) ScalarOpKernel : dst[i] = op(s[i], c)
+//   3) AssignOpKernel : dst[i] = op(dst[i], s[i])
+//   4) AssignScalarOpKernel : dst[i] = op(dst[i], c)
+//   5) UnaryOpKernel : dst[i] = op(s[i])
+//   6) UnaryAssignOpKernel : dst[i] = op(dst[i])
+//---------------------------------------------
+template<typename T, typename OP>
+__global__ void BinaryOpKernel(
+    T* dst, const T* s1, const T* s2,
+    int sd, int ss1, int ss2,
+    size_t n, OP op)
+{
+    size_t idx = blockDim.x * blockIdx.x + threadIdx.x;
+    if (idx < n) {
+        dst[idx * sd] = op(s1[idx * ss1], s2[idx * ss2]);
+    }
+}
+
+template<typename T, typename OP>
+__global__ void ScalarOpKernel(
+    T* dst, const T* s,
+    int sd, int ss,
+    const T* c, size_t n, OP op)
+{
+    size_t idx = blockDim.x * blockIdx.x + threadIdx.x;
+    if (idx < n) {
+        dst[idx * sd] = op(s[idx * ss], c[0]);
+    }
+}
+
+template<typename T, typename OP>
+__global__ void AssignOpKernel(
+    T* dst, const T* s,
+    int sd, int ss,
+    size_t n, OP op)
+{
+    size_t idx = blockDim.x * blockIdx.x + threadIdx.x;
+    if (idx < n) {
+        dst[idx * sd] = op(dst[idx * sd], s[idx * ss]);
+    }
+}
+
+template<typename T, typename OP>
+__global__ void AssignScalarOpKernel(
+    T* dst,
+    int sd,
+    const T* c,
+    size_t n,
+    OP op)
+{
+    size_t idx = blockDim.x * blockIdx.x + threadIdx.x;
+    if (idx < n) {
+        dst[idx * sd] = op(dst[idx * sd], c[0]);
+    }
+}
+
+template<typename T, typename OP>
+__global__ inline void UnaryOpKernel(T* dst, const T* src, int sd, int ss, size_t n, OP op)
+{
+    size_t i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i < n) {
+        dst[sd * i] = op(src[ss * i]);
+    }
+}
+
+template<typename T, typename OP>
+__global__ inline void UnaryAssignOpKernel(T* dst, int sd, size_t n, OP op)
+{
+    size_t i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i < n) {
+        dst[sd * i] = op(dst[sd * i]);
+    }
+}
 /*-----------------------------------------
  * 2 入力演算 (binary op)
  *   dst[i] = src1[i] <op> src2[i]
@@ -111,23 +187,7 @@ ZenuStatus FUNC_NAME(                                                           
     return convertCudaError(e);                                                  \
 }
 
-template<typename T, typename OP>
-__global__ void UnaryOpKernel(T* dst, const T* src, int sd, int ss, size_t n, OP op)
-{
-    size_t i = blockIdx.x * blockDim.x + threadIdx.x;
-    if (i < n) {
-        dst[sd * i] = op(src[ss * i]);
-    }
-}
 
-template<typename T, typename OP>
-__global__ void UnaryAssignOpKernel(T* dst, int sd, size_t n, OP op)
-{
-    size_t i = blockIdx.x * blockDim.x + threadIdx.x;
-    if (i < n) {
-        dst[sd * i] = op(dst[sd * i]);
-    }
-}
 
 /*-----------------------------------------
  * 単項演算 (unary op)
