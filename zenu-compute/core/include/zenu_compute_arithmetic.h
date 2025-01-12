@@ -22,8 +22,8 @@ extern "C" {
  * それぞれ CPU 用 (関数名末尾 `_cpu`) と "nvidia" GPU 用 (関数名末尾 `_nvidia`) が存在します。
  */
 
-#include <stddef.h> // for size_t
-#include "zenu_compute.h" // ZenuDataType, ZenuStatus などが定義されていると仮定
+#include <stddef.h>
+#include "zenu_compute_type.h"
 
 /*======================================================================
  *                        ADD  (mat + ...)
