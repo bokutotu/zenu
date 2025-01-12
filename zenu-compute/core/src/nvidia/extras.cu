@@ -12,6 +12,7 @@
 #include <math.h>
 #include <cuda_runtime.h>
 #include "zenu_compute_type.h"
+#include "zenu_compute_extras.h"
 #include "utils.h"
 #include "iter_macro.h"
 #include <stddef.h>

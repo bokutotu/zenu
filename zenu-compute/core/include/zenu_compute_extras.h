@@ -355,9 +355,9 @@ ZenuStatus zenu_compute_clip_mat_assign_nvidia(
  * @param[in]     src         CPU メモリ上の入力バッファ
  * @param[in]     stride_dst  dst のストライド
  * @param[in]     stride_src  src のストライド
+ * @param[in]     exponent    べき乗の指数 (double で指定、data_type に応じて変換)
  * @param[in]     n           配列の要素数
  * @param[in]     data_type   f32 または f64
- * @param[in]     exponent    べき乗の指数 (double で指定、data_type に応じて変換)
  * @return ZenuStatus         成功またはエラーコード
  */
 ZenuStatus zenu_compute_pow_mat_cpu(
@@ -365,9 +365,9 @@ ZenuStatus zenu_compute_pow_mat_cpu(
     const void* src,
     int         stride_dst,
     int         stride_src,
+    const void* exponent,
     size_t      n,
-    ZenuDataType data_type,
-    double      exponent
+    ZenuDataType data_type
 );
 
 /**
@@ -377,9 +377,9 @@ ZenuStatus zenu_compute_pow_mat_cpu(
  * @param[in]     src         GPU メモリ上の入力バッファ
  * @param[in]     stride_dst  dst のストライド
  * @param[in]     stride_src  src のストライド
+ * @param[in]     exponent    べき乗の指数 (double で指定、data_type に応じて変換)
  * @param[in]     n           配列の要素数
  * @param[in]     data_type   f32 または f64
- * @param[in]     exponent    べき乗の指数 (double で指定、data_type に応じて変換)
  * @return ZenuStatus         成功またはエラーコード
  */
 ZenuStatus zenu_compute_pow_mat_nvidia(
@@ -387,9 +387,9 @@ ZenuStatus zenu_compute_pow_mat_nvidia(
     const void* src,
     int         stride_dst,
     int         stride_src,
+    const void* exponent,
     size_t      n,
-    ZenuDataType data_type,
-    double      exponent
+    ZenuDataType data_type
 );
 
 /**
@@ -397,17 +397,17 @@ ZenuStatus zenu_compute_pow_mat_nvidia(
  *
  * @param[in,out] dst         CPU メモリ上のバッファ
  * @param[in]     stride_dst  dst のストライド
+ * @param[in]     exponent    べき乗の指数 (double で指定、data_type に応じて変換)
  * @param[in]     n           配列の要素数
  * @param[in]     data_type   f32 または f64
- * @param[in]     exponent    べき乗の指数 (double で指定、data_type に応じて変換)
  * @return ZenuStatus         成功またはエラーコード
  */
 ZenuStatus zenu_compute_pow_mat_assign_cpu(
     void*       dst,
     int         stride_dst,
+    const void* exponent,
     size_t      n,
-    ZenuDataType data_type,
-    double      exponent
+    ZenuDataType data_type
 );
 
 /**
@@ -415,17 +415,17 @@ ZenuStatus zenu_compute_pow_mat_assign_cpu(
  *
  * @param[in,out] dst         GPU メモリ上のバッファ
  * @param[in]     stride_dst  dst のストライド
+ * @param[in]     exponent    べき乗の指数 (double で指定、data_type に応じて変換)
  * @param[in]     n           配列の要素数
  * @param[in]     data_type   f32 または f64
- * @param[in]     exponent    べき乗の指数 (double で指定、data_type に応じて変換)
  * @return ZenuStatus         成功またはエラーコード
  */
 ZenuStatus zenu_compute_pow_mat_assign_nvidia(
     void*       dst,
     int         stride_dst,
+    const void* exponent,
     size_t      n,
-    ZenuDataType data_type,
-    double      exponent
+    ZenuDataType data_type
 );
 
 #ifdef __cplusplus

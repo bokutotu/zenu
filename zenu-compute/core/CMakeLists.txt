@@ -124,10 +124,11 @@ if(CUDNN_FRONTEND_BUILD_TESTS)
     FetchContent_MakeAvailable(googletest)
 
     add_executable(test_all
-        ${PROJECT_SOURCE_DIR}/tests/test_random.cpp
         ${PROJECT_SOURCE_DIR}/tests/test.cpp
-        ${PROJECT_SOURCE_DIR}/tests/test_trigonometric.cpp
         ${PROJECT_SOURCE_DIR}/tests/test_arithmetic.cpp
+        ${PROJECT_SOURCE_DIR}/tests/test_extras.cpp
+        ${PROJECT_SOURCE_DIR}/tests/test_random.cpp
+        ${PROJECT_SOURCE_DIR}/tests/test_trigonometric.cpp
     )
     target_link_libraries(test_all
         PRIVATE
