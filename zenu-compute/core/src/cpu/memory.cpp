@@ -40,14 +40,16 @@ void zenu_compute_set_cpu(void* dst, void* value, int num_bytes, ZenuDataType ty
     if (type == f32) {
         float* dst_f32 = static_cast<float*>(dst);
         float* value_f32 = static_cast<float*>(value);
+        _Pragma("omp parallel for")
         for (int i = 0; i < num_bytes / sizeof(float); i++) {
             dst_f32[i] = *value_f32;
         }
     } else if (type == f64) {
-        int* dst_i32 = static_cast<int*>(dst);
-        int* value_i32 = static_cast<int*>(value);
-        for (int i = 0; i < num_bytes / sizeof(int); i++) {
-            dst_i32[i] = *value_i32;
+        double* dst_f64 = static_cast<double*>(dst);
+        double* value_f64 = static_cast<double*>(value);
+        _Pragma("omp parallel for")
+        for (int i = 0; i < num_bytes / sizeof(double); i++) {
+            dst_f64[i] = *value_f64;
         }
     }
 }
