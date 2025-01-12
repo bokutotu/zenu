@@ -4,5 +4,4 @@ Cargo.lock
 *bindings.rs
 .DS_Store
 .bash_history
-*b*
 *build*

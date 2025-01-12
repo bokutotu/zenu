@@ -59,12 +59,14 @@ add_compile_options(-march=native)
 
 set(SRC_FILES
     ${PROJECT_SOURCE_DIR}/src/cpu/arithmetic.cpp
+    ${PROJECT_SOURCE_DIR}/src/cpu/blas.cpp
     ${PROJECT_SOURCE_DIR}/src/cpu/extras.cpp
     ${PROJECT_SOURCE_DIR}/src/cpu/memory.cpp
     ${PROJECT_SOURCE_DIR}/src/cpu/trigonometric.cpp
     ${PROJECT_SOURCE_DIR}/src/cpu/random.cpp
 
     ${PROJECT_SOURCE_DIR}/src/nvidia/arithmetic.cu
+    ${PROJECT_SOURCE_DIR}/src/nvidia/blas.cpp
     ${PROJECT_SOURCE_DIR}/src/nvidia/extras.cu
     ${PROJECT_SOURCE_DIR}/src/nvidia/memory.cpp
     ${PROJECT_SOURCE_DIR}/src/nvidia/memory_kernel.cu
