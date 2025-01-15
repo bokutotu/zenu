@@ -1,13 +1,13 @@
 #pragma once
 
-#include "zenu_compute_type.h"  // ZenuDataType, ZenuStatus, ZenuTranspose が定義されている想定
+#include "zenu_compute_type.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /**
- * @file zenu_blas.h
+ * @file zenu_compute_blas.h
  * @brief CPU / NVIDIA GPU 用の GEMM (行列乗算) 関数を提供する。
  *
  * C = alpha * op(A) * op(B) + beta * C

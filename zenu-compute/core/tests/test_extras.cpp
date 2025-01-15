@@ -31,7 +31,7 @@ bool compare_device_result_f32(const float* device_ptr, const float* expected, s
         return false;
     }
     // array_comp.h を用いて比較
-    return zenu_compare_array_f32(host_result.data(), expected, n, tol);
+    return array_compare(host_result.data(), expected, n, tol);
 }
 
 bool compare_device_result_f64(const double* device_ptr, const double* expected, size_t n, double tol = 1e-9)
@@ -42,7 +42,7 @@ bool compare_device_result_f64(const double* device_ptr, const double* expected,
         std::cerr << "Error: zenu_compute_nvidia_to_cpu() failed\n";
         return false;
     }
-    return zenu_compare_array_f64(host_result.data(), expected, n, tol);
+    return array_compare(host_result.data(), expected, n, tol);
 }
 
 //--------------------------------------------------------------------------
@@ -98,7 +98,7 @@ TEST(TestZenuComputeExtras, ExpMatCPU_F32)
     ASSERT_EQ(st, ZenuStatus::Success);
 
     // 比較
-    EXPECT_TRUE(zenu_compare_array_f32(output.data(), expected.data(), n));
+    EXPECT_TRUE(array_compare(output.data(), expected.data(), n));
 }
 
 TEST(TestZenuComputeExtras, ExpMatCPU_F64)
@@ -122,7 +122,7 @@ TEST(TestZenuComputeExtras, ExpMatCPU_F64)
     );
     ASSERT_EQ(st, ZenuStatus::Success);
 
-    EXPECT_TRUE(zenu_compare_array_f64(output.data(), expected.data(), n));
+    EXPECT_TRUE(array_compare(output.data(), expected.data(), n));
 }
 
 //--------------------------------------------------------------------------
@@ -232,7 +232,7 @@ TEST(TestZenuComputeExtras, ExpMatAssignCPU_F32)
         expected[i] = my_exp(input[i]);
     }
 
-    EXPECT_TRUE(zenu_compare_array_f32(buf.data(), expected.data(), n));
+    EXPECT_TRUE(array_compare(buf.data(), expected.data(), n));
 }
 
 TEST(TestZenuComputeExtras, ExpMatAssignCPU_F64)
@@ -255,7 +255,7 @@ TEST(TestZenuComputeExtras, ExpMatAssignCPU_F64)
         expected[i] = my_exp(input[i]);
     }
 
-    EXPECT_TRUE(zenu_compare_array_f64(buf.data(), expected.data(), n));
+    EXPECT_TRUE(array_compare(buf.data(), expected.data(), n));
 }
 
 //--------------------------------------------------------------------------
@@ -352,7 +352,7 @@ TEST(TestZenuComputeExtras, LnMatCPU_F32)
     ASSERT_EQ(st, ZenuStatus::Success);
 
     // 近似チェック
-    EXPECT_TRUE(zenu_compare_array_f32(output.data(), expected.data(), n, 1e-5f));
+    EXPECT_TRUE(array_compare(output.data(), expected.data(), n, 1e-5f));
 }
 
 TEST(TestZenuComputeExtras, LnMatCPU_F64)
@@ -376,7 +376,7 @@ TEST(TestZenuComputeExtras, LnMatCPU_F64)
     );
     ASSERT_EQ(st, ZenuStatus::Success);
 
-    EXPECT_TRUE(zenu_compare_array_f64(output.data(), expected.data(), n, 1e-9));
+    EXPECT_TRUE(array_compare(output.data(), expected.data(), n, 1e-9));
 }
 
 //--------------------------------------------------------------------------
@@ -476,7 +476,7 @@ TEST(TestZenuComputeExtras, LnMatAssignCPU_F32)
         expected[i] = my_ln((float[]){0.1f, 1.0f, 2.0f, 10.0f}[i]);
     }
 
-    EXPECT_TRUE(zenu_compare_array_f32(buf.data(), expected.data(), n, 1e-5f));
+    EXPECT_TRUE(array_compare(buf.data(), expected.data(), n, 1e-5f));
 }
 
 TEST(TestZenuComputeExtras, LnMatAssignCPU_F64)
@@ -497,7 +497,7 @@ TEST(TestZenuComputeExtras, LnMatAssignCPU_F64)
         expected[i] = my_ln((double[]){0.1, 1.0, 2.0, 10.0}[i]);
     }
 
-    EXPECT_TRUE(zenu_compare_array_f64(buf.data(), expected.data(), n, 1e-9));
+    EXPECT_TRUE(array_compare(buf.data(), expected.data(), n, 1e-9));
 }
 
 //--------------------------------------------------------------------------
@@ -591,7 +591,7 @@ TEST(TestZenuComputeExtras, AbsMatCPU_F32)
         expected[i] = my_abs(input[i]);
     }
 
-    EXPECT_TRUE(zenu_compare_array_f32(output.data(), expected.data(), n));
+    EXPECT_TRUE(array_compare(output.data(), expected.data(), n));
 }
 
 TEST(TestZenuComputeExtras, AbsMatCPU_F64)
@@ -615,7 +615,7 @@ TEST(TestZenuComputeExtras, AbsMatCPU_F64)
         expected[i] = my_abs(input[i]);
     }
 
-    EXPECT_TRUE(zenu_compare_array_f64(output.data(), expected.data(), n));
+    EXPECT_TRUE(array_compare(output.data(), expected.data(), n));
 }
 
 //--------------------------------------------------------------------------
@@ -714,7 +714,7 @@ TEST(TestZenuComputeExtras, AbsMatAssignCPU_F32)
     for(size_t i=0; i<n; i++){
         input[i] = my_abs(input[i]);
     }
-    EXPECT_TRUE(zenu_compare_array_f32(buf.data(), input.data(), n));
+    EXPECT_TRUE(array_compare(buf.data(), input.data(), n));
 }
 
 TEST(TestZenuComputeExtras, AbsMatAssignCPU_F64)
@@ -734,7 +734,7 @@ TEST(TestZenuComputeExtras, AbsMatAssignCPU_F64)
     for(size_t i=0; i<n; i++){
         input[i] = my_abs(input[i]);
     }
-    EXPECT_TRUE(zenu_compare_array_f64(buf.data(), input.data(), n));
+    EXPECT_TRUE(array_compare(buf.data(), input.data(), n));
 }
 
 //--------------------------------------------------------------------------
@@ -832,7 +832,7 @@ TEST(TestZenuComputeExtras, ClipMatCPU_F32)
         expected[i] = my_clip(input[i], min_val, max_val);
     }
 
-    EXPECT_TRUE(zenu_compare_array_f32(output.data(), expected.data(), n));
+    EXPECT_TRUE(array_compare(output.data(), expected.data(), n));
 }
 
 TEST(TestZenuComputeExtras, ClipMatCPU_F64)
@@ -862,7 +862,7 @@ TEST(TestZenuComputeExtras, ClipMatCPU_F64)
         expected[i] = my_clip(input[i], min_val, max_val);
     }
 
-    EXPECT_TRUE(zenu_compare_array_f64(output.data(), expected.data(), n));
+    EXPECT_TRUE(array_compare(output.data(), expected.data(), n));
 }
 
 //--------------------------------------------------------------------------
@@ -976,7 +976,7 @@ TEST(TestZenuComputeExtras, ClipMatAssignCPU_F32)
     for(size_t i=0; i<n; i++){
         input[i] = my_clip(input[i], min_val, max_val);
     }
-    EXPECT_TRUE(zenu_compare_array_f32(buf.data(), input.data(), n));
+    EXPECT_TRUE(array_compare(buf.data(), input.data(), n));
 }
 
 TEST(TestZenuComputeExtras, ClipMatAssignCPU_F64)
@@ -1001,7 +1001,7 @@ TEST(TestZenuComputeExtras, ClipMatAssignCPU_F64)
     for(size_t i=0; i<n; i++){
         input[i] = my_clip(input[i], min_val, max_val);
     }
-    EXPECT_TRUE(zenu_compare_array_f64(buf.data(), input.data(), n));
+    EXPECT_TRUE(array_compare(buf.data(), input.data(), n));
 }
 
 //--------------------------------------------------------------------------
@@ -1104,7 +1104,7 @@ TEST(TestZenuComputeExtras, PowMatCPU_F32)
         expected[i] = my_pow(input[i], exponent);
     }
 
-    EXPECT_TRUE(zenu_compare_array_f32(output.data(), expected.data(), n));
+    EXPECT_TRUE(array_compare(output.data(), expected.data(), n));
 }
 
 TEST(TestZenuComputeExtras, PowMatCPU_F64)
@@ -1130,7 +1130,7 @@ TEST(TestZenuComputeExtras, PowMatCPU_F64)
         expected[i] = my_pow(input[i], exponent);
     }
 
-    EXPECT_TRUE(zenu_compare_array_f64(output.data(), expected.data(), n));
+    EXPECT_TRUE(array_compare(output.data(), expected.data(), n));
 }
 
 //--------------------------------------------------------------------------
@@ -1243,7 +1243,7 @@ TEST(TestZenuComputeExtras, PowMatAssignCPU_F32)
     for(size_t i=0; i<n; i++){
         input[i] = my_pow(input[i], exponent);
     }
-    EXPECT_TRUE(zenu_compare_array_f32(buf.data(), input.data(), n));
+    EXPECT_TRUE(array_compare(buf.data(), input.data(), n));
 }
 
 TEST(TestZenuComputeExtras, PowMatAssignCPU_F64)
@@ -1265,7 +1265,7 @@ TEST(TestZenuComputeExtras, PowMatAssignCPU_F64)
     for(size_t i=0; i<n; i++){
         input[i] = my_pow(input[i], exponent);
     }
-    EXPECT_TRUE(zenu_compare_array_f64(buf.data(), input.data(), n));
+    EXPECT_TRUE(array_compare(buf.data(), input.data(), n));
 }
 
 //--------------------------------------------------------------------------
