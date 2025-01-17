@@ -7,7 +7,7 @@ static inline CBLAS_TRANSPOSE toCblasTranspose(ZenuTranspose zt)
     return (zt == NoTranspose) ? CblasNoTrans : CblasTrans;
 }
 
-ZenuStatus zenu_blas_gemm_cpu(
+ZenuStatus zenu_compute_gemm_cpu(
     ZenuTranspose transA,
     ZenuTranspose transB,
     int M,
@@ -31,17 +31,6 @@ ZenuStatus zenu_blas_gemm_cpu(
     if (M < 0 || N < 0 || K < 0 || lda < 1 || ldb < 1 || ldc < 1) {
         return InvalidArgument;
     }
-
-    // OpenBLAS の cblas_*gemm は
-    // cblas_*gemm( CBLAS_LAYOUT layout, CBLAS_TRANSPOSE transA, CBLAS_TRANSPOSE transB,
-    //              const int M, const int N, const int K,
-    //              const (float/double) alpha,
-    //              const (float/double)* A, const int lda,
-    //              const (float/double)* B, const int ldb,
-    //              const (float/double) beta,
-    //              (float/double)* C, const int ldc );
-    //
-    // ここで layout = CblasRowMajor を使うと、row-major 前提で計算できる。
 
     CBLAS_LAYOUT layout = CblasRowMajor;
     CBLAS_TRANSPOSE cblasTransA = toCblasTranspose(transA);

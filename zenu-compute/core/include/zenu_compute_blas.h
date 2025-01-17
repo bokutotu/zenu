@@ -52,7 +52,7 @@ extern "C" {
  *
  * @note 実装では、Eigen や OpenBLAS, 自前コードなど適宜使用可能。  
  */
-ZenuStatus zenu_blas_gemm_cpu(
+ZenuStatus zenu_compute_gemm_cpu(
     ZenuTranspose transA,
     ZenuTranspose transB,
     int M,
@@ -96,7 +96,7 @@ ZenuStatus zenu_blas_gemm_cpu(
  *
  * @note ユーザ側で CUDA や cuBLAS の初期化 (cublasCreate など) が必要な場合もある。  
  */
-ZenuStatus zenu_blas_gemm_nvidia(
+ZenuStatus zenu_compute_gemm_nvidia(
     ZenuTranspose transA,
     ZenuTranspose transB,
     int M,

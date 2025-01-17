@@ -102,6 +102,7 @@ target_link_libraries(ZenuCore
     PRIVATE
     Threads::Threads
     CUDA::cudart
+    CUDA::cublas
     CUDA::cuda_driver
     CUDA::curand
     CUDNN::cudnn

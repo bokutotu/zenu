@@ -1,25 +1,36 @@
 #include "zenu_compute_blas.h"
 #include "handle.h"
-
 #include <cublas_v2.h>
 
 /**
- * row-major (Cストライド) 配列を cuBLAS に渡す場合は、実質的に転置が反転するため、
- *   - row-major で NoTranspose → col-major で Transpose
- *   - row-major で Transpose   → col-major で NoTranspose
- *
- * というマッピングを行う。
+ * @brief row-major (Cストライド) の A, B, C を、
+ *        col-major 前提の cuBLAS で正しく計算するために、転置フラグを反転する。
  */
 static inline cublasOperation_t toCublasOpRM(ZenuTranspose zt)
 {
     if (zt == NoTranspose) {
-        return CUBLAS_OP_T;
-    } else {
         return CUBLAS_OP_N;
+    } else {
+        return CUBLAS_OP_T;
     }
 }
 
-ZenuStatus zenu_blas_gemm_nvidia(
+/**
+ * @brief row-major GEMM (C = alpha * op(A)*op(B) + beta*C) を
+ *        col-major の cuBLAS で呼び出すときの引数に変換して実行する。
+ *
+ * row-major 上での:
+ *   - A: (M x K),  lda = K
+ *   - B: (K x N),  ldb = N
+ *   - C: (M x N),  ldc = N
+ *
+ * を想定。ただし、転置フラグがある場合はさらにインデックス参照が複雑になるので
+ * ここでは cuBLAS呼び出し時に M<->N を入れ替える・op(A/B) を反転する等で吸収する。
+ *
+ * 【注意】row-majorで (K > N) や (K > M) の場合、ldb や lda が cuBLASから見て不正にならないか、
+ *         一度チェックしておくほうが安全。
+ */
+ZenuStatus zenu_compute_gemm_nvidia(
     ZenuTranspose transA,
     ZenuTranspose transB,
     int M,
@@ -43,64 +54,65 @@ ZenuStatus zenu_blas_gemm_nvidia(
         return InvalidArgument;
     }
 
-    NvidiaHandles& handles = get_global_nvidia_handles();
-    cublasHandle_t handle = *handles.cublasHandle;
+    cublasHandle_t handle = NvidiaHandles::getCublasHandle();
 
-    // row-major と column-major の違いにより、転置は反転させる。
     cublasOperation_t cuTransA = toCublasOpRM(transA);
     cublasOperation_t cuTransB = toCublasOpRM(transB);
 
-    // cuBLAS では引数の順番が (transA, transB, M, N, K, ...) となるが、
-    // row-major を column-major に読み替えるには M <-> N を入れ替えて呼ぶ必要がある。
-    // つまり:
-    //   row-major GEMM: C(M,N) = A(M,K)*B(K,N)
-    //   col-major GEMM: C'(N,M) = B'(N,K)*A'(K,M)  (転置したような扱い)
-    // となるため、cublasSgemm の呼び出しは下記のように "N, M, K" や "cuTransB, cuTransA" を用いる。
-    //
-    // 参考: NVIDIA ドキュメント "How to use cuBLAS in row-major" 等
+    int mCublas = N;
+    int nCublas = M;
+    int kCublas = K;
 
-    int cublasM = N;  // row-major の N
-    int cublasN = M;  // row-major の M
-    int cublasK = K;  // K は同じ
+    cudaDataType AType      = CUDA_R_32F;
+    cudaDataType BType      = CUDA_R_32F;
+    cudaDataType CType      = CUDA_R_32F;
+    cudaDataType computeType= CUDA_R_32F;
 
-    // alpha, beta はそれぞれ float / double
-    cublasStatus_t stat = CUBLAS_STATUS_SUCCESS;
+    const void* alphaPtr = nullptr;
+    const void* betaPtr  = nullptr;
+
+    float  alpha_f, beta_f;
+    double alpha_d, beta_d;
+
     if (data_type == f32) {
-        float alpha_f = static_cast<float>(alpha);
-        float beta_f  = static_cast<float>(beta);
-        stat = cublasSgemm(
-            handle,
-            cuTransB,  // B, A の順で転置フラグを指定
-            cuTransA,
-            cublasM,   // N
-            cublasN,   // M
-            cublasK,   // K
-            &alpha_f,
-            static_cast<const float*>(B), ldb,
-            static_cast<const float*>(A), lda,
-            &beta_f,
-            static_cast<float*>(C), ldc
-        );
-    } else {
-        double alpha_d = alpha;
-        double beta_d  = beta;
-        stat = cublasDgemm(
-            handle,
-            cuTransB,
-            cuTransA,
-            cublasM,
-            cublasN,
-            cublasK,
-            &alpha_d,
-            static_cast<const double*>(B), ldb,
-            static_cast<const double*>(A), lda,
-            &beta_d,
-            static_cast<double*>(C), ldc
-        );
+        AType = BType = CType = CUDA_R_32F;
+        computeType = CUDA_R_32F;
+
+        alpha_f = static_cast<float>(alpha);
+        beta_f  = static_cast<float>(beta);
+        alphaPtr = &alpha_f;
+        betaPtr  = &beta_f;
+    }
+    else if (data_type == f64) {
+        AType = BType = CType = CUDA_R_64F;
+        computeType = CUDA_R_64F;
+
+        alpha_d = alpha;
+        beta_d  = beta;
+        alphaPtr = &alpha_d;
+        betaPtr  = &beta_d;
+    }
+    else {
+        return InvalidArgument;
     }
 
+    cublasStatus_t stat = cublasGemmEx(
+        handle,
+        cuTransB,
+        cuTransA,
+        mCublas,
+        nCublas,
+        kCublas,
+        alphaPtr,
+        B, BType, ldb,
+        A, AType, lda,
+        betaPtr,
+        C, CType, ldc,
+        computeType,
+        CUBLAS_GEMM_DEFAULT
+    );
+
     if (stat != CUBLAS_STATUS_SUCCESS) {
-        cublasDestroy_v2(handle);
         return DeviceError;
     }
 
