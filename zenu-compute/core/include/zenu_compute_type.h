@@ -14,6 +14,7 @@ typedef enum {
     OutOfMemory,
     InvalidArgument,
     DeviceError,
+    InvalidShape,
 } ZenuStatus;
 
 typedef enum {
