@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <cstddef>
+#include <iostream>
 
 /**
  * @brief 2 つの配列が等しいかどうかを比較する関数

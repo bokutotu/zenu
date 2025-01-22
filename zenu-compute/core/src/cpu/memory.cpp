@@ -1,4 +1,5 @@
 #include "zenu_compute_type.h"
+#include "zenu_compute_memory.h"
 #include <cstdlib>
 #include <cstring>
 

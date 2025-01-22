@@ -3,7 +3,7 @@
 #include <cstddef>
 #include <iostream>
 
-size_t ZenuComputeConvCpu::get_im2col2d_bytes() const {
+size_t ZenuComputeConvCpuImpl::get_im2col2d_bytes() const {
     const size_t N           = this->input[0];
     const size_t C           = this->input[1];
     const size_t H           = this->input[2];
@@ -38,7 +38,7 @@ size_t ZenuComputeConvCpu::get_im2col2d_bytes() const {
     return N * C * kernel_h * kernel_w * out_h * out_w * data_size;
 }
 
-size_t ZenuComputeConvCpu::get_im2col_bytes() const {
+size_t ZenuComputeConvCpuImpl::get_im2col_bytes() const {
     if (get_dim() == 2) {
         return get_im2col2d_bytes();
     } else {
@@ -46,7 +46,7 @@ size_t ZenuComputeConvCpu::get_im2col_bytes() const {
     }
 }
 
-size_t ZenuComputeConvCpu::get_gemm_bytes() const {
+size_t ZenuComputeConvCpuImpl::get_gemm_bytes() const {
     size_t num_elm = 1;
     for (int i = 0; i < output.size(); i++) {
         num_elm *= output[i];
@@ -66,6 +66,6 @@ size_t ZenuComputeConvCpu::get_gemm_bytes() const {
     return num_elm * data_bytes;
 }
 
-size_t ZenuComputeConvCpu::get_forward_output_bytes() const {
+size_t ZenuComputeConvCpuImpl::get_forward_bytes() const {
     return get_im2col_bytes() + get_gemm_bytes() + 1024;
 }

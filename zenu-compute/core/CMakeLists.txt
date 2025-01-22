@@ -60,6 +60,12 @@ add_compile_options(-march=native)
 set(SRC_FILES
     ${PROJECT_SOURCE_DIR}/src/cpu/arithmetic.cpp
     ${PROJECT_SOURCE_DIR}/src/cpu/blas.cpp
+    ${PROJECT_SOURCE_DIR}/src/cpu/conv/conv.cpp
+    ${PROJECT_SOURCE_DIR}/src/cpu/conv/forward.cpp
+    ${PROJECT_SOURCE_DIR}/src/cpu/conv/gemm_transpose.cpp
+    ${PROJECT_SOURCE_DIR}/src/cpu/conv/get_bytes.cpp
+    ${PROJECT_SOURCE_DIR}/src/cpu/conv/im2col.cpp
+    ${PROJECT_SOURCE_DIR}/src/cpu/conv/impl_extern_functions.cpp
     ${PROJECT_SOURCE_DIR}/src/cpu/extras.cpp
     ${PROJECT_SOURCE_DIR}/src/cpu/memory.cpp
     ${PROJECT_SOURCE_DIR}/src/cpu/trigonometric.cpp
@@ -130,6 +136,7 @@ if(CUDNN_FRONTEND_BUILD_TESTS)
         ${PROJECT_SOURCE_DIR}/tests/test.cpp
         ${PROJECT_SOURCE_DIR}/tests/test_arithmetic.cpp
         ${PROJECT_SOURCE_DIR}/tests/test_blas.cpp
+        ${PROJECT_SOURCE_DIR}/tests/test_conv.cpp
         ${PROJECT_SOURCE_DIR}/tests/test_extras.cpp
         ${PROJECT_SOURCE_DIR}/tests/test_random.cpp
         ${PROJECT_SOURCE_DIR}/tests/test_trigonometric.cpp
