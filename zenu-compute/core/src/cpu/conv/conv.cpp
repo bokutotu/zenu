@@ -1,30 +1,67 @@
+#include "zenu_compute_conv.h"
+#include "zenu_compute_type.h"
 #include "conv.h"
-#include <iostream>
 
-ZenuStatus ZenuComputeConvCpuImpl::init(std::vector<size_t> input, 
-                                    std::vector<size_t> output, 
-                                    std::vector<size_t> kernel, 
-                                    std::vector<size_t> stride, 
-                                    std::vector<size_t> padding, 
-                                    std::vector<size_t> dilation,
-                                    ZenuDataType type) {
-    this->input = input;
-    this->output = output;
-    this->kernel = kernel;
-    this->stride = stride;
-    this->padding = padding;
-    this->dilation = dilation;
-    this->type = type;
+struct ZenuComputeConvCpu {
+    ZenuComputeConvCpuImpl* impl;
+};
 
-    if (input.size() != output.size() || input.size() != kernel.size()) {
+ZenuStatus zenu_compute_create_conv_cpu(ZenuComputeConvCpu** conv_cpu) {
+    if (conv_cpu == nullptr) {
         return InvalidArgument;
     }
-    if (stride.size() != input.size() - 2 || padding.size() != input.size() - 2 || dilation.size() != input.size() - 2) {
-        return InvalidArgument;
-    }
+
+    *conv_cpu = new ZenuComputeConvCpu();
+    (*conv_cpu)->impl = new ZenuComputeConvCpuImpl();
     return Success;
 }
 
-size_t ZenuComputeConvCpuImpl::get_dim() const {
-    return input.size() - 2;
+void zenu_compute_destroy_conv_cpu(ZenuComputeConvCpu* conv_cpu) {
+    delete conv_cpu;
+}
+
+ZenuStatus zenu_compute_set_conv_cpu_descriptor_cpu(
+    ZenuComputeConvCpu* conv_cpu,
+    size_t* input,
+    size_t* output,
+    size_t* kernel,
+    size_t* stride,
+    size_t* padding,
+    size_t* dilation,
+    ZenuDataType type,
+    size_t num_dim
+) {
+    auto input_vec = std::vector<size_t>(input, input + num_dim + 2);
+    auto output_vec = std::vector<size_t>(output, output + num_dim + 2);
+    auto kernel_vec = std::vector<size_t>(kernel, kernel + num_dim + 2);
+    auto stride_vec = std::vector<size_t>(stride, stride + num_dim);
+    auto padding_vec = std::vector<size_t>(padding, padding + num_dim);
+    auto dilation_vec = std::vector<size_t>(dilation, dilation + num_dim);
+    return conv_cpu->impl->init(input_vec, output_vec, kernel_vec, stride_vec, padding_vec, dilation_vec, type);
+}
+
+size_t zenu_compute_conv_get_forward_workspace_bytes_cpu(ZenuComputeConvCpu* conv_cpu) {
+    return conv_cpu->impl->get_forward_bytes();
+}
+
+ZenuStatus zenu_compute_conv_forward_cpu(ZenuComputeConvCpu* conv_cpu, 
+                                         const void* input_buf, 
+                                         const void*kernel_buf, 
+                                         void* workspace, 
+                                         void* output) {
+    return conv_cpu->impl->forward(input_buf, kernel_buf, output, workspace);
+}
+
+size_t zenu_compute_conv_get_bkwd_data_workspace_bytes_cpu(ZenuComputeConvCpu* conv_cpu) {
+    return conv_cpu->impl->get_backward_data_bytes();
+}
+
+ZenuStatus zenu_compute_conv_backward_data_cpu(
+    ZenuComputeConvCpu* conv_cpu,
+    const void* d_output,
+    const void* kernel,
+    void* workspace,
+    void* d_input
+) {
+    return conv_cpu->impl->backward_data(kernel, d_output, d_input, workspace);
 }

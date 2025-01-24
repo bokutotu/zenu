@@ -60,12 +60,11 @@ add_compile_options(-march=native)
 set(SRC_FILES
     ${PROJECT_SOURCE_DIR}/src/cpu/arithmetic.cpp
     ${PROJECT_SOURCE_DIR}/src/cpu/blas.cpp
+    ${PROJECT_SOURCE_DIR}/src/cpu/conv/bkwd_data.cpp
+    ${PROJECT_SOURCE_DIR}/src/cpu/conv/col2im.cpp
     ${PROJECT_SOURCE_DIR}/src/cpu/conv/conv.cpp
     ${PROJECT_SOURCE_DIR}/src/cpu/conv/forward.cpp
-    ${PROJECT_SOURCE_DIR}/src/cpu/conv/gemm_transpose.cpp
-    ${PROJECT_SOURCE_DIR}/src/cpu/conv/get_bytes.cpp
     ${PROJECT_SOURCE_DIR}/src/cpu/conv/im2col.cpp
-    ${PROJECT_SOURCE_DIR}/src/cpu/conv/impl_extern_functions.cpp
     ${PROJECT_SOURCE_DIR}/src/cpu/extras.cpp
     ${PROJECT_SOURCE_DIR}/src/cpu/memory.cpp
     ${PROJECT_SOURCE_DIR}/src/cpu/trigonometric.cpp

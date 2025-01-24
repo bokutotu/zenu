@@ -43,7 +43,23 @@ public:
                     std::vector<size_t> stride, 
                     std::vector<size_t> padding, 
                     std::vector<size_t> dilation,
-                    ZenuDataType type);
+                    ZenuDataType type) {
+        this->input = input;
+        this->output = output;
+        this->kernel = kernel;
+        this->stride = stride;
+        this->padding = padding;
+        this->dilation = dilation;
+        this->type = type;
+
+        if (input.size() != output.size() || input.size() != kernel.size()) {
+            return InvalidArgument;
+        }
+        if (stride.size() != input.size() - 2 || padding.size() != input.size() - 2 || dilation.size() != input.size() - 2) {
+            return InvalidArgument;
+        }
+        return Success;
+    }
 
     /**
      * @brief 順伝搬の出力テンソルに必要なメモリ量を計算
@@ -108,7 +124,7 @@ private:
      * @brief 畳み込みの次元数を取得（2D=2, 3D=3）
      * @return size_t 次元数
      */
-    size_t get_dim() const ;
+    size_t get_dim() const { return input.size() - 2; }
 
     /**
      * @brief im2col処理に必要なワークスペースサイズを計算
@@ -122,36 +138,42 @@ private:
          */
     size_t get_im2col2d_bytes() const ;
 
-    /**
-     * @brief col2im処理に必要なワークスペースサイズを計算
+     /**
+     * @brief GEMM操作に必要なワークスペースサイズを計算 for forward
      * @return size_t 必要なバイト数
      */
-    size_t get_col2im_bytes() const;
-    
-        /**
-         * @brief 2D畳み込み用col2imワークスペースサイズを計算
-         * @return size_t 必要なバイト数
-         */
-    size_t get_col2im2d_bytes() const;
+    size_t get_gemm_bytes_fwd() const;
 
     /**
-     * @brief GEMM操作に必要なワークスペースサイズを計算
+     * @brief GEMM操作に必要なワークスペースサイズを計算 for backward data
      * @return size_t 必要なバイト数
      */
-    size_t get_gemm_bytes() const;
+    size_t get_gemm_bytes_bkwd_data() const;
 
     /**
-     * @brief GEMM用パラメータ(M,K,N)を取得
+     * @brief GEMM用パラメータ(M,K,N)を取得 for forward
      * @return std::array<size_t,3> [M, K, N]の配列
      */
-    std::array<size_t, 3> get_gemm_param() const;
-    
-        /**
-         * @brief 2D畳み込み用GEMMパラメータ(M,K,N)を取得
-         * @return std::array<size_t,3> [M, K, N]の配列
-         * @note M:出力チャネル数, K:入力チャネル×カーネルサイズ, N:出力空間サイズ
-         */
-    std::array<size_t, 3> get_gemm_param2d() const;
+    std::array<size_t, 3> get_gemm_param_fwd() const;
+
+    /**
+     * @brief 2D畳み込み用GEMMパラメータ(M,K,N)を取得 for forward
+     * @return std::array<size_t,3> [M, K, N]の配列
+     * @note M:出力チャネル数, K:入力チャネル×カーネルサイズ, N:出力空間サイズ
+     */
+    std::array<size_t, 3> get_gemm_param2d_fwd() const;
+
+    /**
+     * @brief GEMM用パラメータ(M,K,N)を取得 for backward data
+     * @return std::array<size_t,3> [M, K, N]の配列
+     */
+    std::array<size_t, 3> get_gemm_param_bkwd_data() const;
+
+    /**
+     * @brief GEMM用パラメータ(M,K,N)を取得 for backward data
+     * @return std::array<size_t,3> [M, K, N]の配列
+     */
+    std::array<size_t, 3> get_gemm_param2d_bkwd_data() const;
 
     /**
      * @brief 入力テンソルをcolumn行列に変換（im2col）
@@ -184,17 +206,31 @@ private:
     void col2im2d(const void* col, void* input) const;
 
     /**
-     * @brief GEMM出力を適切なレイアウトに転置
+     * @brief GEMM出力を適切なレイアウトに転置 for forward
      * @param gemm_out GEMM出力ポインタ
      * @param output 転置済み出力ポインタ
      */
-    void transpose_gemm(const void* gemm_out, void* output) const;
+    void transpose_gemm_fwd(const void* gemm_out, void* output) const;
     
-        /**
-         * @brief 2D畳み込み用GEMM出力転置処理
-         * @param gemm_out GEMM出力ポインタ
-         * @param output 転置済み出力ポインタ
-         * @note NCHWレイアウトに適合するよう4次元ループで転置
-         */
-    void transpose_gemm2d(const void* gemm_out, void* output) const;
+    /**
+     * @brief 2D畳み込み用GEMM出力転置処理 for forward
+     * @param gemm_out GEMM出力ポインタ
+     * @param output 転置済み出力ポインタ
+     * @note NCHWレイアウトに適合するよう4次元ループで転置
+     */
+    void transpose_gemm2d_fwd(const void* gemm_out, void* output) const;
+
+    /**
+     * @brief GEMM出力を適切なレイアウトに転置 for backward data
+     * @param d_output GEMM出力ポインタ
+     * @param d_output_reshaped 転置済み出力ポインタ
+     */
+    void transpose_gemm_bkwd_data(const void* d_output, void* d_output_reshaped) const;
+
+    /**
+     * @brief GEMM出力を適切なレイアウトに転置 for backward kernel
+     * @param d_output GEMM出力ポインタ
+     * @param d_output_reshaped 転置済み出力ポインタ
+     */
+    void transpose_gemm2d_bkwd_data(const void* d_output, void* d_output_reshaped) const;
 };
