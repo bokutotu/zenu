@@ -159,7 +159,7 @@ size_t ZenuComputeConvCpuImpl::get_backward_data_bytes() const {
     for (auto &dim : output) d_output_size *= dim;
     size_t d_output_bytes = d_output_size * data_bytes;
 
-    size_t total = d_output_bytes + gemm_buf_total + get_im2col_bytes() + 2048; 
+    size_t total = d_output_bytes + gemm_buf_total + get_im2col_bytes() + 1024; 
     return total;
 }
 

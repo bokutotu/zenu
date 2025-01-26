@@ -61,6 +61,7 @@ set(SRC_FILES
     ${PROJECT_SOURCE_DIR}/src/cpu/arithmetic.cpp
     ${PROJECT_SOURCE_DIR}/src/cpu/blas.cpp
     ${PROJECT_SOURCE_DIR}/src/cpu/conv/bkwd_data.cpp
+    ${PROJECT_SOURCE_DIR}/src/cpu/conv/bkwd_kernel.cpp
     ${PROJECT_SOURCE_DIR}/src/cpu/conv/col2im.cpp
     ${PROJECT_SOURCE_DIR}/src/cpu/conv/conv.cpp
     ${PROJECT_SOURCE_DIR}/src/cpu/conv/forward.cpp

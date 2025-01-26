@@ -25,7 +25,7 @@ ZenuStatus zenu_compute_create_conv_cpu(ZenuComputeConvCpu** conv_cpu);
  * @param[in] conv_cpu        ハンドル (create 済み)
  * @param[in] input           入力データの次元 2Dの場合は(N, C, H, W)
  * @param[in] output          出力データの次元 2Dの場合は(N, K, P, Q)
- * @param[in] filter          フィルタ (カーネル) の次元 2Dの場合は(K, C, R, S)
+ * @param[in] kernel          フィルタ (カーネル) の次元 2Dの場合は(K, C, R, S)
  * @param[in] pad[2]          パディング (pad_h, pad_w)
  * @param[in] stride[2]       ストライド (stride_h, stride_w)
  * @param[in] dilation[2]     ダイレーション (dil_h, dil_w)
@@ -38,7 +38,7 @@ ZenuStatus zenu_compute_set_conv_cpu_descriptor_cpu(
     ZenuComputeConvCpu* conv_cpu,
     size_t *input,
     size_t *output,
-    size_t *filter,
+    size_t *kernel,
     size_t *pad,
     size_t *stride,
     size_t *dilation,
@@ -89,14 +89,14 @@ ZenuStatus zenu_compute_conv_backward_data_cpu(
 );
 
 /**
- * @brief Conv backward (w.r.t. filter) 実行に必要なワークスペース (バイト数)
+ * @brief Conv backward (w.r.t. kernel) 実行に必要なワークスペース (バイト数)
  */
-size_t zenu_compute_conv_get_bkwd_filter_workspace_bytes_cpu(ZenuComputeConvCpu* conv_cpu);
+size_t zenu_compute_conv_get_bkwd_kernel_workspace_bytes_cpu(ZenuComputeConvCpu* conv_cpu);
 
 /**
- * @brief Conv backward wrt filter 実行 (d_output & input => d_kernel)
+ * @brief Conv backward wrt kernel 実行 (d_output & input => d_kernel)
  */
-ZenuStatus zenu_compute_conv_backward_filter_cpu(
+ZenuStatus zenu_compute_conv_backward_kernel_cpu(
     ZenuComputeConvCpu* conv_cpu,
     const void* d_output,
     const void* input,
@@ -123,7 +123,7 @@ ZenuStatus zenu_compute_create_conv_nvidia(ZenuComputeConvNvidia** conv_nvidia);
  *
  * @param[in] input           入力データの次元 2Dの場合は(N, C, H, W)
  * @param[in] output          出力データの次元 2Dの場合は(N, K, P, Q)
- * @param[in] filter          フィルタ (カーネル) の次元 2Dの場合は(K, C, R, S)
+ * @param[in] kernel          フィルタ (カーネル) の次元 2Dの場合は(K, C, R, S)
  * @param[in] pad[2]          パディング (pad_h, pad_w)
  * @param[in] stride[2]       ストライド (stride_h, stride_w)
  * @param[in] dilation[2]     ダイレーション (dil_h, dil_w)
@@ -135,7 +135,7 @@ ZenuStatus zenu_compute_set_conv_nvidia_descriptor(
     ZenuComputeConvNvidia* conv_nvidia,
     size_t* input,
     size_t* output,
-    size_t* filter,
+    size_t* kernel,
     size_t pad[2],
     size_t stride[2],
     size_t dilation[2],
@@ -176,14 +176,14 @@ ZenuStatus zenu_compute_conv_backward_data_nvidia(
 );
 
 /**
- * @brief backward wrt filter のワークスペース取得 (Nvidia)
+ * @brief backward wrt kernel のワークスペース取得 (Nvidia)
  */
-size_t zenu_compute_conv_get_bkwd_filter_workspace_bytes_nvidia(ZenuComputeConvNvidia* conv_nvidia);
+size_t zenu_compute_conv_get_bkwd_kernel_workspace_bytes_nvidia(ZenuComputeConvNvidia* conv_nvidia);
 
 /**
- * @brief backward wrt filter (Nvidia)
+ * @brief backward wrt kernel (Nvidia)
  */
-ZenuStatus zenu_compute_conv_backward_filter_nvidia(
+ZenuStatus zenu_compute_conv_backward_kernel_nvidia(
     ZenuComputeConvNvidia* conv_nvidia,
     const void* d_output,
     const void* input,

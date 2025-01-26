@@ -65,3 +65,17 @@ ZenuStatus zenu_compute_conv_backward_data_cpu(
 ) {
     return conv_cpu->impl->backward_data(kernel, d_output, d_input, workspace);
 }
+
+size_t zenu_compute_conv_get_bkwd_kernel_workspace_bytes_cpu(ZenuComputeConvCpu* conv_cpu) {
+    return conv_cpu->impl->get_backward_kernel_bytes();
+}
+
+ZenuStatus zenu_compute_conv_backward_kernel_cpu(
+    ZenuComputeConvCpu* conv_cpu,
+    const void* input,
+    const void* grad_output,
+    void* grad_kernel,
+    void* workspace
+) {
+    return conv_cpu->impl->backward_kernel(input, grad_output, grad_kernel, workspace);
+}

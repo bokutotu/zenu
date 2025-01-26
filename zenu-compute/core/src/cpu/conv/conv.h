@@ -175,6 +175,17 @@ private:
      */
     std::array<size_t, 3> get_gemm_param2d_bkwd_data() const;
 
+        /**
+     * @brief backward kernel用 GEMMパラメータ(M,K,N)を取得
+     * @return [M, K, N] の配列
+     */
+    std::array<size_t, 3> get_gemm_param_bkwd_kernel() const;
+
+    /**
+     * @brief 2D畳み込み用 backward kernel GEMMパラメータ(M,K,N)
+     */
+    std::array<size_t, 3> get_gemm_param2d_bkwd_kernel() const;
+
     /**
      * @brief 入力テンソルをcolumn行列に変換（im2col）
      * @param input 入力データポインタ
@@ -233,4 +244,19 @@ private:
      * @param d_output_reshaped 転置済み出力ポインタ
      */
     void transpose_gemm2d_bkwd_data(const void* d_output, void* d_output_reshaped) const;
+
+    /**
+     * @brief GEMM出力を適切なレイアウトに転置 for backward kernel
+     * @param grad_output GEMM出力ポインタ
+     * @param grad_output_reshaped 転置済み出力ポインタ
+     */
+    void transpose_gemm_bkwd_kernel(const void* grad_output, void* grad_output_reshaped) const;
+
+    /**
+     * @brief 2D畳み込み用 grad_output 転置 ( [N,K,PQ] => [K, N*PQ] )
+     */
+    void transpose_gemm2d_bkwd_kernel(
+        const void* grad_output,
+        void*       grad_output_reshaped
+    ) const;
 };
