@@ -1,5 +1,7 @@
 #include "conv.h"
 #include "zenu_compute_blas.h"
+#include "macro.h"
+
 #include <cstring>
 #include <iostream>
 
@@ -125,17 +127,7 @@ size_t ZenuComputeConvCpuImpl::get_im2col2d_bytes() const {
     const size_t out_w       = this->output[3];
 
     size_t data_size;
-    switch (type) {
-    case ZenuDataType::f32:
-        data_size = sizeof(float);
-        break;
-    case ZenuDataType::f64:
-        data_size = sizeof(double);
-        break;
-    default:
-        std::cout << "Unsupported data type" << std::endl;
-        exit(1);
-    }
+    DEFINE_DATA_SIZE(type, data_size);
 
     return N * C * kernel_h * kernel_w * out_h * out_w * data_size;
 }
@@ -154,20 +146,11 @@ size_t ZenuComputeConvCpuImpl::get_gemm_bytes_fwd() const {
         num_elm *= output[i];
     }
     size_t data_bytes;
-    switch (type) {
-    case ZenuDataType::f32:
-        data_bytes = sizeof(float);
-        break;
-    case ZenuDataType::f64:
-        data_bytes = sizeof(double);
-        break;
-    default:
-        std::cout << "Unsupported data type" << std::endl;
-        exit(1);
-    }
+    DEFINE_DATA_SIZE(type, data_bytes);
+
     return num_elm * data_bytes;
 }
 
 size_t ZenuComputeConvCpuImpl::get_forward_bytes() const {
-    return get_im2col_bytes() + get_gemm_bytes_fwd() + 1024;
+    return get_im2col_bytes() + get_gemm_bytes_fwd() + 2048;
 }

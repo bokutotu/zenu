@@ -1,10 +1,10 @@
 #include "conv.h"
 #include "zenu_compute_blas.h"
+#include "macro.h"
 
 #include <cstddef>
 #include <stdint.h>
 #include <cstring>
-#include <iostream>
 #include <omp.h>
 
 
@@ -32,7 +32,8 @@ void ZenuComputeConvCpuImpl::transpose_gemm2d_bkwd_kernel(
     const size_t K  = kernel[0];
     const size_t PQ = output[2] * output[3];
 
-    const size_t elem_size = (type == f32) ? 4 : 8;
+    size_t elem_size;
+    DEFINE_DATA_SIZE(type, elem_size);
 
 #pragma omp parallel for collapse(2)
     for (size_t k_idx = 0; k_idx < K; k_idx++) {
@@ -42,7 +43,7 @@ void ZenuComputeConvCpuImpl::transpose_gemm2d_bkwd_kernel(
 
             memcpy(
                 static_cast<uint8_t*>(grad_output_reshaped) + dst_offset,
-                static_cast<const uint8_t*>(grad_output)    + src_offset,
+                static_cast<const uint8_t*>(grad_output) + src_offset,
                 PQ * elem_size
             );
         }
@@ -54,8 +55,7 @@ ZenuStatus ZenuComputeConvCpuImpl::backward_kernel(
     const void* grad_output,
     void*       grad_kernel,
     void*       workspace
-) const
-{
+) const {
     if (!input || !grad_output || !grad_kernel || !workspace) {
         return ZenuStatus::InvalidArgument;
     }
@@ -64,7 +64,8 @@ ZenuStatus ZenuComputeConvCpuImpl::backward_kernel(
     for (auto &kdim : kernel) {
         kernel_size *= kdim;
     }
-    const size_t dtype_size = (type == ZenuDataType::f32) ? sizeof(float) : sizeof(double);
+    size_t dtype_size;
+    DEFINE_DATA_SIZE(type, dtype_size);
     memset(grad_kernel, 0, kernel_size * dtype_size);
 
     memset(workspace, 0, get_backward_kernel_bytes());
@@ -108,14 +109,8 @@ size_t ZenuComputeConvCpuImpl::get_backward_kernel_bytes() const {
     size_t dY_trans_elm = M * Kdim;
 
     size_t dtype_size;
-    switch (type) {
-    case ZenuDataType::f32: dtype_size = 4;  break;
-    case ZenuDataType::f64: dtype_size = 8;  break;
-    default:
-        std::cerr << "Unsupported dtype in get_backward_kernel_bytes" << std::endl;
-        exit(1);
-    }
+    DEFINE_DATA_SIZE(type, dtype_size);
 
-    return im2col_sz + dY_trans_elm * dtype_size + 1024; 
+    return im2col_sz + dY_trans_elm * dtype_size + 2048; 
 }
 

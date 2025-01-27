@@ -5,17 +5,14 @@
 #include <cstddef>
 
 void ZenuComputeConvCpuImpl::im2col2d(const void* input, void* col) const {
-    // 入力形状
     const size_t N = this->input[0];
     const size_t C = this->input[1];
     const size_t H = this->input[2];
     const size_t W = this->input[3];
 
-    // カーネル形状
     const size_t kernel_h = this->kernel[2];
     const size_t kernel_w = this->kernel[3];
 
-    // ストライドやパディングなど
     const size_t stride_h   = this->stride[0];
     const size_t stride_w   = this->stride[1];
     const size_t pad_h      = this->padding[0];
@@ -23,7 +20,6 @@ void ZenuComputeConvCpuImpl::im2col2d(const void* input, void* col) const {
     const size_t dilation_h = this->dilation[0];
     const size_t dilation_w = this->dilation[1];
 
-    // 出力形状（Conv2D後）
     const size_t out_h = this->output[2];
     const size_t out_w = this->output[3];
 
@@ -79,7 +75,6 @@ void ZenuComputeConvCpuImpl::im2col2d(const void* input, void* col) const {
 }
 
 void ZenuComputeConvCpuImpl::im2col(const void* input, void* col) const {
-    // 2次元Convのみ対応
     if (get_dim() == 2) {
         im2col2d(input, col);
     } else {

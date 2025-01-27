@@ -458,7 +458,6 @@ TEST(ZenuConvCpuTest, FloatBackwardFilter2DConvTest) {
         kernel_buf,
         workspace
     );
-
     ASSERT_EQ(st, ZenuStatus::Success);
 
     const float* lib_d_kernel = static_cast<const float*>(kernel_buf);
