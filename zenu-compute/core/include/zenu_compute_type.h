@@ -15,6 +15,7 @@ typedef enum {
     InvalidArgument,
     DeviceError,
     InvalidShape,
+    CudnnError
 } ZenuStatus;
 
 typedef enum {
