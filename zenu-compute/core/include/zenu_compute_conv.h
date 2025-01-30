@@ -136,8 +136,8 @@ ZenuStatus zenu_compute_set_conv_nvidia_descriptor(
     size_t* input,
     size_t* output,
     size_t* kernel,
-    size_t pad[2],
     size_t stride[2],
+    size_t pad[2],
     size_t dilation[2],
     ZenuDataType data_type,
     size_t num_dim

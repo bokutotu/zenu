@@ -7,6 +7,13 @@
 namespace fe = cudnn_frontend;
 
 /**
+ * @brief convert 関数は、std::vector<size_t> を std::vector<int64_t> に変換します。
+ * @param v 変換する std::vector<size_t>
+ * @return 変換された std::vector<int64_t>
+ */
+std::vector<int64_t> convert(std::vector<size_t> v);
+
+/**
  * @brief from_shape 関数は、引数で与えられた配列 dims の先頭 n 個の要素から std::vector<int64_t> を生成します。
  * @param dims 長さ 8 の int64_t 配列
  * @return n 個の要素を格納した std::vector<int64_t>
@@ -50,7 +57,7 @@ fe::graph::Tensor_attributes get_tensor_attributes_without_type(std::vector<size
  * @param handle cudnnハンドル
  * @return ZenuStatus 成功した場合はSuccess、エラーが発生した場合はCudnnError
  */
-ZenuStatus build_and_check_graph(fe::graph::Graph& graph);
+ZenuStatus build_and_check_graph(fe::graph::Graph& graph, std::vector<fe::HeurMode_t> mode);
 
 /**
  * @brief get_workspace_size はワークスペースのサイズを取得します。

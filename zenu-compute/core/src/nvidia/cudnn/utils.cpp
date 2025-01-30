@@ -40,6 +40,8 @@ cudnn_frontend::DataType_t get_data_type(ZenuDataType data_type) {
 cudnn_frontend::graph::Tensor_attributes get_tensor_attributes(std::vector<size_t> shape,
                                                                ZenuDataType data_type) {
     auto type = get_data_type(data_type);
+    auto stride = default_stride(shape);
+
     return cudnn_frontend::graph::Tensor_attributes()
         .set_dim(convert(shape))
         .set_stride(default_stride(shape))

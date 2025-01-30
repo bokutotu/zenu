@@ -1,94 +1,61 @@
-#include "conv.h"
-#include "nvidia/cudnn/utils.h"
-#include "nvidia/handle.h"
-#include <memory>
+#include "conv_interface.h"
+#include "zenu_compute_conv.h"
+#include "zenu_compute_type.h"
 
-std::vector<int64_t> convert(std::vector<size_t> v) {
-    std::vector<int64_t> result;
-    for (size_t i = 0; i < v.size(); i++) {
-        result.push_back(v[i]);
-    }
-    return result;
-}
+struct ZenuComputeConvNvidia {
+    ZenuComputeConvNvidiaImpl* conv_nvidia;
+};
 
-ZenuStatus ZenuComputeConvNvidiaImpl::init(std::vector<size_t> input, 
-                                std::vector<size_t> output, 
-                                std::vector<size_t> kernel, 
-                                std::vector<size_t> stride, 
-                                std::vector<size_t> padding, 
-                                std::vector<size_t> dilation,
-                                ZenuDataType type) {
-    fwd_graph = std::make_shared<fe::graph::Graph>();
-    bwd_data_graph = std::make_shared<fe::graph::Graph>();
-    bwd_kernel_graph = std::make_shared<fe::graph::Graph>();
-
-    this->input = input;
-    this->output = output;
-    this->kernel = kernel;
-    this->stride = stride;
-    this->padding = padding;
-    this->dilation = dilation;
-    this->type = type;
-
-    if (input.size() != output.size() || input.size() != kernel.size()) {
-        return InvalidArgument;
-    }
-    if (stride.size() != input.size() - 2 || padding.size() != input.size() - 2 || dilation.size() != input.size() - 2) {
+ZenuStatus zenu_compute_create_conv_nvidia(ZenuComputeConvNvidia** conv_nvidia) {
+    if (conv_nvidia == nullptr) {
         return InvalidArgument;
     }
 
-    auto st = init_fwd();
-    if (st != Success) {
-        return st;
-    }
-    st = init_bwd_data();
-    if (st != Success) {
-        return st;
-    }
-    st = init_bwd_kernel();
-    return st;
+    *conv_nvidia = new ZenuComputeConvNvidia();
+    (*conv_nvidia)->conv_nvidia = new ZenuComputeConvNvidiaImpl();
+    return Success;
 }
 
-ZenuStatus ZenuComputeConvNvidiaImpl::init_fwd() {
-    fwd_graph->set_io_data_type(get_data_type(type))
-             .set_compute_data_type(get_data_type(type));
-
-    X_fwd = fwd_graph->tensor(get_tensor_attributes(input, type));
-    Kernel_fwd = fwd_graph->tensor(get_tensor_attributes(kernel, type));
-
-    conv_options = fe::graph::Conv_fprop_attributes()
-                        .set_padding(convert(padding))
-                        .set_stride(convert(stride))
-                        .set_dilation(convert(dilation));
-
-    Y_fwd = fwd_graph->conv_fprop(X_fwd, Kernel_fwd, conv_options);
-    Y_fwd->set_output(true)
-          .set_dim(convert(output))
-          .set_stride(default_stride(output));
-    
-    auto st = build_and_check_graph(*fwd_graph);
-
-    return st;
+void zenu_compute_destroy_conv_nvidia(ZenuComputeConvNvidia* conv_nvidia) {
+    delete conv_nvidia;
 }
 
-size_t ZenuComputeConvNvidiaImpl::get_forward_bytes() const {
-    return get_workspace_size(*fwd_graph);
+ZenuStatus zenu_compute_set_conv_nvidia_descriptor(
+    ZenuComputeConvNvidia* conv_nvidia,
+    size_t* input,
+    size_t* output,
+    size_t* kernel,
+    size_t* stride,
+    size_t* padding,
+    size_t* dilation,
+    ZenuDataType type,
+    size_t num_dim
+) {
+    auto input_vec = std::vector<size_t>(input, input + num_dim + 2);
+    auto output_vec = std::vector<size_t>(output, output + num_dim + 2);
+    auto kernel_vec = std::vector<size_t>(kernel, kernel + num_dim + 2);
+    auto stride_vec = std::vector<size_t>(stride, stride + num_dim);
+    auto padding_vec = std::vector<size_t>(padding, padding + num_dim);
+    auto dilation_vec = std::vector<size_t>(dilation, dilation + num_dim);
+    return conv_nvidia->conv_nvidia->init(input_vec, 
+                                          output_vec, 
+                                          kernel_vec, 
+                                          stride_vec, 
+                                          padding_vec, 
+                                          dilation_vec, 
+                                          type);
 }
 
-ZenuStatus ZenuComputeConvNvidiaImpl::forward(const void* input, 
-                                              const void* kernel, 
-                                              void* output, 
-                                              void* workspace) const {
-    std::unordered_map<std::shared_ptr<fe::graph::Tensor_attributes>, void*> variant_pack = {
-        {X_fwd, const_cast<void*>(input)},
-        {Kernel_fwd, const_cast<void*>(kernel)},
-        {Y_fwd, output}
-    };
-    auto st = fwd_graph->execute(NvidiaHandles::getCudnnHandle(), variant_pack, workspace);
-    if (st.is_good()) {
-        return Success;
-    } else {
-        return CudnnError;
-    }
+size_t zenu_compute_conv_get_forward_workspace_bytes_nvidia(ZenuComputeConvNvidia* conv_nvidia) {
+    return conv_nvidia->conv_nvidia->get_forward_bytes();
 }
 
+ZenuStatus zenu_compute_conv_forward_nvidia(
+    ZenuComputeConvNvidia* conv_nvidia,
+    const void* input,
+    const void* kernel,
+    void* workspace,
+    void* output
+) {
+    return conv_nvidia->conv_nvidia->forward(input, kernel, output, workspace);
+}

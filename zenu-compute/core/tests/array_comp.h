@@ -19,6 +19,7 @@ inline bool array_compare(const T* a, const T* b, size_t n, T tol = 1e-5)
     for (size_t i = 0; i < n; ++i) {
         T diff = std::fabs(a[i] - b[i]);
         if (diff > tol) {
+            std::cerr << "Mismatch at index " << i << ": " << a[i] << " != " << b[i] << " diff = " << diff << std::endl;
             return false;
         }
     }

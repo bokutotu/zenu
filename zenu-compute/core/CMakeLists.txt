@@ -73,6 +73,9 @@ set(SRC_FILES
 
     ${PROJECT_SOURCE_DIR}/src/nvidia/arithmetic.cu
     ${PROJECT_SOURCE_DIR}/src/nvidia/blas.cpp
+    ${PROJECT_SOURCE_DIR}/src/nvidia/conv/conv.cpp
+    ${PROJECT_SOURCE_DIR}/src/nvidia/conv/conv_interface.cpp
+    ${PROJECT_SOURCE_DIR}/src/nvidia/cudnn/utils.cpp
     ${PROJECT_SOURCE_DIR}/src/nvidia/extras.cu
     ${PROJECT_SOURCE_DIR}/src/nvidia/memory.cpp
     ${PROJECT_SOURCE_DIR}/src/nvidia/memory_kernel.cu
@@ -136,7 +139,7 @@ if(CUDNN_FRONTEND_BUILD_TESTS)
         ${PROJECT_SOURCE_DIR}/tests/test.cpp
         ${PROJECT_SOURCE_DIR}/tests/test_arithmetic.cpp
         ${PROJECT_SOURCE_DIR}/tests/test_blas.cpp
-        ${PROJECT_SOURCE_DIR}/tests/test_conv.cpp
+        ${PROJECT_SOURCE_DIR}/tests/test_conv2d.cpp
         ${PROJECT_SOURCE_DIR}/tests/test_extras.cpp
         ${PROJECT_SOURCE_DIR}/tests/test_random.cpp
         ${PROJECT_SOURCE_DIR}/tests/test_trigonometric.cpp
