@@ -4,6 +4,63 @@
 #include <iostream>
 #include <cstddef>
 
+void ZenuComputeConvCpuImpl::im2col1d(const void* input, void* col) const {
+    const size_t N = this->input[0];
+    const size_t C = this->input[1];
+    const size_t W = this->input[2];  // 1D input shape: [N, C, W]
+
+    const size_t kernel_w = this->kernel[2];  // 1D kernel shape: [OutCh, InCh, kW]
+    
+    const size_t stride_w   = this->stride[0];
+    const size_t pad_w      = this->padding[0];
+    const size_t dilation_w = this->dilation[0];
+
+    const size_t out_w = this->output[2];  // 1D output shape: [N, OutCh, oW]
+
+    #define IM2COL_1D_LOOP(TYPE, ZERO_VAL) \
+        TYPE* col_ptr = static_cast<TYPE*>(col); \
+        const TYPE* in_ptr = static_cast<const TYPE*>(input); \
+        _Pragma("omp parallel for collapse(2)") \
+        for (size_t n = 0; n < N; ++n) { \
+            for (size_t ow = 0; ow < out_w; ++ow) { \
+                for (size_t c = 0; c < C; ++c) { \
+                    for (size_t kw = 0; kw < kernel_w; ++kw) { \
+                        const int w_in = static_cast<int>(ow * stride_w + kw * dilation_w - pad_w); \
+                        const size_t col_index = \
+                            ((n * out_w) + ow) * (C * kernel_w) \
+                            + (c * kernel_w) \
+                            + kw; \
+                        if (w_in >= 0 && w_in < static_cast<int>(W)) { \
+                            const size_t in_index = \
+                                (n * C + c) * W \
+                                + static_cast<size_t>(w_in); \
+                            col_ptr[col_index] = in_ptr[in_index]; \
+                        } else { \
+                            col_ptr[col_index] = ZERO_VAL; \
+                        } \
+                    } \
+                } \
+            } \
+        }
+
+    switch (this->type) {
+        case ZenuDataType::f32: {
+            IM2COL_1D_LOOP(float, 0.f);
+            break;
+        }
+        case ZenuDataType::f64: {
+            IM2COL_1D_LOOP(double, 0.0);
+            break;
+        }
+        default: {
+            std::cout << "Unsupported data type in im2col1d" << std::endl;
+            break;
+        }
+    }
+
+    #undef IM2COL_1D_LOOP
+}
+
 void ZenuComputeConvCpuImpl::im2col2d(const void* input, void* col) const {
     const size_t N = this->input[0];
     const size_t C = this->input[1];
@@ -75,7 +132,9 @@ void ZenuComputeConvCpuImpl::im2col2d(const void* input, void* col) const {
 }
 
 void ZenuComputeConvCpuImpl::im2col(const void* input, void* col) const {
-    if (get_dim() == 2) {
+    if (get_dim() == 1) {
+        im2col1d(input, col);
+    } else if (get_dim() == 2) {
         im2col2d(input, col);
     } else {
         std::cout << "Unsupported dimension" << std::endl;

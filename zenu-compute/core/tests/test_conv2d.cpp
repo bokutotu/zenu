@@ -210,6 +210,8 @@ TEST(ZenuConvNvidiaTest, FloatForward2DConvNvidiaTest) {
     zenu_compute_malloc_nvidia(&input_gpu, input_size * sizeof(float));
     zenu_compute_malloc_nvidia(&kernel_gpu, kernel_size * sizeof(float));
     zenu_compute_malloc_nvidia(&output_gpu, output_size * sizeof(float));
+    float zero = 0.0f;
+    zenu_compute_set_nvidia(output_gpu, &zero, sizeof(float), ZenuDataType::f32);
 
     st = zenu_compute_cpu_to_nvidia(input_gpu, input_cpu, input_size * sizeof(float));
     ASSERT_EQ(st, ZenuStatus::Success);
@@ -220,6 +222,7 @@ TEST(ZenuConvNvidiaTest, FloatForward2DConvNvidiaTest) {
     const size_t workspace_bytes = zenu_compute_conv_get_forward_workspace_bytes_nvidia(conv_nvidia);
     zenu_compute_malloc_nvidia(&workspace_gpu, workspace_bytes);
     ASSERT_TRUE(workspace_gpu != nullptr);
+    zenu_compute_set_nvidia(workspace_gpu, &zero, workspace_bytes, ZenuDataType::f32);
 
     // Run forward convolution on GPU
     st = zenu_compute_conv_forward_nvidia(
@@ -249,25 +252,8 @@ TEST(ZenuConvNvidiaTest, FloatForward2DConvNvidiaTest) {
         padding,
         dilation
     );
-    std::cout << "GPU output: ";
-    for (int i = 0; i < gpu_output.size(); i++) {
-        std::cout << gpu_output[i] << " ";
-    }
-    std::cout << std::endl;
-    std::cout << "Naive output: ";
-    for (int i = 0; i < naive_output.size(); i++) {
-        std::cout << naive_output[i] << " ";
-    }
-    std::cout << std::endl;
-
-    std::cout << "diff " << std::endl;
-    for (int i = 0; i < gpu_output.size(); i++) {
-        std::cout << std::fabs(gpu_output[i] - naive_output[i]) << " ";
-    }
-
     ASSERT_TRUE(array_compare(gpu_output.data(), naive_output.data(), output_size, 1e-2f));
 
-    // Cleanup
     zenu_compute_free_nvidia(input_gpu);
     zenu_compute_free_nvidia(kernel_gpu);
     zenu_compute_free_nvidia(output_gpu);
@@ -584,3 +570,208 @@ TEST(ZenuConvCpuTest, FloatBackwardFilter2DConvTest) {
     zenu_compute_free_cpu(workspace);
     zenu_compute_destroy_conv_cpu(conv_cpu);
 }
+
+TEST(ZenuConvNvidiaTest, FloatBackwardData2DConvNvidiaTest) {
+    // Use same parameters as CPU test
+    const std::vector<size_t> input_shape = {2, 3, 14, 14};
+    const std::vector<size_t> kernel_shape = {2, 3, 5, 5};
+    const std::vector<size_t> output_shape = {2, 2, 14, 14};
+    const std::vector<size_t> stride = {1, 1};
+    const std::vector<size_t> padding = {2, 2};
+    const std::vector<size_t> dilation = {1, 1};
+
+    // Create NVIDIA conv handle
+    ZenuComputeConvNvidia* conv_nvidia = nullptr;
+    ZenuStatus st = zenu_compute_create_conv_nvidia(&conv_nvidia);
+    ASSERT_EQ(st, ZenuStatus::Success);
+
+    // Set convolution descriptor
+    st = zenu_compute_set_conv_nvidia_descriptor(
+        conv_nvidia,
+        const_cast<size_t*>(input_shape.data()),
+        const_cast<size_t*>(output_shape.data()),
+        const_cast<size_t*>(kernel_shape.data()),
+        const_cast<size_t*>(stride.data()),
+        const_cast<size_t*>(padding.data()),
+        const_cast<size_t*>(dilation.data()),
+        ZenuDataType::f32,
+        2
+    );
+    ASSERT_EQ(st, ZenuStatus::Success);
+
+    // Allocate CPU memory for d_output and kernel
+    void *d_output_cpu, *kernel_cpu;
+    const size_t input_size = input_shape[0] * input_shape[1] * input_shape[2] * input_shape[3];
+    const size_t kernel_size = kernel_shape[0] * kernel_shape[1] * kernel_shape[2] * kernel_shape[3];
+    const size_t output_size = output_shape[0] * output_shape[1] * output_shape[2] * output_shape[3];
+
+    zenu_compute_malloc_cpu(&d_output_cpu, output_size * sizeof(float));
+    zenu_compute_malloc_cpu(&kernel_cpu, kernel_size * sizeof(float));
+
+    // Initialize with normal distribution
+    st = zenu_compute_normal_distribution_cpu(d_output_cpu, output_size, 0.0f, 1.0f, ZenuDataType::f32, 1234);
+    ASSERT_EQ(st, ZenuStatus::Success);
+    st = zenu_compute_normal_distribution_cpu(kernel_cpu, kernel_size, 0.0f, 1.0f, ZenuDataType::f32, 5678);
+    ASSERT_EQ(st, ZenuStatus::Success);
+
+    // Allocate GPU memory
+    void *d_input_gpu, *d_output_gpu, *kernel_gpu, *workspace_gpu;
+    zenu_compute_malloc_nvidia(&d_input_gpu, input_size * sizeof(float));
+    zenu_compute_malloc_nvidia(&d_output_gpu, output_size * sizeof(float));
+    zenu_compute_malloc_nvidia(&kernel_gpu, kernel_size * sizeof(float));
+    float zero = 0.;
+    zenu_compute_set_nvidia(d_input_gpu, static_cast<void*>(&zero), input_size * sizeof(float), f32);
+
+    // Copy data to GPU
+    st = zenu_compute_cpu_to_nvidia(d_output_gpu, d_output_cpu, output_size * sizeof(float));
+    ASSERT_EQ(st, ZenuStatus::Success);
+    st = zenu_compute_cpu_to_nvidia(kernel_gpu, kernel_cpu, kernel_size * sizeof(float));
+    ASSERT_EQ(st, ZenuStatus::Success);
+
+    // Get workspace size
+    const size_t workspace_bytes = zenu_compute_conv_get_bkwd_data_workspace_bytes_nvidia(conv_nvidia);
+    zenu_compute_malloc_nvidia(&workspace_gpu, workspace_bytes);
+    zenu_compute_set_nvidia(workspace_gpu, static_cast<void*>(&zero), workspace_bytes, f32);
+
+    // Run backward data on NVIDIA
+    st = zenu_compute_conv_backward_data_nvidia(
+        conv_nvidia,
+        d_output_gpu,
+        kernel_gpu,
+        workspace_gpu,
+        d_input_gpu
+    );
+    ASSERT_EQ(st, ZenuStatus::Success);
+
+    // Copy result back to CPU
+    std::vector<float> gpu_d_input(input_size);
+    st = zenu_compute_nvidia_to_cpu(gpu_d_input.data(), d_input_gpu, input_size * sizeof(float));
+    ASSERT_EQ(st, ZenuStatus::Success);
+
+    // Compute reference implementation
+    std::vector<float> naive_d_input(input_size, 0);
+    conv2d_backward_data_naive<float>(
+        static_cast<const float*>(d_output_cpu),
+        static_cast<const float*>(kernel_cpu),
+        naive_d_input.data(),
+        input_shape,
+        kernel_shape,
+        output_shape,
+        stride,
+        padding,
+        dilation
+    );
+
+    // Verify results with tolerance for GPU computations
+    ASSERT_TRUE(array_compare(gpu_d_input.data(), naive_d_input.data(), input_size, 1e-2f));
+
+    // Cleanup
+    zenu_compute_free_nvidia(d_input_gpu);
+    zenu_compute_free_nvidia(d_output_gpu);
+    zenu_compute_free_nvidia(kernel_gpu);
+    zenu_compute_free_nvidia(workspace_gpu);
+    zenu_compute_free_cpu(d_output_cpu);
+    zenu_compute_free_cpu(kernel_cpu);
+    zenu_compute_destroy_conv_nvidia(conv_nvidia);
+}
+
+TEST(ZenuConvNvidiaTest, FloatBackwardKernel2DConvNvidiaTest) {
+    // Use same parameters as CPU test
+    const std::vector<size_t> input_shape = {2, 3, 14, 14};
+    const std::vector<size_t> kernel_shape = {2, 3, 5, 5};
+    const std::vector<size_t> output_shape = {2, 2, 14, 14};
+    const std::vector<size_t> stride = {1, 1};
+    const std::vector<size_t> padding = {2, 2};
+    const std::vector<size_t> dilation = {1, 1};
+
+    // Create NVIDIA conv handle
+    ZenuComputeConvNvidia* conv_nvidia = nullptr;
+    ZenuStatus st = zenu_compute_create_conv_nvidia(&conv_nvidia);
+    ASSERT_EQ(st, ZenuStatus::Success);
+
+    // Set convolution descriptor
+    st = zenu_compute_set_conv_nvidia_descriptor(
+        conv_nvidia,
+        const_cast<size_t*>(input_shape.data()),
+        const_cast<size_t*>(output_shape.data()),
+        const_cast<size_t*>(kernel_shape.data()),
+        const_cast<size_t*>(stride.data()),
+        const_cast<size_t*>(padding.data()),
+        const_cast<size_t*>(dilation.data()),
+        ZenuDataType::f32,
+        2
+    );
+    ASSERT_EQ(st, ZenuStatus::Success);
+
+    // Allocate CPU memory for d_output and kernel
+    void *d_output_cpu, *input_cpu;
+    const size_t input_size = input_shape[0] * input_shape[1] * input_shape[2] * input_shape[3];
+    const size_t kernel_size = kernel_shape[0] * kernel_shape[1] * kernel_shape[2] * kernel_shape[3];
+    const size_t output_size = output_shape[0] * output_shape[1] * output_shape[2] * output_shape[3];
+
+    zenu_compute_malloc_cpu(&d_output_cpu, output_size * sizeof(float));
+    zenu_compute_malloc_cpu(&input_cpu, input_size * sizeof(float));
+
+    // Initialize with normal distribution
+    st = zenu_compute_normal_distribution_cpu(d_output_cpu, output_size, 0.0f, 1.0f, ZenuDataType::f32, 1234);
+    ASSERT_EQ(st, ZenuStatus::Success);
+    st = zenu_compute_normal_distribution_cpu(input_cpu, input_size, 0.0f, 1.0f, ZenuDataType::f32, 5678);
+    ASSERT_EQ(st, ZenuStatus::Success);
+
+    // Allocate GPU memory
+    void *input_gpu, *d_output_gpu, *kernel_gpu, *workspace_gpu;
+    zenu_compute_malloc_nvidia(&input_gpu, input_size * sizeof(float));
+    zenu_compute_malloc_nvidia(&d_output_gpu, output_size * sizeof(float));
+    zenu_compute_malloc_nvidia(&kernel_gpu, kernel_size * sizeof(float));
+    float zero = 0.;
+    zenu_compute_set_nvidia(kernel_gpu, static_cast<void*>(&zero), kernel_size * sizeof(float), f32);
+
+    // Copy data to GPU
+    st = zenu_compute_cpu_to_nvidia(d_output_gpu, d_output_cpu, output_size * sizeof(float));
+    ASSERT_EQ(st, ZenuStatus::Success);
+    st = zenu_compute_cpu_to_nvidia(input_gpu, input_cpu, input_size * sizeof(float));
+    ASSERT_EQ(st, ZenuStatus::Success);
+
+    // Get workspace size
+    const size_t workspace_bytes = zenu_compute_conv_get_bkwd_kernel_workspace_bytes_nvidia(conv_nvidia);
+    zenu_compute_malloc_nvidia(&workspace_gpu, workspace_bytes);
+    zenu_compute_set_nvidia(workspace_gpu, static_cast<void*>(&zero), workspace_bytes, f32);
+
+    // Run backward data on NVIDIA
+    st = zenu_compute_conv_backward_kernel_nvidia(
+        conv_nvidia,
+        d_output_gpu,
+        input_gpu,
+        workspace_gpu,
+        kernel_gpu
+    );
+    ASSERT_EQ(st, ZenuStatus::Success);
+
+    // Copy result back to CPU
+    std::vector<float> kernel_cpu_data(kernel_size);
+    st = zenu_compute_nvidia_to_cpu(kernel_cpu_data.data(), kernel_gpu, kernel_size * sizeof(float));
+    ASSERT_EQ(st, ZenuStatus::Success);
+
+    // Compute reference implementation
+    std::vector<float> kernel_cpu(kernel_size, 0);
+    conv2d_backward_kernel_naive<float>(
+        static_cast<const float*>(input_cpu),
+        static_cast<const float*>(d_output_cpu),
+        static_cast<float*>(kernel_cpu.data()),
+        input_shape,
+        kernel_shape,
+        output_shape,
+        stride,
+        padding,
+        dilation
+    );
+
+    // Cleanup
+    zenu_compute_free_nvidia(input_gpu);
+    zenu_compute_free_nvidia(d_output_gpu);
+    zenu_compute_free_nvidia(kernel_gpu);
+    zenu_compute_free_nvidia(workspace_gpu);
+    zenu_compute_free_cpu(d_output_cpu);
+    zenu_compute_destroy_conv_nvidia(conv_nvidia);
+}
+

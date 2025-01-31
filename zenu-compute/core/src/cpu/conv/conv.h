@@ -192,13 +192,21 @@ private:
      * @param col 出力column行列ポインタ
      */
     void im2col(const void* input, void* col) const;
+
+    /**
+     * @brief 1D畳み込み用im2col処理
+     * @param input 入力データポインタ
+     * @param col 出力column行列ポインタ
+     * @note OpenMPによる並列化済み
+     */
+    void im2col1d(const void* input, void* col)const;
     
-        /**
-         * @brief 2D畳み込み用im2col処理
-         * @param input 入力データポインタ
-         * @param col 出力column行列ポインタ
-         * @note OpenMPによる並列化済み
-         */
+    /**
+     * @brief 2D畳み込み用im2col処理
+     * @param input 入力データポインタ
+     * @param col 出力column行列ポインタ
+     * @note OpenMPによる並列化済み
+     */
     void im2col2d(const void* input, void* col)const;
 
     /**

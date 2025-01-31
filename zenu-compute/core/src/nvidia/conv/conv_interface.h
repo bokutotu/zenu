@@ -1,8 +1,12 @@
 #pragma once
 
 #include "zenu_compute_type.h"
-#include "nvidia/cudnn/graph_desc_interface.h"
-#include <memory>
+
+#include <vector>
+#include <cstddef>
+#include <cudnn_frontend.h>
+
+namespace fe = cudnn_frontend;
 
 struct ZenuComputeConvNvidiaImpl {
 public:
@@ -107,7 +111,17 @@ private:
     std::shared_ptr<fe::graph::Tensor_attributes> Kernel_fwd;
     std::shared_ptr<fe::graph::Tensor_attributes> Y_fwd;
 
+    std::shared_ptr<fe::graph::Tensor_attributes> Y_bkwd_data;
+    std::shared_ptr<fe::graph::Tensor_attributes> Kernel_bkwd_data;
+    std::shared_ptr<fe::graph::Tensor_attributes> X_bkwd_data;
+
+    std::shared_ptr<fe::graph::Tensor_attributes> X_bkwd_kernel;
+    std::shared_ptr<fe::graph::Tensor_attributes> Y_bkwd_kernel;
+    std::shared_ptr<fe::graph::Tensor_attributes> W_bkwd_kernel;
+
     fe::graph::Conv_fprop_attributes conv_options;
+    fe::graph::Conv_dgrad_attributes conv_dgrad_options;
+    fe::graph::Conv_wgrad_attributes conv_wgrad_options;
 
 
     ZenuStatus init_fwd();
