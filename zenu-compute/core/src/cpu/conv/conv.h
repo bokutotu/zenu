@@ -186,6 +186,12 @@ private:
      * @brief GEMM用パラメータ(M,K,N)を取得 for backward data
      * @return std::array<size_t,3> [M, K, N]の配列
      */
+    std::array<size_t, 3> get_gemm_param1d_bkwd_data() const;
+
+    /**
+     * @brief GEMM用パラメータ(M,K,N)を取得 for backward data
+     * @return std::array<size_t,3> [M, K, N]の配列
+     */
     std::array<size_t, 3> get_gemm_param2d_bkwd_data() const;
 
         /**
@@ -228,13 +234,21 @@ private:
      * @param input 出力テンソルポインタ
      */
     void col2im(const void* col, void* input) const;
-    
-        /**
-         * @brief 2D畳み込み用col2im処理
-         * @param col 入力column行列ポインタ
-         * @param input 出力テンソルポインタ
-         * @note OpenMPによる並列化済み
-         */
+
+    /**
+     * @brief 1D畳み込み用col2im処理
+     * @param col 入力column行列ポインタ
+     * @param input 出力テンソルポインタ
+     * @note OpenMPによる並列化済み
+     */
+    void col2im1d(const void* col, void* input) const;
+
+    /**
+     * @brief 2D畳み込み用col2im処理
+     * @param col 入力column行列ポインタ
+     * @param input 出力テンソルポインタ
+     * @note OpenMPによる並列化済み
+     */
     void col2im2d(const void* col, void* input) const;
 
     /**
@@ -266,6 +280,13 @@ private:
      * @param d_output_reshaped 転置済み出力ポインタ
      */
     void transpose_gemm_bkwd_data(const void* d_output, void* d_output_reshaped) const;
+
+    /**
+     * @brief GEMM出力を適切なレイアウトに転置 for backward kernel
+     * @param d_output GEMM出力ポインタ
+     * @param d_output_reshaped 転置済み出力ポインタ
+     */
+    void transpose_gemm1d_bkwd_data(const void* d_output, void* d_output_reshaped) const;
 
     /**
      * @brief GEMM出力を適切なレイアウトに転置 for backward kernel
