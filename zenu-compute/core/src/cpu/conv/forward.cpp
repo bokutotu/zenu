@@ -7,20 +7,26 @@
 
 std::array<size_t, 3> ZenuComputeConvCpuImpl::get_gemm_param_fwd() const {
     const size_t dim = get_dim();
-    if (dim == 2) {
+    if (dim == 1) {
+        return get_gemm_param1d_fwd();
+    } else if (dim == 2) {
         return get_gemm_param2d_fwd();
     }
     // TODO: Support other dimensions
     return {0, 0, 0};
 }
 
+std::array<size_t, 3> ZenuComputeConvCpuImpl::get_gemm_param1d_fwd() const {
+    const size_t M = output[1];
+    const size_t K = input[1] * kernel[2];
+    const size_t N = input[0] * output[2];
+    return {M, K, N};
+}
+
 std::array<size_t, 3> ZenuComputeConvCpuImpl::get_gemm_param2d_fwd() const {
-    // M: 出力チャネル数 (K)
-    // K: 入力チャネル数×カーネル高さ×カーネル幅 (C*R*S)
-    // N: バッチサイズ×出力高さ×出力幅 (N*P*Q)
     const size_t M = output[1];
     const size_t K = input[1] * kernel[2] * kernel[3];
-    const size_t N = input[0] * output[2] * output[3];  // Include batch size
+    const size_t N = input[0] * output[2] * output[3];
     return {M, K, N};
 }
 
@@ -66,11 +72,43 @@ ZenuStatus ZenuComputeConvCpuImpl::forward(
 }
 
 void ZenuComputeConvCpuImpl::transpose_gemm_fwd(const void* gemm_out, void* output) const {
-    if (get_dim() == 2) {
+    if (get_dim() == 1) {
+        transpose_gemm1d_fwd(gemm_out, output);
+    } else if (get_dim() == 2) {
         transpose_gemm2d_fwd(gemm_out, output);
     } else {
         std::cout << "Unsupported dimension in transpose_gemm" << std::endl;
     }
+}
+
+void ZenuComputeConvCpuImpl::transpose_gemm1d_fwd(const void* gemm_out, void* output) const {
+    const size_t N = this->output[0];
+    const size_t M = this->output[1];
+    const size_t L = this->output[2];
+
+    #define TRANSPOSE_GEMM_1D_LOOP(TYPE, in_ptr, out_ptr)                    \
+        _Pragma("omp parallel for collapse(3)")                             \
+        for (size_t n = 0; n < N; ++n) {                                       \
+            for (size_t m = 0; m < M; ++m) {                                   \
+                for (size_t l = 0; l < L; ++l) {                               \
+                    ((TYPE*)out_ptr)[n * M * L + m * L + l] =                  \
+                        ((const TYPE*)in_ptr)[m * (N * L) + n * L + l];        \
+                }                                                            \
+            }                                                                \
+        }
+
+    switch (type) {
+    case ZenuDataType::f32:
+        TRANSPOSE_GEMM_1D_LOOP(float, gemm_out, output);
+        break;
+    case ZenuDataType::f64:
+        TRANSPOSE_GEMM_1D_LOOP(double, gemm_out, output);
+        break;
+    default:
+        std::cout << "Unsupported data type in transpose_gemm1d" << std::endl;
+        break;
+    }
+    #undef TRANSPOSE_GEMM_1D_LOOP
 }
 
 void ZenuComputeConvCpuImpl::transpose_gemm2d_fwd(const void* gemm_out, void* output) const {
@@ -107,21 +145,24 @@ void ZenuComputeConvCpuImpl::transpose_gemm2d_fwd(const void* gemm_out, void* ou
 #undef TRANSPOSE_GEMM_2D_LOOP
 }
 
+size_t ZenuComputeConvCpuImpl::get_im2col1d_bytes() const {
+    const size_t N        = this->input[0];
+    const size_t C        = this->input[1];
+    const size_t kernel_w = this->kernel[2];
+    const size_t out_l    = this->output[2];
+
+    size_t data_size;
+    DEFINE_DATA_SIZE(type, data_size);
+
+    return N * C * kernel_w * out_l * data_size;
+}
+
 size_t ZenuComputeConvCpuImpl::get_im2col2d_bytes() const {
     const size_t N           = this->input[0];
     const size_t C           = this->input[1];
-    const size_t H           = this->input[2];
-    const size_t W           = this->input[3];
 
     const size_t kernel_h    = this->kernel[2];
     const size_t kernel_w    = this->kernel[3];
-
-    const size_t stride_h    = this->stride[0];
-    const size_t stride_w    = this->stride[1];
-    const size_t pad_h       = this->padding[0];
-    const size_t pad_w       = this->padding[1];
-    const size_t dilation_h  = this->dilation[0];
-    const size_t dilation_w  = this->dilation[1];
 
     const size_t out_h       = this->output[2];
     const size_t out_w       = this->output[3];
@@ -133,7 +174,9 @@ size_t ZenuComputeConvCpuImpl::get_im2col2d_bytes() const {
 }
 
 size_t ZenuComputeConvCpuImpl::get_im2col_bytes() const {
-    if (get_dim() == 2) {
+    if (get_dim() == 1) {
+        return get_im2col1d_bytes();
+    } else if (get_dim() == 2) {
         return get_im2col2d_bytes();
     } else {
         return 0;

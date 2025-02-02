@@ -131,11 +131,17 @@ private:
      * @return size_t 必要なバイト数
      */
     size_t get_im2col_bytes() const ;
-    
-        /**
-         * @brief 2D畳み込み用im2colワークスペースサイズを計算
-         * @return size_t 必要なバイト数
-         */
+
+    /**
+     * @brief 1D畳み込み用im2colワークスペースサイズを計算
+     * @return size_t 必要なバイト数
+     */
+    size_t get_im2col1d_bytes() const ;
+
+    /**
+     * @brief 2D畳み込み用im2colワークスペースサイズを計算
+     * @return size_t 必要なバイト数
+     */
     size_t get_im2col2d_bytes() const ;
 
      /**
@@ -155,6 +161,13 @@ private:
      * @return std::array<size_t,3> [M, K, N]の配列
      */
     std::array<size_t, 3> get_gemm_param_fwd() const;
+
+    /**
+     * @brief 1D畳み込み用GEMMパラメータ(M,K,N)を取得 for forward
+     * @return std::array<size_t,3> [M, K, N]の配列
+     * @note M:出力チャネル数, K:入力チャネル×カーネルサイズ, N:出力空間サイズ
+     */
+    std::array<size_t, 3> get_gemm_param1d_fwd() const;
 
     /**
      * @brief 2D畳み込み用GEMMパラメータ(M,K,N)を取得 for forward
@@ -230,7 +243,15 @@ private:
      * @param output 転置済み出力ポインタ
      */
     void transpose_gemm_fwd(const void* gemm_out, void* output) const;
-    
+
+    /**
+     * @brief 1D畳み込み用GEMM出力転置処理 for forward
+     * @param gemm_out GEMM出力ポインタ
+     * @param output 転置済み出力ポインタ
+     * @note NCHWレイアウトに適合するよう4次元ループで転置
+     */
+    void transpose_gemm1d_fwd(const void* gemm_out, void* output) const;
+
     /**
      * @brief 2D畳み込み用GEMM出力転置処理 for forward
      * @param gemm_out GEMM出力ポインタ

@@ -139,6 +139,7 @@ if(CUDNN_FRONTEND_BUILD_TESTS)
         ${PROJECT_SOURCE_DIR}/tests/test.cpp
         ${PROJECT_SOURCE_DIR}/tests/test_arithmetic.cpp
         ${PROJECT_SOURCE_DIR}/tests/test_blas.cpp
+        ${PROJECT_SOURCE_DIR}/tests/test_conv1d.cpp
         ${PROJECT_SOURCE_DIR}/tests/test_conv2d.cpp
         ${PROJECT_SOURCE_DIR}/tests/test_extras.cpp
         ${PROJECT_SOURCE_DIR}/tests/test_random.cpp
