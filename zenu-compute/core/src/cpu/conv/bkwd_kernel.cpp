@@ -7,10 +7,11 @@
 #include <cstring>
 #include <omp.h>
 
-
 std::array<size_t, 3> ZenuComputeConvCpuImpl::get_gemm_param_bkwd_kernel() const {
     if (get_dim() == 2) {
         return get_gemm_param2d_bkwd_kernel();
+    } else if (get_dim() == 1) {
+        return get_gemm_param1d_bkwd_kernel();
     } else {
         return {0,0,0};
     }
@@ -20,6 +21,13 @@ std::array<size_t, 3> ZenuComputeConvCpuImpl::get_gemm_param2d_bkwd_kernel() con
     const size_t M = kernel[0];
     const size_t KK = input[0] * output[2] * output[3];  
     const size_t N = input[1] * kernel[2] * kernel[3];
+    return {M, KK, N};
+}
+
+std::array<size_t, 3> ZenuComputeConvCpuImpl::get_gemm_param1d_bkwd_kernel() const {
+    const size_t M = kernel[0];
+    const size_t KK = input[0] * output[2];
+    const size_t N = input[1] * kernel[2];
     return {M, KK, N};
 }
 
@@ -47,6 +55,43 @@ void ZenuComputeConvCpuImpl::transpose_gemm2d_bkwd_kernel(
                 PQ * elem_size
             );
         }
+    }
+}
+
+void ZenuComputeConvCpuImpl::transpose_gemm1d_bkwd_kernel(
+    const void* grad_output,
+    void*       grad_output_reshaped
+) const {
+    const size_t N = input[0];
+    const size_t K = kernel[0];
+    const size_t P = output[2];
+
+    size_t elem_size;
+    DEFINE_DATA_SIZE(type, elem_size);
+
+#pragma omp parallel for collapse(2)
+    for (size_t k_idx = 0; k_idx < K; k_idx++) {
+        for (size_t n_idx = 0; n_idx < N; n_idx++) {
+            const size_t src_offset = (n_idx * K + k_idx) * P * elem_size;
+            const size_t dst_offset = (k_idx * (N * P) + n_idx * P) * elem_size;
+
+            memcpy(
+                static_cast<uint8_t*>(grad_output_reshaped) + dst_offset,
+                static_cast<const uint8_t*>(grad_output) + src_offset,
+                P * elem_size
+            );
+        }
+    }
+}
+
+void ZenuComputeConvCpuImpl::transpose_gemm_bkwd_kernel(
+    const void* grad_output,
+    void*       grad_output_reshaped
+) const {
+    if (get_dim() == 2) {
+        transpose_gemm2d_bkwd_kernel(grad_output, grad_output_reshaped);
+    } else if (get_dim() == 1) {
+        transpose_gemm1d_bkwd_kernel(grad_output, grad_output_reshaped);
     }
 }
 
@@ -78,7 +123,7 @@ ZenuStatus ZenuComputeConvCpuImpl::backward_kernel(
     std::uintptr_t aligned = (addr + 63) & ~static_cast<std::uintptr_t>(63);
     dY_trans = reinterpret_cast<char*>(aligned);
 
-    transpose_gemm2d_bkwd_kernel(grad_output, dY_trans);
+    transpose_gemm_bkwd_kernel(grad_output, dY_trans);
 
     auto [M, Kdim, N] = get_gemm_param_bkwd_kernel();
 

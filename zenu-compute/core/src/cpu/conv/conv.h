@@ -201,6 +201,11 @@ private:
     std::array<size_t, 3> get_gemm_param_bkwd_kernel() const;
 
     /**
+     * @brief 1D畳み込み用 backward kernel GEMMパラメータ(M,K,N)
+     */
+    std::array<size_t, 3> get_gemm_param1d_bkwd_kernel() const;
+
+    /**
      * @brief 2D畳み込み用 backward kernel GEMMパラメータ(M,K,N)
      */
     std::array<size_t, 3> get_gemm_param2d_bkwd_kernel() const;
@@ -301,6 +306,14 @@ private:
      * @param grad_output_reshaped 転置済み出力ポインタ
      */
     void transpose_gemm_bkwd_kernel(const void* grad_output, void* grad_output_reshaped) const;
+
+    /**
+     * @brief 1D畳み込み用 grad_output 転置 ( [N,K,PQ] => [K, N*PQ] )
+     */
+    void transpose_gemm1d_bkwd_kernel(
+        const void* grad_output,
+        void*       grad_output_reshaped
+    ) const;
 
     /**
      * @brief 2D畳み込み用 grad_output 転置 ( [N,K,PQ] => [K, N*PQ] )
