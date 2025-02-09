@@ -393,6 +393,104 @@ ZenuStatus zenu_compute_conv_backward_kernel_nvidia(
  */
 void zenu_compute_destroy_conv_nvidia(ZenuComputeConvNvidia* conv_nvidia);
 
+/**
+ * @brief forward 畳み込み+バイアスの実行Cpu
+ *
+ * @param[in]  input_shape  入力データへのポインタ
+ * @param[in]  bias_shape   バイアスデータへのポインタ
+ * @param[in]  conv_dim     畳み込み次元数（1D または 2D）
+ * @param[in]  conv_dim     畳み込み次元数（1D または 2D）
+ * @param[in]  input        入力データへのポインタ
+ * @param[in]  bias         バイアスデータへのポインタ
+ * @param[out] output       出力データへのポインタ
+ *
+ * @return ZenuStatus  成功時は Success、それ以外はエラーコードを返します。
+ */
+ZenuStatus zenu_compute_conv_forward_bias_cpu(
+    size_t* input_shape,
+    size_t* bias_shape,
+    size_t conv_dim,
+    ZenuDataType data_type,
+    const void* input,
+    const void* bias,
+    void* output
+);
+
+/**
+ * @brief backward 畳み込み+バイアス（入力データ勾配）の実行Cpu
+ *
+ * @param[in]  input_shape  入力データへのポインタ
+ * @param[in]  bias_shape   バイアスデータへのポインタ
+ * @param[in]  conv_dim     畳み込み次元数（1D または 2D）
+ * @param[in]  conv_dim     畳み込み次元数（1D または 2D）
+ * @param[in]  d_output     出力の勾配データへのポインタ
+ * @param[out] d_input      入力データに対する勾配データへのポインタ
+ *
+ * @return ZenuStatus  成功時は Success、それ以外はエラーコードを返します。
+ */
+ZenuStatus zenu_compute_conv_bkwd_bias_cpu(
+    size_t* input_shape,
+    size_t* bias_shape,
+    size_t conv_dim,
+    ZenuDataType data_type,
+    const void* d_output,
+    void* d_bias
+);
+
+/**
+ * @brief forward 畳み込み+バイアスの実行Nvidia
+ *
+ * @param[in]  input_shape  入力データへのポインタ
+ * @param[in]  bias_shape   バイアスデータへのポインタ
+ * @param[in]  conv_dim     畳み込み次元数（1D または 2D）
+ * @param[in]  data_type    データ型（例: ZenuDataType::f32）
+ * @param[in]  input        入力データへのポインタ
+ * @param[in]  bias         バイアスデータへのポインタ
+ * @param[out] output       出力データへのポインタ
+ *
+ * @return ZenuStatus  成功時は Success、それ以外はエラーコードを返します。
+ */
+ZenuStatus zenu_compute_conv_forward_bias_nvidia(
+    size_t* input_shape,
+    size_t* bias_shape,
+    size_t conv_dim,
+    ZenuDataType data_type,
+    const void* input,
+    const void* bias,
+    void* output
+);
+
+/**
+ * @brief backward 畳み込み+バイアス (ワークスペースを利用する版)
+ *
+ * 外部で確保したワークスペース領域を利用して、出力勾配 (d_output) から各チャネルのバイアス勾配 (d_bias) を計算します。
+ *
+ * @param[in]  input_shape      入力データの形状。conv_dim==2 の場合は [N, C, H, W]、conv_dim==1 の場合は [N, C, W]。
+ * @param[in]  bias_shape       バイアスの形状（通常、チャネル数）。
+ * @param[in]  conv_dim         畳み込み次元数 (1 または 2)。
+ * @param[in]  data_type        データ型 (例: ZenuDataType::f32 または ZenuDataType::f64)。
+ * @param[in]  d_output         出力の勾配データへのポインタ。
+ * @param[out] d_bias           バイアスに対する勾配データへのポインタ。
+ * @param[in]  workspace        外部から確保したワークスペース領域へのポインタ。
+ * @param[in]  workspace_bytes  ワークスペース領域のバイト数。
+ *
+ * @return ZenuStatus     成功時は Success、それ以外はエラーコードを返します。
+ */
+ZenuStatus zenu_compute_conv_bkwd_bias_nvidia(
+    size_t* input_shape,
+    size_t* bias_shape,
+    size_t conv_dim,
+    ZenuDataType data_type,
+    const void* d_output,
+    void* d_bias,
+    void* workspace);
+
+ZenuStatus zenu_compute_bkwd_bias_get_workspace_nvidia(
+    size_t* input_shape,
+    size_t conv_dim,
+    ZenuDataType data_type,
+    size_t* workspace_size);
+
 #ifdef __cplusplus
 } // extern "C"
 #endif

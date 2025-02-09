@@ -51,7 +51,7 @@ ZenuStatus ZenuComputeConvNvidiaImpl::init_fwd() {
     X_fwd = fwd_graph->tensor(get_tensor_attributes(input, type));
     Kernel_fwd = fwd_graph->tensor(get_tensor_attributes(kernel, type));
 
-    conv_options = fe::graph::Conv_fprop_attributes()
+    fe::graph::Conv_fprop_attributes conv_options = fe::graph::Conv_fprop_attributes()
                         .set_padding(convert(padding))
                         .set_stride(convert(stride))
                         .set_dilation(convert(dilation));
@@ -74,7 +74,7 @@ ZenuStatus ZenuComputeConvNvidiaImpl::init_bwd_data() {
     Y_bkwd_data = bwd_data_graph->tensor(get_tensor_attributes(output, type));
     Kernel_bkwd_data = bwd_data_graph->tensor(get_tensor_attributes(kernel, type));
 
-    conv_dgrad_options = fe::graph::Conv_dgrad_attributes()
+    fe::graph::Conv_dgrad_attributes conv_dgrad_options = fe::graph::Conv_dgrad_attributes()
                         .set_padding(convert(padding))
                         .set_stride(convert(stride))
                         .set_dilation(convert(dilation));
@@ -97,7 +97,7 @@ ZenuStatus ZenuComputeConvNvidiaImpl::init_bwd_kernel() {
     X_bkwd_kernel = bwd_kernel_graph->tensor(get_tensor_attributes(input, type));
     Y_bkwd_kernel = bwd_kernel_graph->tensor(get_tensor_attributes(output, type));
 
-    conv_wgrad_options = fe::graph::Conv_wgrad_attributes()
+    fe::graph::Conv_wgrad_attributes conv_wgrad_options = fe::graph::Conv_wgrad_attributes()
                         .set_padding(convert(padding))
                         .set_stride(convert(stride))
                         .set_dilation(convert(dilation));

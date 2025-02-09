@@ -25,3 +25,4 @@ inline bool array_compare(const T* a, const T* b, size_t n, T tol = 1e-5)
     }
     return true;
 }
+

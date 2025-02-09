@@ -119,11 +119,6 @@ private:
     std::shared_ptr<fe::graph::Tensor_attributes> Y_bkwd_kernel;
     std::shared_ptr<fe::graph::Tensor_attributes> W_bkwd_kernel;
 
-    fe::graph::Conv_fprop_attributes conv_options;
-    fe::graph::Conv_dgrad_attributes conv_dgrad_options;
-    fe::graph::Conv_wgrad_attributes conv_wgrad_options;
-
-
     ZenuStatus init_fwd();
     ZenuStatus init_bwd_data();
     ZenuStatus init_bwd_kernel();

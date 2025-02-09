@@ -54,25 +54,34 @@ cudnn_frontend::graph::Tensor_attributes get_tensor_attributes_without_type(std:
         .set_stride(default_stride(shape));
 }
 
+void handle_error(const std::string &msg, const fe::error_t &err) {
+    std::cerr << msg << " failed with error: " << msg << std::endl;
+    std::cout << const_cast<fe::error_t&>(err).get_message() << std::endl;
+}
+
 ZenuStatus build_and_check_graph(cudnn_frontend::graph::Graph& graph, std::vector<fe::HeurMode_t> mode) {
     cudnnHandle_t handle = NvidiaHandles::getCudnnHandle();
     auto err = graph.validate();
     if (!err.is_good()) {
+        handle_error("Graph validation", err);
         return CudnnError;
     }
 
     err = graph.build_operation_graph(handle);
     if (!err.is_good()) {
+        handle_error("Graph build operation graph", err);
         return CudnnError;
     }
 
     err = graph.create_execution_plans(mode);
     if (!err.is_good()) {
+        handle_error("Graph create execution plans", err);
         return CudnnError;
     }
 
     err = graph.check_support(handle);
     if (!err.is_good()) {
+        handle_error("Graph check support", err);
         return CudnnError;
     }
 
