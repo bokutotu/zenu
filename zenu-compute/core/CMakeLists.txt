@@ -64,6 +64,7 @@ set(SRC_FILES
     ${PROJECT_SOURCE_DIR}/src/cpu/conv/bkwd_kernel.cpp
     ${PROJECT_SOURCE_DIR}/src/cpu/conv/col2im.cpp
     ${PROJECT_SOURCE_DIR}/src/cpu/conv/conv.cpp
+    ${PROJECT_SOURCE_DIR}/src/cpu/conv/conv_bias.cpp
     ${PROJECT_SOURCE_DIR}/src/cpu/conv/forward.cpp
     ${PROJECT_SOURCE_DIR}/src/cpu/conv/im2col.cpp
     ${PROJECT_SOURCE_DIR}/src/cpu/extras.cpp
