@@ -52,13 +52,13 @@ ZenuStatus ZenuComputeConvCpuImpl::forward(
 
     zenu_compute_gemm_cpu(
         NoTranspose,
-        Transpose,   // ★こちらを Transpose に
-        M, N, K,                    // => M x K * K x N = M x N
+        Transpose,
+        M, N, K,
         1.0,
-        kernel,  // A
-        K,       // lda = K  (Aは(M,K)だから行幅はK)
+        kernel,
+        K,
         workspace, 
-        K,       // ★ldb = K (Bは実メモリで(N,K)だから行幅はK)
+        K,
         0.0,
         gemm_output, 
         N, 
